@@ -1,0 +1,295 @@
+!iflang [english]
+
+
+!begin_node Rsconf
+(!begin_liste) [Availability]
+
+!item [Name:]
+¯RS-232 configuration® - konfiguriert die RS-232-Schnittstelle.
+
+!item [Opcode:]
+15
+
+!item [Syntax:]
+(!link [Bindings fr Rsconf] [Bindings fr Rsconf])
+
+!item [Description:]
+Die XBIOS-Routine Rsconf konfiguriert die serielle Schnittstelle. Da auf
+unterschiedlichen Rechnern unterschiedliche Hardwarebausteine zum Einsatz
+kommen k”nnen, mu die Funktion vorsichtig eingesetzt werden, d.h:
+!begin_itemize !short
+!item aktuelle Einstellungen sollten mit Hilfe von
+      Rsconf (-1,-1,-1,-1,-1,-1) abgefragt werden
+!item nur die notwendigen Bits manipulieren
+!item anschlieend die neuen Werte setzen 
+!end_itemize
+Aufgrund der M”glichkeit unterschiedliche Bausteine zum Einsatz kommen zu
+lassen, wurden die benutzbaren Werte folgendermaen eingeschr„nkt:
+!begin_table [l|l]
+Parameter !! Einschr„nkung
+!hline
+ucr !! Bit 1: (!B)Art der Parit„t(!b)
+~   !! ~~~~~~~0 = ungerade
+~   !! ~~~~~~~1 = gerade
+~   !!        ~
+~   !! ~~~~2: (!B)Parit„t(!b)
+~   !! ~~~~~~~0 = nein
+~   !! ~~~~~~~1 = ja
+~   !!        ~
+~   !! ~~3+4: (!B)Anzahl der Stopbits(!b)
+~   !! ~~~~~~~0 = ungltig
+~   !! ~~~~~~~1 = 1 Stopbit
+~   !! ~~~~~~~2 = 1,5 Stopbits
+~   !! ~~~~~~~3 = 2 Stopbits
+~   !!        ~
+~   !! ~~5+6: (!B)Wortl„nge(!b)
+~   !! ~~~~~~~0 = 8 Bits
+~   !! ~~~~~~~1 = 7 Bits
+~   !! ~~~~~~~2 = 6 Bits
+~   !! ~~~~~~~3 = 5 Bits
+~   !!        ~
+rsr !! nicht anwendbar
+tsr !! Bit-3: (1 = Break)
+scr !! nicht anwendbar
+!end_table
+Technisch nicht m”glich Werte mssen daher ignoriert werden. Ansonsten gilt
+folgende Belegung:
+!begin_table [l|l]
+Parameter !! Bedeutung
+!hline
+baud !! (!B)Baudrate(!b)
+~    !! -1: nicht ver„ndern
+~    !! ~0: 19200 Baud
+~    !! ~1:  9600 Baud
+~    !! ~2:  4800 Baud
+~    !! ~3:  3600 Baud
+~    !! ~4:  2400 Baud
+~    !! ~5:  2000 Baud
+~    !! ~6:  1800 Baud
+~    !! ~7:  1200 Baud
+~    !! ~8:   600 Baud
+~    !! ~9:   300 Baud
+~    !! 10:   200 Baud
+~    !! 11:   150 Baud
+~    !! 12:   134 Baud
+~    !! 13:   110 Baud
+~    !! 14:    75 Baud
+~    !! 15:    50 Baud
+~    !! ~
+ctr  !! (!B)Art der Flukontrolle(!b)
+~    !! -1: nicht ver„ndern
+~    !! ~0: keine Flukontrolle
+~    !! ~1: XON/XOFF (Control-S, Control-Q)
+~    !! ~2: RTS/CTS
+~    !! ~3: RTS/CTS und XON/XOFF
+~    !! ~
+ucr  !! neuer Wert fr Register, oder -1
+tsr  !! neuer Wert fr Register, oder -1
+rsr  !! neuer Wert fr Register, oder -1
+scr  !! neuer Wert fr Register, oder -1
+!end_table
+(!B)Hinweis:(!b) Ab TOS 1.04 kann die zuletzt eingestellte Baudrate per
+Rsconf (-2,-1,-1,-1,-1) abgefragt werden. Man sollte sich niemals darauf
+verlassen, da alle Einstellungen tats„chlich wie gewnscht vorgenommen
+werden konnten, und deshalb den Rckgabewert der Funktion beachten.
+
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert in gepackter Form die Werte der Register (!I)ucr(!i),
+(!I)rsr(!i), (!I)scr(!i), (!I)tsr(!i) und zwar wie folgt:
+!begin_table [l r l]
+Bits !! 0..7: !! scr-Register
+Bits !! 8..15: !! tsr-Register
+Bits !! 16..23: !! rsr-Register
+Bits !! 24..31: !! ucr-Register
+!end_table
+
+!item [Group:]
+Schnittstellenprogrammierung
+
+!item [Availability:]
+All TOS versions.
+
+!item [See Also:]
+(!link [Binding] [Bindings fr Rsconf]) ~ Bconmap
+
+(!ende_liste)
+
+
+!begin_node Bindings fr Rsconf
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+#include <tos.h>
+
+int32_t Rsconf( int16_t baud, int16_t ctr, int16_t ucr, int16_t rsr, int16_t tsr, int16_t scr );
+!item [Assembler:]
+!begin_verbatim
+move.w    scr,-(sp)    ; Offset 12
+move.w    tsr,-(sp)    ; Offset 10
+move.w    rsr,-(sp)    ; Offset  8
+move.w    ucr,-(sp)    ; Offset  6
+move.w    ctr,-(sp)    ; Offset  4
+move.w    baud,-(sp)   ; Offset  2
+move.w    #15,-(sp)    ; Offset  0
+trap      #14          ; XBIOS aufrufen
+lea       $E(sp),sp    ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node Rsconf
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+¯RS-232 configuration® - konfiguriert die RS-232-Schnittstelle.
+
+!item [Xbiosnummer:]
+15
+
+!item [Binding:]
+(!link [Bindings fr Rsconf] [Bindings fr Rsconf])
+
+!item [Beschreibung:]
+Die XBIOS-Routine Rsconf konfiguriert die serielle Schnittstelle. Da auf
+unterschiedlichen Rechnern unterschiedliche Hardwarebausteine zum Einsatz
+kommen k”nnen, mu die Funktion vorsichtig eingesetzt werden, d.h:
+!begin_itemize !short
+!item aktuelle Einstellungen sollten mit Hilfe von
+      Rsconf (-1,-1,-1,-1,-1,-1) abgefragt werden
+!item nur die notwendigen Bits manipulieren
+!item anschlieend die neuen Werte setzen 
+!end_itemize
+Aufgrund der M”glichkeit unterschiedliche Bausteine zum Einsatz kommen zu
+lassen, wurden die benutzbaren Werte folgendermaen eingeschr„nkt:
+!begin_table [l|l]
+Parameter !! Einschr„nkung
+!hline
+ucr !! Bit 1: (!B)Art der Parit„t(!b)
+~   !! ~~~~~~~0 = ungerade
+~   !! ~~~~~~~1 = gerade
+~   !!        ~
+~   !! ~~~~2: (!B)Parit„t(!b)
+~   !! ~~~~~~~0 = nein
+~   !! ~~~~~~~1 = ja
+~   !!        ~
+~   !! ~~3+4: (!B)Anzahl der Stopbits(!b)
+~   !! ~~~~~~~0 = ungltig
+~   !! ~~~~~~~1 = 1 Stopbit
+~   !! ~~~~~~~2 = 1,5 Stopbits
+~   !! ~~~~~~~3 = 2 Stopbits
+~   !!        ~
+~   !! ~~5+6: (!B)Wortl„nge(!b)
+~   !! ~~~~~~~0 = 8 Bits
+~   !! ~~~~~~~1 = 7 Bits
+~   !! ~~~~~~~2 = 6 Bits
+~   !! ~~~~~~~3 = 5 Bits
+~   !!        ~
+rsr !! nicht anwendbar
+tsr !! Bit-3: (1 = Break)
+scr !! nicht anwendbar
+!end_table
+Technisch nicht m”glich Werte mssen daher ignoriert werden. Ansonsten gilt
+folgende Belegung:
+!begin_table [l|l]
+Parameter !! Bedeutung
+!hline
+baud !! (!B)Baudrate(!b)
+~    !! -1: nicht ver„ndern
+~    !! ~0: 19200 Baud
+~    !! ~1:  9600 Baud
+~    !! ~2:  4800 Baud
+~    !! ~3:  3600 Baud
+~    !! ~4:  2400 Baud
+~    !! ~5:  2000 Baud
+~    !! ~6:  1800 Baud
+~    !! ~7:  1200 Baud
+~    !! ~8:   600 Baud
+~    !! ~9:   300 Baud
+~    !! 10:   200 Baud
+~    !! 11:   150 Baud
+~    !! 12:   134 Baud
+~    !! 13:   110 Baud
+~    !! 14:    75 Baud
+~    !! 15:    50 Baud
+~    !! ~
+ctr  !! (!B)Art der Flukontrolle(!b)
+~    !! -1: nicht ver„ndern
+~    !! ~0: keine Flukontrolle
+~    !! ~1: XON/XOFF (Control-S, Control-Q)
+~    !! ~2: RTS/CTS
+~    !! ~3: RTS/CTS und XON/XOFF
+~    !! ~
+ucr  !! neuer Wert fr Register, oder -1
+tsr  !! neuer Wert fr Register, oder -1
+rsr  !! neuer Wert fr Register, oder -1
+scr  !! neuer Wert fr Register, oder -1
+!end_table
+(!B)Hinweis:(!b) Ab TOS 1.04 kann die zuletzt eingestellte Baudrate per
+Rsconf (-2,-1,-1,-1,-1) abgefragt werden. Man sollte sich niemals darauf
+verlassen, da alle Einstellungen tats„chlich wie gewnscht vorgenommen
+werden konnten, und deshalb den Rckgabewert der Funktion beachten.
+
+!item [Ergebnis:]
+Die Funktion liefert in gepackter Form die Werte der Register (!I)ucr(!i),
+(!I)rsr(!i), (!I)scr(!i), (!I)tsr(!i) und zwar wie folgt:
+!begin_table [l r l]
+Bits !! 0..7: !! scr-Register
+Bits !! 8..15: !! tsr-Register
+Bits !! 16..23: !! rsr-Register
+Bits !! 24..31: !! ucr-Register
+!end_table
+
+!item [Gruppe:]
+Schnittstellenprogrammierung
+
+!item [Verfgbar:]
+Alle TOS Versionen.
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr Rsconf]) ~ Bconmap
+
+(!ende_liste)
+
+
+!begin_node Bindings fr Rsconf
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+#include <tos.h>
+
+int32_t Rsconf( int16_t baud, int16_t ctr, int16_t ucr, int16_t rsr, int16_t tsr, int16_t scr );
+!item [Assembler:]
+!begin_verbatim
+move.w    scr,-(sp)    ; Offset 12
+move.w    tsr,-(sp)    ; Offset 10
+move.w    rsr,-(sp)    ; Offset  8
+move.w    ucr,-(sp)    ; Offset  6
+move.w    ctr,-(sp)    ; Offset  4
+move.w    baud,-(sp)   ; Offset  2
+move.w    #15,-(sp)    ; Offset  0
+trap      #14          ; XBIOS aufrufen
+lea       $E(sp),sp    ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif
