@@ -1,0 +1,723 @@
+!iflang [english]
+
+!begin_node vq_scrninfo
+
+(!begin_liste) [Availability]
+
+!item [Name:]
+¯Inquire Screen Information® - liefert genauere Angaben ber das
+Bildschirmformat
+
+!item [Opcode:]
+102 (Sub-Opcode 1, Opcode 2)
+
+!item [Syntax:]
+void vq_scrninfo ( int16_t handle, int16_t *work_out );
+
+!item [Description:]
+Die Funktion vq_scrninfo liefert genauere Angaben ber das vorhandene
+Bildschirmformat. Diese Informationen sind in erster Linie interessant fr
+Programme, die
+
+!begin_itemize !short
+!item schnell Raster aufbauen (auch in TrueColor) und diese mit vro_cpyfm()
+      auf den Schirm kopieren m”chten.
+!item Raster speichern (z.B. XIMGs).
+!item Raster anzeigen.
+!end_itemize
+
+
+!item [(!nolink [Return]) Value:]
+Alle Informationen werden ber das (!I)work_out(!i) Array nach auen
+gereicht:
+
+!begin_xlist !short [work_out+00+]
+!item [work_out[0!]:]
+(!B)Formatangabe:(!b)
+!begin_xlist !short [-1:]
+!item [0:]
+Interleaved Planes, wortweise
+!item [1:]
+Standardformat (komplette Planes)
+!item [2:]
+Packed Pixels
+!item [-1:]
+unbekanntes Format; nicht direkt beschreibbar
+!end_xlist
+!item [work_out[1!]:]
+(!B)Verfgbarkeit einer CLUT:(!b)
+!begin_xlist !short
+!item [0:]
+keine CLUT (z.B. TTM 194)
+!item [1:]
+Hardware-CLUT
+!item [2:]
+Software-CLUT (HiColor oder TrueColor)
+!end_xlist
+!item [work_out[2!]:]
+Anzahl der Ebenen (Bits) pro Pixel
+!item [work_out[3!]:]
+~
+!item [work_out[4!]:]
+Farbanzahl oder 0L (mehr als 2*10^31 Farben)
+!item [work_out[5!]:]
+Breite einer Zeile in Bytes (ab (!nolink [EdDI]) 1.1)
+!item [work_out[6!]:]
++
+!item [work_out[7!]:]
+Adresse der Bitmap (erst ab (!nolink [EdDI]) Version 1.1 verfgbar).
+!item [work_out[8!]:]
+Anzahl der Bits fr die Rot-Intensit„t
+!item [work_out[9!]:]
+Anzahl der Bits fr die Grn-Intensit„t
+!item [work_out[10!]:]
+Anzahl der Bits fr die Blau-Intensit„t
+!item [work_out[11!]:]
+Anzahl der Bits fr den Alpha-Channel oder „hnliches
+!item [work_out[12!]:]
+Anzahl der Bits fr Genlock
+!item [work_out[13!]:]
+Anzahl der nicht benutzen Bits
+!item [work_out[14!]:]
+(!B)Bitorganisation(!b) (erst ab EdDI 1.1)
+(!nl)
+(!B)Bei 2-256 Farben:(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge
+!end_xlist
+(!B)Bei 32768 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 1 Overlay-Bit, 5 Rot-Bits, 5 Grn-Bits,
+5 Blau-Bits
+!item [Bit-1 =]
+Falcon-Format, d.h. 5 Rot-Bits, 5 Grn-Bits, 1 Overlay-Bit, 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 65536 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 5 Rot-Bits, 6 Grn-Bits und 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (24 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Rot-Bits, 8 Grn-Bits und 8 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (32 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Overlay-Bits, 8 Rot-Bits, 8 Grn-Bits und
+8 Blau-Bits.
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+!end_xlist
+
+(!B)Falls eine Hardware-CLUT (work_out[1] == 1) vorhanden ist:(!b)
+!begin_xlist !short [work_out+00..000+:]
+!item [work_out[16..271!]:]
+Pixelwert des zugeh”rigen VDI-Farbindexes
+!end_xlist
+(!B)Falls HiColor, TrueColor oder „hnliches vorhanden ist:(!b)
+!begin_xlist !short [work_out+000..000+]
+!item [work_out[16..31!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Rotintensit„t
+!item [work_out[32..47!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Grnintensit„t
+!item [work_out[48..63!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Blauintensit„t
+!item [work_out[64..79!]:]
+Zuordnung der Bitnummer fr Alpha-Channel
+!item [work_out[80..95!]:]
+Zuordnung der Bitnummer fr Genlock
+!item [work_out[96..127!]:]
+unbenutzte Bits
+!item [work_out[128..271!]:]
+reserviert (0)               
+!end_xlist
+
+!item [Availability:]
+ab EdDI-Version 1.00.
+
+!item [Group:]
+Inqurie function
+
+!item [See Also:]
+(!link [Binding] [Bindings for vq_scrninfo]) ~
+(!link [Beispiel-Belegung] [Beispiele zu vq_scrninfo]) ~
+(!link [XIMG-Format][Das XIMG-Format fr Pixelbilder]) ~
+Rasterformate ~
+NVDI  ~    (!link [Bitmapformat bei Druckertreibern][Bitmapformat bei Druckertreibern])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings for vq_scrninfo
+!ignore_index
+
+(!begin_liste) [GEM-Arrays]
+
+!item [C:]
+void vq_scrninfo ( int16_t handle, int16_t *work_out );
+
+!item [Binding:]
+!begin_verbatim
+void vq_scrninfo (int16_t handle, int16_t *work_out)
+{
+   intin[0] = 2;
+
+   contrl[0] = 102;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   work_out[0..272] = intout[0..272];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Address !! Element !! Contents
+!hline
+contrl    !! contrl[0]      !! 102   Function Opcode
+contrl+2  !! contrl[1]      !! 0     # entry in ptsin
+contrl+4  !! contrl[2]      !! 0     # entry in ptsout
+contrl+6  !! contrl[3]      !! 1     # entry in intin
+contrl+8  !! contrl[4]      !! 272   # entry in intout
+contrl+10 !! contrl[5]      !! 1
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0]       !! 2
+intout    !! intout[0..272] !! work_out[0..272]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Beispiele zu vq_scrninfo
+
+Die folgende Liste enth„lt Beispiele fr das von vq_scrninfo belegte
+work_out-Array fr verschiedene Bildschirmaufl”sungen:
+
+(!B)In 256 Farben auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   0    | Interleaved Planes, wortweise
+   1     |   1    | Hardware-CLUT vorhanden
+   2     |   8    | 8 Bit pro Pixel
+   3/4   | 256    | 256 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   6    | 6 Bits fr die Rot-Intensit„t
+   9     |   6    | 6 Bits fr die Grn-Intensit„t
+  10     |   6    | 6 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   1    | normale Bitreihenfolge (erst ab EdDI 1.1)
+         |        |
+  16     |   0    | Pixelwert fr VDI-Farbindex 0
+  17     | 255    | Pixelwert fr VDI-Farbindex 1
+  18     |   2    | Pixelwert fr VDI-Farbindex 2
+  ...    | ...    |
+ 271     |  15    | Pixelwert fr VDI-Farbindex 255
+!end_verbatim
+
+(!B)In HiColor auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab "EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   1    | ein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   2    | Falcon 15-Bit-Format mit 1 Overlay-Bit (EdDI 1.1)
+         |        |
+  16     |  11    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 11 des Pixels
+  17     |  12    | Bit 1 befindet sich in Bit 12 des Pixels
+  18     |  13    | ...
+  19     |  14    | ...
+  20     |  15    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 15 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |   6    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  33     |   7    | Bit 1 befindet sich in Bit 7 des Pixels
+  34     |   8    | ...
+  35     |   9    | ...
+  36     |  10    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 10 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   0    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 0 des Pixels
+  49     |   1    | Bit 1 befindet sich in Bit 1 des Pixels
+  50     |   2    | ...
+  51     |   3    | ...
+  52     |   4    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 4 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80     |   5    | Bit fr Genlock
+  81..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+(!B)In HiColor auf einer VGA-Grafikkarte wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   1    | ein unbenutzes Bit
+  14     |  129   | 15 Bit in Intel-Darstellung
+         |        | (gggbbbbb-xrrrrrgg;erst ab EdDI 1.1)
+         |        |
+  16     |   2    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 2 des Pixels
+  17     |   3    | Bit 1 befindet sich in Bit 3 des Pixels
+  18     |   4    | ...
+  19     |   5    | ...
+  20     |   6    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |  13    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 13 des Pixels
+  33     |  14    | Bit 1 befindet sich in Bit 14 des Pixels
+  34     |  15    | ...
+  35     |   0    | ...
+  36     |   1    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 1 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   8    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 8 des Pixels
+  49     |   9    | Bit 1 befindet sich in Bit 9 des Pixels
+  50     |  10    | ...
+  51     |  11    | ...
+  52     |  12    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 12 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96     |   7    | unbenutztes Bit
+  97..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+Querverweis: vq_scrninfo ~  Rasterformate ~  NVDI
+!end_node
+
+!else
+
+!begin_node vq_scrninfo
+
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+¯Inquire Screen Information® - liefert genauere Angaben ber das
+Bildschirmformat
+
+!item [VDI-Nummer:]
+102 (Unterfunktion 1, Opcode 2)
+
+!item [Deklaration:]
+void vq_scrninfo ( int16_t handle, int16_t *work_out );
+
+!item [Beschreibung:]
+Die Funktion vq_scrninfo liefert genauere Angaben ber das vorhandene
+Bildschirmformat. Diese Informationen sind in erster Linie interessant fr
+Programme, die
+
+!begin_itemize !short
+!item schnell Raster aufbauen (auch in TrueColor) und diese mit vro_cpyfm()
+      auf den Schirm kopieren m”chten.
+!item Raster speichern (z.B. XIMGs).
+!item Raster anzeigen.
+!end_itemize
+
+
+!item [Ergebnis:]
+Alle Informationen werden ber das (!I)work_out(!i) Array nach auen
+gereicht:
+
+!begin_xlist !short [work_out+00+]
+!item [work_out[0!]:]
+(!B)Formatangabe:(!b)
+!begin_xlist !short [-1:]
+!item [0:]
+Interleaved Planes, wortweise
+!item [1:]
+Standardformat (komplette Planes)
+!item [2:]
+Packed Pixels
+!item [-1:]
+unbekanntes Format; nicht direkt beschreibbar
+!end_xlist
+!item [work_out[1!]:]
+(!B)Verfgbarkeit einer CLUT:(!b)
+!begin_xlist !short
+!item [0:]
+keine CLUT (z.B. TTM 194)
+!item [1:]
+Hardware-CLUT
+!item [2:]
+Software-CLUT (HiColor oder TrueColor)
+!end_xlist
+!item [work_out[2!]:]
+Anzahl der Ebenen (Bits) pro Pixel
+!item [work_out[3!]:]
+~
+!item [work_out[4!]:]
+Farbanzahl oder 0L (mehr als 2*10^31 Farben)
+!item [work_out[5!]:]
+Breite einer Zeile in Bytes (ab (!nolink [EdDI]) 1.1)
+!item [work_out[6!]:]
++
+!item [work_out[7!]:]
+Adresse der Bitmap (erst ab (!nolink [EdDI]) Version 1.1 verfgbar).
+!item [work_out[8!]:]
+Anzahl der Bits fr die Rot-Intensit„t
+!item [work_out[9!]:]
+Anzahl der Bits fr die Grn-Intensit„t
+!item [work_out[10!]:]
+Anzahl der Bits fr die Blau-Intensit„t
+!item [work_out[11!]:]
+Anzahl der Bits fr den Alpha-Channel oder „hnliches
+!item [work_out[12!]:]
+Anzahl der Bits fr Genlock
+!item [work_out[13!]:]
+Anzahl der nicht benutzen Bits
+!item [work_out[14!]:]
+(!B)Bitorganisation(!b) (erst ab EdDI 1.1)
+(!nl)
+(!B)Bei 2-256 Farben:(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge
+!end_xlist
+(!B)Bei 32768 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 1 Overlay-Bit, 5 Rot-Bits, 5 Grn-Bits,
+5 Blau-Bits
+!item [Bit-1 =]
+Falcon-Format, d.h. 5 Rot-Bits, 5 Grn-Bits, 1 Overlay-Bit, 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 65536 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 5 Rot-Bits, 6 Grn-Bits und 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (24 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Rot-Bits, 8 Grn-Bits und 8 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (32 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Overlay-Bits, 8 Rot-Bits, 8 Grn-Bits und
+8 Blau-Bits.
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+!end_xlist
+
+(!B)Falls eine Hardware-CLUT (work_out[1] == 1) vorhanden ist:(!b)
+!begin_xlist !short [work_out+00..000+:]
+!item [work_out[16..271!]:]
+Pixelwert des zugeh”rigen VDI-Farbindexes
+!end_xlist
+(!B)Falls HiColor, TrueColor oder „hnliches vorhanden ist:(!b)
+!begin_xlist !short [work_out+000..000+]
+!item [work_out[16..31!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Rotintensit„t
+!item [work_out[32..47!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Grnintensit„t
+!item [work_out[48..63!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Blauintensit„t
+!item [work_out[64..79!]:]
+Zuordnung der Bitnummer fr Alpha-Channel
+!item [work_out[80..95!]:]
+Zuordnung der Bitnummer fr Genlock
+!item [work_out[96..127!]:]
+unbenutzte Bits
+!item [work_out[128..271!]:]
+reserviert (0)               
+!end_xlist
+
+!item [Verfgbar:]
+ab EdDI-Version 1.00.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_scrninfo]) ~
+(!link [Beispiel-Belegung] [Beispiele zu vq_scrninfo]) ~
+(!link [XIMG-Format][Das XIMG-Format fr Pixelbilder]) ~
+Rasterformate ~
+NVDI  ~    (!link [Bitmapformat bei Druckertreibern][Bitmapformat bei Druckertreibern])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_scrninfo
+!ignore_index
+
+(!begin_liste) [Umsetzung]
+
+!item [C:]
+void vq_scrninfo ( int16_t handle, int16_t *work_out );
+
+!item [Umsetzung:]
+!begin_verbatim
+void vq_scrninfo (int16_t handle, int16_t *work_out)
+{
+   intin[0] = 2;
+
+   contrl[0] = 102;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   work_out[0..272] = intout[0..272];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 102   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! 272   # Eintr„ge in intout
+contrl+10 !! contrl[5]      !! 1
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0]       !! 2
+intout    !! intout[0..272] !! work_out[0..272]
+!end_table
+
+(!ende_liste)
+!end_node
+
+!begin_node Beispiele zu vq_scrninfo
+
+Die folgende Liste enth„lt Beispiele fr das von vq_scrninfo belegte
+work_out-Array fr verschiedene Bildschirmaufl”sungen:
+
+(!B)In 256 Farben auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   0    | Interleaved Planes, wortweise
+   1     |   1    | Hardware-CLUT vorhanden
+   2     |   8    | 8 Bit pro Pixel
+   3/4   | 256    | 256 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   6    | 6 Bits fr die Rot-Intensit„t
+   9     |   6    | 6 Bits fr die Grn-Intensit„t
+  10     |   6    | 6 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   1    | normale Bitreihenfolge (erst ab EdDI 1.1)
+         |        |
+  16     |   0    | Pixelwert fr VDI-Farbindex 0
+  17     | 255    | Pixelwert fr VDI-Farbindex 1
+  18     |   2    | Pixelwert fr VDI-Farbindex 2
+  ...    | ...    |
+ 271     |  15    | Pixelwert fr VDI-Farbindex 255
+!end_verbatim
+
+(!B)In HiColor auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab "EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   1    | ein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   2    | Falcon 15-Bit-Format mit 1 Overlay-Bit (EdDI 1.1)
+         |        |
+  16     |  11    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 11 des Pixels
+  17     |  12    | Bit 1 befindet sich in Bit 12 des Pixels
+  18     |  13    | ...
+  19     |  14    | ...
+  20     |  15    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 15 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |   6    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  33     |   7    | Bit 1 befindet sich in Bit 7 des Pixels
+  34     |   8    | ...
+  35     |   9    | ...
+  36     |  10    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 10 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   0    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 0 des Pixels
+  49     |   1    | Bit 1 befindet sich in Bit 1 des Pixels
+  50     |   2    | ...
+  51     |   3    | ...
+  52     |   4    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 4 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80     |   5    | Bit fr Genlock
+  81..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+(!B)In HiColor auf einer VGA-Grafikkarte wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   1    | ein unbenutzes Bit
+  14     |  129   | 15 Bit in Intel-Darstellung
+         |        | (gggbbbbb-xrrrrrgg;erst ab EdDI 1.1)
+         |        |
+  16     |   2    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 2 des Pixels
+  17     |   3    | Bit 1 befindet sich in Bit 3 des Pixels
+  18     |   4    | ...
+  19     |   5    | ...
+  20     |   6    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |  13    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 13 des Pixels
+  33     |  14    | Bit 1 befindet sich in Bit 14 des Pixels
+  34     |  15    | ...
+  35     |   0    | ...
+  36     |   1    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 1 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   8    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 8 des Pixels
+  49     |   9    | Bit 1 befindet sich in Bit 9 des Pixels
+  50     |  10    | ...
+  51     |  11    | ...
+  52     |  12    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 12 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96     |   7    | unbenutztes Bit
+  97..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+Querverweis: vq_scrninfo ~  Rasterformate ~  NVDI
+!end_node
+
+!endif

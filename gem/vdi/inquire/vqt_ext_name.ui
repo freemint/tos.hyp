@@ -1,0 +1,343 @@
+!iflang [english]
+
+!begin_node vqt_ext_name
+
+(!begin_liste) [Availability]
+
+!item [Name:]
+¯Inquire Face Name and Index® - Informationen ber einen Zeichensatz
+ermitteln.
+
+!item [Opcode:]
+130 (Sub-Opcode 1)
+
+!item [Syntax:]
+int16_t vqt_ext_name ( int16_t handle, int16_t index, int8_t *name,
+                    uint16_t *font_format, uint16_t *flags );
+
+!item [Description:]
+Die Funktion ermittelt Informationen ber einen Zeichensatz. Es gilt:
+
+!begin_xlist !short [font_format]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [index]
+Nummer des Zeichensatzes
+!item [name[0..31!]]
+Name des Zeichensatzes
+!item [name[32!]]
+Flag
+!begin_xlist !short
+!item [0 =]
+Bitmap-Font
+!item [1 =]
+Vektorfont
+!end_xlist
+!item [font_format]
+(!B)Format des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+Bitmap
+!item [Bit-1 =]
+Speedo
+!item [Bit-2 =]
+TrueType
+!item [Bit-3 =]
+Type-1
+!end_xlist
+!item [flags]
+(!B)Art des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0]
+!begin_xlist !short
+!item [= 0]
+(Font ist proportional)
+!item [= 1]
+(Font ist monospaced)
+!end_xlist
+!item [Bit-4]
+!begin_xlist !short
+!item [= 0]
+(Font ist kein Symbolfont)
+!item [= 1]
+(Font ist ein Symbolfont)
+!end_xlist
+!end_xlist
+!end_xlist
+
+(!B)Hinweis:(!b)
+Ein Font wird als (!I)Symbolfont(!i) eingestuft, wenn er im
+Bereich 'A'-'Z' und 'a'-'z' nicht vollst„ndig ist, oder wenn er laut der
+PANOSE Klassifizierung (!I)pictorial(!i) ist. Das entsprechende Flag ist
+daher nur als Anhaltspunkt zu betrachten (bei einem kyrillischen
+TrueType-Font w„re es z.B. auch gesetzt), und signalisiert, da die
+Zeichenbelegung im ASCII-Mapping (vst_charmap) nicht der normalen
+Atari-Belegung entspricht.
+
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert den Index des Zeichensatzes zurck.
+
+!item [Availability:]
+ab NVDI 3.00
+
+!item [Group:]
+Inqurie function
+
+!item [See Also:]
+(!link [Binding] [Bindings for vqt_ext_name]) ~  vst_load_fonts ~ vst_font ~  vqt_xfntinfo
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings for vqt_ext_name
+!ignore_index
+
+(!begin_liste) [GEM-Arrays]
+
+!item [C:]
+int16_t vqt_ext_name ( int16_t handle, int16_t index, int8_t *name,
+                    uint16_t *font_format, uint16_t *flags );
+
+!item [Binding:]
+!begin_verbatim
+int16_t vqt_ext_name (int16_t handle, int16_t index,
+                      int8_t *name, uint16_t *font_format,
+                      uint16_t *flags)
+{
+   intin[0] = index;
+   intin[1] = 0;         /* reserviert */
+
+   contrl[0] = 130;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   name[0..31]  = intout[1..32];
+   name[32]     = intout[33];
+   *flags       = (intout[34] >> 8) & 0xff;
+   *font_format = intout[34] & 0xff;
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Address !! Element !! Contents
+!hline
+contrl    !! contrl[0]     !! 130   Function Opcode
+contrl+2  !! contrl[1]     !! 0     # entry in ptsin
+contrl+4  !! contrl[2]     !! 0     # entry in ptsout
+contrl+6  !! contrl[3]     !! 2     # entry in intin
+contrl+8  !! contrl[4]     !! 35    # entry in intout
+contrl+10 !! contrl[5]     !! 1
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0]      !! index
+intin+2   !! intin[1]      !! 0
+intout    !! intout[0]     !! Return Value
+intout+2  !! intout[1..16] !! name[0..31]
+intout+64 !! intout[33]    !! name[32]
+intout+66 !! intout[34]    !! flags/font_format
+!end_table
+
+(!B)Hinweis:(!b) Im High-Byte von (!nolink [intout])[34] wird (!I)flags(!i)
+zurckgeliefert; im Low-Byte von (!nolink [intout])[34] (!I)font_format(!i).
+
+Um festzustellen, was fr einen Font man vor sich hat, mu man die Anzahl
+der Eintr„ge in (!nolink [intout]) ((!nolink [contrl])[4]) beachten. Ist
+(!nolink [contrl])[4] 33, so sind keine
+zus„tzlichen Informationen vorhanden und demzufolge mu es sich um einen
+(!B)Bitmapfont(!b) handeln. Ist (!nolink [contrl])[4] == 34, wird nur zus„tzlich in
+(!nolink [intout])[33] (name[32]) mitgeteilt, ob es sich um einen (!B)Vektorfont(!b)
+handelt. Nur wenn (!nolink [contrl])[4] == 35 ist, kann
+man mit (!nolink [intout])[34] (flags) den
+Fonttyp genauer feststellen und sofort erkennen, ob der Font „quidistant
+(monospaced) ist.
+
+(!nolink [intout])[34] wird nur zurckgeliefert, wenn (!nolink [contrl])[3] > 1
+und (!nolink [contrl])[5] = 1!
+
+(!ende_liste)
+!end_node
+
+!else
+
+!begin_node vqt_ext_name
+
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+¯Inquire Face Name and Index® - Informationen ber einen Zeichensatz
+ermitteln.
+
+!item [VDI-Nummer:]
+130 (Unterfunktion 1)
+
+!item [Deklaration:]
+int16_t vqt_ext_name ( int16_t handle, int16_t index, int8_t *name,
+                    uint16_t *font_format, uint16_t *flags );
+
+!item [Beschreibung:]
+Die Funktion ermittelt Informationen ber einen Zeichensatz. Es gilt:
+
+!begin_xlist !short [font_format]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [index]
+Nummer des Zeichensatzes
+!item [name[0..31!]]
+Name des Zeichensatzes
+!item [name[32!]]
+Flag
+!begin_xlist !short
+!item [0 =]
+Bitmap-Font
+!item [1 =]
+Vektorfont
+!end_xlist
+!item [font_format]
+(!B)Format des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+Bitmap
+!item [Bit-1 =]
+Speedo
+!item [Bit-2 =]
+TrueType
+!item [Bit-3 =]
+Type-1
+!end_xlist
+!item [flags]
+(!B)Art des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0]
+!begin_xlist !short
+!item [= 0]
+(Font ist proportional)
+!item [= 1]
+(Font ist monospaced)
+!end_xlist
+!item [Bit-4]
+!begin_xlist !short
+!item [= 0]
+(Font ist kein Symbolfont)
+!item [= 1]
+(Font ist ein Symbolfont)
+!end_xlist
+!end_xlist
+!end_xlist
+
+(!B)Hinweis:(!b)
+Ein Font wird als (!I)Symbolfont(!i) eingestuft, wenn er im
+Bereich 'A'-'Z' und 'a'-'z' nicht vollst„ndig ist, oder wenn er laut der
+PANOSE Klassifizierung (!I)pictorial(!i) ist. Das entsprechende Flag ist
+daher nur als Anhaltspunkt zu betrachten (bei einem kyrillischen
+TrueType-Font w„re es z.B. auch gesetzt), und signalisiert, da die
+Zeichenbelegung im ASCII-Mapping (vst_charmap) nicht der normalen
+Atari-Belegung entspricht.
+
+!item [Ergebnis:]
+Die Funktion liefert den Index des Zeichensatzes zurck.
+
+!item [Verfgbar:]
+ab NVDI 3.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_ext_name]) ~  vst_load_fonts ~ vst_font ~  vqt_xfntinfo
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_ext_name
+!ignore_index
+
+(!begin_liste) [Umsetzung]
+
+!item [C:]
+int16_t vqt_ext_name ( int16_t handle, int16_t index, int8_t *name,
+                    uint16_t *font_format, uint16_t *flags );
+
+!item [Umsetzung:]
+!begin_verbatim
+int16_t vqt_ext_name (int16_t handle, int16_t index,
+                      int8_t *name, uint16_t *font_format,
+                      uint16_t *flags)
+{
+   intin[0] = index;
+   intin[1] = 0;         /* reserviert */
+
+   contrl[0] = 130;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   name[0..31]  = intout[1..32];
+   name[32]     = intout[33];
+   *flags       = (intout[34] >> 8) & 0xff;
+   *font_format = intout[34] & 0xff;
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 130   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 35    # Eintr„ge in intout
+contrl+10 !! contrl[5]     !! 1
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0]      !! index
+intin+2   !! intin[1]      !! 0
+intout    !! intout[0]     !! Return-Wert
+intout+2  !! intout[1..16] !! name[0..31]
+intout+64 !! intout[33]    !! name[32]
+intout+66 !! intout[34]    !! flags/font_format
+!end_table
+
+(!B)Hinweis:(!b) Im High-Byte von (!nolink [intout])[34] wird (!I)flags(!i)
+zurckgeliefert; im Low-Byte von (!nolink [intout])[34] (!I)font_format(!i).
+
+Um festzustellen, was fr einen Font man vor sich hat, mu man die Anzahl
+der Eintr„ge in (!nolink [intout]) ((!nolink [contrl])[4]) beachten. Ist
+(!nolink [contrl])[4] 33, so sind keine
+zus„tzlichen Informationen vorhanden und demzufolge mu es sich um einen
+(!B)Bitmapfont(!b) handeln. Ist (!nolink [contrl])[4] == 34, wird nur zus„tzlich in
+(!nolink [intout])[33] (name[32]) mitgeteilt, ob es sich um einen (!B)Vektorfont(!b)
+handelt. Nur wenn (!nolink [contrl])[4] == 35 ist, kann
+man mit (!nolink [intout])[34] (flags) den
+Fonttyp genauer feststellen und sofort erkennen, ob der Font „quidistant
+(monospaced) ist.
+
+(!nolink [intout])[34] wird nur zurckgeliefert, wenn (!nolink [contrl])[3] > 1
+und (!nolink [contrl])[5] = 1!
+
+(!ende_liste)
+!end_node
+
+!endif

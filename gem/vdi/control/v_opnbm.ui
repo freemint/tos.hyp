@@ -1,0 +1,383 @@
+!iflang [english]
+
+!begin_node v_opnbm
+
+(!begin_liste) [Availability]
+
+!item [Name:]
+¯Open Bitmap® - ”ffnet eine Offscreen Bitmap
+
+!item [Opcode:]
+100 (Sub-Opcode 1)
+
+!item [Syntax:]
+void v_opnbm ( int16_t *work_in, MFDB *bitmap, int16_t *handle, int16_t *work_out );
+
+!item [Description:]
+Die Funktion v_opnbm () dient zur Erzeugung von Offscreen-Bitmaps. Man kann
+ihr entweder die Gr”e eines Bitmap angeben, die Sie allozieren soll, oder
+ihr eine Bitmap bergeben. Die Bitmap wird im gleichen Format wie die des
+Bildschirms verwaltet, wodurch schnelles Kopieren zwischen beiden m”glich
+ist.
+
+!begin_xlist !short [work_in+15..19+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+graf_handle()
+!item [work_in[0..10!]]
+wie bei v_opnwk()/v_opnvwk() definiert
+!item [work_in[11!]]
+Breite -1 (z.B. 1279)
+!item [work_in[12!]]
+H”he -1 (z.B. 959)
+!item [work_in[13!]]
+Breite eines Pixels in Mikrometern
+!item [work_in[14!]]
+H”he eines Pixels in Mikrometern
+!item [work_in[15..19!]]
+reserviert, sollte 0 enthalten
+!end_xlist
+
+Die Funktion steht ab EdDI-Version 1.00 zur Verfgung. Ab (!nolink [EdDI]) 1.1 kann
+v_opnbm() mit zus„tzlichen Parametern in (!I)work_in[15..19](!i) aufgerufen
+werden. Es wird dann versucht, eine Bitmap in dem durch diese Parameter
+beschriebenen Format zu ”ffnen. Sollte fr das angegebene Format kein
+Treiber vorhanden sein, kann die Bitmap nicht erzeugt werden. Es gilt:
+
+!begin_xlist !short [work_in+15..16+]
+!item [work_in[15..16!]]
+Anzahl der darstellbaren Farben
+!item [work_in[17!]]
+Anzahl der Planes
+!item [work_in[18!]]
+Pixelformat
+!item [work_in[19!]]
+Bitreihenfolge
+!end_xlist
+
+Pixelformat und Bitreihenfolge werden bei vq_scrninfo genauer beschrieben.
+Mit den folgenden Parametern kann z.B. eine Offscreen-Bitmap mit 256 Farben
+und Interleaved Planes erzeugt werden:
+
+!begin_verbatim
+work_in[15..16] = 256;  /* 256 Farben             */
+work_in[17] = 8;        /* 8 Farbebenen           */
+work_in[18] = 0;        /* Interleaved Planes     */
+work_in[19] = 1;        /* normale Bitreihenfolge */
+!end_verbatim
+
+(!B)Achtung:(!b) Der Eintrag (!I)work_in[11](!i) sollte bei Addition von 1
+ohne Rest durch 16 teilbar sein. Andernfalls rundet der VDI Treiber auf den
+n„chsth”heren ohne Rest teilbaren Wert.
+
+Wird fr Pixelbreite und -H”he 0 angegeben, so werden die Werte des
+Bildschirms benutzt. Nach erfolgreichem Aufruf enth„lt der Parameter
+(!I)handle(!i) die Kennung der erzeugten Bitmap.
+
+(!B)Hinweis:(!b) Die Benutzung von Offscreen-Bitmaps bietet sich auch dann
+an, wenn man Effekte wie starkes Flackern vermeiden m”chte. In diesem Fall
+baut man Teile der Grafik in der Bitmap auf und bertr„gt die Bitmap mit
+vrt_cpyfm oder vro_cpyfm auf den Bildschirm.
+
+!item [(!nolink [Return]) Value:]
+Informationen werden ber das (!I)work_out(!i) Array bzw. den
+Memory-Form-Definiton-Block (MFDB) nach auen gereicht:
+
+!begin_xlist !short [work_out+00..00+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [work_out[0..1!]]
+wie bei v_opnwk()/v_opnvwk() definiert
+!item [work_out[2!]]
+0
+!item [work_out[3..38!]]
+wie bei (!nolink [v_opnwk])()/(!nolink [v_opnvwk])() definiert
+!item [work_out[39!]]
+0 (keine Hardw.-Palette vorh., da Bitmap)
+!item [work_out[39..56!]]
+wie bei (!nolink [v_opnwk(!nolink [()/(!nolink [v_opnvwk])() definiert
+!item [bitmap]
+Zeiger auf einen MFDB
+!end_xlist
+
+Falls bitmap->fd_addr gleich NULL ist, so wird anhand der Gr”enangaben in
+(!I)work_in(!i) Speicher fr die Bitmap angefordert (die Bitmap wird im
+Gegensatz zu (!nolink [v_opnvwk])() gel”scht).
+
+Um eine Bitmap im ger„tespezifischen Format zu ”ffnen, mu
+(!I)bitmap->fd_nplanes(!i) eine Null oder die Ebenenanzahl des Schirms
+enthalten (work_out[4] bei vq_extnd()). Ist bitmap->fd_nplanes 1, wird eine
+monochrome Bitmap angelegt.
+
+Die Eintr„ge des (!nolink [MFDB]) (fd_addr, fd_w, fd_h, fd_wdwidth, fd_stand,
+fd_nplanes) werden vom (!nolink [VDI])-Treiber gesetzt und an die aufrufende Applikation
+zurckgegeben. Wenn nicht nicht gengend Speicher vorhanden ist, wird der
+Inhalt des MFDBs nicht ver„ndert; ein Null-Handle wird zurckgegeben.
+
+Wenn (!I)bitmap->fd_addr(!i) ungleich NULL ist, wird dieser Eintrag als
+Zeiger auf eine Bitmap interpretiert. Wenn die Bitmap im Standardformat
+vorliegt, wird sie ins ger„tespezifische Format umgewandelt. Liegt sie schon
+im ger„tespezifischen Format vor, so wird sie nicht umgewandelt. Falls die
+Aufl”sung der Bitmap (d.h. die Anzahl der Farben und Planes) nicht
+untersttzt wird, gibt v_opnbm() ein Null-Handle zurck.
+
+!item [Availability:]
+
+!item [Group:]
+Control Function
+
+!item [See Also:]
+(!link [Binding] [Bindings for v_opnbm]) ~  NVDI ~  Off-Screen-Bitmaps ~  v_clsbm
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings for v_opnbm
+!ignore_index
+
+(!begin_liste) [GEM-Arrays]
+
+!item [C:]
+void v_opnbm ( int16_t *work_in, MFDB *bitmap, int16_t *handle, int16_t *work_out );
+
+!item [Binding:]
+!begin_verbatim
+void v_opnbm (int16_t *work_in, MFDB *bitmap, int16_t *handle,
+              int16_t *work_out)
+{
+   intin[0..19] = work_in[0..19];
+
+   contrl[0] = 100;
+   contrl[1] = 0;
+   contrl[3] = 20;
+   contrl[5] = 1;
+   contrl[6] = handle;
+   contrl[7..8] = bitmap;
+
+   vdi ();
+
+   *handle = contrl[6];
+   work_out[0..44]  = intout[0..44];
+   work_out[45..56] = ptsout[0..11];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Address !! Element !! Contents
+!hline
+contrl    !! contrl[0]     !! 100   Function Opcode
+contrl+2  !! contrl[1]     !! 0     # entry in ptsin
+contrl+4  !! contrl[2]     !! 6     # entry in ptsout
+contrl+6  !! contrl[3]     !! 20    # entry in intin
+contrl+8  !! contrl[4]     !! 45    # entry in intout
+contrl+10 !! contrl[5]     !! 1     Sub-Opcode
+contrl+12 !! contrl[6]     !! handle
+contrl+14 !! contrl[7..8]  !! bitmap
+intin     !! intin[0..19]  !! work_in[0..19]
+intout    !! intout[0..44] !! work_out[0..44]
+ptsout    !! ptsout[0..11] !! work_out[45..56]
+!end_table
+
+(!ende_liste)
+!end_node
+
+!else
+
+!begin_node v_opnbm
+
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+¯Open Bitmap® - ”ffnet eine Offscreen Bitmap
+
+!item [VDI-Nummer:]
+100 (Unterfunktion 1)
+
+!item [Deklaration:]
+void v_opnbm ( int16_t *work_in, MFDB *bitmap, int16_t *handle, int16_t *work_out );
+
+!item [Beschreibung:]
+Die Funktion v_opnbm () dient zur Erzeugung von Offscreen-Bitmaps. Man kann
+ihr entweder die Gr”e eines Bitmap angeben, die Sie allozieren soll, oder
+ihr eine Bitmap bergeben. Die Bitmap wird im gleichen Format wie die des
+Bildschirms verwaltet, wodurch schnelles Kopieren zwischen beiden m”glich
+ist.
+
+!begin_xlist !short [work_in+15..19+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+graf_handle()
+!item [work_in[0..10!]]
+wie bei v_opnwk()/v_opnvwk() definiert
+!item [work_in[11!]]
+Breite -1 (z.B. 1279)
+!item [work_in[12!]]
+H”he -1 (z.B. 959)
+!item [work_in[13!]]
+Breite eines Pixels in Mikrometern
+!item [work_in[14!]]
+H”he eines Pixels in Mikrometern
+!item [work_in[15..19!]]
+reserviert, sollte 0 enthalten
+!end_xlist
+
+Die Funktion steht ab EdDI-Version 1.00 zur Verfgung. Ab (!nolink [EdDI]) 1.1 kann
+v_opnbm() mit zus„tzlichen Parametern in (!I)work_in[15..19](!i) aufgerufen
+werden. Es wird dann versucht, eine Bitmap in dem durch diese Parameter
+beschriebenen Format zu ”ffnen. Sollte fr das angegebene Format kein
+Treiber vorhanden sein, kann die Bitmap nicht erzeugt werden. Es gilt:
+
+!begin_xlist !short [work_in+15..16+]
+!item [work_in[15..16!]]
+Anzahl der darstellbaren Farben
+!item [work_in[17!]]
+Anzahl der Planes
+!item [work_in[18!]]
+Pixelformat
+!item [work_in[19!]]
+Bitreihenfolge
+!end_xlist
+
+Pixelformat und Bitreihenfolge werden bei vq_scrninfo genauer beschrieben.
+Mit den folgenden Parametern kann z.B. eine Offscreen-Bitmap mit 256 Farben
+und Interleaved Planes erzeugt werden:
+
+!begin_verbatim
+work_in[15..16] = 256;  /* 256 Farben             */
+work_in[17] = 8;        /* 8 Farbebenen           */
+work_in[18] = 0;        /* Interleaved Planes     */
+work_in[19] = 1;        /* normale Bitreihenfolge */
+!end_verbatim
+
+(!B)Achtung:(!b) Der Eintrag (!I)work_in[11](!i) sollte bei Addition von 1
+ohne Rest durch 16 teilbar sein. Andernfalls rundet der VDI Treiber auf den
+n„chsth”heren ohne Rest teilbaren Wert.
+
+Wird fr Pixelbreite und -H”he 0 angegeben, so werden die Werte des
+Bildschirms benutzt. Nach erfolgreichem Aufruf enth„lt der Parameter
+(!I)handle(!i) die Kennung der erzeugten Bitmap.
+
+(!B)Hinweis:(!b) Die Benutzung von Offscreen-Bitmaps bietet sich auch dann
+an, wenn man Effekte wie starkes Flackern vermeiden m”chte. In diesem Fall
+baut man Teile der Grafik in der Bitmap auf und bertr„gt die Bitmap mit
+vrt_cpyfm oder vro_cpyfm auf den Bildschirm.
+
+!item [Ergebnis:]
+Informationen werden ber das (!I)work_out(!i) Array bzw. den
+Memory-Form-Definiton-Block (MFDB) nach auen gereicht:
+
+!begin_xlist !short [work_out+00..00+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [work_out[0..1!]]
+wie bei v_opnwk()/v_opnvwk() definiert
+!item [work_out[2!]]
+0
+!item [work_out[3..38!]]
+wie bei (!nolink [v_opnwk])()/(!nolink [v_opnvwk])() definiert
+!item [work_out[39!]]
+0 (keine Hardw.-Palette vorh., da Bitmap)
+!item [work_out[39..56!]]
+wie bei (!nolink [v_opnwk(!nolink [()/(!nolink [v_opnvwk])() definiert
+!item [bitmap]
+Zeiger auf einen MFDB
+!end_xlist
+
+Falls bitmap->fd_addr gleich NULL ist, so wird anhand der Gr”enangaben in
+(!I)work_in(!i) Speicher fr die Bitmap angefordert (die Bitmap wird im
+Gegensatz zu (!nolink [v_opnvwk])() gel”scht).
+
+Um eine Bitmap im ger„tespezifischen Format zu ”ffnen, mu
+(!I)bitmap->fd_nplanes(!i) eine Null oder die Ebenenanzahl des Schirms
+enthalten (work_out[4] bei vq_extnd()). Ist bitmap->fd_nplanes 1, wird eine
+monochrome Bitmap angelegt.
+
+Die Eintr„ge des (!nolink [MFDB]) (fd_addr, fd_w, fd_h, fd_wdwidth, fd_stand,
+fd_nplanes) werden vom (!nolink [VDI])-Treiber gesetzt und an die aufrufende Applikation
+zurckgegeben. Wenn nicht nicht gengend Speicher vorhanden ist, wird der
+Inhalt des MFDBs nicht ver„ndert; ein Null-Handle wird zurckgegeben.
+
+Wenn (!I)bitmap->fd_addr(!i) ungleich NULL ist, wird dieser Eintrag als
+Zeiger auf eine Bitmap interpretiert. Wenn die Bitmap im Standardformat
+vorliegt, wird sie ins ger„tespezifische Format umgewandelt. Liegt sie schon
+im ger„tespezifischen Format vor, so wird sie nicht umgewandelt. Falls die
+Aufl”sung der Bitmap (d.h. die Anzahl der Farben und Planes) nicht
+untersttzt wird, gibt v_opnbm() ein Null-Handle zurck.
+
+!item [Verfgbar:]
+
+!item [Gruppe:]
+Kontrollfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr v_opnbm]) ~  NVDI ~  Off-Screen-Bitmaps ~  v_clsbm
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr v_opnbm
+!ignore_index
+
+(!begin_liste) [Umsetzung]
+
+!item [C:]
+void v_opnbm ( int16_t *work_in, MFDB *bitmap, int16_t *handle, int16_t *work_out );
+
+!item [Umsetzung:]
+!begin_verbatim
+void v_opnbm (int16_t *work_in, MFDB *bitmap, int16_t *handle,
+              int16_t *work_out)
+{
+   intin[0..19] = work_in[0..19];
+
+   contrl[0] = 100;
+   contrl[1] = 0;
+   contrl[3] = 20;
+   contrl[5] = 1;
+   contrl[6] = handle;
+   contrl[7..8] = bitmap;
+
+   vdi ();
+
+   *handle = contrl[6];
+   work_out[0..44]  = intout[0..44];
+   work_out[45..56] = ptsout[0..11];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 100   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 6     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! 20    # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 45    # Eintr„ge in intout
+contrl+10 !! contrl[5]     !! 1     Unterfunktion
+contrl+12 !! contrl[6]     !! handle
+contrl+14 !! contrl[7..8]  !! bitmap
+intin     !! intin[0..19]  !! work_in[0..19]
+intout    !! intout[0..44] !! work_out[0..44]
+ptsout    !! ptsout[0..11] !! work_out[45..56]
+!end_table
+
+(!ende_liste)
+!end_node
+
+!endif
