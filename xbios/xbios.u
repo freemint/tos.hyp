@@ -1,10 +1,711 @@
 !iflang [english]
 
-Achtung!! Nach dem Umkopieren des deutschen Teils in den englischen Teil,
-mssen die CT60 Funktionen und die CENTscreen Funktionen in dem deutschen
-Teil dieser Datei noch bersetzt werden. Es handelt sich dabei um eine
-Kurzbeschreibung in der Funktionsliste der CT60 Funktionen und der
-CENTscreen Funktionen.
+
+!begin_node Das XBIOS
+
+Diese Funktionen erm”glichen den geordneten Zugriff auf die ver!-schiedenen
+Spezial-Chips im Atari. Sie werden ber den 680X0-Trap #14 aufgerufen und
+sollten nur verwendet werden, wenn keine Routinen einer h”heren Ebene
+(GEMDOS, BIOS) zur Verfgung stehen, die statt dessen benutzt werden
+k”nnten. Das (!nolink [XBIOS]) l„t sich in folgende Funktionsgruppen
+einteilen:
+
+!begin_itemize !short
+!item Bildschirmfunktionen
+!item CENTScreen-XBIOS-Erweiterung
+!item Crazy-Dots-XBIOS-Erweiterung
+!item CT60-XBIOS-Erweiterung
+!item Datum, Uhrzeit und Zeitgeber
+!item Druckerfunktionen
+!item DSP-Programmierung
+!item Interruptfunktionen
+!item Laufwerksfunktionen
+!item OverScan-XBIOS-Erweiterungen
+!item PCI-BIOS
+!item Schnittstellenprogrammierung
+!item Spezialbefehle
+!item Soundroutinen
+!item Tastaturfunktionen
+!end_itemize
+
+Das (!nolink [XBIOS]) ist in MagiC reentrant. Das heit, diese Funktionen
+k”nnen (solange der jeweilge Supervisor-Stack nicht berl„uft...) auch aus
+Interrupts mehrfach aufgerufen werden.
+
+!label XBIOS, Parameterbergabe im
+!label Parameterbergabe im XBIOS
+Das (!nolink [XBIOS]) nimmt seine Parameter auf dem Stack entgegen; dabei
+wird das letzte Argument aus der Parameterliste als erstes auf dem Stack
+abgelegt. Funktionsergebnisse werden im Prozessorregister d0
+zurck!-geliefert. Nur die Register d3-d7 und a3-a7 werden gerettet, alle
+anderen k”nnen durch den Aufruf ver„ndert werden.
+
+Querverweis: MetaDOS ~ (!link [Funktionsliste][XBIOS-Funktionsliste])
+
+!end_node
+
+!begin_node MetaDOS
+MetaDOS ist eine Betriebssystemerweiterung von Atari, die das (!B)XBIOS(!b)
+um ein Treiberkonzept fr (!I)blockorientierte(!i) Ger„te erweitert.
+MetaDOS erlaubt daher die Installation passender Treiber, und stellt
+(!B)neue XBIOS-Laufwerksfunktionen(!b) zur Verfgung.
+
+Die Kommunikation mit dem (!B)GEMDOS(!b) wird dabei durch spezielle
+(!I)logische(!i) Ger„tetreiber realisiert.
+!end_node
+
+
+!begin_node BIOS und XBIOS Fehlermeldungen
+!label XBIOS-Fehlermeldungen
+
+Fehler werden von BIOS und (!nolink [XBIOS]) als negative Werte gemeldet.
+Die folgende Liste enth„lt alle bekannten Fehlermeldungen:
+
+!begin_xlist !short [Nr. Bezeichnung]
+!item [Nr. Bezeichnung]
+Bedeutung
+!item [~]
+~
+!item [~~0 E_OK]
+Ok. Kein Fehler aufgetreten.
+!label ERROR
+!item [~-1 ERROR]
+Fehler (nicht genau zu spezifizieren)
+!label EDRVNR
+!item [~-2 EDRVNR]
+Angesprochenes Ger„t nicht funktionsbereit.
+!label EUNCMD
+!item [~-3 EUNCMD]
+Das angegebene Kommando ist nicht bekannt.
+!label E_CRC
+!item [~-4 E_CRC]
+Fehler beim Lesen eines Sektors.
+!label EBADRQ
+!item [~-5 EBADRQ]
+Ger„t kann das Kommando nicht ausfhren.
+!label E_SEEK
+!item [~-6 E_SEEK]
+Track konnte vom Laufwerk nicht erreicht werden.
+!label EMEDIA
+!item [~-7 EMEDIA]
+Lesefehler (Medium hat unkorrekten Bootsektor).
+!label ESECNF
+!item [~-8 ESECNF]
+Sektor wurde nicht gefunden.
+!label EPAPER
+!item [~-9 EPAPER]
+Drucker ist nicht betriebsbereit.
+!label EWRITF
+!item [-10 EWRITF]
+Fehler bei einer Schreiboperation.
+!label EREADF
+!item [-11 EREADF]
+Fehler bei einer Leseoperation.
+!label EGENRL
+!item [-12 EGENRL]
+Allgemeiner Fehler.
+!label EWRPRO
+!item [-13 EWRPRO]
+Medium ist schreibgeschtzt.
+!label E_CHNG
+!item [-14 E_CHNG]
+Medium wurde nach Schreiboperation gewechselt.
+!label EUNDEV
+!item [-15 EUNDEV]
+Ger„t ist dem Betriebssystem unbekannt.
+!label EBADSF
+!item [-16 EBADSF]
+Defekte Sektoren beim Formatieren entdeckt.
+!label EOTHER
+!item [-17 EOTHER]
+Eine andere Diskette mu eingelegt werden. Dieser Fehler tritt nur auf,
+wenn Laufwerk B: angesprochen wird, ohne angeschlossen zu sein. In
+diesem Fall wird der Benutzer aufgefordert, die Diskette in das erste
+Laufwerk einzufgen.
+!label EINSERT
+!item [-18 EINSERT]
+MetaDOS-Fehler: Medium einlegen
+!label EDVNRSP
+!item [-19 EDVNRSP]
+(!nolink [MetaDOS])-Fehler: Ger„t antwortet nicht.
+!label SNDNOTLOCK
+!item [-128 SNDNOTLOCK]
+Falcon-XBIOS: Sound-System nicht reserviert.
+!label SNDLOCKED
+!item [-129 SNDLOCKED]
+Falcon-XBIOS: Sound-System bereits reserviert.
+!end_xlist
+
+Querverweis: (!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~ GEMDOS-Fehlermeldungen
+
+!end_node
+
+
+!begin_node xbios-Trap
+!label xbios
+(!begin_liste) [Beschreibung]
+!item [Name:]
+¯xbios® - XBios-Trap ausfhren.
+Peripheriebausteins sperren.
+!item [Deklaration:]
+int32_t xbios( void ... );
+!item [Beschreibung:]
+Die Routine xbios fhrt einen TRAP #14 durch. Die
+bergebenen Parameter h„ngen von der jeweiligen (!nolink [XBIOS])-
+Funktion ab.
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis einen Wert vom Datentyp int32_t.
+
+!item [Querverweis]    bios ~ gemdos ~ XBIOS ~ (!link [Dispatcher][XBIOS-Dispatcher])
+(!ende_liste)
+!end_node
+
+!begin_node Bildschirmfunktionen
+
+!begin_itemize !short
+!item Cursconf~~~ Cursordarstellung „ndern oder ermitteln.
+!item EgetPalette Farbtabelle lesen.
+!item EgetShift~~ Shift Mode Register lesen.
+!item EsetBank~~~ Farbtabelle setzen.
+!item EsetColor~~ Farbtabelleneintrag setzen.
+!item EsetGray~~~ Farbinterpretation setzen.
+!item EsetPalette Farbtabelle laden.
+!item EsetShift~~ Shift Mode Register setzen.
+!item EsetSmear~~ Farbverwischung setzen.
+!item Getrez~~~~~ Aufl”sung ermitteln.
+!item Initmouse~~ Mauszeiger initialisieren.
+!item Logbase~~~~ Adresse des logischen Bildschirmspeichers ermitteln.
+!item mon_type~~~ Monitortyp ermitteln. 
+!item Physbase~~~ Adresse des physikal. Bildschirmspeichers ermitteln.
+!item Setcolor~~~ Farbe einstellen.
+!item Setpalette~ Farbpalette ausw„hlen. 
+!item Setscreen~~ Festlegen der Bildschirmaufl”sung und -adressen.
+!item VgetRGB~~~~ RGB-Wert einer Farbe ermitteln.
+!item VSetscreen~ Festlegen der Bildschirmaufl”sung und -adressen
+!item VgetSize~~~ Gr”e des Bildschirmpuffers ermitteln.
+!item VsetMask~~~ Transparenz fr True-Color setzen.
+!item Vsetmode~~~ Videohardwareregister setzen.
+!item VsetRGB~~~~ RGB-Wert einer Farbe setzen.
+!item VsetSync~~~ Synchronisationsart setzen. 
+!item Vsync~~~~~~ Vertikales Synchronisationssignal abfragen.
+!end_itemize
+
+!include xbios/bildscrm/cursconf.ui
+!include xbios/bildscrm/egetpale.ui
+!include xbios/bildscrm/egetshif.ui
+!include xbios/bildscrm/esetbank.ui
+!include xbios/bildscrm/esetcolo.ui
+!include xbios/bildscrm/esetgray.ui
+!include xbios/bildscrm/esetpale.ui
+!include xbios/bildscrm/esetshif.ui
+!include xbios/bildscrm/esetsmea.ui
+!include xbios/bildscrm/getrez.ui
+!include xbios/bildscrm/initmous.ui
+!include xbios/bildscrm/logbase.ui
+!include xbios/bildscrm/mon_type.ui
+!include xbios/bildscrm/physbase.ui
+!include xbios/bildscrm/setcolor.ui
+!include xbios/bildscrm/setpalet.ui
+!include xbios/bildscrm/setscree.ui
+!include xbios/bildscrm/vgetrgb.ui
+!include xbios/bildscrm/vsetscre.ui
+!include xbios/bildscrm/vgetsize.ui
+!include xbios/bildscrm/vsetmask.ui
+!include xbios/bildscrm/vsetmode.ui
+!include xbios/bildscrm/vsetrgb.ui
+!include xbios/bildscrm/vsetsync.ui
+!include xbios/bildscrm/vsync.ui
+!include xbios/bildscrm/bildscrm.ui
+!end_node
+
+!begin_node CENTScreen-XBIOS-Erweiterung
+
+!begin_itemize !short
+!item MultiMon~ Multisynchro mode
+!item SetMon~~~ Set the monitor's kind
+!item SizeComp~ Vgetsize compatibility
+!item Vattrib~~ Change the attributs of a video mode
+!item Vclose~~~ Shut down
+!item Vcreate~~ Add a video mode
+!item Vdelete~~ Delete a video mode
+!item Vfirst~~~ Search the first video mode
+!item Vload~~~~ Load VIDEO.DAT
+!item Vlock~~~~ Lock the virtual screen
+!item Vnext~~~~ Next video mode
+!item Voffset~~ Locating of the virtual screen
+!item Vopen~~~~ Wake up the screen
+!item Vread~~~~ Inquire on the actual video mode
+!item Vsave~~~~ Save VIDEO.DAT
+!item Vscroll~~ Choose the method of scrolling
+!item Vseek~~~~ Locating of the virtual screen
+!item Vsize~~~~ Return the size of the screen
+!item Vvalid~~~ Valid a video mode
+!item Vwrite~~~ Change the screen resolution
+!end_itemize
+
+(!B)Hinweis:(!b) (!nl)
+Es handelt sich hierbei (!I)nicht(!i) um dokumentierte Routinen des
+Betriebssystems.
+
+!include xbios/centscrn/multimon.ui
+!include xbios/centscrn/setmon.ui
+!include xbios/centscrn/sizecomp.ui
+!include xbios/centscrn/vattrib.ui
+!include xbios/centscrn/vclose.ui
+!include xbios/centscrn/vcreate.ui
+!include xbios/centscrn/vdelete.ui
+!include xbios/centscrn/vfirst.ui
+!include xbios/centscrn/vload.ui
+!include xbios/centscrn/vlock.ui
+!include xbios/centscrn/vnext.ui
+!include xbios/centscrn/voffset.ui
+!include xbios/centscrn/vopen.ui
+!include xbios/centscrn/vread.ui
+!include xbios/centscrn/vsave.ui
+!include xbios/centscrn/vscroll.ui
+!include xbios/centscrn/vseek.ui
+!include xbios/centscrn/vsize.ui
+!include xbios/centscrn/vvalid.ui
+!include xbios/centscrn/vwrite.ui
+!end_node
+
+
+!begin_node Crazy-Dots-XBIOS-Erweiterung
+
+!begin_itemize !short
+!item GetScreenDescriptor
+!item ResetScreen
+!item GetNumberofPModes
+!item GetPMode
+!item ReadMode
+!item CopyModeToActiveMode
+!item ActiveModeNumber
+!item GetActiveModeDesc
+!item GetRegisterbase
+!item GetFeatures
+!item GetActiveFeatures
+!end_itemize
+
+(!B)Hinweis:(!b) (!nl)
+Diese Funktionen stehen nur zur Verfgung, wenn der Treiber der
+Grafikkarte Crazy-Dots gestartet wurde. Es handelt sich (!I)nicht(!i) um
+dokumentierte Routinen des Betriebssystems.
+
+!include xbios/crazydot/gscrdesc.ui
+!include xbios/crazydot/resetscr.ui
+!include xbios/crazydot/getnofpm.ui
+!include xbios/crazydot/getpmode.ui
+!include xbios/crazydot/readmode.ui
+!include xbios/crazydot/cpmd2amd.ui
+!include xbios/crazydot/acmodenr.ui
+!include xbios/crazydot/gamddesc.ui
+!include xbios/crazydot/gregbase.ui
+!include xbios/crazydot/getfeat.ui
+!include xbios/crazydot/getafeat.ui
+!end_node
+
+
+!begin_node CT60-XBIOS-Erweiterung
+
+!begin_xlist [ù ct60_read_core_temperature] !short
+!item [ù CacheCtrl] CPU Cacheverwaltung
+!item [ù ct60_cache] aktivieren/deaktivieren der 68060 Caches.
+!item [ù ct60_flush_cache] flush 68060 Caches.
+!item [ù ct60_read_core_temperature] Read the 68060 temperature.
+!item [ù ct60_rw_parameter] Read or change a parameter inside the flash eprom.
+!end_xlist
+
+!include xbios/ct60/rcortemp.ui
+!include xbios/ct60/rd_param.ui
+!include xbios/ct60/cache.ui
+!include xbios/ct60/fl_cache.ui
+!end_node
+
+!begin_node Datum, Uhrzeit und Zeitgeber
+
+!begin_itemize !short
+!item Gettime~~ Datum und Uhrzeit ermitteln.
+!item NVMaccess Konfiguration des NVM der Echtzeituhr.
+!item Settime~~ Datum und Uhrzeit einstellen.
+!item Xbtimer~~ Systemzeitgeber initialisieren.
+!end_itemize
+
+!include xbios/datetime/gettime.ui
+!include xbios/datetime/nvmacces.ui
+!include xbios/datetime/settime.ui
+!include xbios/datetime/xbtimer.ui
+!include xbios/datetime/datetime.ui
+!end_node
+
+!begin_node Druckerfunktionen
+
+!begin_itemize !short
+!item Prtblk Hardcopy-Funktion mit Parameterblock.
+!item Scrdmp Bildschirminhalt ausdrucken.
+!item Setprt Druckereinstellung ermitteln oder „ndern.
+!end_itemize
+
+Querverweis: Bildschirmfunktionen ~ GDOS-Treiber
+
+!include xbios/drucker/prtblk.ui
+!include xbios/drucker/scrdmp.ui
+!include xbios/drucker/setprt.ui
+!end_node
+
+!begin_node DSP-Programmierung
+
+Auf dem Falcon stehen die folgenden Routinen zur Programmierung des
+digitalen Signalprozessors DSP-56001 zur Verfgung:
+!begin_xlist [ù Dsp_RequestUniqueAbility] !short
+!item [ù Dsp_Available]
+Freien Speicher ermitteln.
+!item [ù Dsp_BlkBytes]
+Byteweiser Datentransfer.
+!item [ù Dsp_BlkHandShake]
+Datentransfer mit Handshake.
+!item [ù Dsp_BlkUnpacked]
+Transfer von DSP-Worten (max. 4 Byte L„nge).
+!item [ù Dsp_BlkWords]
+Wortweiser Datentransfer.
+!item [ù Dsp_DoBlock]
+Datentransfer zum DSP.
+!item [ù Dsp_ExecBoot]
+Bootprogramm fr DSP laden.
+!item [ù Dsp_ExecProg]
+DSP-Programm starten.
+!item [ù Dsp_FlushSubroutines]
+Unterprogramme l”schen.
+!item [ù Dsp_GetProgAbility]
+Identifikation erfragen.
+!item [ù Dsp_GetWordSize]
+L„nge von DSP-Worten ermitteln.
+!item [ù Dsp_Hf0]
+Bit 3 des HSR setzen bzw. l”schen.
+!item [ù Dsp_Hf1]
+Bit 4 des HSR setzen bzw. l”schen.
+!item [ù Dsp_Hf2]
+Bit 3 des HCR ermitteln.
+!item [ù Dsp_Hf3]
+Bit 4 des HCR ermitteln.
+!item [ù Dsp_HStat]
+Wert des ISR-Registers ermitteln.
+!item [ù Dsp_InqSubrAbility]
+Unterprogrammkennung ermitteln.
+!item [ù Dsp_InStream]
+Datentransfer zum DSP via Interrupt.
+!item [ù Dsp_IOStream]
+Datentransfer vom und zum DSP via Interrupt.
+!item [ù Dsp_LoadProg]
+DSP-Programm laden und starten.
+!item [ù Dsp_LoadSubroutine]
+Unterprogramm installieren.
+!item [ù Dsp_Lock]
+Verfgbarkeit des DSP ermitteln.
+!item [ù Dsp_LodToBinary]
+LOD- in Bin„rformat konvertieren.
+!item [ù Dsp_MultBlocks]
+Datentransfer vom und zum DSP.
+!item [ù Dsp_OutStream]
+Datentransfer vom DSP via Interrupt.
+!item [ù Dsp_RemoveInterrupts]
+šbertragungsroutinen entfernen.
+!item [ù Dsp_RequestUniqueAbility]
+Identifikation erteilen.
+!item [ù Dsp_Reserve]
+Speicher reservieren.
+!item [ù Dsp_RunSubroutine]
+Unterprogramm ausfhren.
+!item [ù Dsp_SetVectors]
+Eigene šbertragungsroutinen installieren.
+!item [ù Dsp_TriggerHC]
+Host Command ausfhren.
+!item [ù Dsp_Unlock]
+DSP freigeben.
+!end_xlist
+
+Querverweis: Schnittstellenprogrammierung
+
+!include xbios/dsp56001/availabl.ui
+!include xbios/dsp56001/blkbytes.ui
+!include xbios/dsp56001/blkhndsh.ui
+!include xbios/dsp56001/blkunpac.ui
+!include xbios/dsp56001/blkwords.ui
+!include xbios/dsp56001/doblock.ui
+!include xbios/dsp56001/execboot.ui
+!include xbios/dsp56001/execprog.ui
+!include xbios/dsp56001/flushsub.ui
+!include xbios/dsp56001/getproga.ui
+!include xbios/dsp56001/getwords.ui
+!include xbios/dsp56001/hf0.ui
+!include xbios/dsp56001/hf1.ui
+!include xbios/dsp56001/hf2.ui
+!include xbios/dsp56001/hf3.ui
+!include xbios/dsp56001/hstat.ui
+!include xbios/dsp56001/inqsubra.ui
+!include xbios/dsp56001/instream.ui
+!include xbios/dsp56001/iostream.ui
+!include xbios/dsp56001/loadprog.ui
+!include xbios/dsp56001/loadsubr.ui
+!include xbios/dsp56001/lock.ui
+!include xbios/dsp56001/lodtobin.ui
+!include xbios/dsp56001/multbloc.ui
+!include xbios/dsp56001/outstrea.ui
+!include xbios/dsp56001/removein.ui
+!include xbios/dsp56001/requestu.ui
+!include xbios/dsp56001/reserve.ui
+!include xbios/dsp56001/runsubro.ui
+!include xbios/dsp56001/setvecto.ui
+!include xbios/dsp56001/triggerh.ui
+!include xbios/dsp56001/unlock.ui
+!end_node
+
+!begin_node Interruptfunktionen
+
+!begin_itemize !short
+!item Jdisint~ Interrupts sperren.
+!item Jenabint Interrupts freigeben.
+!end_itemize
+
+Querverweis: Schnittstellenprogrammierung
+
+!include xbios/interrpt/jdisint.ui
+!include xbios/interrpt/jenabint.ui
+!end_node
+
+!begin_node Laufwerksfunktionen
+
+!begin_itemize !short
+!item DMAread~~~~~~~~ Sektoren von Festplatte lesen.
+!item DMAwrite~~~~~~~ Sektoren auf Festplate schreiben.
+!item Flopfmt~~~~~~~~ Spur auf einer Diskette formatieren.
+!item Floprate~~~~~~~ Seekrate und (!nolink [Timeout der Floppy]) setzen.
+!item Floprd~~~~~~~~~ Einzelne Sektoren lesen.
+!item Flopver~~~~~~~~ Sektoren einer Diskette berprfen.
+!item Flopwr~~~~~~~~~ Einzelne Sektoren schreiben.
+!label MetaDOS-Funktionen
+!item Metaclose~~~~~~ Gibt ein MetaDOS Ger„t wieder frei.
+!item Metadiscinfo~~~ Ermittelt aktuelle Status-Informationen.
+!item Metagettoc~~~~~ Liefert das (!nolink [Inhaltsverzeichnis]) eines Ger„tes.
+!item Metainit~~~~~~~ Informationen ber (!nolink [MetaDOS]) Version ermitteln.
+!item Metaioctl~~~~~~ Schickt GEMDOS-Opcodes an ein (!nolink [MetaDOS]) Ger„t.
+!item Metaopen~~~~~~~ Initialisiert ein (!nolink [MetaDOS]) Ger„t.
+!item Metaread~~~~~~~ Liest Daten von einem (!nolink [MetaDOS]) Ger„t.
+!item Metasetsongtime Startet eine Audio-Wiedergabe.
+!item Metastartaudio~ Startet eine Audio-Wiedergabe.
+!item Metastatus~~~~~ Ermittelt den Status eines (!nolink [MetaDOS]) Ger„tes.
+!item Metastopaudio~~ Beendet eine Audio-Wiedergabe.
+!item Metawrite~~~~~~ Schreibt Daten auf ein (!nolink [MetaDOS]) Ger„t.
+!item Protobt~~~~~~~~ Bootsektor fr Diskette im Speicher generieren.
+!end_itemize
+
+Querverweis: (!link [GEMDOS-Dateifunktionen][Dateifunktionen des GEMDOS]) ~
+(!link [GEMDOS-Verzeichnisfunktionen][Verzeichnisfunktionen des GEMDOS])
+
+!include xbios/laufwerk/dmaread.ui
+!include xbios/laufwerk/dmawrite.ui
+!include xbios/laufwerk/flopfmt.ui
+!include xbios/laufwerk/floprate.ui
+!include xbios/laufwerk/floprd.ui
+!include xbios/laufwerk/flopver.ui
+!include xbios/laufwerk/flopwr.ui
+!include xbios/laufwerk/metaclos.ui
+!include xbios/laufwerk/metadinf.ui
+!include xbios/laufwerk/metagett.ui
+!include xbios/laufwerk/metainit.ui
+!include xbios/laufwerk/metaioct.ui
+!include xbios/laufwerk/metaopen.ui
+!include xbios/laufwerk/metaread.ui
+!include xbios/laufwerk/metasets.ui
+!include xbios/laufwerk/metastar.ui
+!include xbios/laufwerk/metastat.ui
+!include xbios/laufwerk/metastop.ui
+!include xbios/laufwerk/metawrit.ui
+!include xbios/laufwerk/protobt.ui
+!end_node
+
+!begin_node OverScan-XBIOS-Erweiterungen
+
+!begin_xlist [ù Oscanswitc] !short
+!item [ù Oscanis]
+Liefert die Versionsnummer von OverScan.
+!item [ù Oscanpatch]
+Patchbereich von Overscan ermitteln.
+!item [ù Oscanphy]
+Umschalten des (!nolink [Physbase])-Emulators.
+!item [ù Oscanscr]
+Umschalten des (!nolink [Setscreen])-Aufrufes.
+!item [ù Oscanswitch]
+Aktuellen Modus umschalten oder abfragen.
+!item [ù Oscantab]
+Zeiger auf Datenstruktur einer Aufl”sung ermitteln.
+!item [ù Oscanvb]
+Schaltet die VB-Randtest-Routine, sowie einige Tests im IKBD-Interrupt
+ein oder aus.
+!end_xlist
+(!B)Hinweis:(!b) Diese Funktionen stehen nur unter OverScan zur Verfgung;
+es handelt sich (!I)nicht(!i) um dokumentierte Routinen des
+Betriebssystems.
+
+!include xbios/overscan/oscanis.ui
+!include xbios/overscan/oscanpat.ui
+!include xbios/overscan/oscanphy.ui
+!include xbios/overscan/oscanscr.ui
+!include xbios/overscan/oscanswi.ui
+!include xbios/overscan/oscantab.ui
+!include xbios/overscan/oscanvb.ui
+!end_node
+
+
+!begin_node PCI-BIOS
+
+!begin_xlist [ù find_pci_classcode] !short
+!item [ù find_pci_device]
+Find PCI device
+!item [ù find_pci_classcode]
+Find PCI class code
+!end_xlist
+
+!include xbios/pci_bios/fpdevice.ui
+!include xbios/pci_bios/fpclassc.ui
+!end_node
+
+!begin_node Schnittstellenprogrammierung
+
+!begin_xlist [ù Kbdvbase] !short
+!item [ù Bconmap]
+Ausw„hlen einer seriellen Schnittstelle.
+!item [ù Dosound]
+Soundgenerator programmieren.
+!item [ù ExtRsConf]
+Konfiguration der RS232/RS485-Schnittstelle
+!item [ù Giaccess]
+Register des GI-Soundchips lesen und schreiben.
+!item [ù Ikbdws]
+Programmierung des Tastatur-Chips.
+!item [ù Iorec]
+Interruptpuffer fr RS232, Tastatur-Chip und MIDI-Schnittstelle abfragen.
+!item [ù Kbdvbase]
+Puffer und Interruptvektoren fr Maus-, MIDI- und Tastaturschnittstelle
+abfragen.
+!item [ù Mfpint]
+Programmierung des Multifunktionsperipherie-Chips.
+!item [ù Midiws]
+Strings lesen und schreiben auf MIDI-Schnittstelle.
+!item [ù Offgibit]
+Bit im Port A-Register des GI-Chips l”schen.
+!item [ù Ongibit]
+Bit im Port A-Register des GI-Chips setzen.
+!item [ù Rsconf]
+Konfiguration der RS232-Schnittstelle.
+!end_xlist
+
+Querverweis: Interruptfunktionen
+
+!include xbios/intrface/bconmap.ui
+!include xbios/intrface/dosound.ui
+!include xbios/intrface/extrscon.ui
+!include xbios/intrface/giaccess.ui
+!include xbios/intrface/ikbdws.ui
+!include xbios/intrface/iorec.ui
+!include xbios/intrface/kbdvbase.ui
+!include xbios/intrface/mfpint.ui
+!include xbios/intrface/midiws.ui
+!include xbios/intrface/offgibit.ui
+!include xbios/intrface/ongibit.ui
+!include xbios/intrface/rsconf.ui
+!end_node
+
+!begin_node Soundroutinen
+
+Auf dem Falcon stehen die folgenden Routinen zur Soundprogrammierung zur
+Verfgung:
+
+!begin_xlist [ù setmontracks]  !short
+!item [ù buffoper] Aufnahme-/Wiedergabemodus setzen.
+!item [ù buffptr] Aufnahme-/Wiedergabeposition ermitteln.
+!item [ù devconnect] Audio-Subsystem-Komponenten verbinden.
+!item [ù dsptristate] Externe DSP-Hardware koordinieren.
+!item [ù gpio] šber externe DSP-Buchse kommunizieren.
+!item [ù locksnd] Soundsystem fr andere Anwendungen sperren.
+!item [ù setbuffer] Aufnahme-/Wiedergabepuffer setzen.
+!item [ù setinterrupt] Interrupt am Ende einer Aufnahme/Wiedergabe festlegen.
+!item [ù setmode] Aufnahme-/Wiedergabemodus w„hlen. 
+!item [ù setmontracks] Wiedergabespur fr internen Lautsprecher festlegen.
+!item [ù settracks] Spurenanzahl festlegen.
+!item [ù sndstatus] Status des A/D- und D/A-Wandlers ermitteln.
+!item [ù soundcmd] Parameter des A/D- und D/A-Wandlers setzen/ermitteln.
+!item [ù StarTrack] (!nolink [XBIOS])-Erweiterumg der StarTrack-Karte
+!item [ù unlocksnd] Soundsystem fr andere Anwendungen freigeben.
+!item [ù WavePlay]  Abspielen eines Samples
+
+!end_xlist
+(!B)Hinweis:(!b) Die Verfgbarkeit dieser Routinen auf anderen
+Rechnersystemen kann ber den (!link [McSn-Cookie][Cookie, McSn])
+oder den _SND-Cookie ermittelt werden.
+
+!include xbios/sound/buffoper.ui
+!include xbios/sound/buffptr.ui
+!include xbios/sound/devconne.ui
+!include xbios/sound/dsptrist.ui
+!include xbios/sound/gpio.ui
+!include xbios/sound/locksnd.ui
+!include xbios/sound/setbuffe.ui
+!include xbios/sound/setinter.ui
+!include xbios/sound/setmode.ui
+!include xbios/sound/setmontr.ui
+!include xbios/sound/settrack.ui
+!include xbios/sound/sndstatu.ui
+!include xbios/sound/soundcmd.ui
+!include xbios/sound/startrac.ui
+!include xbios/sound/unlocksn.ui
+!include xbios/sound/waveplay.ui
+!end_node
+
+!begin_node Spezialbefehle
+
+!begin_itemize !short
+!item Blitmode~ Blitterkonfiguration „ndern oder ermitteln.
+!item CacheCtrl CPU Cacheverwaltung
+!item CJar~~~~~ Erzeugen, Abfragen  und  L”schen von Cookies
+!item Dbmsg~~~~ Debugmeldungen ausgeben
+!item Puntaes~~ AES im ROM abschalten.
+!item Random~~~ Zufallszahlengenerator.
+!item Ssbrk~~~~ Speicherplatz reservieren (nur intern verwendet).
+!item Supexec~~ Unterprogramm im Supervisor-Modus starten.
+!item Trapper~~ Einklinken in Systemfunktionen.
+!item WdgCtrl~~ Einstellen des Hardware-Watchdog
+!end_itemize
+
+Querverweis: Schnittstellenprogrammierung
+
+!include xbios/spezial/blitmode.ui
+!include xbios/spezial/cachectr.ui
+!include xbios/spezial/cjar.ui
+!include xbios/spezial/dbmsg.ui
+!include xbios/spezial/janus.ui
+!include xbios/spezial/puntaes.ui
+!include xbios/spezial/random.ui
+!include xbios/spezial/ssbrk.ui
+!include xbios/spezial/supexec.ui
+!include xbios/spezial/trapper.ui
+!include xbios/spezial/wdgctrl.ui
+!end_node
+
+!begin_node Tastaturfunktionen
+
+!begin_itemize !short
+!item Bioskeys Bios-Tabelle fr Tastaturcodes zurcksetzen.
+!item Kbrate~~ Auto-Repeat der Tastatur „ndern oder ermitteln.
+!item Keytbl~~ Neue Tabelle fr Tastaturcodes vorgeben.
+!end_itemize
+
+Querverweis: ASCII-Tabelle ~  (!link [Scan-Code Tabelle][Der Scan-Code])
+
+!include xbios/tastatur/bioskeys.ui
+!include xbios/tastatur/kbrate.ui
+!include xbios/tastatur/keytbl.ui
+!end_node
+
 
 !else
 
@@ -229,33 +930,52 @@ Die Funktion liefert als Ergebnis einen Wert vom Datentyp int32_t.
 !begin_node CENTScreen-XBIOS-Erweiterung
 
 !begin_itemize !short
-!item MultiMon~ Multisynchro mode
-!item SetMon~~~ Set the (!nolink [monitor])'s kind
-!item SizeComp~ Vgetsize compatibility
-!item Vattrib~~ Change the attributs of a video mode
-!item Vclose~~~ Shut down
-!item Vcreate~~ Add a video mode
-!item Vdelete~~ Delete a video mode
-!item Vfirst~~~ Search the first video mode
-!item Vload~~~~ Load VIDEO.DAT
-!item Vlock~~~~ Lock the virtual screen
-!item Vnext~~~~ Next video mode
-!item Voffset~~ Locating of the virtual screen
-!item Vopen~~~~ Wake up the screen
-!item Vread~~~~ Inquire on the actual video mode
-!item Vsave~~~~ Save VIDEO.DAT
-!item Vscroll~~ Choose the method of scrolling
-!item Vseek~~~~ Locating of the virtual screen
-!item Vsize~~~~ (!nolink [Return]) the size of the screen
-!item Vvalid~~~ Valid a video mode
-!item Vwrite~~~ Change the screen resolution
+!item MultiMon~ Multisynchro Mode
+!item SetMon~~~ Monitortyp setzen
+!item SizeComp~ Vgetsize Kompatibilit„t
+!item Vattrib~~ Attribute des Videomodes „ndern
+!item Vclose~~~ Shutdown
+!item Vcreate~~ ein Videomode hinzufgen
+!item Vdelete~~ l”scht ein Videomode
+!item Vfirst~~~ Sucht den ersten Videomode
+!item Vload~~~~ L„dt VIDEO.DAT
+!item Vlock~~~~ Lockt den virtuellen Bildschirm
+!item Vnext~~~~ N„chster Videomode
+!item Voffset~~ Position des virtuellen Bildschirms
+!item Vopen~~~~ Bildschirm aufwecken
+!item Vread~~~~ Informationen ber aktuellen Videomode abfragen
+!item Vsave~~~~ speichert VIDEO.DAT
+!item Vscroll~~ Scrollmethode festlegen
+!item Vseek~~~~ setzen der Position des virtuellen Bildschirms
+!item Vsize~~~~ ermittelt die Gr”e des Bildschirms
+!item Vvalid~~~ prft einen Videomode
+!item Vwrite~~~ Aufl”sung wechseln
 !end_itemize
 
 (!B)Hinweis:(!b) (!nl)
 Es handelt sich hierbei (!I)nicht(!i) um dokumentierte Routinen des
 Betriebssystems.
 
-!include xbios/centscrn.ui
+!include xbios/centscrn/multimon.ui
+!include xbios/centscrn/setmon.ui
+!include xbios/centscrn/sizecomp.ui
+!include xbios/centscrn/vattrib.ui
+!include xbios/centscrn/vclose.ui
+!include xbios/centscrn/vcreate.ui
+!include xbios/centscrn/vdelete.ui
+!include xbios/centscrn/vfirst.ui
+!include xbios/centscrn/vload.ui
+!include xbios/centscrn/vlock.ui
+!include xbios/centscrn/vnext.ui
+!include xbios/centscrn/voffset.ui
+!include xbios/centscrn/vopen.ui
+!include xbios/centscrn/vread.ui
+!include xbios/centscrn/vsave.ui
+!include xbios/centscrn/vscroll.ui
+!include xbios/centscrn/vseek.ui
+!include xbios/centscrn/vsize.ui
+!include xbios/centscrn/vvalid.ui
+!include xbios/centscrn/vwrite.ui
 !end_node
 
 
@@ -280,28 +1000,28 @@ Diese Funktionen stehen nur zur Verfgung, wenn der Treiber der
 Grafikkarte Crazy-Dots gestartet wurde. Es handelt sich (!I)nicht(!i) um
 dokumentierte Routinen des Betriebssystems.
 
-!include xbios/crazydots/gscrdesc.ui
-!include xbios/crazydots/resetscr.ui
-!include xbios/crazydots/getnofpm.ui
-!include xbios/crazydots/getpmode.ui
-!include xbios/crazydots/readmode.ui
-!include xbios/crazydots/cpmd2amd.ui
-!include xbios/crazydots/acmodenr.ui
-!include xbios/crazydots/gamddesc.ui
-!include xbios/crazydots/gregbase.ui
-!include xbios/crazydots/getfeat.ui
-!include xbios/crazydots/getafeat.ui
+!include xbios/crazydot/gscrdesc.ui
+!include xbios/crazydot/resetscr.ui
+!include xbios/crazydot/getnofpm.ui
+!include xbios/crazydot/getpmode.ui
+!include xbios/crazydot/readmode.ui
+!include xbios/crazydot/cpmd2amd.ui
+!include xbios/crazydot/acmodenr.ui
+!include xbios/crazydot/gamddesc.ui
+!include xbios/crazydot/gregbase.ui
+!include xbios/crazydot/getfeat.ui
+!include xbios/crazydot/getafeat.ui
 !end_node
 
 
 !begin_node CT60-XBIOS-Erweiterung
 
 !begin_xlist [ù ct60_read_core_temperature] !short
-!item [ù CacheCtrl] CPU Cacheverwaltung
-!item [ù ct60_cache]
-!item [ù ct60_flush_cache]
-!item [ù ct60_read_core_temperature] Read the 68060 temperature.
-!item [ù ct60_rw_parameter] Read or change a parameter inside the flash eprom.
+!item [ù CacheCtrl] CPU Cacheverwaltung.
+!item [ù ct60_cache] aktivieren/deaktivieren der 68060 Caches.
+!item [ù ct60_flush_cache] flush 68060 Caches.
+!item [ù ct60_read_core_temperature] Temperatur des 68060 lesen.
+!item [ù ct60_rw_parameter] Lesen oder Schreiben eines Parameter im Flash Eprom.
 !end_xlist
 
 !include xbios/ct60/rcortemp.ui
