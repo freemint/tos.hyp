@@ -1,0 +1,124 @@
+!begin_node ARGV-Verfahren
+!label Kommandozeilen, erweiterte
+
+Das ARGV-Verfahren dient zur šbergabe erweiterter Kommandozeilen, und
+wurde im Herbst 1989 von (!I)Ken Badertscher(!i) (Atari-USA) offiziell
+spezifiziert. Das Verfahren arbeitet wie folgt:
+
+Die Environmentvariable ARGV zeigt an, da dieses Verfahren angewendet
+wird; der Wert der Variablen spielt dabei (!I)keine(!i) Rolle, allein die
+Anwesenheit ist entscheidend. Die ARGV-Variable muss die letzte
+Environmentvariable sein, damit das aufgerufene Programm den "vorderen"
+Teil als sein normales Environment weiterbenutzen kann.
+
+Die erweiterte Kommandozeile wird nun einfach als Folge von Strings
+(Null-Terminiert !) hinter ARGV in das Environment geschrieben. Der
+erste String enth„lt dabei den Namen des gestarteten Programms, wie
+man ihn auch bei (!nolink [Pexec]) bergibt (und entspricht dem bislang nicht
+genutzten argv[0]). Die weiteren Strings enthalten die einzelnen
+Parameter, in denen auch Leerzeichen auftauchen drfen; das Ende der
+Liste wird wie bei einem normalen Environment durch eine doppelte 0
+gekennzeichnet.
+
+Darber hinaus bergibt man bei (!nolink [Pexec]) als L„ngenbyte (erstes Byte in
+der Kommandozeile) den Wert 127, der wegen der existierenden
+L„ngenbeschr„nkung auf 125 Bytes bislang nicht angenommen werden konnte.
+Dies erm”glicht es dem aufgerufenen Programm, sicherzustellen, da die
+im Environment bergebenen Werte tats„chlich gltig sind und nicht etwa
+von einem Programm, das den ARGV-Standard nicht kennt, briggelassen
+wurden.
+
+Je nachdem, ob man per ARGV Parameter an andere Programme bergeben,
+oder diese selbst lesen m”chte, behandelt man einen der folgenden
+zwei Punkte:
+
+ù ARGV beim gestarteten Programm
+!label ARGV beim gestarteten Programm
+
+Zun„chst stellt man fest, ob die Variable ARGV im Environment vorhanden
+ist. Wenn dies der Fall ist, (!I)und(!i) das Kommandozeilen-L„ngenbyte
+den Wert 127 besitzt, dann findet man nach der ersten 0 nach ARGV (denn
+diese Variable k”nnte ja einen Wert haben), die einzelnen
+Kommandozeilenparameter. Zum Schlu sollte man den ersten Buchstaben von
+ARGV auf 0 den Wert 0 setzen, damit das Environment wieder die Standardform
+besitzt.
+
+ù ARGV beim Aufrufer
+!label ARGV beim Aufrufer
+
+Zun„chst mu ein neues Environment fr das aufzurufende Programm erzeugt
+werden. Dazu berechnet man z.B. die L„nge des bereits vorhandenen
+Environments, addiert die L„nge der Kommandozeile und alloziert
+entsprechend viele Bytes. Dann wird das bestehende Environment kopiert
+(und dabei eine evtl. bereits bestehende ARGV-Variable entfernt), die
+neue ARGV-Variable und die Kommandozeilenparameter nacheinander angeh„ngt
+(jeweils null-terminiert). Eine letzte Null schliet das Environment dann
+endgltig ab. Zu guter letzt bergibt man im L„ngenbyte der Kommandozeile
+den magischen Wert 127.
+
+ù Erweiterung des ARGV-Verfahrens
+!label ARGV-Verfahren, erweitertes
+
+Ein Problem mit der ursprnglichen Definition des ARGV-Verfahrens besteht
+darin, (!I)leere(!i) Parameter bergeben zu k”nnen (zwei aufeinanderfolgende
+Nullen schlieen ja das Environment ab !). Um diese dennoch bergeben zu
+k”nnen, wurde das Verfahren wie folgt erweitert:
+
+!begin_itemize
+!item leere Parameter werden in der Kommandozeile in (!I)einfache(!i)
+Anfhrungsstriche gesetzt, und tauchen im Environment als (!I)genau(!i)
+ein Leerzeichen auf.
+!item fr die Variable ARGV wird ein Wert definiert: falls diese mit
+'NULL:' beginnt, enth„lt der Rest der Zeile (durch Kommata getrennt) die
+Positionen der leeren Parameter. (!B)Beispiel:(!b) ARGV=NULL:3,5,9
+bedeutet, da argv[3], argv[5] und argv[9] leer sind. Der Startup-Code
+sollte sich dann darum kmmern, die entsprechenden Parameter zu l”schen.
+!end_itemize
+
+(!B)Hinweis:(!b) Um maximale Kompatibilit„t zu alten Programmen zu
+gew„hrleisten, sollte das erweiterte ARGV-Verfahren (!I)nur dann(!i)
+eingesetzt werden, wenn tats„chlich leere Parameter bergeben werden
+mssen. In allen anderen F„llen sollte man stattdessen auf die
+ursprngliche Definiton zurckgreifen.
+
+ù ARGV-Verfahren ab MagiC 3.0
+!label ARGV-Verfahren in MagiC
+!label MagiC, ARGV-Verfahren in
+
+Ab (!nolink [MagiC])-3 wird das ARGV-Verfahren bereits von Pexec auf drei verschiedene
+Arten untersttzt:
+
+!begin_itemize
+!item (!B)Ist das L„ngenbyte der Kommandozeile 127(!b), geht (!nolink [Pexec]) davon
+aus, da das aufrufende Programm ARGV untersttzt und das Environment
+bereits entsprechend manipuliert ist; das Environment wird daher nicht
+ge„ndert.
+!item (!B)Ist das L„ngenbyte 254(!b), erwartet (!nolink [MagiC]) direkt dahinter die
+Zeichenkette "ARGV=", gefolgt von einem Nullbyte und von einer durch zwei
+Nullbytes abgeschlossenen Liste von Parametern. Durch šbergaben von
+"ARGV=NULL..." usw. kann man auch das erweiterte ARGV-Verfahren verwenden,
+das die šbergabe von leeren Parametern erm”glicht (s.o).
+
+(!nolink [Pexec]) l”scht ein evntl. vorhandenes ARGV und tr„gt das neue ins
+Environment ein. Die Kommandozeile besteht nur aus dem Wert 127 als
+Indikator, da die Parameter im Environment liegen. Das Verfahren ist
+geeignet, wenn das aufgerufene Programm mit Sicherheit das ARGV-Verfahren
+beherrscht.
+!item (!B)Ist das L„ngenbyte 255(!b), erwartet (!nolink [MagiC]) direkt dahinter eine
+durch Leerstellen getrennte und durch ein Nullbyte abgeschlossene Liste von
+Parametern (wie i.a. die Kommandozeile bergeben wird). (!nolink [Pexec]) l”scht ein
+evntl. vorhandenes ARGV, erstellt aus der Kommandozeile eine Argumentliste
+und tr„gt diese als ARGV ins Environment ein. Als argv[0] wird der
+Programmdatei-Pfad genommen, der (!nolink [Pexec]) bergeben wurde. Ist dieser Pfad
+ungltig, gibt es Mll, deshalb sollte man auch bei Modus 5 von (!nolink [Pexec])
+(Basepage erstellen) einen sinnvollen Programmnamen bergeben. Bei Modus 7
+heit argv[0] dann einfach "NONAME", weil hier kein Name bergeben wird.
+
+Die Kommandozeile hat als L„ngenbyte 127 als Indikator fr das
+Vorhandensein von ARGV. Ist die L„nge der Kommandozeile < 127, wird diese
+auerdem in die Basepage kopiert, ansonsten besteht die Kommandozeile nur
+aus dem Wert 127. Das Verfahren ist geeignet, wenn das aufrufende Programm
+nicht sicher ist, da das aufgerufene Programm ARGV versteht.
+!end_itemize
+
+!end_node

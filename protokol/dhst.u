@@ -1,0 +1,82 @@
+########################################
+# @(#) TOS - das Betriebssystem
+# @(#) Rolf Kotzian
+########################################
+
+!begin_node Document-History-Protokoll
+!label Protokoll, Document-History-Protokoll
+!label Protokoll, DHST
+!label DHST
+
+Das Document-(!nolink [History])-(DHST-) Protokoll dient dazu, eine globale Liste
+der zuletzt benutzten Dokumente zu verwalten (Ñhnlich dem Abruf-MenÅ
+in z.B. Texel) und an einer einheitlichen Stelle (hier: Start-Me-Up-
+MenÅ) schnell abrufbar zu machen.
+
+Dazu ein kurzer Auszug der Struktur in C-Notation:
+!label DHST_ADD
+!label DHST_ACK
+!begin_verbatim
+#define DHST_ADD 0xdadd
+#define DHST_ACK 0xdade
+
+typedef struct
+{
+   char *appname,
+        *apppath,
+        *docname,
+        *docpath;
+} DHSTINFO;
+!end_verbatim
+
+Jedesmal wenn der Anwender eine Datei îffnet, sucht die Applikation
+nach dem Cookie 'DHST'. Ist dieser vorhanden, gibt das untere Word des
+Cookie-Wertes die (!nolink [AES])-ID des DHST-Servers an, an den die Nachricht
+DHST_ADD geschickt wird. Die Applikation legt also im (!B)globalen(!b) Spei-
+cher eine DHSTINFO-Struktur an und fÅllt sie entsprechend auf:
+
+!begin_verbatim
+ appname:     Name der Applikation
+              (z.B. "Texel")
+
+ apppath:     absoluter Pfad der Applikation
+              (z.B. "c:\program\texel.app")
+
+ docname:     Name des Dokuments
+              (z.B. "balmer.txl")
+
+ docpath:     absoluter Pfad des Dokuments
+              (z.B. "d:\daten\balmer.txl")
+
+Dann schickt sie dem DHST-Server folgende Nachricht:
+
+!begin_verbatim
+ msg[0]    DHST_ADD
+ msg[1]    ap_id der Anwendung
+ msg[2]    0
+ msg[3]    und
+ msg[4]    Pointer auf DHSTINFO-Struktur
+ msg[5]    0
+ msg[6]    0
+ msg[7]    0
+!end_verbatim
+
+
+Als Antwort erhÑlt die Applikation folgende Message, mit der sie den
+globalen Speicher wieder freigeben kann:
+
+
+!begin_verbatim
+ msg[0]    DHST_ACK
+ msg[1]    ap_id des DHST-Servers
+ msg[2]    0
+ msg[3]    und
+ msg[4]    Pointer auf DHSTINFO-Struktur (wie bei DHST_ADD Åbergeben)
+ msg[5]    0
+ msg[6]    0
+ msg[7]    0=Fehler, sonst: OK
+!end_verbatim
+
+In der ST-Computer 10/98 findet sich ein ausfÅhrlicher Artikel zu
+diesem Thema.
+!end_node

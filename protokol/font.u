@@ -1,0 +1,171 @@
+
+!ifnset Font-Protokoll_schon_da
+
+# Zur Erkennung das der Text schon bearbeitet wurde
+!set Font-Protokoll_schon_da
+
+
+!begin_node Font-Protokoll
+
+(!U)Beschreibung des Font-Protokolls, Revision 5(!u)
+
+Eine minimale Untersttzung dieses Protokolls besteht in der Aus!-wer!-tung
+der Nachricht (!V)FONT_CHANGED(!v). Programme, die eines der
+(GDOS--) At!-tri!-bu!-te Textwinkel, --breite, --kerning, --neigung oder
+die Angabe der Textgr”že in 1/65536 Punkt untersttzen, sollten auch die
+Nachricht (!V)XFONT_CHANGED(!v), die zus„tzliche Informationen anbietet,
+untersttzen.
+
+šber die Nachricht (!V)FONT_SELECT(!v) kann der Fontselektor auch von der
+Applikation aufgerufen werden. Dabei k”nnen auch die aktuell
+ein!-ge!-stell!-ten Attribute bergeben werden.
+
+Untersttzt die Anwendung auch das XAcc--2--Protokoll, so kann sie auch
+leicht die Untersttzung der Best„tigungsnachricht (!V)FONT_ACK(!v)
+offen!-le!-gen und ohne Environment--Variable nach Fontselektoren im
+Speicher suchen.
+
+!begin_itemize
+!label FONT_CHANGED
+!item (!V)FONT_CHANGED(!v)--Nachricht: (!nl)
+Nachricht des Fontselektors an eine Applikation, daž der Zeichensatz
+und/oder die Zeichenattribute (Gr”že, Farbe und Effekte) in einem oder
+mehreren Fenstern der Applikation gewechselt werden sol!-len. Besitzt die
+Zielapplikation im erweiterten XAcc--Namen die Kennung ""(!V)XFontAck(!v)"",
+so muž diese Nachricht mit der Nachricht (!V)FONT_ACK(!v) beantwortet
+werden. Ansonsten ist die Untersttzung die!-ser Nachricht optional.
+
+Negative Werte in (!V)msg[6/7](!v) bzw. Null in (!V)msg[4/5](!v) stehen
+fr keine Ver„nderung
+!begin_quote
+!begin_verbatim
+msg[0]       = FONT_CHANGED (0x7a18)
+msg[1]       = apID
+msg[2]       = 0
+msg[3]       = Fenster-Handle oder negativer Wert, falls
+               Font in allen Fenstern gewechselt werden soll
+msg[4]       = Font-ID oder Null
+msg[5]       = Font-Gr”že in Punkt (>0) oder Pixel (<0)
+               bzw. Null fr keine Ver„nderung
+msg[6]       = Font-Farbe
+msg[7]       = Effekte:
+                Bit 0: Fett
+                Bit 1: Hell
+                Bit 2: Kursiv
+                Bit 3: Unterstrichen
+                Bit 4: Umrandet
+                Bit 5: Schattiert
+                Bit 6: Invers
+                Bit 12: 1=Font ist monospaced; 0=unbekannt
+                (restliche Bits sind reserviert)
+!end_verbatim
+!end_quote
+
+Bit 12 ist mit der Revision 5 einegfhrt worden.
+# Quelle: Gruppe: Fido.ATARI_EXPERT.GER, 11 Sep 1997
+
+!label XFONT_CHANGED
+!item (!V)XFONT_CHANGED(!v)--Nachricht: (!nl)
+Erweiterte (GDOS--)Attribute bermitteln. Diese Nachricht ist op!-tional
+und wird (!I)vor(!i) der Nachricht (!V)FONT_CHANGED(!v) verschickt, d.h.
+erst wenn die Nachricht (!V)FONT_CHANGED(!v) eintrifft und den glei!-chen
+Absender ((!V)msg[1](!v) vergleichen!) hat, sollten diese Werte gesetzt
+werden! Dadurch werden doppelte Redraws und/oder Fehler ver!-mie!-den.
+
+Die Nachricht (!V)FONT_CHANGED(!v) enth„lt die auf Punkt gerundete
+Gr”!-že, d.h. Programme, die (!V)XFONT_CHANGED(!v) nicht untersttzen,
+k”nnen diesen Wert benutzen.
+
+Fontselektoren versenden idR diese Nachricht nur, wenn eines der
+bermittelten Attribute vom Normalwert abweicht!
+
+!begin_quote
+!begin_verbatim
+msg[0]   = XFONT_CHANGED (0x7a1b)
+msg[1]   = apID
+msg[2]   = 0
+msg[3/4] = Gr”že in 1/65536-Punkt (fix31)
+msg[5]   = Rotationswinkel in 1/10-Grad (0-3599)
+msg[6]   = Neigung in 1/10-Grad (-1800 - 1800)
+msg[7]   = Breite und Kerning:
+           Bit 15:    Paar-(!nolink [Kerning])
+           Bit 13/14: Track-Kerningmodus (0-3)
+           Bit 0-12:  Breite in Punkt
+
+           in C:
+
+           typedef struct
+           {
+               unsigned int  pair  : 1;
+               unsigned int  track : 2;
+               unsigned int  width : 13;
+           } VECTOR_INFO;
+!end_verbatim
+!end_quote
+
+!label FONT_SELECT
+!item (!V)FONT_SELECT(!v)--Nachricht: (!nl)
+Mit dieser Nachricht kann ein im Speicher vorhandener Fontselektor,
+der im erweiterten XAcc--Namen die Ken!-nung ""(!V)XFontSelect(!v)""
+be!-sitzt, aufgerufen werden. Untersttzt die An!-wen!-dung und/oder der
+Fontselektor kein XAcc--2--Protokoll, so kann noch nach dem Inhalt
+der ((!nolink [AES])-)Environment--Variablen ""(!V)FONTSELECT(!v)"" gesucht werden.
+Die!-se Variable kann gegebenenfalls auch mehrere Namen (getrennt durch
+Semikolon) enthalten, wobei die Namen optional auch Pfad und
+Dateierweiterung besitzen k”n!-nen, so daž man den Fontselektor unter
+Multitasking bei Be!-darf (!I)parallel(!i) nachladen kann.
+
+(!B)Beispiele:(!b)
+
+!begin_verbatim
+setenv FONTSELECT=FONT_PAL;FONT_SEL
+setenv FONTSELECT=C:\FONTSEL\FONT_SEL.APP;C:\FONTSEL\FONT_PAL.APP
+!end_verbatim
+
+Zur passiven Untersttzung des Font--Protokolls gengt aber die
+Aus!-wer!-tung der o.g. (!nolink [Nachrichten]) (!V)FONT_CHANGED(!v) und
+(!V)XFONT_CHANGED(!v).
+
+Negative Werte in (!V)msg[6/7](!v) oder eine Null (!V)msg[4/5](!v)
+bedeuten, daž dieser Parameter nicht ben”tigt wird, nicht eingestellt
+werden soll oder noch nicht gesetzt wurde
+!begin_quote
+!begin_verbatim
+msg[0]       = FONT_SELECT (0x7a19)
+msg[1]       = apID
+msg[2]       = 0
+msg[3]       = Handle des Fensters, dessen Zeichensatz ein-
+               gestellt werden soll, oder ein negativer
+               Wert, wenn der Zeichensatz in allen Fenstern
+               der Applikation gewechselt werden soll
+msg[4]       = Font-ID oder Null
+msg[5]       = Font-Gr”že in Punkt (>0) oder Pixel (<0) bzw.
+               Null, falls der Parameter nicht ben”tigt wird
+               (s.o.)
+msg[6]       = Farbe
+msg[7]       = Effekte (s.o.)
+!end_verbatim
+!end_quote
+
+!label FONT_ACK
+!item (!V)FONT_ACK(!v)--Nachricht: (!nl)
+Fontselektor darber informieren, ob die (!V)FONT_CHANGED(!v)--Nachricht
+ausgewertet bzw. die Zeichensatz--Attribute eingestellt werden konn!-ten
+!begin_quote
+!begin_verbatim
+msg[0]        = FONT_ACK (0x7a1a)
+msg[1]        = apID
+msg[2]        = 0
+msg[3]        = TRUE (1):  Nachricht wurde ausgewertet
+                FALSE (0): Nachricht wurde ignoriert
+msg[4-7]      = 0 (reserviert)
+!end_verbatim
+!end_quote
+!end_itemize
+
+Querverweis: xFSL-Schnittstelle ~
+(!link [Zeichensatzauswahl von MagiC][Zeichensatzauswahl])
+
+!end_node
+
+!endif

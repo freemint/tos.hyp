@@ -1,0 +1,1332 @@
+!begin_node buffoper
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯buffoper® - Setzen des Aufnahme bzw. Wiedergabemodus
+!item [Xbiosnummer:]
+136
+!item [Binding:]
+(!link [Bindings fr buffoper] [Bindings fr buffoper])
+!item [Beschreibung:]
+Die XBIOS-Routine buffoper legt den Aufnahme- und Wiedergabemodus fest.
+
+Wird fr (!I)mode(!i) der Wert -1 bergeben, wird die aktuelle Einstellung
+ermittelt. Sonst wird (!I)mode(!i) wie folgt kodiert:
+!begin_table [c|l]
+Bit !! Operation
+!hline
+0 !! Wiedergabe
+1 !! Wiedergabewiederholung
+2 !! Aufnahme
+1 !! Aufnahmewiederholung
+!end_table
+Gesetzte Bits schalten eine Operation ein, gel”schte Bits aus.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Im Erfolgsfall liefert die Funktion den Wert 0. Wurde fr (!I)mode(!i) -1
+bergeben, erh„lt man die aktuelle Einstellung, deren Kodierung der des
+Parameters (!I)mode(!i) entspricht.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr buffoper]) ~
+               buffptr ~   devconnect  ~  dsptristate  ~  gpio ~
+               locksnd ~  setbuffer ~ setinterrupt ~ setmontracks
+               setmode ~  settracks ~ sndstatus ~    soundcmd ~
+               unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr buffoper
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG buffoper ( WORD mode );
+!item [Assembler:]
+!begin_verbatim
+move.w    mode,-(sp)   ; Offset 2
+move.w    #136,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #4,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+
+!begin_node buffptr
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯buffptr® - Ermitteln der Aufnahme bzw. Wiedergabeposition
+!item [Xbiosnummer:]
+141
+!item [Binding:]
+(!link [Bindings fr buffptr] [Bindings fr buffptr])
+!item [Beschreibung:]
+Die XBIOS-Routine buffptr ermittelt die aktuelle Wiedergabe- und
+Aufnahmepositionen in den entsprechenden Puffern.
+
+(!I)ptr(!i) zeigt auf einen mindestens 4 Langworte groen Puffer. In diesen
+werden die Positionszeiger angelegt. Der erste LONG des Puffer enth„lt
+einen Zeiger auf die aktuelle Wiedergabeposition und der zweite LONG einen
+Zeiger auf die aktuelle Abspielposition.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Im Erfolgsfall liefert die Funktion den Wert 0.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr buffptr]) ~
+               buffoper ~  devconnect ~   dsptristate ~  gpio ~
+               locksnd  ~ setbuffer ~ setinterrupt ~ setmontracks ~
+               setmode  ~ settracks ~ sndstatus   ~  soundcmd ~
+               unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr buffptr
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG buffptr ( LONG *ptr );
+!item [Assembler:]
+!begin_verbatim
+pea       ptr          ; Offset 2
+move.w    #141,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #6,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node devconnect
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯devconnect® - Verbinden der Audiosubsystem-Komponenten
+!item [Xbiosnummer:]
+139
+!item [Binding:]
+(!link [Bindings fr devconnect] [Bindings fr devconnect])
+!item [Beschreibung:]
+Die XBIOS-Routine devconnect verbindet Komponenten des Audio-Subsystems.
+!begin_table [l|l]
+Parameter !! Bedeutung
+!hline
+src !! Quellkomponente:
+~   !! 0   DMA-Ausgabe
+~   !! 1   DSP-Ausgabe
+~   !! 2   Externer Eingabekanal
+~   !! 3   A/D-Wandler - Mikrophon
+~   !! ~
+dst !! Bitvektor der Zielkomponenten:
+~   !! Bit 0  DMA-Eingabe
+~   !! Bit 1  DSP-Eingabe
+~   !! Bit 2  Externer Ausgabekanal
+~   !! Bit 3  D/A-Wandler - Lautsprecher
+~   !! ~
+srcclk !! Takt fr die Quellkomponente:
+~      !! 0  Interner 25,175 MHz Takt
+~      !! 1  Externer Takt
+~      !! ~~~Fr MilanBlaster ist Externer Takt
+~      !! ~~~24,576 MHz wenn gpio(1, 0) & 0x1l == 1l und
+~      !! ~~~22,5792 MHz wenn gpio(1, 0) & 0x1l == 0l
+~      !! ~~~ist!
+~      !! 2  Interner 32 MHz Takt
+~      !! ~
+prescale !! Taktvorteiler. Die Sample-Rate ergibt
+~        !! sich aus dem Takt geteilt durch 256
+~        !! und geteilt durch Vorteiler + 1. Die
+~        !! Werte fr den Vorteiler rangieren
+~        !! von 0 bis 11.
+~        !! Wird fr den Vorteiler 0 bergeben,
+~        !! wird in den STE-Kompatibilit„tsmodus
+~        !! geschaltet.
+~        !! ~
+protocol !! Wird 0 bergeben, findet eine šber-
+~        !! tragung mit Handshaking statt, bei
+~        !! 1 erfolgt kein Handshaking.
+!end_table
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr devconnect]) ~
+               buffoper ~  buffptr ~      dsptristate ~  gpio ~
+               locksnd  ~ setbuffer ~ setinterrupt ~ setmontracks ~
+               setmode  ~ settracks ~ sndstatus  ~   soundcmd ~
+               unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr devconnect
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG devconnect ( WORD src, WORD dst, WORD srcclk, WORD prescale,
+                  WORD protocol );
+!item [Assembler:]
+!begin_verbatim
+move.w    protocol,-(sp)  ; Offset 10
+move.w    prescale,-(sp)  ; Offset  8
+move.w    srcclk,-(sp)    ; Offset  6
+move.w    dst,-(sp)       ; Offset  4
+move.w    src,-(sp)       ; Offset  2
+move.w    #139,-(sp)      ; Offset  0
+trap      #14             ; XBIOS aufrufen
+lea       $C(sp),sp       ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node dsptristate
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯dsptristate® - Externe DSP Hardware koordinieren
+!item [Xbiosnummer:]
+137
+!item [Binding:]
+(!link [Bindings fr dsptristate] [Bindings fr dsptristate])
+!item [Beschreibung:]
+Die XBIOS-Routine (!I)dsptristate(!i) koppelt Leitungen vom Multiplexer ab,
+wenn externe Hardware am SSI-Port des DSP angeschlossen wird.
+!begin_xlist [Parameter]
+!item [Parameter]
+Bedeutung
+!item [dspxmit]
+Der Wert 0 koppelt den Multiplexer von der entsprechenden Leitung ab, 1
+erlaubt die Verbindung
+!item [dsprec]
+Der Wert 0 koppelt den Multiplexer von der entsprechenden Leitung ab, 1
+erlaubt die Verbindung
+!end_xlist
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar.
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr dsptristate]) ~
+               buffoper ~  buffptr    ~   devconnect ~   gpio ~
+               locksnd  ~  setbuffer ~ setinterrupt ~ setmontracks ~
+               setmode  ~  settracks ~ sndstatus   ~  soundcmd ~
+               unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr dsptristate
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG dsptristate ( WORD dspxmit, WORD dsprec );
+!item [Assembler:]
+!begin_verbatim
+move.w    dsprec,-(sp)   ; Offset 4
+move.w    dspxmit,-(sp)  ; Offset 2
+move.w    #137,-(sp)     ; Offset 0
+trap      #14            ; XBIOS aufrufen
+addq.l    #6,sp          ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node gpio
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯gpio® - Kommunikation ber externe DSP-Buchse
+!item [Xbiosnummer:]
+138
+!item [Binding:]
+(!link [Bindings fr gpio] [Bindings fr gpio])
+!item [Beschreibung:]
+Die XBIOS-Routine gpio dient der Kommunikation ber die externen DSP-Buchse.
+!begin_xlist [node]
+!item [mode]
+Bedeutung
+!item [0]
+Setzen der Ein-/Ausgaberichtung Die unteren drei Bits von (!I)data(!i)
+repr„sentieren die Mehrzweckleitungen. Ein gesetztes Bit steht fr eine
+Ausgabe- und ein gel”schtes fr eine Eingabeleitung.
+!item [1]
+Lesen der Mehrzweckleitungen. Den Status der Leitungen erh„lt man als
+Funktionsresultat.
+!item [2]
+Schreiben auf den Mehrzweckleitungen Der Parameter (!I)data(!i) enth„lt den
+neuen Status der Mehrzweckleitungen.
+!end_xlist
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Im Erfolgsfall liefert die Funktion den Wert 0. Hatte der Parameter
+(!I)mode(!i) den Wert 1, so erh„lt man den Status der Mehrzweckleitungen.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr gpio])   ~
+               buffoper ~  buffptr  ~   devconnect ~
+               dsptristate  ~  locksnd  ~  setbuffer  ~ setinterrupt ~
+               setmontracks ~  setmode  ~  settracks  ~ sndstatus ~
+               soundcmd    ~   unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr gpio
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG gpio ( WORD mode, WORD data );
+!item [Assembler:]
+!begin_verbatim
+move.w    data,-(sp)   ; Offset 4
+move.w    mode,-(sp)   ; Offset 2
+move.w    #138,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #6,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+
+!begin_node locksnd
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯locksnd® - Soundsystem fr andere Anwendungen sperren
+!item [Xbiosnummer:]
+128
+!item [Binding:]
+(!link [Bindings fr locksnd] [Bindings fr locksnd])
+!item [Beschreibung:]
+Die XBIOS-Routine locksnd sperrt das Soundsystem fr andere Anwendungen.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 1 zurck. Ist das
+Soundsystem bereits vergeben, so wird ein negativer Wert zurckgeliefert.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr locksnd])  ~
+               buffoper ~  buffptr  ~    devconnect ~
+               dsptristate  ~  gpio    ~   setbuffer  ~  setinterrupt ~
+               setmontracks ~  setmode  ~  settracks  ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr locksnd
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG locksnd ( VOID );
+!item [Assembler:]
+!begin_verbatim
+move.w    #128,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #2,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node setbuffer
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯setbuffer® - Setzen des Aufnahme und Wiedergabepuffers
+!item [Xbiosnummer:]
+131
+!item [Binding:]
+(!link [Bindings fr setbuffer] [Bindings fr setbuffer])
+!item [Beschreibung:]
+Die XBIOS-Routine setbuffer setzt den Puffer fr die Wiedergabe-
+((!I)reg(!i) = 0) bzw. Aufnahmedaten ((!I)reg(!i) = 1). Der Parameter
+(!I)begaddr(!i) zeigt auf den Anfang des Puffers und (!I)endaddr(!i) auf
+das letzte Byte + 1 des Puffers.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+ Der Speicher mu mit der Gemdos Funktion Mxalloc(size, 0) angefordert werden.
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr setbuffer])  ~
+               buffoper ~  buffptr  ~   devconnect ~
+               dsptristate  ~  gpio    ~   locksnd   ~  setinterrupt ~
+               setmontracks ~  setmode ~   settracks ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr setbuffer
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG setbuffer ( WORD reg, VOID *begaddr, VOID *endaddr );
+!item [Assembler:]
+!begin_verbatim
+pea       endaddr      ; Offset 8
+pea       begaddr      ; Offset 4
+move.w    reg,-(sp)    ; Offset 2
+move.w    #131,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+lea       $C(sp),sp    ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+
+!begin_node setinterrupt
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯setinterrupt® - Interrupt am Ende einer Aufnahme bzw. einer Wiedergabe
+festlegen
+!item [Xbiosnummer:]
+135
+!item [Binding:]
+(!link [Bindings fr setinterrupt] [Bindings fr setinterrupt])
+!item [Beschreibung:]
+Die XBIOS-Routine setinterrupt bestimmt, welcher Interrupt nach dem
+Aufnehmen bzw. Abspielen ausgel”st werden soll.
+!begin_xlist !short [scr_inter]
+!item [src_inter]
+Bedeutung
+!item [~]
+~
+!item [0]
+Timer-A-Interrupt
+!item [1]
+MFP-Interrupt 7
+!end_xlist
+!begin_xlist !short [cause]
+!item [cause]
+Bedeutung
+!item [~]
+~
+!item [0]
+Kein Interrupt
+!item [1]
+Interrupt nach dem Abspielen
+!item [2]
+Interrupt nach dem Aufnehmen
+!item [3]
+Interrupt nach Aufnehmen und Abspielen
+!end_xlist
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr setinterrupt])  ~
+               buffoper  ~ buffptr   ~  devconnect ~
+               dsptristate  ~  gpio     ~  locksnd   ~  setbuffer ~
+               setmontracks ~  setmode  ~  settracks ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr setinterrupt
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG setinterrupt ( WORD src_inter, WORD cause );
+!item [Assembler:]
+!begin_verbatim
+move.w    cause,-(sp)      ; Offset 4
+move.w    src_inter,-(sp)  ; Offset 2
+move.w    #135,-(sp)       ; Offset 0
+trap      #14              ; XBIOS aufrufen
+addq.l    #6,sp            ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+
+!begin_node setmode
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯setmode® - Modus fr Aufnahme bzw. Wiedergabe w„hlen
+!item [Xbiosnummer:]
+132
+!item [Binding:]
+(!link [Bindings fr setmode] [Bindings fr setmode])
+!item [Beschreibung:]
+Die XBIOS-Routine setmode gibt die Art des Aufnahme- und Wiedergabemodus an:
+!begin_table [c|l]
+mode !! Bedeutung
+!hline
+0 !! ~8 Bit Stereo
+1 !! 16 Bit Stereo
+2 !! ~8 Bit Mono
+!end_table
+               Ist Bit 5 im '(!nolink [_SND])' Cookie gesetzt stehen evtl.
+               noch weitere modi zur Verfgung, die getrennt
+               in low und high byte von mode den Wiedergabe
+               und Aufnahme modus einstellen. Wird fr mode
+               der Wert -1 bergeben, wird die aktuelle
+               Einstellung ohne nderung zurckgegeben.
+
+                0x0003   16 Bit Mono Wiedergabe (!nl)
+                0x0004   24 Bit Stereo Wiedergabe (!nl)
+                0x0005   32 Bit Stereo Wiedergabe (!nl)
+                0x0006   24 Bit Mono Wiedergabe (!nl)
+                0x0007   32 Bit Mono Wiedergabe (!nl)
+
+                0x0000   16 Bit Stereo Aufnahme (!nl)
+                0x0100   ~8 Bit Stereo Aufnahme (!nl)
+                0x0200   ~8 Bit Mono Aufnahme (!nl)
+                0x0300   16 Bit Mono Aufnahme (!nl)
+                0x0400   24 Bit Stereo Aufnahme (!nl)
+                0x0500   32 Bit Stereo Aufnahme (!nl)
+                0x0600   24 Bit Mono Aufnahme (!nl)
+                0x0700   32 Bit Mono Aufnahme (!nl)
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr setmode]) ~
+               buffoper    ~   buffptr  ~   devconnect ~
+               dsptristate  ~  gpio         ~  locksnd   ~  setbuffer ~
+               setinterrupt ~  setmontracks ~  settracks ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr setmode
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG setmode ( WORD mode );
+!item [Assembler:]
+!begin_verbatim
+move.w    mode,-(sp)   ; Offset 2
+move.w    #132,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #4,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node setmontracks
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯setmontracks® - Wiedergabespur fr internen Lautsprecher festlegen
+!item [Xbiosnummer:]
+134
+!item [Binding:]
+(!link [Bindings fr setmontracks] [Bindings fr setmontracks])
+!item [Beschreibung:]
+Die XBIOS-Routine setmontracks legt fest, da die Ausgabe einer bestimmten
+Spur ber den internen Lautsprecher erfolgen soll. Dieser kann jeweils nur
+eine Spur wiedergeben.
+
+(!I)montrack(!i) bestimmt eine der vier m”glichen Spuren. Diese sind von 0
+bis 3 durchnumeriert.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen 
+!item [Querverweis:]    (!link [Binding] [Bindings fr setmontracks])  ~
+               buffoper ~  buffptr   ~  devconnect ~
+               dsptristate  ~  gpio    ~   locksnd   ~  setbuffer ~
+               setinterrupt ~  setmode ~   settracks ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr setmontracks
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG setmontracks ( WORD montrack );
+!item [Assembler:]
+!begin_verbatim
+move.w    montrack,-(sp)  ; Offset 2
+move.w    #134,-(sp)      ; Offset 0
+trap      #14             ; XBIOS aufrufen
+addq.l    #4,sp           ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node settracks
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯settracks® - Anzahl der Spuren festlegen
+!item [Xbiosnummer:]
+133
+!item [Binding:]
+(!link [Bindings fr settracks] [Bindings fr settracks])
+!item [Beschreibung:]
+Die XBIOS-Routine settracks setzt die Anzahl der Aufnahme-
+((!I)rectracks(!i)) und Wiedergabespuren ((!I)play!-tracks(!i)). Es stehen
+maximal je 4 Spuren zur Ver!-f!-gung. Als Argument wird die Anzahl - 1
+bergeben!
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar.
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr settracks])   ~
+               buffoper    ~  buffptr ~   devconnect ~
+               dsptristate  ~  gpio         ~ locksnd  ~  setbuffer ~
+               setinterrupt ~  setmontracks ~ setmode  ~  sndstatus ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr settracks
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG settracks ( WORD playtracks, WORD rectracks );
+!item [Assembler:]
+!begin_verbatim
+move.w    rectracks,-(sp)   ; Offset 4
+move.w    playtracks,-(sp)  ; Offset 2
+move.w    #133,-(sp)        ; Offset 0
+trap      #14               ; XBIOS aufrufen
+addq.l    #6,sp             ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node sndstatus
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯sndstatus® - Status des A/D und D/A Wandlers ermitteln
+!item [Xbiosnummer:]
+140
+!item [Binding:]
+(!link [Bindings fr sndstatus] [Bindings fr sndstatus])
+!item [Beschreibung:]
+Die XBIOS-Routine sndstatus ermittelt den aktuellen Status des A/D- und
+D/A-Wandlers. Sie kann diesen ebenfalls neu initialisieren.
+
+Hat (!I)reset(!i) den Wert 1 wird der A/D- und D/A-Wandler neu
+initialisiert (unteranderem werden die šberlaufbits gel”scht). Andernfalls
+wird der aktuelle Status ermittelt.
+
+Ist Bit 5 im '_SND' Cookie gesetzt stehen noch weitere Statusabfragen
+zur Verfgung.
+
+!begin_verbatim
+reset  Funktion
+        return
+
+ 2     Bittiefen abfragen.
+        Bit  0 gesetzt: 8Bit
+        Bit  1 gesetzt: 16Bit
+        Bit  2 gesetzt: 24Bit
+        Bit  3 gesetzt: 32Bit
+
+ 3     Fr MasterMix-Ausgang vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: A/D-Wandler (ADC-InMix bypass)
+        Bit  1 gesetzt: D/A-Wandler (DAC/Multiplexer)
+        Bit  2 gesetzt: Mic
+        Bit  3 gesetzt: FM-Generator
+        Bit  4 gesetzt: Line
+        Bit  5 gesetzt: CD
+        Bit  6 gesetzt: TV
+        Bit  7 gesetzt: Aux1
+
+ 4     Fr A/D-Wandler vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: Mic rechts
+        Bit  1 gesetzt: Mic links
+        Bit  2 gesetzt: FM-Generator rechts
+        Bit  3 gesetzt: FM-Generator links
+        Bit  4 gesetzt: Line rechts
+        Bit  5 gesetzt: Line links
+        Bit  6 gesetzt: CD rechts
+        Bit  7 gesetzt: CD links
+        Bit  8 gesetzt: TV rechts
+        Bit  9 gesetzt: TV links
+        Bit 10 gesetzt: Aux1 rechts
+        Bit 11 gesetzt: Aux1 links
+        Bit 12 gesetzt: Mixer rechts (MasterMix)
+        Bit 13 gesetzt: Mixer links (MasterMix)
+
+        Bit 16 gesetzt: D/A-Wandler rechts
+        Bit 17 gesetzt: D/A-Wandler links
+
+ 5     Duplexbetrieb erfragen.
+        Bit  0 gesetzt: Aufnahme/Wiedergabe gleichzeitig
+                        m”glich
+
+ 8     8 Bit Sampleformate erfragen.
+ 9     16 Bit Sampleformate erfragen.
+10     24 Bit Sampleformate erfragen.
+11     32 Bit Sampleformate erfragen.
+        Bit  0 gesetzt: signed.
+        Bit  1 gesetzt: unsigned.
+        Bit  2 gesetzt: Motorola bigendian wenn > 8Bit.
+        Bit  3 gesetzt: Intel littleendian wenn > 8Bit.
+
+0x8900 Wert der Falcon 030 Registers 0xff8900 und 0xff8901
+       abfragen.
+        %0000 xxxx 00xx 00xx
+              ||||   ||   ||
+              ||||   ||   ||>Playback enable
+              ||||   ||   |>Playback repeat
+              ||||   ||>Record enable
+              ||||   |>Record repeat
+              ||||>MFP-15 Int at Playback end
+              |||>MFP-15 Int at Record end
+              ||>Timer A Int at Playback end
+              |>Timer A Int at Record end
+
+0x8902 Wert der Falcon 030 Registers 0xff8902, 0xff8904
+       und 0xff8906 abfragen.
+        ret = Frame Base Address.
+
+0x890e Wert der Falcon 030 Registers 0xff890e, 0xff8910
+       und 0xff8912 abfragen.
+        ret = Frame End Address.
+
+0x8920 Wert der Falcon 030 Registers 0xff8920 und
+       0xff8921 abfragen.
+        %00xx 00xx xx00 00xx
+           ||   || ||     ||
+           ||   || ||     ||>00 = 6258 Hz
+           ||   || ||     ||>01 = 12517 Hz
+           ||   || ||     ||>10 = 25033 Hz
+           ||   || ||     ||>11 = 50066 Hz
+           ||   || ||>00 = 8-bit Stereo
+           ||   || ||>01 = 16-bit Stereo
+           ||   || ||>10 = 8-bit Mono
+           ||   || ||>11 = 16-bit Mono
+           ||   ||>Play Tracks
+           ||>Monitor Track
+!end_verbatim
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Liegt kein Fehler vor erh„lt man als Ergebnis den Wert Null. Ansonsten
+stellt das Resultat einen Bitvektor dar, der sich wie folgt entschlsselt:
+!begin_table [l|l]
+Bits !! Bedeutung
+!hline
+0-3  !! 1 ~Ungltiges Kontrollfeld
+~~   !! 2 ~Ungltiges Syncformat
+~~   !! 3 ~Ungltiger Takt
+4    !! Linker šberlauf
+5    !! Rechter šberlauf
+!end_table
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr sndstatus])  ~
+               buffoper     ~  buffptr  ~  devconnect ~
+               dsptristate  ~  gpio         ~  locksnd  ~  setbuffer ~
+               setinterrupt ~  setmontracks ~  setmode  ~  settracks ~
+               soundcmd     ~  unlocksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr sndstatus
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG sndstatus ( WORD reset );
+!item [Assembler:]
+!begin_verbatim
+move.w    reset,-(sp)  ; Offset 2
+move.w    #140,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #4,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node soundcmd
+!label NSoundcmd
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯soundcmd® - Parameter des A/D und D/A-Wandlers setzen bzw. ermitteln
+!item [Xbiosnummer:]
+130
+!item [Binding:]
+(!link [Bindings fr soundcmd] [Bindings fr soundcmd])
+!item [Beschreibung:]
+Die XBIOS-Routine soundcmd setzt bzw. ermittelt die Parameter des A/D- und
+D/A-Wandlers. Der Parameter (!I)mode(!i) bestimmt das Kommando und
+(!I)data(!i) die vorzunehmende Einstellung.
+!begin_xlist [node]
+!item [mode]
+Bedeutung
+!item [0]
+Abschw„chung des linken Ausgabekanals um 1,5 Db Einheiten:
+(!nl)
+data = Einheiten << 4;
+!item [1]
+Abschw„chung des rechten Ausgabekanals um 1,5 Db Einheiten:
+(!nl)
+data = Einheiten << 4;
+!item [2]
+Verst„rkung des linken Eingabekanals um 1,5 Db Einheiten:
+(!nl)
+data = Einheiten << 4;
+!item [3]
+Verst„rkung des rechten Eingabekanals um 1,5 Db Einheiten:
+(!nl)
+data = Einheiten << 4;
+!item [4]
+Eingabequellen des 16-Bit-Hardwareaddierers. Bit 0 von (!I)data(!i) repr„sentiert
+den A/D-Wandler und Bit 1 den Multiplexer
+
+Ist Bit 5 im _SND Cookie gesetzt stehen noch weitere (Master) Eing„nge zur Verfgung.
+Die Eing„nge werden eingeschaltet sowie das entsprechende Bit auf 1 gesetzt und Bit 14
+in (!I)data(!i) gesetzt ist. (!nl)
+
+Bit 2 von (!I)data(!i) repr„sentiert den Mikrofon Eingang. (!nl)
+Bit 3 von (!I)data(!i) repr„sentiert den FM-Generator. (!nl)
+~~~~~~(FrequenzModulator, OPLx/Wavetable) (!nl)
+Bit 4 von (!I)data(!i) repr„sentiert den Line Eingang. (!nl)
+Bit 5 von (!I)data(!i) repr„sentiert den CD Eingang. (!nl)
+Bit 6 von (!I)data(!i) repr„sentiert den TV Eingang. (!nl)
+Bit 7 von (!I)data(!i) repr„sentiert den Aux1 Eingang. (!nl)
+
+!item [5]
+Eingabequellen des A/D-Wandlers. Bit 0 steht fr den rechten und Bit 1 fr
+den linken Kanal. Ist ein Bit gesetzt, wird werden die Daten dem Soundchip
+entnommen, sonst dem Mikrophon.
+
+Ist Bit 5 im '_SND' Cookie gesetzt stehen evtl. noch weitere (A/D-Wandler) Eing„nge zur
+Verfgung. Die Eing„nge werden eingeschaltet sowie das entsprechende Bit auf 0 gesetzt
+und Bit 14 von (!I)data(!i) auf 1 gesetzt ist.
+
+Bit ~2 ist der rechte FM-Generator. (!nl)
+Bit ~3 ist der linke FM-Generator. (!nl)
+Bit ~4 ist der rechte Line Eingang. (!nl)
+Bit ~5 ist der linke Line Eingang. (!nl)
+Bit ~6 ist der rechte CD Eingang. (!nl)
+Bit ~7 ist der linke CD Eingang. (!nl)
+Bit ~8 ist der rechte TV Eingang. (!nl)
+Bit ~9 ist der linke TV Eingang. (!nl)
+Bit 10 ist der rechte Aux1 Eingang. (!nl)
+Bit 11 ist der linke Aux1 Eingang. (!nl)
+Bit 12 ist der rechte Mixer Ausgang. (!nl)
+Bit 13 ist der linke Mixer Ausgang. (!nl)
+
+Ist Bit 14 von (!I)data(!i) auf 1 gesetzt, werden weitere Eing„nge des A/D-Wandlers in (!I)data2(!i)
+erwartet.
+
+Bit 16 ist der rechte D/A-Wandler Ausgang. (!nl)
+Bit 17 ist der linke D/A-Wandler Ausgang.
+
+!item [6]
+Kompatibilit„t zum STE-Soundsystem. (!I)data(!i) wird als Vorteiler genommen, falls
+der mittels devconnect eingestellte Vorteiler gleich Null ist:
+!begin_table [l l]
+0 !! Vorteiler ist 1280
+1 !! Vorteiler ist 640
+2 !! Vorteiler ist 320
+3 !! Vorteiler ist 160
+!end_table
+!end_xlist
+Zus„tzliche mode Kommandos wenn Bit 5 im '_SND' Cookie gesetzt ist.
+!begin_xlist [~~]
+!item [~7]
+Direkteingabe der Samplefrequenz. (!I)data(!i) wird als unsigned short interpretiert
+und kann dann einen Wertebereich von 0 bis 65534 Hz. einnehmen.
+!item [~8]
+Setzen des 8Bit Sampleformat.
+!item [~9]
+Setzen des 16Bit Sampleformat.
+!item [10]
+Setzen des 24Bit Sampleformat.
+!item [11]
+Setzen des 32Bit Sampleformat.
+
+Folgende Bits stehen zZ. zur Verfgung:  (!nl)
+Bit 0 = signed. (!nl)
+Bit 1 = unsigned. (!nl)
+Bit 2 = Motorola bigendian wenn > 8Bit. (!nl)
+Bit 3 = Intel littleendian wenn > 8Bit.
+
+!item [12]
+Verst„rkung des linken Master Ausgabekanals. (!nl)
+data = 0 - 255;
+!item [13]
+Verst„rkung des rechten Master Ausgabekanals. (!nl)
+data = 0 - 255;
+!item [14]
+Verst„rkung des linken Mic Eingabekanals. (!nl)
+data = 0 - 255;
+!item [15]
+Verst„rkung des rechten Mic Eingabekanals. (!nl)
+data = 0 - 255;
+!item [16]
+Verst„rkung des linken FM-Generator Eingabekanals. (!nl)
+data = 0 - 255;
+!item [17]
+Verst„rkung des rechten FM-Generator Eingabekanals. (!nl)
+data = 0 - 255;
+!item [18]
+Verst„rkung des linken Line Eingabekanals. (!nl)
+data = 0 - 255;
+!item [19]
+Verst„rkung des rechten Line Eingabekanals. (!nl)
+data = 0 - 255;
+!item [20]
+Verst„rkung des linken CD Eingabekanals. (!nl)
+data = 0 - 255;
+!item [21]
+Verst„rkung des rechten CD Eingabekanals. (!nl)
+data = 0 - 255;
+!item [22]
+Verst„rkung des linken TV Eingabekanals. (!nl)
+data = 0 - 255;
+!item [23]
+Verst„rkung des rechten TV Eingabekanals. (!nl)
+data = 0 - 255;
+!item [24]
+Verst„rkung des linken Aux1 Eingabekanals. (!nl)
+data = 0 - 255;
+!item [25]
+Verst„rkung des rechten Aux1 Eingabekanals. (!nl)
+data = 0 - 255;
+!end_xlist
+
+Wird fr den Parameter (!I)data(!i) der Wert -1 bergeben, so bleibt die
+Einstellung unver„ndert.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+
+NSoundcmd ist eine erweiterte Version von soundcmd
+!item [Ergebnis:]
+Die Funktion liefert die aktuelle Einstellung zurck.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr soundcmd])  ~
+               buffoper ~  buffptr   ~  devconnect ~
+               dsptristate   ~ gpio     ~  setbuffer ~  setinterrupt ~
+               setmontracks  ~ setmode  ~  settracks ~  sndstatus ~
+               unlocksnd     ~ locksnd
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr soundcmd
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG soundcmd ( WORD mode, WORD data ); (!nl)
+LONG NSoundcmd ( WORD mode, WORD data, LONG data2);
+!item [Assembler:]
+!begin_verbatim
+move.w    data,-(sp)   ; Offset 4
+move.w    mode,-(sp)   ; Offset 2
+move.w    #130,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #6,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node StarTrack
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯StarTrack® - XBIOS-Erweiterung der StarTrack-Karte
+!item [Xbiosnummer:]
+500
+!item [Binding:]
+Bei den einzelnen Unterfunktionen.
+!item [Beschreibung:]
+neue XBIOS-Aufrufe fr die Startrack-Soundkarte
+
+Alle Funktionen gehen ber (!nolink [XBIOS])-Aufruf 500 (xbs=500)
+und teilen sich dann in die verschiedenen Unter!-funktionsaufrufe auf.
+
+!begin_xlist [bypass-mode:] !short
+!item [play-mode:] vergleichbar mit DMA-play beim Falcon
+!item [rec-mode:] vergleichbar mit DMA-rec beim Falcon
+!item [(!nolink [bypass])-mode:] die Ausg„nge sind mit den Eing„ngen verbunden.
+!end_xlist
+
+!begin_xlist [999 dsp_hostcommand ] !short
+!item [~~1  installed]          Cookie (!nolink [XBIOS])-Treiber
+!item [~10  cardslot]
+!item [~11  cardsel]            Soundkarte ausw„hlen
+!item [~12  cardmagic]          Soundkarten-magic auslesen
+!item [ 13  cardadr]            Soundkarten-Adressen
+!item [ 20  digana]             Digital/Analogeingang
+!item [ 21  digcom]             Digitalquelle
+!item [ 22  dspmode]            dsprouting no/input/output
+!item [ 23  sclock]             Samplerate
+!item [ 24  highsrate]          highsampling
+!item [ 25  bypass]             bypass/sampleplay
+!item [ 26  recmode]            Aufnahme-Modus           
+!item [ 27  playmode]           Wiedergabe-Modus         
+!item [ 28  mode24]             Matrix-Datengr”e (16/24Bit)
+!item [ 30  digmode]            digitaloutput consumer/professional
+!item [ 31  scmsmode]           clear SCMS
+!item [ 32  mycopybit]          eigener SCMS-Kopierschutz no/one/all
+!item [ 33  emphasis]           de-emphasis
+!item [ 40  digsrate]           samplerate-erkennung vom digitalinput
+!item [ 41  digcode]            Digitalinput-Aufnahmeart-Code
+!item [ 42  errorcode]          Digitalinput-Fehlercode
+!item [ 43  cblmode]            Matrix auf CBL-Mode umstellen
+!item [ 44  cblread]            Auslesen der Channel Status-Bytes
+!item [ 45  recstat]            recfifo-status
+!item [ 46  playstat]           playfifo-status
+!item [ 50  volad]              volume-controller fr input
+!item [ 51  volda]              volume-controller fr output
+!item [ 52  readsmp]            Sample lesen?
+!item [ 53  writesmp]           Sample schreiben?
+!item [ 54  intact]             interrupt-freigabe fr FIFO
+!item [ 55  dspintact]          interrupt-freigabe fr DSP
+!item [ 60  sysreset]           record-FIFO l”schen, Offset-Abgleich & Kickstart fr D/A
+                                 Reset fr A/D, D/A,Volume-Controller, Digital SP/DIF-Chips
+!item [ 61  dspreset]           Reset fr DSP
+!item [ 70  dspmemory]          DSP-Memorymodus          
+!item [ 71  clkdivide]          DSP-Taktteiler           
+!item [ 72  pathset]            DSP-Verbindungen 
+!item [ 73  dsp_hostcommand]    DSP-Hostkommando starten 
+!item [ 74  dspclear]           liest DSP-Empfangsbuffer aus                            
+!item [100  mix]                mixt 2,4,6 oder 8 Stereokan„le (=4,8,12 oder 16 Tracks)
+                                  zu einem Stereokanal zusammen
+!item [101  dspmix]             mixt bzw. verzahnt Stereokan„le (4,8 oder 16 Tracks)
+                                  zu Falcon-kompatiblen 128Bit-W”rtern
+!item [110  monitor]            record & play-(!nolink [bypass])
+!item [111  recwait]            Warten auf autorecord-schwellwert
+!item [112  memrec]             memory-record ohne Interrupt
+!item [113  memplay]            memory-play ohne Interrupt
+!item [114  recplay]            memory record&play ohne Interrupt
+!item [115  hardrec]            HD-record ohne Interrupt
+!item [116  hardplay]           HD-play ohne Interrupt
+!item [117  hrecplay]           HD record&play ohne Interrupt
+!item [120  init_peak]          peakwert-ausgabe im Interrupt
+!item [121  init_imemrec]       memory-record im Interrupt
+!item [122  init_imemplay]      memory-play im Interrupt
+!item [123  init_implaymix]     memory-play & record-(!nolink [mix]) im Interrupt
+!item [124  init_hrec]          HD-record im Interrupt
+!item [125  init_hplay]         HD-play im Interrupt
+!item [126  init_ihplaymix]     HD-play & record-(!nolink [mix]) im Interrupt
+!item [130  init_mrecpeak]      memory-rec & peakausgabe im Interrupt
+!item [131  init_mplaypeak]     memory-play & peakausgabe im Interrupt
+!item [132  init_mrppeak]       memory play & record-(!nolink [mix]) & peakausgabe im Interrupt
+!item [133  init_hrecpeak]      HD-rec & peakausgabe im Interrupt
+!item [134  init_hplaypeak]     HD-play & peakausgabe im Interrupt
+!item [135  init_hrppeak]       HD play & record-(!nolink [mix]) & peakausgabe im Interrupt
+!item [140  init_xmemrec]       memory-record im HalfBuffer-System
+!item [141  init_xmemplay]      memory-play im HalfBuffer-System
+!item [142  init_xmixplay]      memory-play & mischen mit record im HalfBuffer-System
+!item [143  init_xmemrec4]      memory-record im HalfBuffer-System von 4 Kan„len (analog/digital)
+!item [144  init_xmemplay4]     memory-play im HalfBuffer-System von 4 Kan„len (analog/digital)
+!item [150  peakshake]          Peakwert-Handshake (=neuen Wert generieren)
+!item [200  read_rlow]          low-register lesen
+!item [201  read_rhi]           high-register lesen
+!item [202  read_rdsp]          dsp-register lesen
+!item [203  read_raes]          aes-register lesen
+!item [204  read_rint]          interrupt-register lesen
+!item [210  wr_rlow]            low-register schreiben
+!item [211  wr_rhi]             high-register schreiben
+!item [212  wr_rdsp]            dsp-register schreiben
+!item [213  wr_raes]            aes-register schreiben
+!item [214  wr_rint]            interrupt-register schreiben
+!item [220  read_dpath1]        dsp dpath1-register lesen
+!item [221  read_dpath2]        dsp dpath2-register lesen
+!item [222  read_dport]         dsp dport-register lesen
+!item [223  read_dconv]         dsp dconv-register lesen
+!item [224  read_dpdat]         dsp dpdat-register lesen
+!item [225  read_dclk]          dsp dclk-register lesen
+!item [230  wr_dpath1]          dsp dpath1-register schreiben
+!item [231  wr_dpath2]          dsp dpath2-register schreiben
+!item [232  wr_dport]           dsp dport-register schreiben
+!item [233  wr_dconv]           dsp dconv-register schreiben
+!item [234  wr_dpdat]           dsp dpdat-register schreiben
+!item [235  wr_dclk]            dsp dclk-register schreiben
+!item [300  fastcut]            Speicherbereich l”schen im samplemem
+!item [301  peaksuch]           peakwert-suche im samplemem
+!item [302  zerono]             nullstellen-suche im samplemem
+!item [303  fading]             sample-fading im samplemem
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern mit der entsprechenden
+Karten und deren Treiber verfgbar.
+!item [Ergebnis:]
+Bei den einzelnen Unterfunktionen.
+!item [Gruppe:]
+Soundroutinen
+(!ende_liste)
+!end_node    
+
+!include xbios/startrac.ui
+
+
+
+!begin_node unlocksnd
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯unlocksnd® - Soundsystem fr andere Anwendungen freigeben
+!item [Xbiosnummer:]
+129
+!item [Binding:]
+(!link [Bindings fr unlocksnd] [Bindings fr unlocksnd])
+!item [Beschreibung:]
+Die XBIOS-Routine unlocksnd gibt das Soundsystem fr andere Anwendungen
+frei, nachdem es zuvor gesperrt wurde.
+
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+!item [Ergebnis:]
+Die Funktion liefert im positiven Fall den Wert 0 zurck. War das
+Soundsystem bereits verfgbar, so wird ein negativer Wert zurckgeliefert.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr unlocksnd])   ~
+               buffoper ~  buffptr ~    devconnect ~
+               dsptristate  ~  gpio    ~   setbuffer ~  setinterrupt ~
+               setmontracks ~  setmode ~   settracks ~  sndstatus ~
+               soundcmd     ~  locksnd
+(!ende_liste)
+!end_node
+
+
+!begin_node Bindings fr unlocksnd
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+ #include <portab.h> (!nl)
+ #include <tos.h>
+
+LONG unlocksnd ( VOID );
+!item [Assembler:]
+!begin_verbatim
+move.w    #129,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #2,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node WavePlay
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯WavePlay® - Abspielen eines Samples
+!item [Xbiosnummer:]
+165
+!item [Binding:]
+(!link [Bindings fr WavePlay] [Bindings fr WavePlay])
+!item [Beschreibung:]
+Die XBIOS-Routine WavePlay startet das abspielen eines Samples.
+
+(!I)flags(!i) ist ein Bitvektor fr die Beschreibung des 
+Samples bzw. auszufhrenden Funktion:
+               
+Bit 0 gesetzt: Sample ist Mono. (!nl)
+Bit 1 gesetzt: Sample ist 16Bit.
+               
+Ist Bit 5 im '(!nolink [_SND])' Cookie gesetzt.
+               
+Bit 4 gesetzt: Sample ist, wenn 16Bit, Intelformat. (!nl)
+Bit 5 gesetzt: Sample ist ohne Vorzeichen. (!nl)
+Bit 6 gesetzt: Sampleformat ist so wie es von MilanBlaster aufgenommen wurde.
+
+Bit 8 gesetzt: siehe Beschreibung im Atari Compendium
+               Band I, (!nolink [XBIOS]) 4.110-4.112. Wird vom MilanBlaster-XBios
+               nicht untersttzt.
+
+(!I)rate(!i) ist die Samplefrequenz in Hz.
+
+(!I)sptr(!i) ist die Startadresse des Samples. (kann bei MilanBlaster auch im
+TT-Ram liegen)
+
+(!I)slen(!i) ist die l„nge des Samples in Byte.
+
+(!B)Hinweis:(!b) Die Funktion ist verfgbar wenn Bit 5 im
+'_SND' Cookie gesetzt oder der 'SAM\0' Cookie vorhanden ist.
+!item [Ergebnis:]
+Im Erfolgsfall liefert die Funktion den Wert 0, die
+Wiedergabe wurde dann gestartet und kann durch
+buffoper(0) jederzeit unterbrochen werden. Das Ende
+des Samples wurde erreicht wenn (!nolink [buffoper])(-1) Bit 0 gel”scht ist.
+!item [Gruppe:]
+Soundroutinen
+!item [Querverweis:]    (!link [Binding] [Bindings fr WavePlay]) 
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr WavePlay
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+LONG WavePlay ( WORD flags, LONG rate, LONG sptr, LONG slen );
+!item [Assembler:]
+!begin_verbatim
+move.l    slen,-(sp)
+pea       sptr
+move.l    rate,-(sp)
+move.w    flags,-(sp)
+move.w    #165,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #16,sp       ; Stack korrigieren
+!end_verbatim
+(!ende_liste)
+!end_node

@@ -1,0 +1,1044 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fÅr den ST-Guide
+##
+## Last Edit: 29.07.96
+##
+## Kapitel x: Das DFS-Konzept von MagiC
+
+
+
+!begin_node Das DFS-Konzept von MagiC
+!label MagiC, DFS-Konzept in
+
+(!nolink [MagiC]) ermîglicht wie MultiTOS die Einbindung alternativer Dateisysteme (sog.
+XFSs). Fest in MagiC integriert ist nur ein einziges XFS, das DOS_XFS. Auf
+diesem XFS setzen wiederum Untertreiber, sogenannte DFS (dos file system)
+auf, von denen zwei in (!nolink [MagiC]) integriert sind, und zwar das FAT-Dateisystem
+und das U-Dateisystem (das fÅr Laufwerk U:).
+
+Ein DOS-Dateisystem (DFS) wird vom DOS_XFS aufgerufen. Hier stehen nur die
+Dateifunktionen, wÑhrend die Verzeichnisverwaltung im wesentlichen vom
+DOS_XFS Åbernommen wird. Weitere DFSs kînnen eingebunden werden. Der Aufwand
+fÅr ein DFS ist (!I)wesentlich geringer(!i) als fÅr ein XFS, da viele
+Funktionen vom DOS_XFS bereits ausgefÅhrt werden. Die wesentliche
+Voraussetzung ist eine DOS-konforme Verzeichnisstruktur (mit
+32-Byte-EintrÑgen und Dateinamen des Formats 8+3). Dieses Kapitel behandelt
+die Punkte:
+
+!begin_itemize !short
+!item (!link [Aufbau eines DFS] [Der Aufbau eines DFS])
+!item (!link [Datenstrukturen] [Datenstrukturen fÅr ein DFS])
+!item Installation eines DFS
+!end_itemize
+
+Querverweis: (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+
+
+
+!begin_node Der Aufbau eines DFS
+!label MagiC, Aufbau eines DFS in
+
+Da die Implementation eines DFS nur in Assembler erfolgen kann, wird dessen
+Beschreibung in Assembler-Syntax angegeben:
+
+!begin_verbatim
+dfs_name:      DS.B      8    /* Untername des DOS-Dateisystems      */
+dfs_next:      DS.L      1    /* nÑchster Treiber                    */
+dfs_init:      DS.L      1    /* Initialisierung                     */
+dfs_sync:      DS.L      1    /* synchronisiert das Dateisystem      */
+dfs_drv_open:  DS.L      1    /* neues Laufwerk                      */
+dfs_drv_close: DS.L      1    /* Laufwerk freigeben                  */
+dfs_dfree:     DS.L      1    /* fÅr Dfree                           */
+dfs_sfirst:    DS.L      1    /* fÅr Fsfirst                         */
+dfs_snext:     DS.L      1    /* fÅr Fsnext                          */
+dfs_ext_fd:    DS.L      1    /* erweitert ein Verzeichnis           */
+dfs_fcreate:   DS.L      1    /* erstellt ein Verzeichnis oder Datei */
+dfs_fxattr:    DS.L      1    /* fÅr Fxattr                          */
+dfs_dir2index: DS.L      1    /* fÅr Dreaddir                        */
+dfs_readlink:  DS.L      1    /* fÅr Freadlink                       */
+dfs_dir2FD:    DS.L      1    /* fÅr Fopen                           */
+dfs_fdelete:   DS.L      1    /* fÅr Fdelete und Ddelete             */
+dfs_pathconf:  DS.L      1    /* fÅr Dpathconf                       */
+!end_verbatim
+
+Querverweis: (!link [Aufbau eines XFS][Der Aufbau eines XFS])  ~ MagiC
+
+
+
+!begin_node dfs_dfree
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_dfreeÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *
+a1 !! = !! long df[4]
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+FÅr Dfree(). I.a. reicht es, aus dem (!link [DD][Der Verzeichnis-Deskriptor (DD)])
+den zugehîrigen (!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) zu ermitteln und
+den freien Platz auf dem ganzen Laufwerk anzugeben.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+!begin_node dfs_dir2FD
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_dir2FDÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+-> d0 !! = !! long errcode
+ggf. !! ~ !! ~
+a0 !! = !! LINK *l
+!end_table
+
+!item [Beschreibung:]
+Initialisiert einen Prototyp-FD, und zwar die Felder
+
+!begin_itemize !short
+!item fd_len
+!item fd_stcl
+!item fd_attr
+!item fd_ddev
+!end_itemize
+und ggf.
+!begin_itemize !short
+!item fd_name
+!item fd_xftype
+!item fd_xdata usw.
+!end_itemize
+
+Ggfs. werden noch andere Daten des FD verÑndert.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_dir2index
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_dir2indexÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+-> d0 !! = !! long index oder errcode
+!end_table
+
+!item [Beschreibung:]
+Gibt einfach einen Index (32 Bit) zu einem DIR-Eintrag zurÅck. Der FAT_DFS
+nimmt dazu den ent-intellisierten Startcluster. <dd> ist das Verzeichnis, in
+dem die Datei liegt.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_drv_close
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_drv_closeÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+d0 !! = !! int mode
+a0 !! = !! (!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *d
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Auch diese Funktion erfÅllt, abhÑngig vom <mode>, zwei Aufgaben:
+
+(!B)1. mode == 0:(!b)
+(!nl)
+Das DOS_XFS fragt das DFS, ob das Laufwerk geschlossen werden darf. Wenn
+dies nicht erlaubt ist, muû EACCDN geliefert werden, sonst (!nolink [E_OK]) (nîtig z.B.
+fÅr Dlock()). Geîffnete Dateien wurden bereits von Kernel und DOS_XFS
+erkannt, d.h. in solch einem Fall wird dfs_drv_close Åberhaupt nicht
+aufgerufen.
+
+Aus diesem Grund dÅrften i.A. keine verÑnderten Sektorpuffer existieren,
+auch keine, die gerade gelesen oder beschrieben werden (dies geschieht immer
+Åber Dateien!). In diesem Fall genÅgt es also, immer ein (!nolink [E_OK]) zu liefern.
+Problematischer wird es, wenn man einen Write-Back-Cache einsetzt. Dabei
+kann es vorkommen, daû keine Datei mehr geîffnet ist, aber noch Puffer
+belegt sind und zurÅckgeschrieben werden mÅssen. Der Kernel macht einen
+Sync-Aufruf (xfs_sync, der weitergegeben wird an dfs_sync), bevor die
+Anfrage gestellt wird; es dÅrften also keine verÑnderten Puffer mehr
+existieren. Falls doch, sollte das DFS aus SicherheitsgrÅnden ein (!nolink [EACCDN])
+zurÅckliefern.
+
+(!B)2. mode == 1:(!b)
+(!nl)
+Das DOS_XFS erzwingt das Schlieûen, das DFS muû E_OK liefern. Es dÅrfen
+keine Caches zurÅckgeschrieben werden, da das Laufwerk bereits ungÅltig ist.
+(nachdem ein Diskwechsel bereits gemeldet wurde).
+
+Beim (!nolink [Dlock])() wird dfs_drv_close() zunÑchst mit Modus 0, dann, wenn es keinen
+Fehler gegeben hat, mit Modus 1 aufgerufen. Diese Vorgehensweise wird auch
+dann durchgefÅhrt, wenn einmal ein Mechanismus eingebaut wird, der den
+Auswurfknopf von Wechselplattenlaufwerken oder CD-ROM abfragt und ggf. den
+Auswurf verweigert.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_drv_open
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_drv_openÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *d
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+(!nolink [MagiC]) unterstÅtzt genau 26 gleichzeitig aktive Dateisysteme denen die
+Buchstaben 'A'..'Z' zugeordnet sind. Dieser Eintrag hat zwei Aufgaben:
+
+!begin_enumerate
+!item Beim ersten Zugriff auf ein Laufwerk (etwa D:) legt der Kernel einen
+      DMD (drive media descriptor) an und "bietet" diesen den XFSs an. Der
+      DOS_XFS bietet diesen wiederum der Reihe nach allen DFS-Treibern an.
+      Der Eintrag d_dfs ist noch ein Nullzeiger, d_drive ist initialisiert
+      (zwischen 0 und 25, entsprechend 'A'..'Z'). Die DFS-Treiber versuchen
+      nun, auf dem Laufwerk "ihr" Dateisystem zu erkennen. Falls dies
+      gelingt, mÅssen (!nolink [d_dfs]) und d_root initialisiert werden, der
+      RÅckgabewert ist dann E_OK. Andernfalls wird EDRIVE gemeldet, und das
+      DOS_XFS probiert das nÑchste DFS.
+!item Beim wiederholten Zugriff ist (!nolink [d_dfs]) bereits initialisiert, und das DFS
+      hat die Gelegenheit, auf Mediumwechsel zu testen. Ist alles in
+      Ordnung, muû (!nolink [E_OK]) zurÅckgegeben werden. Ansonsten muû die
+      Diskwechselroutine des Kernels aufgerufen und E_CHNG zurÅckgegeben
+      werden. Den Zeiger auf die Diskwechselroutine des Kernels erhÑlt man
+      dabei per Dcntl.
+!end_enumerate
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_ext_fd
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_ext_fdÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *fd
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Wird benutzt, wenn eine Datei angelegt werden soll, aber das Verzeichnis
+bereits voll ist. Wird auûerdem beim Anlegen eines Ordners (Dcreate)
+verwendet.
+
+<fd> ist ein Prototyp-FD, der bereits im exklusiven Modus geîffnet ist. Die
+Datei muû erweitert und der neue Platz mit Nullen initialisiert werden.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_fcreate
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_fcreateÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+d0 !! = !! int cmd
+d1 !! = !! long arg
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Wird bei Fcreate, Dcreate und Dcntl benutzt. Der DOS_XFS hat bereits im
+Verzeichnis <dd> einen freien Platz gefunden und, zunÑchst im Speicher, den
+neuen Verzeichniseintrag <dir> erstellt. Die nicht in jedem DFS verwendeten
+Teile des DIR (auch Clusternummer) sind bereits mit Null initialisiert. Das
+DFS hat hier die Gelegenheit, noch Korrekturen vorzunehmen und die
+reservierten DIR-Bereiche je nach Dateityp zu initialisieren, bevor der
+DOS_XFS den ganzen Eintrag in das Verzeichni schreibt.
+
+Wenn der Aufruf von (!nolink [Dcntl]) oder Fsymlink kommt, stehen in d0 und a0 die
+entsprechenden Parameter, sonst ist d0 == 0. Wenn d0 == SYMLINK_CREATE ist,
+muû (oder zumindest kann, wenn mîglich) ein symbolischer Link erstellt
+werden.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_fdelete
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_fdeleteÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+d0 !! = !! long dirpos
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Die Datei mit dem Verzeichniseintrag <dir> im Verzeichnis <FD> soll gelîscht
+werden. FÅhrt das tatsÑchliche Lîschen der Datei durch, das Lîschen des
+Verzeichniseintrags und ZugriffsprÅfungen werden vom DOS_XFS durchgefÅhrt.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_fxattr
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_fxattrÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir oder NULL
+d0 !! = !! int mode
+d1 !! = !! XATTR *xattr
+-> d0 !! = !! long errcode
+ggf. !! ~ !! ~
+a0 !! = !! LINK *l
+!end_table
+
+!item [Beschreibung:]
+FÅr Fxattr. Der DOS_XFS hat bereits alle Informationen, die fÅr alle DFSs
+identisch sind, in den (!nolink [XATTR]) eingetragen. xattr_blksize und xattr_nblocks
+mÅssen vom DFS noch initialisiert werden, xattr_size kann z.B. bei
+Sonderdateien angepaût werden. xattr_index ist vom DOS_XFS mit dem in
+Motorola-Format umgewandelten dir_stcl initialisiert worden. In vielen
+FÑllen wird es nîtig sein, hier eine Korrektur vorzunehmen und z.B. einen
+Zeiger auf einen Treiber oder eine globale Datenstruktur zu Åbergeben.
+
+Beim Modus d0 == 0 (d.h. folge symbolischen Links) muû der DFS entsprechend
+reagieren und im Fall eines Links in d0 ELINK und in a0 den Link
+zurÅckgeben. Wenn <dir> == NULL ist, hat der DOS_XFS keinen
+Verzeichniseintrag, sondern einen FD ermittelt (z.B. die Root oder eine
+geîffnete Datei).
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_init
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_initÆ
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Reserviert. EnthÑlt im Fall MagiC-interner XFSs deren Initialisierung. Wird
+bei nachgeladenen XFSs nicht verwendet.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_name
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_nameÆ
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Der Name ist bisher nur Kommentar; er soll irgendwann auch einmal die
+Mîglichkeit bieten, festzustellen, welche Treiber installiert sind und wie
+z.B. der fÅr Laufwerk A: zustÑndige Treiber heiût (d.h. was fÅr ein
+Dateisystem die Diskette enthÑlt).
+
+Der Name des integrierten XFS lautet "DOS_XFS " (auf 8 Zeichen per
+Leerstellen erweitert).
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_next
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_nextÆ
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Ist einfach ein Verkettungszeiger auf den nÑchsten Treiber. Ein neuer
+Treiber wird vorn eingebunden, hat also immer hîchste PrioritÑt. Damit ist
+es z.B. mîglich, den integrierten DOS-Treiber zu Åberladen.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_pathconf
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_pathconfÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+d0 !! = !! int which
+-> d0 !! = !! long val oder Fehlercode
+!end_table
+
+!item [Beschreibung:]
+Verschiedene BeschrÑnkungen werden abgefragt, die fÅr einen bestimmten Pfad
+<dd> gelten. Die meisten Werte fÅr <which> werden bereits vom DOS_XFS
+eingesetzt, deshalb kommen nur folgende Werte vor:
+
+!begin_table [l l l]
+DP_IOPEN    !! (0) !! max. Anzahl gleichzeitig offener Dateien
+DP_ATOMIC   !! (4) !! interne Blockgrîûe
+DP_MODEATTR !! (7) !! zulÑssige Dateitypen (ab 21.05.95)
+!end_table
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_readlink
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_readlinkÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *dd
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+-> d0 !! = !! long errcode
+ggf. !! ~ !! ~
+a0 !! = !! LINK *l
+!end_table
+
+!item [Beschreibung:]
+FÅr Freadlink. d0 ist entweder EACCDN, wenn <dir> kein Symlink ist, oder ein
+anderer Fehlercode. Wenn kein Fehler aufgetreten ist, muû in a0 der Link
+zurÅckgegeben werden, und d0 muû den Wert ELINK haben.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_sfirst
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_sfirstÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) * d
+a1 !! = !! (!link [DIR][Der Verzeichniseintrag (DIR)]) *dir
+d0 !! = !! long pos
+d1 !! = !! DTA *dta
+-> d0 !! = !! long errcode
+ggf. !! ~ !! ~
+a0 !! = !! LINK *l
+!end_table
+
+!item [Beschreibung:]
+Der DOS_XFS hat bereits die Datei angesteuert. Das DFS braucht lediglich fÅr
+den nÑchsten Fsnext die reservierten EintrÑge dta_usr1 und dta_usr2 zu
+initialisieren, damit die Stelle wiedergefunden wird.
+
+Dateideskriptoren (FDs) kînnen in dta_usr nicht verwendet werden, weil das
+Freigeben bei einer "garbage collection" nicht verhindert werden kann. Die
+FDs einfach zu blockieren, ist auch nicht mîglich, da man das Ende der
+Fsfirst/(!nolink [Fsnext]) Operation nicht vorhersagen kann. Eine bereits erfolglose
+Suche kann z.B. durch Lîschen von dta_sname markiert werden.
+
+<pos> zeigt bereits auf den nÑchsten Eintrag, also 32 Bytes hinter <dir>.
+Bei symbolischen Links muû das DFS entsprechend reagieren, in d0 ELINK
+Åbergeben und in a0 einen Zeiger auf den Link. Ein Link beginnt mit einem
+Wort (16 Bit) fÅr die LÑnge des Pfads, gefolgt vom Pfad selbst.
+
+(!B)Achtung:(!b) Die LÑnge muû INKLUSIVE abschlieûendes Nullbyte und
+auûerdem gerade sein. Der Link muû auf einer geraden Speicheradresse liegen.
+
+Der Puffer fÅr den Link kann statisch oder auch flÅchtig sein, da der Kernel
+die Daten sofort umkopiert, ohne daû zwischendurch ein Kontextwechsel
+stattfinden kann.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_snext
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_snextÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! DTA *dta
+a1 !! = !! (!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *dmd
+-> d0 !! = !! long errcode
+ggf. !! ~ !! ~
+a0 !! = !! LINK *l
+!end_table
+
+!item [Beschreibung:]
+GestÅtzt auf die Daten, die dfs_sfirst im reservierten Bereich der (!nolink [DTA])
+abgelegt hat, wird die nÑchste passende Datei gesucht. Dabei kann auf
+Funktionen des DOS_XFS zurÅckgegriffen werden, die per Dcntl ermittelt
+werden kînnen:
+
+!begin_xlist !short [conv_pathelem]
+!item [_dir_srch]
+durchsucht ein Verzeichnis per FD
+!item [reopen_FD]
+îffnet einen FD
+!item [close_DD]
+schlieût einen FD
+!item [filename_match]
+vergleicht Dateinamen
+!item [conv_path_elem]
+wandelt Dateinamen um
+!item [init_DTA]
+kopiert Daten vom (!link [DIR][Der Verzeichniseintrag (DIR)]) in die (!nolink [DTA])
+!end_xlist
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dfs_sync
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødfs_syncÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *d
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Der Kernel hat dem DOS_XFS mitgeteilt, daû auf Laufwerk <d> alle Puffer
+zurÅckzuschreiben sind. öbergeben wird in Register a0 ein Zeiger auf einen
+DMD (drive media descriptor). Das DOS_XFS gibt diesen Aufruf direkt an das
+DFS weiter.
+
+ZurÅckgeliefert wird ein Fehlercode. Wenn das DFS keine Pufferverwaltung hat
+(z.B. eine RAMDisk), muû eine 0 geliefert werden.
+
+!item [Gruppe:]
+(!link [Aufbau eines DFS][Der Aufbau eines DFS])
+
+!item [Querverweis:]
+(!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node Datenstrukturen fÅr ein DFS
+!label DFS, Datenstrukturen fÅr ein
+
+Bei der Arbeit mit einem DFS sind die folgenden Datenstrukturen wichtig:
+
+!begin_itemize !short
+!item (!link [DIR][Der Verzeichniseintrag (DIR)])      (Verzeichniseintrag)
+!item (!link [DMD][Der Drive-Medium-Deskriptor (DMD)])      (Medium-Deskriptor)
+!item DTA      (Disk-Transfer-Area)
+!item (!link [DIR][Der Verzeichniseintrag (DIR)])       ((!nolink [Datei-Deskriptor]))
+!item (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])  (DOS-GerÑtetreiber)
+!end_itemize
+
+Querverweis: XFS-Strukturen
+!end_node
+
+
+
+!begin_node Der Verzeichniseintrag (DIR)
+
+Die folgenden Felder sind bei jedem DFS identisch:
+
+!begin_verbatim
+dir_name:  DS.B   11    /* 0x00: Dateinname                          */
+dir_attr:  DS.B    1    /* 0x0b: Attribut                            */
+dir_usr1:  DS.W    1    /* 0x0c: zur freien Verwendung               */
+dir_usr2:  DS.L    1    /* 0x0e: zur freien Verwendung               */
+dir_usr3:  DS.L    1    /* 0x12: zur freien Verwendung               */
+dir_time:  DS.W    1    /* 0x16: Zeit  der letzten énderung (Intel)  */
+dir_date:  DS.W    1    /* 0x18: Datum der letzten énderung (Intel)  */
+dir_stcl:  DS.W    1    /* 0x1a: erster Cluster bzw. andere Info     */
+dir_flen:  DS.L    1    /* 0x1c: DateilÑnge (Intel)                  */
+!end_verbatim
+
+(!B)Hinweis:(!b) Statt des Clusters sind auch andere Angaben mîglich. Das
+DOS_XFS behandelt allerdings den Eintrag zunÑchst wie eine Clusterangabe
+(fÅr xattr.index und fd_stcl sowie fÅr das Erstellen der EintrÑge "." und
+".." bei (!nolink [Dcreate])). Im Fall Fxattr kann die Angabe vom DFS mit anderen Daten
+Åberschrieben werden.
+
+Querverweis: (!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node Der GerÑtetreiber (MX_DDEV)
+!label GerÑtetreiber, MX_DDEV
+
+Der Unter-GerÑtetreiber (MX_DDEV) wird beim ôffnen einer Datei von der
+DFS-Funktion dfs_dir2FD in den Dateideskriptor eingesetzt und vom DOS_XFS
+aufgerufen. Der MX_DDEV-GerÑtetreiber muû folgende Funktionen bereitstellen:
+
+!begin_verbatim
+typedef struct _mx_ddev
+{
+	LONG cdecl (*ddev_open)(struct _mx_dosfd *f);
+	LONG cdecl (*ddev_close)();
+	LONG cdecl (*ddev_read)();
+	LONG cdecl (*ddev_write)();
+	LONG cdecl (*ddev_stat)();
+	LONG cdecl (*ddev_seek)();
+	LONG cdecl (*ddev_datime)();
+	LONG cdecl (*ddev_ioctl)();
+	LONG cdecl (*ddev_delete)();
+	LONG cdecl (*ddev_getc)();
+	LONG cdecl (*ddev_getline)();
+	LONG cdecl (*ddev_putc)();
+} MX_DDEV;
+!end_verbatim
+
+Querverweis: (!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC]) ~  XFS-Konzept in MagiC
+
+
+
+!begin_node ddev_open
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øddev_openÆ
+
+!item [Parameter:]
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+-> d0 !! = !! long errcode
+!end_table
+
+!item [Beschreibung:]
+Die Datei wird geîffnet, der FD ist bereits initialisiert. Im Open-Modus
+(fd_mode) muû das Bit O_TRUNC ausgewertet werden. Ggf. ist ein Fehlercode
+zurÅckzugeben, bei GerÑten kann O_TRUNC getrost ignoriert werden.
+
+Das Feld fd_fpos ist bereits auf 0L initialisiert. Falls dies nicht
+ausreicht (z.B. merkt sich das FAT_DFS immer den aktuellen Cluster), sind
+die entsprechenden Felder des Benutzerbereichs des FD zu initialisieren oder
+andere Felder des FD anzupassen. ddev_open wird sowohl beim ersten ôffnen
+einer Datei aufgerufen (nach dfs_dir2FD) als auch beim Duplizieren eines
+Dateideskriptors (wenn z.B. mehrere Programme gleichzeitig auf eine Datei
+oder ein Verzeichnis zugreifen). Die VertrÑglichkeit der Open-Modi (etwa
+shared read) wird vom Kernel gewÑhrleistet. Der GerÑtetreiber kann z.B. den
+Openmodus derart modifizieren, daû der FD immer "exklusiv" geîffnet ist,
+oder per Bit OM_NOCHECK veranlassen, daû er den Openmodus selbst Åberwachen
+mîchte. Wird ddev_open fÅr den Prototyp-FD aufgerufen, ist fd->fd_multi1 ==
+fd. Gibt ddev_open einen Fehlercode zurÅck, wird der FD einfach wieder vom
+DOS-XFS freigegeben.
+
+!item [Gruppe:]
+(!link [DOS-GerÑtetreiber][Der GerÑtetreiber (MX_DDEV)])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+!begin_node ddev_close
+
+Die Datei wird geschlossen. Die Behandlung von (!B)fd_refcnt(!b) wird vom
+DOS_XFS Åbernommen. Der MX_DDEV-Treiber braucht hier lediglich eventuelle
+Puffer zurÅckzuschreiben.
+
+(!B)Parameter-öbergabe:(!b) a0 = (!link [FD][Der Datei-Deskriptor (FD)]) *file,
+-> d0 = long errcode
+
+
+
+!begin_node ddev_read
+
+Siehe dev_read.
+
+(!B)Parameter-Åbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long count
+a1 !! = !! char *buffer
+-> d0 !! = !! long amount
+!end_table
+!end_node
+
+
+
+!begin_node ddev_write
+
+Siehe dev_write. Der MX_DDEV braucht sich nicht um eine Aktualisierung des
+Verzeichnisses oder das Datum des letzten Zugriffs zu kÅmmern.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long count
+a1 !! = !! char *buffer
+-> d0 !! = !! long amount
+!end_table
+!end_node
+
+
+
+!begin_node ddev_stat
+
+Siehe dev_stat.
+
+(!B)Parameter-Åbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+a1 !! = !! MAGX_UNSEL *unselect oder NULL
+d0 !! = !! int rwflag
+d1 !! = !! long apcode
+-> d0 !! = !! long status
+!end_table
+!end_node
+
+
+
+!begin_node ddev_seek
+
+Siehe dev_seek.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long where
+d1 !! = !! int mode
+-> d0 !! = !! long position
+!end_table
+!end_node
+
+
+
+!begin_node ddev_datime
+
+Siehe dev_datime. Der MX_DDEV kann hier einfach einen NULL-Zeiger einsetzen,
+dann fÅhrt das DOS_XFS die Standardprozedur durch. Das DOS_XFS setzt
+Fcntl(FUTIME, ...) auf Fdatime um.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+a1 !! = !! int d[2]
+d0 !! = !! int setflag
+-> d0 !! = !! long errcode
+!end_table
+!end_node
+
+
+
+!begin_node ddev_ioctl
+
+Siehe dev_ioctl. Es sollten zumindest die Funktionen FTRUNCATE, FIONREAD und
+FIONWRITE unterstÅtzt werden. Das DOS_XFS setzt Fcntl(FUTIME, ...) auf
+Fdatime() und damit auf ddev_datime um, d.h. FUTIME braucht von ddev_ioctl
+(!I)nicht(!i) direkt unterstÅtzt zu werden.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! FD *file
+d0 !! = !! int cmd
+a1 !! = !! void *buf
+-> d0 !! = !! long errcode 
+!end_table
+!end_node
+
+
+
+!begin_node ddev_delete
+
+Diese Funktion wird nur vom U_DFS, also dem integrierten DFS-Dateisystem fÅr
+Laufwerk U: aufgerufen. Wenn man also einen eigenen GerÑtetreiber
+installiert, ist genau hier der Zeitpunkt gekommen, seinen Speicher
+freizugeben und sich damit aus dem System zurÅckzuziehen.
+
+(!B)Parameter-Åbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *directory
+a1 !! = !! DIR *dir
+-> d0 !! = !! long errcode
+!end_table
+!end_node
+
+
+
+!begin_node ddev_getc
+
+Siehe dev_getc. Der MX_DDEV kann hier einfach einen NULL-Zeiger einsetzen,
+dann fÅhrt das DOS_XFS die Standardprozedur durch, d.h. ruft ddev_read auf.
+
+(!B)Parameter-Åbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! int mode
+-> d0 !! = !! unsigned long c
+!end_table
+!end_node
+
+
+
+!begin_node ddev_getline
+
+Siehe dev_getline. Der MX_DDEV kann hier einfach einen NULL-Zeiger
+einsetzen, dann fÅhrt das DOS_XFS die Standardprozedur durch, d.h. ruft
+ddev_read auf.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+a1 !! = !! char *buf
+d1 !! = !! long size
+d0 !! = !! int mode
+-> d0 !! = !! long amount
+!end_table
+!end_node
+
+
+
+!begin_node ddev_putc
+
+Siehe dev_putc. Der MX_DDEV kann hier einfach einen NULL-Zeiger einsetzen,
+dann fÅhrt das DOS_XFS die Standardprozedur durch, d.h. ruft ddev_write auf.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! int mode
+d1 !! = !! long value
+-> d0 !! = !! unsigned long count
+!end_table
+!end_node
+!end_node
+
+
+
+!begin_node Die Disk-Transfer-Area (DTA)
+
+Die DTA wird von den alten DOS-Funktionen (!nolink [Fsfirst]) und Fsnext verwendet,
+deren ungeschickte Konzeption durch die MSDOS-Schîpfer immer noch wie ein
+Fluch auf dem System lastet. Die Aufteilung in res1/res2 hat historische
+GrÅnde, um den Aufbau zumindest im DOS_XFS mîglichst kompatibel zum alten
+TOS zu machen. FÅr das DOS_XFS und damit alle DFSs sieht die Struktur
+folgendermaûen aus:
+
+!begin_verbatim
+dta_sname:  DS.B    12       /* 0x00: Suchname (von Fsfirst)       */
+dta_usr1 :  DS.L     1       /* 0x0c: zur freien Verwendung        */
+dta_usr2 :  DS.L     1       /* 0x10: zur freien VerfÅgung         */
+dta_drive:  DS.B     1       /* 0x14: logisches Laufwerk (0..25)   */
+dta_attr :  DS.B     1       /* 0x15: gefundenes Attribut          */
+dta_time :  DS.W     1       /* 0x16: gefundene Zeit               */
+dta_date :  DS.W     1       /* 0x18: gefundenes Datum             */
+dta_len  :  DS.L     1       /* 0x1a: gefundene LÑnge              */
+dta_name :  DS.B    14       /* 0x1e: gefundener Dateiname         */
+!end_verbatim
+
+(!B)Hinweis:(!b) Hier stehen 2 Langworte zur freien VerfÅgung. In
+(!I)dta_sname(!i) steht der Suchname bereits im aktuellen Format. In
+(!I)dta_usr1(!i) und (!I)dta_usr2(!i) muû die aktuelle Position der Suche
+eingetragen werden, damit ein nachfolgendes Fsnext an der richtigen Stelle
+weitersucht.
+
+Querverweis: (!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node Installation eines DFS
+
+Ein DFS ist einfach ein Programm, das den Treiber installiert und sich
+resident beendet. Die Installation erfolgt durch dosfunctions =
+(!B)Dcntl(DFS_INSTDFS, "U:\\", &myxfs)(!b); Der Pfad "U:\\" ist wichtig,
+weil der (!nolink [Dcntl])-Aufruf nicht vom MagiC-Kernel, sondern vom DOS-XFS ausgefÅhrt
+wird. Man erhÑlt einen Zeiger auf wichtige XFS-Funktionen zurÅck, oder einen
+Fehlercode. Die DOS_XFS-Funktionen kann man auch unabhÑngig von der
+Installation eines DFS erfragen Åber dosfunctions = (!B)Dcntl(DFS_GETINFO,
+"U:\\", NULL)(!b); Per kernel = (!B)Dcntl (KER_GETINFO, NULL, NULL)(!b)
+erhÑlt man die Kernelfunktionen. Die Deinstallation eines DFS ist
+(!I)nicht(!i) vorgesehen.
+!end_node
+!end_node

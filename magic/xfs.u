@@ -1,0 +1,3496 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fÅr den ST-Guide
+##
+## Last Edit: 29.07.96
+##
+## Kapitel x: Das XFS-Konzept von MagiC
+
+
+!begin_node Das XFS-Konzept von MagiC
+!label MagiC, XFS-Konzept in
+
+(!nolink [MagiC]) ermîglicht wie MultiTOS die Einbindung alternativer Dateisysteme, und
+damit prinzipiell die Verwendung langer Dateinamen. Aus verschiedenen
+GrÅnden wurde in MagiC jedoch ein anderer Ansatz gewÑhlt, als in Atari's
+Lîsung. Dies hat leider zur Folge, daû die fÅr MultiTOS vorhandenen XFS's
+(Minix-XFS, CD-ROM-XFS, ...) unter (!nolink [MagiC]) (!I)nicht(!i) eingesetzt werden
+kînnen. Dieses Kapitel beschreibt die folgenden Punkte:
+
+!begin_itemize !short
+!item (!link [Allgemeines] [Allgemeines zum XFS-Konzept von MagiC])
+!item (!link [Aufbau eines XFS] [Der Aufbau eines XFS])
+!item (!link [Datenstrukturen] [Datenstrukturen fÅr ein XFS])
+!item (!link [Installation eines XFS] [XFS, Installation eines])
+!item Kernelfunktionen fÅr ein XFS
+!item (!link [Symbolische Links] [Symbolische Links und das XFS-Konzept])
+!end_itemize
+
+Querverweis:
+VFAT-XFS in MagiC ~  (!link [DFS-Konzept in MagiC][Das DFS-Konzept von MagiC])
+
+
+
+!begin_node Allgemeines zum XFS-Konzept von MagiC
+!label XFS-Konzept, Allgemeines
+
+Das GEMDOS war bisher der konservativste Teil des Betriebssystems MagiC.
+FÅr Netzwerktreiber muûten praktisch sÑmtliche DOS-Aufrufe einschlieûlich
+Pexec nachgebildet werden, ohne auf einer tieferen Ebene eingreifen zu
+kînnen. In (!nolink [MagiC]) 1.x (wie in TOS) war das DOS nicht einmal reentrant, da
+ein statisch angelegter Stack verwendet wurde.
+
+In MultiTOS/MiNT wird das Problem dermaûen umgangen, daû gewissermaûen
+Åber das (!nolink [GEMDOS]) ein System gelegt wird, das alle hîheren Verwaltungsaufgaben
+erledigt, andere Dateisysteme einbinden kann und das (!nolink [GEMDOS]) nur noch als
+dummen Dateisystemtreiber verwendet. Vorteil dieses Systems ist seine
+groûe FlexibilitÑt und Erweiterbarkeit, ein entscheidender Nachteil aber
+der gewaltive Overhead bei der Verwendung von 'normalen' DOS-Dateisystemen.
+Dies sind aber gerade diejenigen, die mit Abstand am hÑufigsten eingesetzt
+werden. Hinzu kommt, daû das (!nolink [GEMDOS])-Dateisystem mit dem Einsatz von MiNT
+nichts an FunktionalitÑt, Komfort oder Geschwindigkeit gewinnen kann, da ja
+die alten Routinen nur mit zusÑtzlichem Overhead ablaufen. Die
+Dateisystemzugriffe unter MiNT sind also i.a. (!I)nicht(!i) reentrant, d.h.
+jeder Diskettenzugriff legt wie unter MS-Windows den gesamten Rechner lahm.
+
+Eine weitere Eigenschaft von MiNT ist das BemÅhen, die Funktionen, die alle
+Dateisysteme gemeinsam haben, in den Kernel zu Åbernehmen. Dabei bleiben
+zwar die Dateisystemtreiber (MiNT-XFSs) kompakt, aber durch den
+Inode-orientierten Aufbau der Kernelfunktionen wird den Dateitreibern eine
+unter UmstÑnden ungÅnstige Struktur aufgezwungen, auûerdem sind i.a. viele
+Aufrufe des Dateisystemtreibers fÅr einen DOS-Aufruf notwendig. Schlieûlich
+ist der MiNT-Kernel selbst sehr lang, liegt aber zum groûen Teil brach,
+solange keine anderen Dateisysteme als DOS eingesetzt werden.
+
+(!B)Unter (!nolink [MagiC]) wurde ein anderer Ansatz gewÑhlt(!b), der darin bestand, das
+gesamte (!nolink [GEMDOS]) einschlieûlich der Lowlevel-Funktionen fÅr die
+Sektorpufferung von Grund auf neu zu schreiben und in insgesamt drei, vier
+oder fÅnf Schichten zu zerlegen, in die von auûen (durch nachgeladene
+Treiber) eingegriffen werden kann. Als Nebeneffekt kam eine Erweiterung der
+FunktionalitÑt des DOS-Dateisystems und ein zusÑtzliches Dateisystem auf dem
+logischen Laufwerk U: heraus.
+
+(!B)Das gesamte Konzept einschlieûlich der Zugriffe auf DOS-Dateisysteme ist
+reentrant und lÑuft im Hintergrund ab(!b). So ist es mîglich, auf Laufwerk
+A: Dateien zu bearbeiten, ohne den Rechner bei den Diskettenzugriffen
+merklich zu bremsen. Dabei ist MagiC bisher nur um 10k lÑnger geworden. Im
+Vergleich zu MiNT wurden aber mehr Funktionen in die Dateisystemtreiber
+ausgelagert, was diese zwar lÑnger macht, aber ihnen die Mîglichkeit gibt,
+die Funktionen wesentlich effizienter auszufÅhren. Das DOS-Dateisystem ist
+eher noch etwas schneller als langsamer geworden.
+
+Obwohl vollstÑndig in Assembler realisiert, handelt es sich um ein
+objektorientiertes System mit virtuellen Funktionen und mehrstufigen
+Vererbungen. Ein Dateideskriptor, wie ihn der Kernel verwendet und das XFS
+zur VerfÅgung stellt, ist ein Objekt mit speziellen Daten und Funktionen.
+Das XFS realisiert aber ein abgeleitetes Objekt mit weiteren Datenfeldern
+und Funktionen. Der DFS-Untertreiber des DOS_XFS schlieûlich muû wiederum
+weitere Funktionen und Daten im FD unterbringen und leitet die Klasse weiter
+ab. Genauso sieht es mit dem DMD (drive medium descriptor) aus. Der Kernel
+benîtigt nur wenige Angaben, die unteren Schichten jedoch wesentlich mehr,
+aber immer wieder verschiedene.
+
+(!B)Die Schichten im einzelnen:(!b)
+
+!begin_enumerate !short
+!item (!B)Der DOS-Kernel(!b). Er liegt in (!nolink [MagiC]) selbst und wird direkt von
+      den Anwenderprogrammen Åber Trap #1 aufgerufen. Er enthÑlt Module fÅr
+      die Speicherverwaltung, fÅr die Prozeûverwaltung und fÅr die
+      Dateiverwaltung. Letztere hat die folgenden Unterschichten.
+!item (!B)Das Dateisystem(!b) (XFS = eXtended File System). Sein Aufbau ist
+      grundsÑtzlich verschieden von einem MiNT-XFS, erfÅllt aber denselben
+      Zweck. (!nolink [MagiC]) fÅr Ataris enthÑlt nur ein einziges XFS, das sogenannte
+      DOS_XFS, andere kînnen eingebunden werden. Die Macintosh-Version
+      (MagiCMac) enthÑlt (!I)zusÑtzlich(!i) ein Mac-XFS. Speziell dieses
+      Dateisystem greift wieder auf Untertreiber zu:
+!begin_enumerate   
+!item Ein DOS- Dateisystem (DFS) wird vom DOS_XFS aufgerufen. Hier stehen
+      nur die Dateifunktionen, wÑhrend die Verzeichnisverwaltung im
+      wesentlichen vom DOS_XFS Åbernommen wird. MagiC direkt enthÑlt zwei
+      DFSs. Eines fÅr Laufwerk U:, ein zweites fÅr FAT-Dateisysteme, die auf
+      BIOS Laufwerken liegen. Weitere DFSs kînnen eingebunden werden. Der
+      Aufwand fÅr ein DFS ist wesentlich geringer als fÅr ein XFS, da viele
+      Funktionen vom DOS_XFS bereits ausgefÅhrt werden. Die wesentliche
+      Voraussetzung ist eine DOS-konforme Verzeichnisstruktur (mit 32-Byte
+      EintrÑgen und Dateinamen des Formats 8+3). Der Kernel selbst kommt
+      mit dem DFS (!I)nicht(!i) in BerÅhrung, sondern steuert ihn
+      transparent Åber das DOS-XFS an.
+!end_enumerate
+!item (!B)Die Dateitreiber(!b) (MX_DEV), die im wesentlichen das Lesen und
+      Schreiben einer Datei erledigen. Sie werden vom XFS angelegt und
+      verwaltet, aber bei Funktionen wie Fread() und Fwrite() direkt vom
+      Kernel aufgerufen, wodurch extrem wenig Overhead entsteht. Das DOS_XFS
+      enthÑlt tatsÑchlich nur einen Dateitreiber. Dieser erledigt z.B. bei
+      Schreibzugriffen die Aktualisierung des Verzeichnisses und ruft wieder
+      Untertreiber (MX_DDEV) auf.
+!begin_enumerate
+!item Der Untertreiber MX_DDEV wird nur vom DOS-Dateitreiber des
+      Dateisystems DOS_XFS aufgerufen. Der Benutzer kann eigene MX_DDEVs
+      Åber das Verzeichnis U:\\DEV einbinden. Der Kernel selbst kommt mit
+      den Untertreibern Åbrigens nicht in BerÅhrung.
+!end_enumerate
+!end_enumerate
+
+(!B)Bemerkungen:(!b)
+
+!begin_itemize
+!item Im Gegensatz zu MiNT sind U:\PROC, U:\DEV usw. keine eigenen
+      Dateisysteme sondern einfach nur Unterverzeichnisse des DFS fÅr
+      Laufwerk U:. Je nach Unterverzeichnis legt das U-DFS verschiedene
+      Dateitypen und -treiber an. Da die Verzeichniskontrolle dem DOS_XFS
+      obliegt, werden Schreibzugriffe auf z.B. ein Device im Verzeichnis per
+      Dateidatum protokolliert. Das geht sogar soweit, daû ein
+      Schreibzugriff auf das Wurzelverzeichnis von Laufwerk A: automatisch
+      das Dateidatum von U:\A verÑndert.
+
+      Devices, Pipes und Shared-Memory-Blîcke kînnen verschoben, gelîscht
+      oder umbenannt werden. In allen Verzeichnissen von Laufwerk U: kînnen
+      symbolische Links angelegt werden, z.B. kann man mit
+      "ln -s U:\CON U:\CONSOLE" einen Alias fÅr die GerÑtedatei CON anlegen.
+      Man kann auch einfach leere Dateien anlegen, jedoch keine Ordner, weil
+      das Laufwerk U: keinen Speicher hat.
+!item Im Gegensatz zu MiNT ist U:\ kein eigenes, spezielles Dateisystem. Es
+      wird lediglich darauf geachtet, daû nur symbolische Links angelegt
+      werden kînnen. Die Verzeichnisse U:\A usw. sind lediglich symbolische
+      Links, die auch entfernt oder umbenannt werden kînnen.
+!item Alle Verzeichnisse von U: sind z.Zt. auf 32 EintrÑge beschrÑnkt.
+!item Der Aufbau aller internen Strukturen und die schnelle registerbasierte
+      ParameterÅbergabe und -rÅckgabe erfordert eine Implementation aller
+      Dateisysteme und -treiber in Assembler, zumindest fÅr die meisten
+      Funktionen.
+!item Der Aufbau des MX_DDEV-Dateitreibers hat sich seit (!nolink [MagiC]) V2.10
+      geÑndert. Der Beispieltreiber DEV_LPT1 darf unter (!nolink [MagiC]) 3.00 nicht
+      verwendet werden. Die Konzepte sind jedoch identisch geblieben, nur
+      ein paar Konstanten haben sich geÑndert. Ein neuer Beispieltreiber ist
+      noch nicht fertig.
+!end_itemize
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])  ~
+(!link [Test auf Pipes][Pipes, Test auf])
+!end_node
+
+
+!begin_node Der Aufbau eines XFS
+!label MagiC, Aufbau eines XFS in
+
+Da die Implementation eines XFS nur in Assembler erfolgen kann, wird dessen
+Beschreibung in Assembler-Syntax angegeben:
+
+!begin_verbatim
+xfs_name:       DS.B      8    /* Name des Dateisystems               */
+xfs_next:       DS.L      1    /* nÑchster Treiber                    */
+xfs_flags:      DS.L      1    /* Flags analog zu MiNT                */
+xfs_init:       DS.L      1    /* Initialisierung                     */
+xfs_sync:       DS.L      1    /* Synchronisation des Dateisystems    */
+xfs_pterm:      DS.L      1    /* teilt ein Programmende mit          */
+xfs_garbcoll:   DS.L      1    /* Garbage-Collection oder NULL        */
+xfs_freeDD:     DS.L      1    /* DD freigeben                        */
+xfs_drv_open:   DS.L      1    /* DMD (Mediach) testen/initialisieren */
+xfs_drv_close:  DS.L      1    /* erzwingt einen Disk-Wechsel         */
+xfs_path2DD:    DS.L      1    /* gibt einen DD zum Pfadnamen zurÅck  */
+xfs_sfirst:     DS.L      1    /* sucht die erste passende Datei      */
+xfs_snext:      DS.L      1    /* sucht die nÑchste passende Datei    */
+xfs_fopen:      DS.L      1    /* îffnet oder erstellt eine Datei     */
+xfs_fdelete:    DS.L      1    /* lîscht eine Datei                   */
+xfs_link:       DS.L      1    /* fÅr Frename und Flink benîtigt      */
+xfs_xattr:      DS.L      1    /* fÅr Fxattr benîtigt                 */
+xfs_attrib:     DS.L      1    /* fÅr Fattrib benîtigt                */
+xfs_chown:      DS.L      1    /* fÅr Fchown benîtigt                 */
+xfs_chmod:      DS.L      1    /* fÅr Fchmod benîtigt                 */
+xfs_dcreate:    DS.L      1    /* erstellt ein Verzeichnis            */
+xfs_ddelete:    DS.L      1    /* lîscht ein Verzeichnis              */
+xfs_DD2name:    DS.L      1    /* gibt den absoluten Pfadnamen zurÅck */
+xfs_dopendir:   DS.L      1    /* îffnet ein Verzeichnis              */
+xfs_dreaddir:   DS.L      1    /* liest nÑchsten Verzeichnis-Eintrag  */
+xfs_drewinddir: DS.L      1    /* setzt das dirhandle auf 1. Eintrag  */
+xfs_dclosedir:  DS.L      1    /* schlieût das dirhandle              */
+xfs_dpathconf:  DS.L      1    /* ermittelt verschiedene Limits       */
+xfs_dfree:      DS.L      1    /* Anzahl freier Blîcke etc. ermitteln */
+xfs_wlabel:     DS.L      1    /* schreibt den Disk-Namen             */
+xfs_rlabel:     DS.L      1    /* liest den Disk-Namen                */
+xfs_symlink:    DS.L      1    /* erstellt einen symbolischen Link    */
+xfs_readlink:   DS.L      1    /* liest einen symbolischen Link       */
+xfs_dcntl:      DS.L      1    /* fÅr Dcntl benîtigt                  */
+!end_verbatim
+
+Querverweis:
+(!link [Aufbau eines DFS][Der Aufbau eines DFS]) ~
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node xfs_attrib
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_attribÆ - fÅr (!nolink [Fattrib]) notwendig
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+int rwflag
+!item [d1 =]
+int attrib
+!item [-> d0 =]
+char attr  oder long errcode
+!item [-> a0 =]
+SYMLINK *
+!end_xlist
+
+!item [Beschreibung:]
+Im Gegensatz zu MiNT fÅhrt MagiC diese Funktion nicht auf Fxattr zurÅck,
+weil dies u.U. einen gewaltigen Overhead bedeutet. Hierbei mÅssen
+symbolische Links verfolgt werden, d.h. die RÅckgabe von ELINK ist zulÑssig.
+
+Diese Funktion wird vom XFS_DOS noch nicht ordentlich durchfÅhrt, es werden
+keine symbolischen Links erkannt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Fattrib ~  Fxattr
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_chmod
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_chmodÆ - fÅr (!nolink [Fchmod]) notwendig
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+int mode
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+éndert die Zugriffsrechte einer Datei. Die Parameter entsprechen denen von
+Fchmod. Symbolische Links werden nicht verfolgt.
+
+Wird vom XFS_DOS (!I)nicht(!i) unterstÅtzt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Fchmod
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_chown
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_chownÆ - fÅr (!nolink [Fchown]) notwendig.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+uid
+!item [d1 =]
+gid
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+éndert den Eigner (User-ID und Group-ID) einer Datei. Die Parameter
+entsprechen denen von Fchown. Symbolische Links werden nicht verfolgt, d.h.
+Eigner und Gruppe des symbolischen Links werden modifiziert.
+
+Wird vom XFS_DOS (!I)nicht(!i) unterstÅtzt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Fchown
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dclosedir
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dclosedirÆ - schlieût ein Verzeichnis
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [a0 =]
+(!link [DHD][Der Directory-Handle-Deskriptor (DHD)]) *dhd
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Analog zu MiNT.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Dclosedir
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dcntl
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dcntlÆ - fÅr (!nolink [Dcntl]) notwendig.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+int cmd
+!item [d1 =]
+long arg
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Dcntl. Jedes XFS sollte FUTIME unterstÅtzen.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dcreate
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dcreateÆ - erstellt ein Verzeichnis
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name (ohne Pfad)
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Dcreate benîtigt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Dcreate
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_ddelete
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_ddeleteÆ - lîscht ein Verzeichnis
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Diese Funktion musste ab MagiC-Version 4.01 geÑndert werden. FÅr (!nolink [MagiC]) <
+4.01 (Kernelversion < 3) gilt:
+
+Beim Lîschen ist darauf zu achten, daû kein Verzeichnis durch den Kernel
+referenziert sein darf auûer durch den Aufruf selbst (d.h. es muû dd_refcnt
+== 1 sein). Auûerdem ist darauf zu achten, daû keine Dateien im Verzeichnis
+liegen. ELINK darf nicht zurÅckgegeben werden, symbolische Links dÅrfen
+nicht behandelt werden. Die Zugriffsberechtigung muû (falls eine existiert)
+vom XFS geprÅft werden.
+
+FÅr (!nolink [MagiC]) < 4.01 (Kernelversion >= 3) gilt:
+
+Wegen Reentranzproblematiken ergeben sich einigen énderungen, wobei der
+Kernel dem XFS Zugriffskontrollen abnimmt und weiterhin der Kernel den DD
+freigibt, nicht das XFS: Der Kernel îffnet zunÑchst mit xfs_path2DD den
+Parent des zu lîschenden Verzeichnisses, dann testet er mit xfs_xattr, ob es
+sich um einen Symlink handelt, und lîscht ihn ggf. per xfs_fdelete.
+
+Handelt es sich um ein Verzeichnis, îffnet der Kernel dieses wieder per
+(!nolink [xfs_path2DD]) (Modus 1) und gibt den Parent wieder per xfs_freeDD frei. Die
+öberprÅfung von dd_refcnt wird vom Kernel durchgefÅhrt, der ZÑhler kann und
+muû daher vom XFS ignoriert werden. Das XFS muû nun sicherstellen, daû das
+zu lîschende Verzeichnis bzw. der DD nicht anderweitig geîffnet oder benutzt
+werden kînnen (wichtig fÅr reentrante XFSs). Das XFS lîscht dann das
+Verzeichnis, gibt aber den DD nicht (!) frei, damit der Kernel im
+Erfolgsfall (RÅckgabe (!nolink [E_OK])) vorher seine Standardpfade freigeben kann. Der
+Kernel ruft dann (!nolink [xfs_freeDD]) auf. Wie gehabt, muû das XFS prÅfen, ob das
+Verzeichnis leer ist, bzw. Zugriffsberechtigungen existieren.
+
+Nochmal im Zusammenhang:
+
+!begin_itemize
+!item Kernel ermittelt zu lîschenden DD, prÅft ReferenzzÑhler.
+!item xfs_ddelete sperrt den DD. Wenn das nicht geht, wird EACCDN geliefert.
+!item xfs_ddelete lîscht das Verzeichnis, wenn es leer ist. Der DD wirkt
+      dabei als Sperre fÅr parallel laufende Versuche, das gerade gelîschte
+      Verzeichnis zu benutzen.
+!item xfs_ddelete lÑût den jetzt ungÅltigen, aber noch als Sperre dienenden
+      DD weiterhin gÅltig (im Gegensatz zum alten Konzept).
+!item Der Kernel macht bei Erfolg seine Standardpfade ungÅltig.
+!item Der Kernel gibt den DD frei.
+!end_itemize
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Ddelete
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dfree
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dfreeÆ - Anzahl freier Blîcke ermitteln.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+long[4]
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Dfree. XFS_DOS ruft direkt den zustÑndigen DFS-Treiber auf.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Dfree
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_DD2name
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_DD2nameÆ - gibt den absoluten Pfadnamen zurÅck.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+int bufsize
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Dgetpath und Dgetcwd. Nach <name> wird der Pfad kopiert der zum
+Åbergebenen Verzeichnis gehîrt. Der Pfad muû ohne folgenden '\'
+zurÅckgegeben werden, d.h. ein Leerstring fÅr das Wurzelverzeichnis.
+<bufsize> versteht sich, wie Åberall, inklusive abschlieûendes Nullbyte.
+Wenn der Puffer zu klein ist (bufsize kleiner als der Pfad), muû wie in MiNT
+(!nolink [ERANGE]) zurÅckgegeben werden.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dopendir
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dopendirÆ - îffnet ein Verzeichnis
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [d0 =]
+int tosflag
+!item [-> d0 =]
+(!link [DHD][Der Directory-Handle-Deskriptor (DHD)]) *dhd  oder Fehlercode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Dopendir. Als <tosflag> sind z.Zt. nur 0 und 1 erlaubt. Ist <tosflag> ==
+0, werden Dateinamen nicht abgeschnitten, und die ersten 4 Bytes, die von
+D(x)readdir zurÅckgegeben werden, enthalten den Datei-Index.
+
+Ist <tosflag> == 1, muû dreaddir die Dateinamen auf 8+3 und Groûschrift
+kÅrzen und darf keine Dateikennung zurÅckgeben.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Dopendir ~  Dreaddir ~  Dxreaddir
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dpathconf
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dpathconfÆ - ermittelt verschiedene Limits
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [d0 =]
+int which
+!item [-> d0 =]
+long value
+!end_xlist
+
+!item [Beschreibung:]
+Wie in MiNT. XFS_DOS ruft direkt den zustÑndigen DFS-Treiber auf. <which>
+kann folgende Werte annehmen:
+
+!begin_xlist !short [DP_XATTRFIELDS (-1)]
+!item [DP_MAXREQ   (-1)]
+ermittle max. gÅltigen Wert fÅr <which>
+!item [DP_IOPEN    (0)]
+internes Limit fÅr Anzahl offener Dateien
+!item [DP_MAXLINKS (1)]
+maximale Anzahl Links fÅr eine Datei
+!item [DP_PATHMAX  (2)]
+maximale LÑnge fÅr vollen Pfadnamen
+!item [DP_NAMEMAX  (3)]
+maximale LÑnge fÅr Dateinamen
+!item [DP_ATOMIC   (4)]
+Blockgrîûe
+!item [DP_TRUNC    (5)]
+Dateinamen-VerkÅrzung liefert:
+!begin_xlist !short [DP_AUTOTRUNC (1)]
+!item [DP_NOTRUNC   (0)]
+nie kÅrzen, ggf. ERANGE
+!item [DP_AUTOTRUNC (1)]
+auf max. LÑnge gekÅrzt
+!item [DP_DOSTRUNC  (2)]
+VerkÅrzung auf 8+3
+!end_xlist
+!item [DP_CASE     (6)]
+Groû-/Kleinschreibung liefert:
+!begin_xlist !short [DP_CASEINSENS (2)]
+!item [DP_CASESENS   (0)]
+unterschieden
+!item [DP_CASECONV   (1)]
+in Groûschrift gewandelt
+!item [DP_CASEINSENS (2)]
+nicht unterschieden und nicht gewandelt
+!end_xlist
+!end_xlist
+
+Ab der MagiC-Version vom 21.5.95 wird weiterhin unterstÅtzt:
+
+!begin_xlist !short [DP_XATTRFIELDS (-1)]
+!item [DP_MODEATTR    (7)]
+(vgl. Dpathconf)
+!item [DP_XATTRFIELDS (8)]
+(vgl. Dpathconf)
+!end_xlist
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])  ~ Dpathconf
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_dreaddir
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_dreaddirÆ - liest nÑchsten Verzeichniseintrag
+
+!item [Parameter:]
+!begin_xlist !short [->a0 =]
+!item [a0 =]
+(!link [DHD][Der Directory-Handle-Deskriptor (DHD)]) *dhd
+!item [d0 =]
+int  size
+!item [a1 =]
+char *buf
+!item [d1 =]
+XATTR *xattr oder NULL
+!item [d2 =]
+long *xr (wenn xattr != NULL)
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Wie in MiNT. öbernimmt sowohl Dreaddir als auch Dxreaddir.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_drewinddir
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_drewinddirÆ - Directory Handle auf 1. Eintrag setzen.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DHD][Der Directory-Handle-Deskriptor (DHD)]) * dhd
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]Wie in MiNT. 
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])  ~ Drewinddir
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_drv_close
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_drv_closeÆ - erzwingt einen Diskwechsel.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *
+!item [d0 =]
+int mode
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Auch diese Funktion erfÅllt, abhÑngig vom <mode>, zwei Aufgaben:
+
+!begin_enumerate
+!item (!B)mode == 0:(!b)
+(!nl)
+      Der Kernel bittet das XFS, das Laufwerk, wenn mîglich, zu schlieûen.
+      Wenn dies nicht erlaubt ist, muû EACCDN geliefert werden, sonst sind
+      alle Strukturen freizugeben bzw. Caches zurÅckzuschreiben und (!nolink [E_OK]) als
+      RÅckgabewert zu liefern.
+
+      Geîffnete Dateien werden bereits vom Kernel erkannt und das Schlieûen
+      verhindert. Dabei kînnen aber nur solche Dateien erkannt werden, die
+      ein Handle haben und dem Kernel bekannt sind. Der Kernel ruft
+      sicherheitshalber vor Aufruf dieser Funktion xfs_sync auf, falls ein
+      Write-Back-Cache verwendet wird. Diese Vorgehensweise wird auch dann
+      durchgefÅhrt, wenn einmal ein Mechanismus eingebaut wird, der den
+      Auswurfknopf von Wechselplattenlaufwerken oder CD-ROM abfragt und ggf.
+      den Auswurf verweigert.
+!item (!B)mode == 1:(!b)
+(!nl)
+      Der Kernel erzwingt das Schlieûen, das XFS muû E_OK liefern. Es dÅrfen
+      keine Caches zurÅckgeschrieben werden, da das Laufwerk bereits
+      ungÅltig ist (nachdem ein Diskwechsel bereits gemeldet wurde). DDs und
+      FDs brauchen nicht freigegeben zu werden, soweit sie vom Kernel noch
+      referenziert werden, d.h. der Kernel fÅhrt auch nach dem Diskwechsel
+      noch xfs_freeDD bzw. dev_close aus.
+!end_enumerate
+
+Das interne DOS_XFS leitet den Aufruf an die gleichnamige Funktion des DFS
+weiter, auûerdem werden ggf. XFS-Strukturen freigegeben.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_drv_open
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_drv_openÆ - DMD (Mediach) testen/initialisieren.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+MagiC unterstÅtzt genau 26 gleichzeitig aktive Dateisysteme denen die
+Buchstaben 'A'..'Z' zugeordnet sind. Dieser Eintrag hat zwei Aufgaben:
+
+!begin_enumerate
+!item Beim ersten Zugriff auf ein Laufwerk (etwa D:) legt der Kernel einen
+      DMD (drive media descriptor) an und "bietet" diesen den XFSs an. Der
+      Eintrag d_xfs ist noch ein Nullzeiger, d_drive ist initialisiert
+      (zwischen 0 und 25, entsprechend 'A'..'Z').
+
+      Die XFS-Treiber versuchen nun, auf dem Laufwerk "ihr" Dateisystem zu
+      erkennen. Falls dies gelingt, mÅssen (!nolink [d_xfs]) und d_root initialisiert
+      werden, der RÅckgabewert ist dann (!nolink [E_OK]). Andernfalls wird
+      (!nolink [EDRIVE])
+      gemeldet, und der Kernel probiert das nÑchste XFS.
+
+      (!B)Achtung:(!b) Die root darf wÑhrend der Lebensdauer eines
+      gemounteten Dateisystems nicht freigegeben werden. Der ReferenzzÑhler
+      der root sollte mit 1 vorbesetzt werden, um zu verhindern, daû er per
+      free_DD freigegeben wird. In den Versionen vor (!nolink [MagiC]) 4.01 war dies
+      nicht notwendig, weil der ReferenzzÑhler (in unsauberer Weise) vor dem
+      Aufruf von path2DD nicht inkrementiert und nachher dekrementier wurde.
+!item Beim wiederholten Zugriff ist (!nolink [d_xfs]) bereits initialisiert, und das XFS
+      hat die Gelegenheit, auf Mediumwechsel zu testen. Ist alles in
+      Ordnung, muû (!nolink [E_OK]) zurÅckgegeben werden. Ansonsten muû die
+      Diskwechselroutine des Kernels aufgerufen und (!nolink [E_CHNG]) zurÅckgegeben
+      werden. Den Zeiger auf die Diskwechselroutine des Kernels erhÑlt man
+      bei der Installation des XFS.
+!end_enumerate
+
+Das interne DOS_XFS leitet den Aufruf an die gleichnamige Funktion des DFS
+weiter, d.h. alle DFS-Treiber werden durchprobiert.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_fdelete
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_fdeleteÆ - lîscht eine Datei.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name (ohne Pfad)
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Fdelete. Beim Lîschen eines Symlinks darf nur dieser gelîscht werden,
+nicht etwa eine referenzierte Datei. D.h. der RÅckgabewert ELINK ist hier
+_UNZULéSSIG_.
+
+Zugriffsrecht-öberprÅfungen obliegen vollstÑndig dem XFS. Beim Lîschen ist
+darauf zu achten, daû keine Datei durch den Kernel referenziert sein darf
+(d.h. fd_refcnt != 0).
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_flags
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_flagsÆ - Flags analog zu MiNT
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Reserviert. Sollte eigentlich Flags enthalten. Wird jedoch vom MagiC-Kernel
+nicht verwendet. Also bitte nicht verwenden!
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_fopen
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_fopenÆ - îffnet oder erstellt eine Datei.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name (ohne Pfad)
+!item [d0 =]
+int omode (fÅrs ôffnen)
+!item [d1 =]
+int attrib (fÅrs Erstellen)
+!item [-> d0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) *  oder Fehlercode
+!item [-> a0 =]
+SYMLINK *
+!end_xlist
+
+!item [Beschreibung:]
+Wird fÅr die Funktionen Fopen und Fcreate verwendet. Der Open-Modus ist im
+niederwertigen Byte anders als in MiNT, weil die MiNT-Modi fÅr die
+Implementierung der Abfragen ungÅnstig sind. Beim Aufrufen von (!nolink [Fopen]) Åber
+Trap #1 werden die MiNT-Modi vom Kernel in die internen Modi konvertiert.
+Hier die internen Modi, die vom XFS-Treiber bearbeitet werden mÅssen
+(NOINHERIT wird (!I)nicht(!i) unterstÅtzt, weil nach TOS-Konvention nur die
+Handles 0..5 vererbt werden). Ansonsten entspricht das HiByte den
+MiNT-Konventionen:
+
+!begin_verbatim
+OM_RPERM   EQU  1   // Datei ist zum Lesen geîffnet
+OM_WPERM   EQU  2   // Datei ist zum Schreiben geîffnet
+OM_EXEC    EQU  4   // Datei ist zum AusfÅhren geîffnet
+OM_APPEND  EQU  8   // Schreibzugriffe ans Ende (Kernel!)
+OM_RDENY   EQU  16  // andere dÅrfen nicht gleichz. lesen
+OM_WDENY   EQU  32  // "" "" nicht gleichz. schreiben
+OM_NOCHECK EQU  64  // KEINE öberprÅfung durch den Kernel
+!end_verbatim
+
+Das Bit OM_APPEND wird vom Kernel bei Aufruf von Fwrite() automatisch
+beachtet, der Kernel fÅhrt vor jedem Schreibzugriff ein Fseek() aus.
+
+OM_NOCHECK wird vom Kernel gesetzt, wenn eine Datei als Device, d.h. als
+Handle -1,-2,-3 oder -4 geîffnet bzw. auf ein solches Handle umgelenkt
+(Fforce) wird. Ist dieses Bit gesetzt, sollte das XFS keine PrÅfung auf
+mehrfaches ôffnen der Datei machen (siehe auch unten bei fd_mode), sondern
+dies dem GerÑtetreiber Åberlassen.
+
+Hier die Bits, die wie im MiNT verwendet werden:
+
+!begin_verbatim
+O_CREAT EQU  $200 // Datei erstellen, falls nicht existiert
+O_TRUNC EQU  $400 // Datei leeren, falls existiert
+O_EXCL  EQU  $800 // nicht îffnen, falls existiert
+!end_verbatim
+
+Der Kernel fÅhrt (!nolink [Fcreate]) aus als (!nolink [Fopen])
+(O_CREAT +O_RDWR + O_TRUNC). O_COMPAT
+(d.h. nur der TOS-Modus 0,1 oder 2 angegeben, ist in MagiC immer
+gleichbedeutend mit O_WDENY.
+
+Die öberprÅfung der Zugriffsrechte obliegt vollstÑndig dem XFS, der Kernel
+tut nichts. Das wÑre auch wenig sinnvoll, da jedes Dateisystem seine eigenen
+Mechanismen und Rechte hat. ZurÅckgegeben wird dem Kernel ein Zeiger auf
+einen geîffneten (!link [FD][Der Datei-Deskriptor (FD)]), d.h. das ôffnen des Dateitreibers muû vom XFS
+durchgefÅhrt werden. Der ReferenzzÑhler des zurÅckgegebenen FDs ist vom XFS
+zu erhîhen bzw. beim ersten ôffnen auf 1 zu initialisieren. FÅr symbolische
+Links und Diskwechsel gilt dasselbe wie bei xfs_sfirst.
+
+(!B)(!nolink [Fopen]) wird unter MiNT folgendermaûen zurÅckgefÅhrt:(!b)
+
+!begin_enumerate !short
+!item per <lookup> Konvertierung pathname->fcookie
+!item per <getxattr> Ermittlung der Zugriffsrechte
+!item Test der Zugriffsrechte durch den Kernel
+!item per <getdev> Ermittlung des Dateitreibers
+!item per <getdev->open> ôffnen der Datei
+!end_enumerate
+
+Dieses Verfahren ist sehr langwierig. DOS gibt beim Suchen der Datei bereits
+einen Zeiger auf den 32-Byte-Verzeichniseintrag zurÅck, der direkt zum
+öberprÅfen des Attributs und damit der Zugriffsrechte und auch zum ôffnen
+der Datei dient. (!nolink [MagiC]) erwartet daher direkt die Implementation des
+Fopen-Befehls mit allen öberprÅfungen der Zugriffsrechte. ZurÅckgeliefert
+wird eine FD-Struktur, in die der Dateitreiber eingetragen und geîffnet
+wurde.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_freeDD
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_freeDDÆ - gibt einen DD frei.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [->]
+void
+!end_xlist
+
+!item [Beschreibung:]
+Der Kernel hat den ReferenzzÑhler eines DD auf 0 dekrementiert, der DD wird
+also vom Kernel nicht mehr referenziert. Die Funktion wird z.B. aufgerufen,
+wenn der Kernel nach dem Fopen() den Pfad, in dem die geîffnete Datei liegt
+und der an xfs_fopen Åbergeben worden war, nicht mehr benîtigt. XFSs, die
+keine garbage collection machen, kînnen Åber diese Funktion ihre DDs
+freigeben.
+
+Es muss sichergestellt werden, daû die root nie freigegeben wird. Entweder
+baut man hier eine spezielle Abfrage ein, oder (eleganter) setzt den
+ReferenzzÑhler der root bei drv_open bereits auf 1.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_garbcoll
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_garbcollÆ - Garbage Collection.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *d
+!item [-> d0 =]
+1L oder 0L
+!end_xlist
+
+!item [Beschreibung:]
+Der Kernel benîtigt dringend internen GEMDOS-Speicher und macht eine
+MÅllsammlung (garbage collection). Ein XFS, das die interne
+Speicherverwaltung des Kernels nicht verwendet, kann hier einen Nullpointer
+als Funktion eintragen.
+
+(!B)Achtung:(!b) Es sollten mîglichst soviele Blîcke wie mîglich freigegeben
+werden, RÅckgabe ist 1, wenn (mindestens) ein Block freigegeben werden
+konnte. Bei einer garbage collection durchlÑuft der Kernel die gesamte Liste
+aller angemeldeten logischen Laufwerke. Das XFS wird also so oft um eine
+garbage collect ersucht, wie es zu diesem Zeitpunkt Laufwerke verwaltet.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_init
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_initÆ - Initialisierung.
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Reserviert. EnthÑlt im Fall MagiC-interner XFSs deren Initialisierung. Wird
+bei nachgeladenen XFSs nicht verwendet.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_link
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_linkÆ - fÅr (!nolink [Frename]) und (!nolink [Flink]) notwendig.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *olddir
+!item [a1 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *newdir
+!item [d0 =]
+char *oldname
+!item [d1 =]
+char *newname
+!item [d2 =]
+int flag_link
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Wird sowohl fÅr (!nolink [Frename]) (d2 = 0) als auch fÅr (!nolink [Flink])
+(d2 = 1) verwendet. Im
+Fall Frename ist ein neuer Verzeichniseintrag zu erstellen und der alte
+Eintrag (Verweis auf die Datei) zu lîschen oder zu Åberschreiben.
+
+Im Fall Flink wird ein weiterer Verweis auf dieselbe Datei angelegt und der
+alte Eintrag nicht gelîscht. Beide DDs liegen immer auf demselben
+Dateisystem, haben also denselben DMD. Wie bei Fdelete ist im Fall eines
+symbolischen Links dieser umzubenennen bzw. ein weiterer Link zu erstellen.
+D.h. der RÅckgabewert ELINK ist hier (wie bei xfs_fdelete) _UNZULéSSIG_.
+
+(!nolink [Flink]) wird vom DOS_XFS (!I)nicht(!i) unterstÅtzt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_name
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_nameÆ - Name des Dateisystems
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Der Name ist bisher nur Kommentar; er soll irgendwann auch einmal die
+Mîglichkeit bieten, festzustellen, welche Treiber installiert sind und wie
+z.B. der fÅr Laufwerk A: zustÑndige Treiber heiût (d.h. was fÅr ein
+Dateisystem die Diskette enthÑlt). 
+
+Der Name des integrierten XFS lautet "DOS_XFS " (auf 8 Zeichen per
+Leerstellen erweitert).
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_next
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_nextÆ - nÑchster Treiber.
+
+!item [Parameter:]
+---
+
+!item [Beschreibung:]
+Ist einfach ein Verkettungszeiger auf den nÑchsten Treiber. Ein neuer
+Treiber wird vorn eingebunden, hat also immer hîchste PrioritÑt. Damit ist
+es z.B. mîglich, den integrierten DOS-Treiber zu Åberladen.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_path2DD
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_path2DDÆ - gibt einen DD zum Pfadnamen zurÅck.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [mode =]
+0: name ist Datei
+!item [=]
+1: name ist selbst Verzeichnis
+!item [d0 =]
+int mode
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *reldir akt. Verzeichnis
+!item [a1 =]
+char *pathname
+!item [-> d0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [d1 =]
+char *restpfad
+!item [oder]
+~
+!item  [-> d0 =]
+ELINK
+!item [d1 =]
+Restpfad ohne beginnenden '\'
+!item  [a0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) des Pfades, in dem der symbolische Link
+liegt. Dies ist wichtig bei relativen Pfadangaben im Link.
+!item [a1 =]
+NULL, Der Pfad stellt den Parent des Wurzelverzeichnisses dar.
+!item [oder]
+~
+!item [a1 =]
+Pfad des symbolischen Links
+!end_xlist
+
+!item [Beschreibung:]
+Der Kernel unterscheidet zwischen zwei Typen von Deskriptoren,
+Dateideskriptoren FD, file descriptor) und Verzeichnisdeskriptoren (DD,
+directory descriptor), die aber im Aufbau identisch sein kînnen. Diese
+Funktion liefert zu einem Pfad einen Deskriptor zurÅck. Der ReferenzzÑhler
+des DD muû jedesmal, wenn er als Funktionswert zurÅckgeliefert wird, um 1
+erhîht werden, weil er vom Kernel referenziert wird. Die Funktion path2DD
+entspricht einem "ôffnen" des Pfades, es wird eine Art "Dateihandle" dem
+Kernel zurÅckgegeben, das der Kernel wieder schlieûen muû. Das Parsen des
+Pfades muû immer vom XFS erledigt werden.
+
+(!B)Eingabeparameter:(!b)
+
+!begin_xlist !short [<pathname>]
+!item [<mode>]
+Legt fest, ob das letzte Pfadelement selbst ein Verzeichnis ist (mode == 1),
+oder ob der Pfad ermittelt werden soll, in dem diese Datei liegt.
+!item [<reldir>]
+Verzeichnis, von dem aus gesucht werden soll.
+!item [<pathname>]
+Der Pfadname, ohne Laufwerkbuchstaben und ohne fÅhrendes '\'.
+!end_xlist
+
+(!B)Ausgabeparameter:(!b)
+
+1. Fall: Es ist ein Fehler aufgetreten
+
+<d0> enthÑlt den Fehlercode
+
+2. Fall: Ein Verzeichnisdeskriptor (DD) konnte ermittelt werden.
+
+!begin_xlist !short [<a0]
+!item [<d0>]
+Zeiger auf den (!link [DD][Der Verzeichnis-Deskriptor (DD)]). Der ReferenzzÑhler des
+DD wurde vom XFS um 1 erhîht.
+!item [<d1>]
+Zeiger auf den restlichen Dateinamen ohne beginnenden '\' bzw. '/'. Wenn das
+Ende des Pfades erreicht wurde, zeigt dieser Zeiger auf das abschliessende
+Nullbyte.
+!end_xlist
+
+3. Fall: Das XFS ist bei der Pfadauswertung auf einen symbolischen Link
+gestoûen
+
+!begin_xlist !short [<a0>
+!item [<d0>]
+enthÑlt den internen MagiC- Fehlercode ELINK
+!item [<d1>]
+Zeiger auf den restlichen Pfad ohne beginnenden '\' bzw. '/'
+!item [<a0>]
+enthÑlt den DD des Pfades, in dem der symbolische Link liegt. Der
+ReferenzzÑhler des DD wurde vom XFS um 1 erhîht.
+!item [<a1>]
+ist der Zeiger auf den Link selbst. Ein Link beginnt mit einem Wort (16 Bit)
+fÅr die LÑnge des Pfads, gefolgt vom Pfad selbst.
+!end_xlist
+
+(!B)Achtung:(!b) Die LÑnge muû INKLUSIVE abschlieûendes Nullbyte und
+auûerdem gerade sein. Der Link muû auf einer geraden Speicheradresse liegen.
+
+Der Puffer fÅr den Link kann statisch oder auch flÅchtig sein, da der Kernel
+die Daten sofort umkopiert, ohne daû zwischendurch ein Kontextwechsel
+stattfinden kann.
+
+Wird a1 == NULL Åbergeben, wird dem Kernel signalisiert, daû der Parent des
+Wurzelverzeichnisses angewÑhlt wurde. Befindet sich der Pfad etwa auf U:\A,
+kann der Kernel auf U:\ zurÅckgehen. Der Wert des RÅckgaberegisters a0 wird
+vom Kernel ignoriert, es darf daher kein ReferenzzÑhler erhîht werden.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_pterm
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_ptermÆ - teilt ein Programmende mit.
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [a0 =]
+PD *
+!item [->]
+void
+!end_xlist
+
+!item [Beschreibung:]
+Diese Funktion wird bei jedem Programmende aufgerufen und gibt dem XFS
+Gelegenheit, internen Strukturen freizugeben oder Locks zu entfernen. Die
+fÅr den Kernel sichtbaren Dateien (d.h. die, denen ein Handle zugeordnet
+ist), werden vorher vom Kernel geschlossen. Die ReferenzzÑhler fÅr
+Standardverzeichnisse werden ebenfalls vorher durch den Kernel
+dekrementiert. öbergeben wird in a0 ein Zeiger auf einen Prozeû-Deskriptor.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_readlink
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_readlinkÆ - liest einen symbolischen Link.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+char *buf
+!item [d1 =]
+int  size
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]FÅr Freadlink. Wird vom DOS_XFS unterstÅtzt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_rlabel
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_rlabelÆ - liest den Disknamen.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+char *buf
+!item [d1 =]
+int len
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Zum Lesen des Medien-Namens. Wird vom Kernel dann aufgerufen, wenn Fsfirst
+mit (Attribut == 8) durchgefÅhrt wird. <name> ist i.a. "*.*" und kann
+ignoriert werden. <len> ist die LÑnge des Puffers <buf>, bei öberschreitung
+muû ERANGE geliefert werden. Wird auch fÅr Dreadlabel() aufgerufen. In
+diesem Fall ist name == NULL.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_sfirst
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_sfirstÆ - sucht die erste passende Datei.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) * srchdir
+!item [a1 =]
+char *name (ohne Pfad)
+!item [d0 =]
+DTA *
+!item [d1 =]
+int  attrib
+!item [-> d0 =]
+long errcode
+!item [-> a0 =]
+SYMLINK * (ggf. Symlink)
+!end_xlist
+
+!item [Beschreibung:]
+Wird fÅr Fsfirst benîtigt. MiNT verwendet statt dieser Funktion eine
+Kombination von Dreaddir und Fxattr, wozu aber sehr viele Aufrufe des
+XFS-Treibers notwendig sind. Der reservierte Bereich der (!nolink [DTA]) kann vom XFS
+frei verwendet werden, falls dieser zu klein ist, muû mit Ñhnlichen
+heuristischen Methoden wie in MiNT vorgegangen werden, d.h. Zeiger in die
+(!nolink [DTA]) eingetragen werden, die auf fest angelegte Deskriptoren zeigen.
+
+Diese Deskriptoren kînnen aber nur nach heuristischen Methoden freigegeben
+werden, weil man nie weiû, ob noch ein Fsnext kommt oder nicht. Der Kernel
+ermittelt Åber path2DD bereits den vollstÑndigen Pfad, so daû nur noch der
+reine Dateiname in a1 Åbergeben wird. Wie bei allen DOS-Aufrufen, die einen
+Pfad verarbeiten, muû das XFS darauf achten, daû der DD fÅr die Dauer der
+Bearbeitung geschÅtzt wird. Das ist besonders dann kritisch, wenn das
+Dateisystem reentrant ist.
+
+Ist eine gesuchte Datei ein symbolischer Link, muû als Fehlercode in d0
+ELINK und in a0 der Zeiger auf den Link Åbergeben werden. Der Kernel ruft
+dann einfach (!nolink [Fxattr]) auf, um die (!nolink [DTA]) zu fÅllen.
+Trat ein Diskwechsel auf, ist
+E_CHNG zurÅckzugeben, der Kernel wiederholt dann automatisch die Funktion.
+Das gilt auch fÅr alle anderen Funktionen.
+
+In jedem Fall muû dta_drive korrekt initialisiert werden, z.B. per:
+dta.dta_drive = srchdir->dd_dmd->d_drive. Wird (!nolink [E_OK]) oder ELINK
+zurÅckgegeben, ohne daû dta_drive initialisiert wurde, ist das Resultat
+unvorhersehbar!
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+
+
+
+!begin_node xfs_snext
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_snextÆ - sucht die nÑchste passende Datei.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+DTA *
+!item [a1 =]
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *
+!item [-> d0 =]
+long errcode,
+!item [-> a0 =]
+SYMLINK * (Symlink)
+!end_xlist
+
+!item [Beschreibung:]
+Wird fÅr Fsnext benîtigt. Der Kernel hat aus der (!nolink [DTA]) bereits das zugehîrige
+Dateisystem ermittelt, dessen DMD in a1 Åbergeben wird. Auch hier kann ein
+symbolischer Link auftreten.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_symlink
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_symlinkÆ - erstellt einen symbolischen Link.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) * dir
+!item [a1 =]
+char *name
+!item [d0 =]
+char *to
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+FÅr Fsymlink. Es muû unter dem neuen Namen <name> eine Datei im Verzeichnis
+<dir> erstellt werden, die auf die Datei <to> zeigt. Wird vom DOS_XFS
+unterstÅtzt.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_sync
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_syncÆ - synchronisiert das Dateisystem.
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [a0 =]
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) *d
+!item [->]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Der Kernel teilt dem XFS mit, daû auf Laufwerk <d> alle Puffer
+zurÅckzuschreiben sind. öbergeben wird in Register a0 ein Zeiger auf einen
+DMD (drive media descriptor). Dieser wird vom Kernel angelegt.
+
+ZurÅckgeliefert wird ein Fehlercode. Wenn das XFS keine Pufferverwaltung hat
+(z.B. eine RAMDisk), muû eine 0 geliefert werden. Das interne DOS_XFS ruft
+einfach die gleichlautende DFS- Funktion auf.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_wlabel
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_wlabelÆ - schreibt den Disknamen.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Zum (Um-)Benennen von Medien. Wird vom Kernel dann aufgerufen, wenn Fcreate
+mit Attribut 8 durchgefÅhrt werden. Wird der Diskname, wie beim
+DOS-Dateisystem, als spezielle Datei abgelegt, mÅssen alle anderen
+pfadbasierten XFS-Funktionen den Disknamen ignorieren.
+
+Ein leerer Name oder ein aus "\xe5" bestehender (KompatibilitÑt zu TOS) muû
+den Disknamen lîschen (falls Medien ohne Namen zulÑssig sind). Wird auch fÅr
+Dwritelabel() aufgerufen.
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node xfs_xattr
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øxfs_xattrÆ - fÅr Fxattr notwendig.
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) *
+!item [a1 =]
+char *name
+!item [d0 =]
+XATTR *
+!item [d1 =]
+int mode
+!item [-> d0 =]
+long errcode
+!item [-> a0 =]
+SYMLINK *
+!end_xlist
+
+!item [Beschreibung:]
+Wird fÅr Fxattr verwendet. Im Fall mode == 0 (d.h. folge symbolischen Links)
+kann in d0 ELINK und in a0 ein Link zurÅckgegeben werden, andernfalls ist
+ELINK unzulÑssig.
+
+!begin_xlist !short [mode == 0:]
+!item [mode == 0:]
+folge symbolischen Links (gib ggf. ELINK zurÅck)
+!item [== 1:]
+folge nicht (d.h. erstelle (!nolink [XATTR]) fÅr den Link)
+!end_xlist
+
+!item [Gruppe:]
+(!link [Aufbau eines XFS][Der Aufbau eines XFS])
+
+!item [Querverweis:]
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node Datenstrukturen fÅr ein XFS
+!label XFS, Datenstrukturen fÅr ein
+
+Bei der Arbeit mit einem XFS sind die folgenden Datenstrukturen wichtig:
+
+!begin_xlist [MX_DEV ] !short 
+!item [(!link [DD] [Der Verzeichnis-Deskriptor (DD)])]        (Verzeichnis-Deskriptor)
+!item [(!link [DHD] [Der Directory-Handle-Deskriptor (DHD)])] (Directory-Handle-Deskriptor)
+!item [(!link [DMD] [Der Drive-Medium-Deskriptor (DMD)])]     (Medium-Deskriptor)
+!item [(!link [DTA] [Die Disk-Transfer-Area DTA])]            (Disk-Transfer-Area)
+!item [(!link [FD] [Der Datei-Deskriptor (FD)])]              (Datei-Deskriptor)
+!item [(!link [MX_DEV] [Der GerÑtetreiber (MX_DEV)])]         (GerÑtetreiber)
+!end_xlist
+
+Querverweis:
+(!link [DFS-Strukturen][Datenstrukturen fÅr ein DFS]) ~
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+
+
+!begin_node Der Verzeichnis-Deskriptor (DD)
+!label Verzeichnis-Deskriptor
+!label Directory-Deskriptor
+!label Deskriptor, Verzeichnis-
+
+Die Verzeichnisdeskriptoren mÅssen vom XFS angelegt und verwaltet werden.
+Alle Deskriptoren, die dem Kernel bekannt sind (d.h. diejenigen, die fÅr
+einen Prozeû als Standardpfad verwendet werden) haben ReferenzzÑhler
+ungleich Null. Eine Ausnahme bildet nur der DD fÅr das Wurzelverzeichnis
+eines Laufwerks; hier ist der ReferenzzÑhler immer 0, egal ob ein Prozeû das
+Wurzelverzeichnis als Standardverzeichnis hat oder nicht.
+
+FÅr den Kernel sieht ein DD folgendermaûen aus, diese EintrÑge mÅssen vom
+XFS angelegt werden:
+
+!begin_verbatim
+dd_dmd:      DS.L      1    /* 0x00: Zeiger auf DMD               */
+dd_refcnt:   DS.W      1    /* 0x04: Ref.zÑhler fÅr Standardpfade */
+!end_verbatim
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node dd_dmd
+
+Hier steht das zugehîrige Dateisystem.
+!end_node
+
+
+
+!begin_node dd_refcnt
+
+Der ReferenzzÑhler. Dieser Eintrag wird nur vom Kernel verwendet, muû vom
+XFS beim Erstellen eines (!nolink [DD]) auf 0 initialiert (bei der root am
+besten auf 1, s.o. bei xfs_drv_open) und bei jeder öbergabe an den Kernel
+(-> xfs_path2DD) um 1 inkrementiert werden.
+
+D.h. daû xfs_path2DD beim ZurÅckgeben eines neuen
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]) (der also vom Kernel
+sonst nicht referenziert wird) den ReferenzzÑhler auf 1 setzen muû.
+
+Wenn der ReferenzzÑhler ungleich 0 ist, hat der Kernel Zeiger auf diesen DD,
+und er darf keinesfalls vom XFS freigegeben werden. Der Kernel zÑhlt den
+ReferenzzÑhler jedesmal um 1 herunter, wenn er einen DD nicht mehr benîtigt.
+Erreicht der ZÑhler dabei Null, wird xfs_freeDD aufgerufen. Das XFS kann
+dann den DD freigeben oder ansonsten erst beim Aufruf von (!nolink [xfs_garbcoll]) (der
+"garbage collection") oder bei xfs_drv_close.
+
+(!B)Achtung:(!b) Die root darf wÑhrend der Lebensdauer eines gemounteten
+Dateisystems nicht freigegeben werden. Der ReferenzzÑhler der root sollte
+mit 1 vorbesetzt werden, um zu verhindern, daû er per free_DD freigegeben
+wird.
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~  Datenstrukturen fÅr ein XFS
+!end_node
+!end_node
+
+
+
+!begin_node Der Directory-Handle-Deskriptor (DHD)
+!label Directory-Handle-Deskriptor
+!label Deskriptor, Directory-Handle
+
+Die Directory-Handles werden fÅr Dopendir/Dclosedir/Drewinddir benîtigt. Im
+Gegensatz zu den Dateideskriptoren (FD) hÑlt der Kernel keine Liste der
+geîffneten DHs. Wenn ein Prozeû terminiert, wird das XFS Åber die Funktion
+xfs_pterm aufgerufen und muû alle fÅr den Prozeû angelegten DHs freigeben.
+
+Den Eigner eines DH kann das XFS Åber den Kernel-Zeiger <act_pd> ermitteln.
+FÅr den Kernel sieht ein DH folgendermaûen aus, diese EintrÑge mÅssen vom
+XFS angelegt werden:
+
+!begin_verbatim
+dhd_dmd:  DS.L   1   /* 0x00: Zeiger auf DMD  */
+!end_verbatim
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)])
+
+
+!begin_node dhd_dmd
+
+Hier steht das zugehîrige Dateisystem.
+!end_node
+!end_node
+
+
+
+!begin_node Der Drive-Medium-Deskriptor (DMD)
+!label Drive-Medium-Deskriptor
+!label Deskriptor, Drive-Medium
+
+Der DMD wird vom Kernel (!) fÅr jedes geîffnete Laufwerk angelegt und auch
+ggf. wieder freigegeben. Hier legt der XFS alle Daten an, die er sich fÅr
+das Laufwerk merken muû. Die folgenden Felder sind diejenigen, die der
+Kernel benîtigt (Das Ur- Objekt, von dem der XFS seinen XFS-DMD ableitet):
+
+!begin_verbatim
+d_xfs:      DS.L   1    /* 0x00: Der Dateisystemtreiber           */
+d_drive:    DS.W   1    /* 0x04: Laufwerknummer 0..25             */
+d_root:     DS.L   1    /* 0x06: Zeiger auf DD der Root           */
+d_biosdev:  DS.W   1    /* 0x0a: BIOS-Laufwerk oder -1            */
+d_driver:   DS.L   1    /* 0x0c: def. zus. mit devcode das Medium */
+d_devcode:  DS.L   1    /* 0x10: z.B. SCSI Target & Laufwerk      */
+d_dfs:      DS.L   1    /* 0x14: DOS-spez. Dateisystem-Treiber    */
+!end_verbatim
+
+Andere XFSs oder DFSs tragen weitere Daten in den DMD ein. Man kann sich
+den DMD als eine Objektklasse vorstellen. Ein fÅr das DOS_XFS abgeleiteter
+DMD hat nur den zusÑtzlichen Eintrag d_dfs. Der FAT-DFS trÑgt zusÑtzlich
+Daten wie die Clustergrîûe und die Anzahl der Sektoren ein.
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~
+(!link [DD][Der Verzeichnis-Deskriptor (DD)])
+
+
+!begin_node d_xfs
+
+Hier steht der zugehîrige Dateisystemtreiber (XFS). Er wird von
+(!B)xfs_drv_open(!b) eingetragen.
+!end_node
+
+
+
+!begin_node d_drive
+
+Hier steht, welchem logischen Laufwerk ('A' .. 'Z') das Dateisystem
+zugeordnet ist. Das braucht nicht immer einem (!B)BIOS-Laufwerk(!b) zu
+entsprechen. Dieser Wert wird (!I)immer (!)(!i) vom Kernel eingetragen, wenn
+ein Laufwerk geîffnet wird, bevor ein XFS eingetragen wird.
+!end_node
+
+
+
+!begin_node d_root
+
+Hier steht ein Zeiger auf den DD des Wurzelverzeichnisses.
+!end_node
+
+
+
+!begin_node d_biosdev
+
+Wenn es sich um eine Partition handelt, die mit (!nolink [BIOS]) (!B)Rwabs(!b)
+behandelt wird, steht hier die BIOS-GerÑtenummer. Ansonsten muû -1
+eingetragen werden (z.B. bei Laufwerk U: oder einer
+(!I)Macintosh(!i)-Partition).
+!end_node
+
+
+
+!begin_node d_driver
+
+Bestimmt zusammen mit d_devcode das Medium. D.h. wenn d_driver und
+(!nolink [d_devcode]) identisch sind, liegen beide Laufwerke auf demselben Medium. D.h.
+wenn das Medium ausgeworfen werden soll, mÅssen beide Dateisysteme gesperrt
+werden. Bei einer Harddisk-Partion ist d_biosdev das (!B)BIOS-Laufwerk(!b),
+(!B)d_driver(!b) ist beliebig (z.B. Zeiger auf die XHDI-Struktur), (!nolink [d_devcode])
+ist der XHDI-Code eines Mediums, d.h. SCSI-Target und GerÑtenummer (jew. ein
+WORD).
+!end_node
+
+
+
+!begin_node d_devcode
+
+Bestimmt zusammen mit d_driver das Medium. D.h. wenn d_driver und
+d_devcode identisch sind, liegen beide Laufwerke auf demselben Medium. D.h.
+wenn das Medium ausgeworfen werden soll, mÅssen beide Dateisysteme gesperrt
+werden. Bei einer Harddisk-Partion ist d_biosdev das (!B)BIOS-Laufwerk(!b),
+(!nolink [d_driver]) ist beliebig (z.B. Zeiger auf die XHDI-Struktur), d_devcode
+ist der XHDI-Code eines Mediums, d.h. SCSI-Target und GerÑtenummer (jew. ein
+WORD).
+!end_node
+
+
+
+!begin_node d_dfs
+
+Dieser Eintrag existiert (!I)zwingend nur fÅr(!i) (!B)DOS-Dateisysteme(!b)
+(also bereits fÅr ein abgeleitetes Objekt) und enthÑlt einen Zeiger auf den
+DFS-Untertreiber.
+!end_node
+!end_node
+
+
+
+!begin_node Der Datei-Deskriptor (FD)
+!label Datei-Deskriptor
+!label File-Deskriptor
+!label Deskriptor, Datei-
+
+Die Dateideskriptoren mÅssen vom XFS angelegt und verwaltet werden. Alle
+Deskriptoren, die dem Kernel bekannt sind, haben ReferenzzÑhler ungleich
+Null. FÅr den Kernel sieht ein FD genauso aus wie ein
+(!link [DD][Der Verzeichnis-Deskriptor (DD)]), weshalb im DOS_XFS
+die gleiche Datenstruktur verwendet wird.
+
+FÅr den Kernel sieht ein FD folgendermaûen aus, diese EintrÑge mÅssen vom
+XFS angelegt werden:
+
+!begin_verbatim
+fd_dmd:      DS.L    1   /* 0x00: Zeiger auf DMD                       */
+fd_refcnt:   DS.W    1   /* 0x04: Ref.zÑhler fÅrs Schlieûen oder -1    */
+fd_mode:     DS.W    1   /* 0x06: Open- Modus und flags                */
+fd_dev:      DS.L    1   /* 0x08: Zeiger auf MX_DEV                    */
+!end_verbatim
+
+Die vom DOS_XFS abgeleitete Klasse (ein "DOS-FD") hat darÅber hinaus noch
+die zusÑtzlichen Felder:
+
+!begin_verbatim
+fd_ddev:     DS.L    1    /* 0x0c: Zeiger auf MX_DDEV                  */
+fd_name:     DS.B   11    /* 0x10: DD_FD: Name im internen Format      */
+fd_attr:     DS.B    1    /* 0x1b: Attribut                            */
+fd_owner:    DS.L    1    /* 0x1c: DD_FD: Eigner eines FD oder NULL    */
+fd_parent:   DS.L    1    /* 0x20: Zeiger auf den Parent-DD_FD         */
+fd_children: DS.L    1    /* 0x24: DD_FD: Liste aller Kinder           */
+fd_next:     DS.L    1    /* 0x28: Zeiger auf FDs im selben Verzeichn. */
+fd_multi:    DS.L    1    /* 0x2c: Zeiger auf FD derselben Datei       */
+fd_multi1:   DS.L    1    /* 0x30: Zeiger auf erstes Listenelement     */
+fd_fpos:     DS.L    1    /* 0x34: Position des Dateizeigers           */
+fd_dirch:    DS.B    1    /* 0x38: Bit0: "dirty"                       */
+fd_unused:   DS.B    1    /* 0x39:                                     */
+fd_time:     DS.W    1    /* 0x3a: Zeit  (8086)                        */
+fd_date:     DS.W    1    /* 0x3c: Datum (8086)                        */
+fd_stcl:     DS.W    1    /* 0x3e: Start- Cluster                      */
+fd_len:      DS.L    1    /* 0x40: DateilÑnge in Bytes                 */
+fd_dirpos:   DS.L    1    /* 0x44: Pos. des zug. Eintrags im Directory */
+fd_user1:    DS.L    1    /* 0x48: zur freien VerfÅgung                */
+fd_user2:    DS.L    1    /* 0x4c: zur freien VerfÅgung                */
+!end_verbatim
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC]) ~
+(!link [DMD][Der Drive-Medium-Deskriptor (DMD)]) ~
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)]) ~
+(!link [MX_DEV][Der GerÑtetreiber (MX_DEV)])
+
+
+!begin_node fd_dmd
+
+Hier steht das zugehîrige Dateisystem.
+!end_node
+
+
+
+!begin_node fd_refcnt
+
+Der ReferenzzÑhler. Dieser Eintrag wird (!I)nur vom Kernel(!i) verwendet,
+muû beim Aufruf von (!B)dev_close(!b) dekrementiert und durch
+(!B)xfs_fopen(!b) initialisiert werden (mit 1).
+
+Ein ReferenzzÑhler von -1 signalisiert, daû der FD nie freigegeben werden
+darf. Dies ist z.B. fÅr die GerÑtedateien U:\DEV\CON, U:\DEV\AUX usw.
+notwendig, die immer zur VerfÅgung stehen.
+!end_node
+
+
+
+!begin_node fd_mode
+
+Hier steht der Modus, wie bei (!B)xfs_fopen(!b) beschrieben. Zeigen zwei FDs
+auf dieselbe Datei, mÅssen die Modi kompatibel sein. Durch die einfache
+MagiC-interne Modusdarstellung ist ein einfaches Rotieren und verUNDen der
+Bits ausreichend, z.B:
+
+!begin_verbatim
+  move.w   fd_mode(a0),d1
+  btst     #BOM_NOCHECK,d1  ; kein Check durch das XFS?
+  bne.b    _opf_nxt         ; ja, ddev_open prÅft
+  ror.b    #4,d1
+  and.b    d0,d1
+  bne      opd_eaccdn       ; Konflikt: return(EACCDN)
+!end_verbatim
+!end_node
+
+
+
+!begin_node fd_dev
+
+Dies ist der Zeiger auf den GerÑtetreiber.
+!end_node
+
+
+
+## die folgenden Komponenten sind eigentlich nur im 
+## DOS-XFS vorhanden.
+
+
+
+!begin_node fd_ddev
+
+Hier muû das DFS beim Aufruf von (!B)dir2FD(!b) den MX_DDEV eintragen, also
+den GerÑtetreiber.
+!end_node
+
+
+
+!begin_node fd_name
+
+Hier wird der Name (8+3) im internen Format abgelegt. Der Name ist nur
+gÅltig, wenn es sich um ein (!B)Unterverzeichnis(!b) handelt. Der Name ist
+(!I)nur im Prototyp-FD(!i), d.h. in fd->multi1 gÅltig. Der Name der Root ist
+eine leere Zeichenkette.
+!end_node
+
+
+
+!begin_node fd_attr
+
+Hier wird das Datei-Attribut abgelegt. Dieses ist (!I)nur im
+Prototyp-FD(!i), d.h. in fd->multi1 gÅltig. Am Attribut kann man erkennen,
+ob der FD ein Verzeichnis reprÑsentiert.
+!end_node
+
+
+
+!begin_node fd_owner
+
+Hier wird ein Zeiger auf den Eigner eines FD abgelegt (d.h. ein Zeiger auf
+die (!B)Basepage(!b)). Ein Wert von NULL bedeutet, daû der FD z.Zt. nicht
+belegt ist.
+!end_node
+
+
+!begin_node fd_parent
+
+Verkettungszeiger auf den (!B)Parent(!b), d.h. auf das Verzeichnis, in dem
+die Datei liegt bzw. das Elterverzeichnis eines Unterverzeichnisses.
+fd_parent ist nur fÅr den (!I)Prototyp-FD(!i) gÅltig.
+!end_node
+
+
+
+!begin_node fd_children
+
+Liste aller geîffneten Dateien und geîffneten Unterverzeichnisse.
+fd_children ist (!I)nur fÅr den Prototyp-FD(!i) gÅltig.
+!end_node
+
+
+
+!begin_node fd_next
+
+Zeiger auf den nÑchsten FD im selben Verzeichnis, d.h. auf das nÑchste
+Geschwist, dieses kann eine geîffnete Datei oder ein Unterverzeichnis sein,
+prinzipiell werden keine Unterschiede gemacht. fd_next ist (!I)nur fÅr den
+Prototyp-FD(!i) gÅltig.
+!end_node
+
+
+
+!begin_node fd_multi
+
+Wenn eine Datei mehrmals geîffnet wird, wird ein (!B)'Clone'(!b) des
+Prototyp-FD angelegt. FÅr diesen Clone sind die meisten Felder des FD
+ungÅltig, im wesentlichen sind nur Treiber, Modus und Dateiposition gÅltig.
+fd_multi ist eine verkettete Liste, die mit NULL abgeschlossen ist.
+!end_node
+
+
+
+!begin_node fd_multi1
+
+Der zugehîrige Prototyp-FD, der die gÅltigen Dateiangaben enthÑlt. Wenn eine
+Datei nur einmal geîffnet ist, gilt: fd->fd_multi == fd
+!end_node
+
+
+
+!begin_node fd_fpos
+
+Die Position des Dateizeigers, ist 0L bei einem GerÑt.
+!end_node
+
+
+
+!begin_node fd_dirch
+
+Bit 0 zeigt an, ob eine Datei verÑndert wurde und daher beim Schlieûen der
+Datei das Verzeichnis ((!B)fd_parent(!b)) aktualisiert werden muû (passiert
+nicht, wenn es sich um einen Ordner handelt). Die anderen Bits sind
+(!I)reserviert(!i) und werden teilweise vom DOS_XFS verwendet.
+!end_node
+
+
+
+!begin_node fd_unused
+
+Unbenutzt und reserviert.
+!end_node
+
+
+
+!begin_node fd_time
+
+Uhrzeit aus dem Verzeichniseintrag im (!B)Intel-Format(!b).
+!end_node
+
+
+
+!begin_node fd_date
+
+Datum aus dem Verzeichniseintrag im (!B)Intel-Format(!b).
+!end_node
+
+
+
+!begin_node fd_stcl
+
+Start-Cluster im (!B)Motorola-Format(!b).
+!end_node
+
+
+
+!begin_node fd_len
+
+DateilÑnge in Bytes im (!B)Motorola-Format(!b).
+!end_node
+
+
+
+!begin_node fd_dirpos
+
+Position des zugehîrigen Eintrags im Parent. Ist (!I)nur fÅr den
+Prototyp-FD(!i) gÅltig.
+!end_node
+
+
+
+!begin_node fd_user1
+
+Zusammen mit (!B)fd_user2(!b) 2 Langworte zur freien VerfÅgung. Das FAT_DFS
+speichert hier zusÑtzliche Informationen zu (!B)fd_fpos(!b) ab, und zwar den
+aktuellen Cluster. Andere DFSs kînnen andere Daten ablegen. Diese Felder
+sind zunÑchst auch nur fÅr den Prototyp-FD gÅltig, es sei denn, beim ôffnen
+((!B)ddev_open(!b)) werden die Daten explizit aus dem Prototyp-FD in den
+Clone kopiert.
+!end_node
+
+
+
+!begin_node fd_user2
+
+Zusammen mit (!B)fd_user1(!b) 2 Langworte zur freien VerfÅgung. Das FAT_DFS
+speichert hier zusÑtzliche Informationen zu (!B)fd_fpos(!b) ab, und zwar den
+aktuellen Cluster. Andere DFSs kînnen andere Daten ablegen. Diese Felder
+sind zunÑchst auch nur fÅr den Prototyp-FD gÅltig, es sei denn, beim ôffnen
+((!B)ddev_open(!b)) werden die Daten explizit aus dem Prototyp-FD in den
+Clone kopiert.
+!end_node
+!end_node
+
+
+
+!begin_node Die Disk-Transfer-Area DTA
+
+Die DTA wird von den alten DOS-Funktionen Fsfirst und Fsnext verwendet,
+deren ungeschickte Konzeption durch die MSDOS-Schîpfer immer noch wie ein
+Fluch auf dem System lastet. FÅr den Kernel sieht die Struktur
+folgendermaûen aus:
+
+!begin_verbatim
+dta_res1:        DS.B    20    /* 0x00: vom Kernel nicht benutzt */
+dta_drive:       DS.B     1    /* 0x14: logisches Laufwerk       */
+dta_attribute:   DS.B     1    /* 0x15: gefundenes Attribut      */
+dta_time:        DS.W     1    /* 0x16: gefundene Zeit           */
+dta_date:        DS.W     1    /* 0x18: gefundenes Datum         */
+dta_len:         DS.L     1    /* 0x1a: gefundene LÑnge          */
+dta_name:        DS.B    14    /* 0x1e: gefundener Dateiname     */
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponenten (!I)dta_attribute(!i) bis (!I)dta_name(!i)
+stellen den dokumentierten User-Bereich dar; dieser muss nach
+GEMDOS-Spezifikation behandelt werden.
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node xfs_dta_res1
+
+Wird vom Kernel nicht verwendet. Hier darf sich das XFS tummeln.
+!end_node
+
+
+
+!begin_node xfs_dta_drive
+
+Hier steht das zugehîrige (!B)logische(!b) Laufwerk (0 entspricht Laufwerk-A
+etc). Hierdurch kann der Kernel beim Fsnext entscheiden, welches XFS die
+Anforderung ausfÅhren muss.
+!end_node
+
+
+
+!begin_node Der GerÑtetreiber (MX_DEV)
+!label GerÑtetreiber, MX_DEV
+
+Der GerÑtetreiber wird beim ôffnen einer Datei vom XFS in den
+Dateideskriptor eingesetzt und vom Kernel direkt aufgerufen. Der
+GerÑtetreiber muû die folgenden Funktionen bereitstellen:
+
+!begin_verbatim
+typedef struct _mx_dev
+{
+  LONG  (*dev_close)();
+  LONG  (*dev_read)();
+  LONG  (*dev_write)();
+  LONG  (*dev_stat)();
+  LONG  (*dev_seek)();
+  LONG  (*dev_datime)();
+  LONG  (*dev_ioctl)();
+  LONG  (*dev_getc)();
+  LONG  (*dev_getline)();
+  LONG  (*dev_putc)();
+} MX_DEV;
+!end_verbatim
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+
+
+
+
+!begin_node dev_close
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødev_closeÆ
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) *file
+!item [-> d0 =]
+long errcode
+!end_xlist
+
+!item [Beschreibung:]
+Wenn fd_refcnt nicht schon 0 ist, muû fd_refcnt dekrementiert werden (dies
+muû vom (!link [MX_DEV][Der GerÑtetreiber (MX_DEV)]) erledigt werden). Bei dieser
+Gelegenheit sollten auch
+mîglicherweise vorhandene Puffer zurÅckgeschrieben bzw. VerzeichniseintrÑge
+aktualisiert werden. Wenn (!nolink [fd_refcnt]) 0 ist, kann der FD freigegeben werden.
+Beim Diskwechsel ist (!nolink [fd_refcnt]) bereits beim Aufruf von dev_close 0, d.h. der
+FD muû einfach nur freigegeben werden.
+
+Der vom DOS_XFS installierte Dateitreiber schreibt die Verzeichnisdaten
+zurÅck und ruft dann den (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber auf.
+
+!item [Gruppe:]
+(!link [GerÑtetreiber][Der GerÑtetreiber (MX_DEV)])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dev_datime
+
+(!B)FÅr Fdatime.(!b) Der vom DOS_XFS installierte Dateitreiber leitet den
+Aufruf an den (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter, wenn die Funktion im
+MX_DDEV-Treiber unterstÅtzt wird (Zeiger != NULL), ansonsten wird die
+Funktion (!I)automatisch(!i) mit Hilfe der Daten des FD ausgefÅhrt.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+a1 !! = !! int d[2]
+d0 !! = !! int setflag
+-> d0 !! = !! long errcode
+!end_table
+!end_node
+
+
+
+!begin_node dev_getc
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødev_getcÆ
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) *file
+!item [d0 =]
+int mode
+!item [-> d0 =]
+unsigned long c
+!end_xlist
+
+!item [Beschreibung:]
+Wird vom Kernel fÅr (!nolink [Fgetchar])() und die zeichenorientierten Funktionen
+(Cconin, Cconout, Cauxin usw.) verwendet. Im Fall eines GerÑts kann der
+RÅckgabewert ein Langwort sein (so bei CON im Hiword der Scancode der
+Taste), ansonsten ein Byte (immer als "unsigned" erweitert). Bei EOF muû
+0x0000FF1A geliefert werden.
+
+(!B)<mode> bedeutet:(!b)
+
+!begin_xlist !short [CMODE_COOKED (1)]
+!item [CMODE_COOKED (1)]
+Bit 0 gesetzt: Steuerzeichen ^C, ^S, ^Q werden verarbeitet.
+!item [CMODE_RAW (0)]
+Bit 0 nicht gesetzt: "raw" Modus
+!item [CMODE_ECHO (2)]
+Bit 1 gesetzt: Eingabe wird ge-echo-t
+!end_xlist
+
+Der vom DOS_XFS installierte Dateitreiber leitet den Aufruf an den
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter, wenn die Funktion im MX_DDEV-Treiber
+unterstÅtzt wird (Zeiger != NULL), ansonsten wird die Funktion automatisch
+auf dev_fread zurÅckgefÅhrt.
+
+!item [Gruppe:]
+(!link [GerÑtetreiber][Der GerÑtetreiber (MX_DEV)])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dev_getline
+
+(!B)FÅr zeilenorientierte Eingabe(!b). <mode> wie in dev_getc. ZurÅckgegeben
+wird die Anzahl der eingegebenen Zeichen ohne Endezeichen o.Ñ. Der vom
+DOS_XFS installierte Dateitreiber leitet den Aufruf an den
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter, wenn die Funktion im MX_DDEV-Treiber
+unterstÅtzt wird (Zeiger != NULL), ansonsten wird die Funktion automatisch
+auf dev_fread zurÅckgefÅhrt, die Zeile wird dann mit CR und LF beendet,
+Steuerzeichen (BS oder Del) nicht ausgewertet.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+a1 !! = !! char *buf
+d1 !! = !! long size
+d0 !! = !! int mode
+-> d0 !! = !! long amount
+!end_table
+!end_node
+
+
+
+!begin_node dev_ioctl
+
+(!B)FÅr Fcntl.(!b) Der vom DOS_XFS installierte Dateitreiber leitet den
+Aufruf direkt an den (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter. Bearbeitet werden jedoch
+vorher folgende Funktionen: FSTAT und FUTIME. Diese sollten auch von anderen
+XFSs ausgefÅhrt werden. Jeder Dateitreiber sollte (!B)FIONREAD(!b) und
+(!B)FIONWRITE(!b) unterstÅtzen.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! int cmd
+a1 !! = !! void *buf
+-> d0 !! = !! long errcode
+!end_table
+!end_node
+
+
+
+!begin_node dev_putc
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødev_putcÆ
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) *file
+!item [d0 =]
+int mode
+!item [d1 =]
+long value
+!item [-> d0 =]
+unsigned long count
+!end_xlist
+
+!item [Beschreibung:]
+Wird vom Kernel fÅr (!nolink [Fgetchar])() und die zeichenorientierten Funktionen
+(Cconout, Cauxout usw.) verwendet. Im Fall eines Terminals muû der
+RÅckgabewert 4L sein (d.h. 4 Bytes geschrieben, ansonsten 1L, falls
+erfolgreich geschrieben wurde.
+
+(!B)<mode> bedeutet:(!b)
+
+!begin_xlist !short [CMODE_COOKED (1)]
+!item [CMODE_COOKED (1)]
+Bit 0 gesetzt: Steuerzeichen ^C, ^S, ^Q werden verarbeitet.
+!item [CMODE_RAW (0)]
+Bit 0 nicht gesetzt: "raw" Modus
+!end_xlist
+
+Der vom DOS_XFS installierte Dateitreiber leitet den Aufruf an den
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter, wenn die Funktion im MX_DDEV-Treiber
+unterstÅtzt wird (Zeiger != NULL), ansonsten wird die Funktion automatisch
+auf dev_fwrite zurÅckgefÅhrt.
+
+!item [Gruppe:]
+(!link [GerÑtetreiber][Der GerÑtetreiber (MX_DEV)])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dev_read
+
+Von Datei <file> werden <count> Bytes in den Puffer <buffer> gelesen. Die
+Anzahl der tatsÑchlich gelesenen Zeichen wird zurÅckgegeben. Der vom DOS_XFS
+installierte Dateitreiber leitet den Aufruf direkt an den
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long count
+a1 !! = !! char *buffer
+-> d0 !! = !! long amount
+!end_table
+!end_node
+
+
+
+!begin_node dev_seek
+
+(!B)FÅr Fseek.(!b) <mode> ist, wie im TOS, 0, 1 oder 2. ZurÅckgegeben wird
+die aktuelle Position des Schreib-/Lesezeigers, GerÑtetreiber mÅssen hier
+immer eine 0L zurÅckgeben. Der vom DOS_XFS installierte Dateitreiber leitet
+den Aufruf direkt an den (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter.
+
+(!B)Parameter-Åbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long where
+d1 !! = !! int mode
+-> d0 !! = !! long position
+!end_table
+!end_node
+
+
+
+!begin_node dev_stat
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ødev_statÆ
+
+!item [Parameter:]
+!begin_xlist !short [-> a0 =]
+!item [a0 =]
+(!link [FD][Der Datei-Deskriptor (FD)]) *file
+!item [a1 =]
+MAGX_UNSEL *unselect oder NULL
+!item [d0 =]
+int rwflag
+!item [d1 =]
+long apcode
+!item [-> d0 =]
+long status
+!end_xlist
+
+!item [Beschreibung:]
+Gibt den Lese-/Schreibstatus der Datei an. Wird z.B. bei Fselect()
+aufgerufen (oder bei Cconos()/Cconis() usw.). Im Gegensatz zu MiNT wird hier
+dem Treiber Åberlassen, ob er interruptfÑhig ist oder nicht, d.h. ob er in
+der Lage ist, eine wartende Applikation im Interrupt wieder aufzurufen oder
+nicht. rwflag gibt an, ob Schreib- oder Lesestatus abgefragt wird.
+
+<unselect> ist entweder NULL oder ein Zeiger auf folgende Struktur:
+
+!begin_verbatim
+typedef struct
+{
+   union
+   {
+      void (*unsel) (MAGX_UNSEL *un);
+      long status;
+   }
+   long param;
+} MAGX_UNSEL;
+!end_verbatim
+
+(!B)Vorgehensweise:(!b)
+
+Allgemein gilt: Wenn <unselect> ungleich Null ist, muû der RÅckgabewert
+nicht nur als Funktionsergebnis (in d0.l), sondern auch in unselect->status
+zurÅckgegeben werden. Das gilt fÅr alle Arten von RÅckgabewerten. In
+unsel->param kann optional ein Parameter abgelegt werden.
+
+(!B)Wenn <apcode> == NULL ist, wird gepollt, d.h. die Applikation wird nicht
+schlafengelegt. Also RÅckgabe:(!b)
+
+0 = nicht bereit, 1 = bereit, <0 = Fehler.
+
+(!B)Wenn <apcode> != NULL ist (dann ist auch <unselect> != NULL) wird
+zurÅckgegeben:(!b)
+
+!begin_xlist !short [<0]
+!item [<0]
+Fehler
+!item [0]
+nicht bereit, GerÑt kann nur polling
+!item [1]
+bereit
+!item [>0]
+etwa Zeiger auf eine Funktion, die den Aufweckinterrupt wieder deinstalliert
+(entspricht in etwa dem unselect in MiNT).
+!end_xlist
+
+(!B)Falls das GerÑt nicht bereit ist und interruptfÑhig ist, geht man
+folgendermaûen vor:(!b)
+
+!begin_enumerate !short
+!item  unselect mit der Adresse der AufrÑumroutine und einem optionalen
+       Parameter initialisieren, Prototyp etwa:
+!begin_verbatim
+void unselect( a0 = MAGX_UNSEL *un,a1 = void *ap_code );
+!end_verbatim
+!item Interrupt zum Aufwecken installieren, diesem unselect (und damit auch
+      den optionalen Parameter) und appl mitteilen.
+!item Zeiger auf AufrÑumroutine in d0 zurÅckgeben.
+!end_enumerate
+
+(!B)Die Interruptroutine macht folgendes:(!b)
+
+!begin_enumerate !short
+!item Der Interrupt trifft ein.
+!item unselect->status wird mit 1 (ok) oder < 0 (nicht ok) beschrieben und
+      der Interrupt deaktiviert! Die Applikation wird aufgeweckt mit
+!begin_verbatim
+kernel->appl_IOcomplete( a0 = APPL *ap );
+!end_verbatim
+!end_enumerate
+
+(!B)Die AufrÑumroutine macht folgendes:(!b)
+
+!begin_enumerate !short
+!item Der Interrupt wird deaktiviert.
+!item in unsel->status wird, falls noch nicht geschehen, eine 1
+      (eingetroffen) oder 0 (nicht eingetroffen) oder < 0 (Fehler)
+      eingetragen. Es muû sichergestellt werden, daû kein IOcomplete und
+      kein Schreibzugriff auf unsel anschlieûend noch erfolgen kann. Ein
+      Wert ungleich 1, aber grîûer als Null wird immer als Adresse der
+      AufrÑumroutine interpretiert, diese muû noch aufgerufen werden, wenn
+      der Interrupt nicht eingetroffen ist. Falls der Interrupt z.B. einen
+      Wert von 2L eintrÅge, ginge der Kernel davon aus, daû der Interrupt
+      nicht eingetreten ist und immer noch die Adresse der AufrÑumroutine in
+      der MAGX_UNSEL-Struktur steht. Ein Sprung nach Adresse 2 ist dann aber
+      schnell ziemlich tîdlich.
+!end_enumerate
+
+Die DOS-Funktionen Finstat() und Foutstat() versuchen zunÑchst, den Aufruf
+auf (!nolink [Fcntl]) ((!nolink [FIONREAD]) bzw. (!nolink [FIONWRITE]))
+zurÅckzufÅhren. Wenn diese Subfunktion
+von dev_ioctl nicht existiert (der Dateitreiber muû EINVFN liefern!), wird
+dev_stat aufgerufen. In diesem Fall kann die Aussage getroffen werden
+"Zeichen liegt an" (Wert == 1) bzw. "kein Zeichen liegt an" (Wert == 0).
+
+Der vom DOS_XFS installierte Dateitreiber leitet den Aufruf direkt an den
+(!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter.
+
+!item [Gruppe:]
+(!link [GerÑtetreiber][Der GerÑtetreiber (MX_DEV)])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node dev_write
+
+Auf Datei <file> werden <count> Bytes aus dem Puffer <buffer> geschrieben.
+Die Anzahl der tatsÑchlich geschriebenen Zeichen wird zurÅckgegeben. Der vom
+DOS_XFS installierte Dateitreiber aktualisiert Zeit und Datum der Datei und
+leitet dann den Aufruf an den (!link [MX_DDEV][Der GerÑtetreiber (MX_DDEV)])-Untertreiber weiter.
+
+(!B)Parameter-öbergabe:(!b)
+!begin_table [r l l]
+a0 !! = !! (!link [FD][Der Datei-Deskriptor (FD)]) *file
+d0 !! = !! long count
+a1 !! = !! char *buffer
+-> d0 !! = !! long amount
+!end_table
+
+
+
+!begin_node Installation eines XFS
+!ignore_index
+!label XFS, Installation eines
+Ein XFS ist einfach ein Programm, das den Treiber installiert und sich
+resident beendet. Die Installation erfolgt per kernel = (!B)Dcntl
+(KER_INSTXFS, NULL, &myxfs)(!b).
+
+Man erhÑlt einen Zeiger auf wichtige Kernelfunktionen oder einen Fehlercode
+zurÅck. Die Kernelfunktionen kann man auch unabhÑngig von der Installation
+eines XFS erfragen, und zwar per kernel = (!B)Dcntl(KER_GETINFO, NULL,
+ NULL)(!b).
+
+Die Deinstallation eines XFS ist (!I)nicht(!i) vorgesehen.
+
+
+
+!begin_node Kernelfunktionen fÅr ein XFS
+!label XFS, Kernelfunktionen fÅr ein
+
+(!nolink [MagiC]) stellt den installierten XFSs, DFSs oder GerÑtetreibern einige
+Kernelinformationen sowie -funktionen zur VerfÅgung. Bei den
+Kernelfunktionen gilt dieselbe Registerkonvention wie fÅr die
+XFS-Funktionen, d.h. d0-d2 und a0-a2 kînnen zerstîrt werden. Einen Zeiger
+auf die Struktur, die die Kernelfunktionen enthÑlt, bekommt man Åber
+
+!begin_verbatim
+     kernel = Dcntl (KER_INSTXFS, NULL, &myxfs);   oder
+     kernel = Dcntl (KER_GETINFO, NULL, NULL);
+!end_verbatim
+
+Im ersten Fall wird ein XFS installiert, im zweiten Fall bekommt man nur
+die Kernelstruktur (etwa fÅr ein DFS oder einen GerÑtetreiber). Der Aufbau
+der Kernelstruktur im einzelnen:
+
+!label MX_KERNEL
+!begin_verbatim
+typedef struct
+{
+  WORD version;
+  VOID (*fast_clrmem)      ( void *von, void *bis );
+  BYTE (*toupper)          ( char c );
+  VOID (*_sprintf)         ( char *dest, char *source, LONG *p );
+  VOID *act_pd;
+  APPL *act_appl;
+  APPL *keyb_app;
+  WORD *pe_slice;
+  WORD *pe_timer;
+  VOID (*appl_yield)       ( void );
+  VOID (*appl_suspend)     ( void );
+  VOID (*appl_begcritic)   ( void );
+  VOID (*appl_endcritic)   ( void );
+  LONG (*evnt_IO)          ( LONG ticks_50hz, void *unsel );
+  VOID (*evnt_mIO)         ( LONG ticks_50hz, void *unsel, WORD cnt );
+  VOID (*evnt_emIO)        ( APPL *ap );
+  VOID (*appl_IOcomplete)  ( APPL *ap );
+  LONG (*evnt_sem)         ( WORD mode, void *sem, LONG timeout );
+  VOID (*Pfree)            ( void *pd );
+  WORD int_msize;
+  VOID *int_malloc         ( void );
+  VOID int_mfree           ( void *memblk );
+  VOID resv_intmem         ( void *mem, LONG bytes );
+  LONG diskchange          ( WORD drv );
+  LONG DMD_rdevinit        ( DMD *dmd );
+  LONG proc_info           ( WORD code, PD *pd );
+} MX_KERNEL;
+!end_verbatim
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node mxk_version
+
+Das ist die Versionsnummer, die z.Zt. einfach 3 ist. Bei jeder énderung der
+Kernelstruktur wird die Versionsnummer hochgesetzt, so daû sich Programme
+entsprechend anpassen kînnen.
+!end_node
+
+
+
+!begin_node mxk_fast_clrmem
+
+Eine schnelle Speicherlîschroutine, die den Speicher von <von> bis <bis>
+(ausschlieûlich) auf 0 setzt.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! void *von
+a1 !! = !! void *bis
+!end_table
+!end_node
+
+
+
+!begin_node mxk_toupper
+
+Wandelt das Zeichen <c> unter BerÅcksichtigung der nationalen Sonderzeichen
+in Groûschrift um.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+d0 !! = !! char c
+!end_table
+!end_node
+
+
+
+!begin_node mxk__sprintf
+
+Eine Funktion, die ihre Argumente auf dem Stack erwartet. öbergeben wird die
+Ziel-Zeichenkette <dest>, die Schablone <source> und die einzutragenden
+Werte p[]. Die Langworte werden je nach Formatieranweisung als "unsigned
+int" (%W), "signed long" (%L) oder Zeichenkette (%S) interpretiert.
+
+Bei %W wird das weiter unten im Speicher liegende Wort verwendet, die Folge
+%% fÅgt ein Prozentzeichen ein.
+!end_node
+
+
+
+!begin_node mxk_act_pd
+Der Zeiger auf die aktuelle (!B)Basepage(!b), die Adresse lÑût sich auch
+Åber den Systemheader oder die DOS-Variablen ermitteln.
+!end_node
+
+
+
+!begin_node mxk_act_appl
+
+Der Zeiger auf die (!B)aktuelle Applikation(!b) (d.h. die laufende Task).
+Der Aufbau der Struktur ist (!I)nicht(!i) dokumentiert, der Zeiger wird
+wegen des schnelleren Zugriffs anstelle der ap_id als Deskriptor verwendet.
+!end_node
+
+
+
+!begin_node mxk_keyb_app
+
+Die Applikation, die z.Zt. die Tastatur besitzt. Der Zeiger kann z.B. von
+GerÑtetreibern verwendet werden, die die tastaturbesitzende Applikation
+anders behandeln mÅssen.
+!end_node
+
+
+
+!begin_node mxk_pe_slice
+
+FÅr das prÑemptive Multitasking. Wenn <*pe_slice> == -1 ist, ist das
+prÑemptive Multitasking abgeschaltet, und Diskzugriffe werden (!I)nicht(!i)
+unterbrochen.
+!end_node
+
+
+
+!begin_node mxk_pe_timer
+
+FÅr das prÑemptive Multitasking. Wenn <*pe_slice> == -1 ist, ist das
+prÑemptive Multitasking abgeschaltet, und Diskzugriffe werden nicht
+unterbrochen.
+!end_node
+
+
+
+!begin_node mxk_appl_yield
+
+Gibt Rechenzeit ans System. Wichtig fÅr Treiber, die nicht auf einen
+Interrupt warten kînnen und verhindern mÅssen, daû ihr "busy waiting" das
+System lahmlegt.
+!end_node
+
+
+
+!begin_node mxk_appl_suspend
+
+Arbeitet wie (!B)appl_yield()(!b), gibt jedoch der Applikation eine
+geringere PrioritÑt, etwa als Hintergrundprozeû.
+!end_node
+
+
+
+!begin_node mxk_appl_begcritic
+
+Die aktuelle Applikation tritt in eine kritische Phase und darf nicht
+terminiert werden.
+!end_node
+
+
+
+!begin_node mxk_appl_endcritic
+
+Ende der kritischen Phase. Falls zwischenzeitlich der Befehl zur
+Terminierung eingegangen ist, wird das Programm terminiert.
+!end_node
+
+
+
+!begin_node mxk_evnt_IO
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øevnt_IOÆ
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [d0 =]
+long ticks_50hz
+!item [a0 =]
+void *unsel
+!end_xlist
+
+!item [Beschreibung:]
+evnt_IO ermîglicht es, auf EIN externes Ereignis zu warten. Als externes
+Ereignis kommt entweder ein Interrupt oder eine andere Applikation (die etwa
+zum Aufwecken in eine Pipe schreibt) in Frage. Die Funktion wird zum
+Erstellen von GerÑtetreibern verwendet:
+
+(!B)Vorgehensweise (siehe DEV_LPT1 als Beispiel):(!b)
+
+!begin_enumerate !short
+!item Interrupts sperren
+!item Abfrage, ob das Ereignis (im Fall DEV_LPT1 lautet das Ereignis:
+      "centronics busy off" eingetroffen ist.
+!item Wenn ja, Interrupts freigeben und Aktion durchfÅhren (im Fall
+      DEV_LPT1: Zeichen drucken)
+!item Wenn nein, Interruptroutine aufsetzen (im Fall DEV_LPT1: MFP-I0, d.h.
+      Centronics Busy Interrupt aktivieren) und diesem die aktuelle
+      Applikation (act_appl) sowie eine Langwortadresse zugÑnglich machen,
+      in die die Interruptroutine RÅckmeldungen schreiben kann. Diese
+      Adresse ist mit der Adresse einer Routine zu beschreiben, die den
+      Interrupt wieder abmeldet, dahinter kînnen nach eigenen Anforderungen
+      z.B. noch weitere Daten folgen. Die Unselect-Routine bekommt spÑter
+      einen Zeiger auf alle diese Daten und kann z.B. die optionalen
+      Parameter auswerten. Der ganze Mechanismus ist notwendig, um ein
+      korrektes Deinitialisieren des Interrupts in jedem Fall zu
+      garantieren.
+!item Interrupts freigeben
+!item evnt_IO aufrufen. In d0.w die Anzahl der 50Hz- Ticks fÅr den Timeout
+      angeben, 0 heiût "kein Timeout". In a0 die Adresse des Langworts
+      angeben, in dem die Adresse der AufrÑumroutine steht, die den
+      Interrupt wieder abmeldet (dahinter folgen optional weitere Parameter,
+      falls die Unselect-Routine diese versteht). Im Fall des Einbindens
+      von GerÑtetreibern fÅr Fselect() ist nur ein optionales Langwort
+      mîglich.
+
+      Die Interruptroutine schreibt bei Eintreffen des Interrupts einen
+      Status < 0L (Fehler) oder 1L (OK) statt der Deinitialisierungsroutine
+      in das Statuslangwort (in dem vorher ihre eigene Startadresse stand).
+      Anschlieûend deinstalliert sich die Routine selbst bzw. stellt sicher
+      daû bei folgenden Interrupts keine Aktionen ausgefÅhrt werden.
+      Schlieûlich weckt die Interruptroutine die dem Interrupt zugeordnete
+      Applikation auf, und zwar Åber den Aufruf appl_IOcomplete() mit der
+      Applikation als Parameter.
+!item evnt_IO() liefert als RÅckgabewert 0L (Timeout, der Interrupt ist
+      nicht eingetroffen) oder < 0 (der Interrupt hat Fehlermcode ins
+      Statuslangwort geschrieben) oder 1L (der Interrupt hat eine 1L ins
+      Statuslangwort geschrieben). Eine Deinstallierung des Interrupts ist
+      nicht mehr notwendig, dies hat der Kernel erledigt, falls die
+      Interruptroutine dies nicht selbst beim Eintreffen des Interrupts
+      getan hat.
+!end_enumerate
+
+!item [Gruppe:]
+(!link [Kernelfunktionen][Kernelfunktionen fÅr ein XFS])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node mxk_evnt_mIO
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øevnt_mIOÆ
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [d0 =]
+long ticks_50hz
+!item [a0 =]
+void *unsel
+!item [d1 =]
+int cnt
+!end_xlist
+bzw. 
+!begin_xlist !short [a0 =]
+!item [a0 =]
+APPL *ap
+!end_xlist
+
+!item [Beschreibung:]
+evnt_mIO() ermîglicht es, auf MEHRERE externe Ereignisse zu warten, z.B.
+wird diese Funktion von Fselect verwendet (mehrere Dateien!).
+
+(!B)Vorgehensweise:(!b)
+
+!begin_enumerate !short
+!item FÅr n Ereignisse eine Langwort-Tabelle der LÑnge 2*n anlegen.
+!item FÅr jedes Ereignis die AufrÑumroutine (unselect-Routine) eintragen,
+      (dahinter folgt ein optionaler Langwortparameter) und den Interrupt
+      aufsetzen. Die Reihenfolge ist wichtig, es muû verhindert werden, daû
+      die unselect-Adresse den RÅckgabewert des bereits eingetroffenen
+      Interrupts Åberschreibt, ggf. Interrupts sperren.
+!item evnt_mIO aufrufen. Die Parameter sind wie bei evnt_IO, in d1.w wird
+      aber die Anzahl der Ereignisse Åbergeben, a0 ist der Tabellenanfang.
+!item evnt_mIO() liefert keinen RÅckgabewert. Die Tabelle muû durchsucht und
+      die Interrupts deinstalliert werden (z.B. die unselect-Routinen
+      aufrufen), dabei kann ÅberprÅft werden, welche Interrupts bereits
+      eingetroffen sind.
+!item evnt_emIO mit der aktuellen Applikation aufrufen. Dieser Aufruf stellt
+      sicher, daû nach Deinstallieren aller Interrupts deren jetzt nutzlose
+      (!nolink [Nachrichten]) an die Applikation gelîscht werden.
+!end_enumerate
+
+Auf die Ereignisse evnt_(m)IO wartende Applikationen erscheinen im
+Programm-Manager als wartend auf "io" (Input/Output) oder "io ti"
+(Input/Output mit Timeout).
+
+!item [Gruppe:]
+(!link [Kernelfunktionen][Kernelfunktionen fÅr ein XFS])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node mxk_appl_IOcomplete
+
+Weckt eine Applikation auf, die auf evnt_(m)IO wartet.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! APPL *ap
+!end_table
+!end_node
+
+
+
+!begin_node mxk_evnt_sem
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Øevnt_semÆ
+
+!item [Parameter:]
+!begin_xlist !short [a0 =]
+!item [d0 =]
+int mode
+!item [a0 =]
+void *sem
+!item [d1 =]
+long timeout
+!end_xlist
+
+!item [Beschreibung:]
+FÅr mode sind folgende Unterfunktionen mîglich:
+
+!begin_xlist !short [5 SEMCREATE]
+!item [0 SEM_FREE]
+Semaphore freigeben (ohne Taskwechsel!)
+!item [1 SEM_SET]
+Semaphore setzen, ggf. warten
+!item [2 SEM_TEST]
+Eigner der Semaphore ermitteln (ggf. NULL)
+!item [3 SEM_CSET]
+Semaphore setzen, falls nicht schon gesetzt
+!item [4 SEM_GET]
+Semaphore ermitteln, falls Name bekannt ist.
+!item [5 SEM_CREATE]
+Semaphore erstellen, d.h. neue einrichten
+!item [6 SEM_DEL]
+Semaphore entfernen
+!end_xlist
+
+SEM_SET und SEM_CSET sind die einzigen Unterfunktionen, die einen
+Taskwechsel auslîsen kînnen.
+
+Im Gegensatz zu wind_update() kann mit diesen Aufrufen das Setzen und
+Freigeben von Semaphoren nicht geschachtelt werden. Versucht man, eine
+bereits reservierte Semaphore nochmal zu reservieren, gibt es einen
+Fehlercode.
+
+Beim Freigeben der Semaphore wird kein Taskwechsel durchgefÅhrt, d.h. die
+Semaphore kann zwar ggf. jetzt einer anderen Applikation gehîren, die den
+Status "ready" hat, aber sie hat noch keine Rechenzeit bekommen. Wenn die
+Situation unkritisch ist, sollte in jedem Fall anschlieûend ein appl_yield()
+durchgefÅhrt werden.
+
+Die Bildschirmsemaphore hat den Namen _SCR und darf mit evnt_sem() nur mit
+der Unterfunktion SEM_TEST behandelt werden.
+
+SEM_CREATE setzt den Erzeuger nicht automatisch als Eigner. Dies ist nicht
+notwendig, weil kein Taskwechsel stattgefunden hat. Also kann bedenkenlos
+ein SEM_SET anschlieûend durchgefÅhrt werden.
+
+SEM_DEL verlangt, daû der Lîscher auch der Eigner ist. Beim Lîschen werden
+alle wartenden Applikationen freigegeben, sie erhalten, wenn sie per
+evnt_sem(SEM_SET, ..) warten, eine -2 als RÅckgabewert. Wer
+System-Semaphoren (solche, deren Namen mit '_' beginnen) lîscht, ist selbst
+schuld.
+
+!item [Gruppe:]
+(!link [Kernelfunktionen][Kernelfunktionen fÅr ein XFS])
+
+!item [Querverweis:]
+---
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node evnt_sem_SEM_FREE
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [a0 =]
+Zeiger auf Semaphore
+!begin_xlist !short [-> -1]
+!item [-> 0]
+OK
+!item [-> -1]
+Semaphore unbenutzt oder von anderer APP benutzt.
+!end_xlist
+!end_xlist
+!end_node
+
+
+
+!begin_node evnt_sem_SEM_SET
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [a0 =]
+Zeiger auf Semaphore
+!item [d1 =]
+Timeout in 50Hz- Ticks
+!begin_xlist !short [-> -1]
+!item [-> 0]
+OK
+!item [-> 1]
+Timeout
+!item [-> -1]
+Semaphore war schon von mir gesetzt.
+!item [-> -2]
+Semaphore wurde inzwischen entfernt.
+!end_xlist
+!end_xlist
+!end_node
+
+
+
+!begin_node vnt_sem_SEM_TEST
+
+(!B)Parameter:(!b)
+!begin_xlist !short [ao =]
+!item [a0 =]
+Zeiger auf Semaphore
+!begin_xlist !short [-> >0]
+!item [-> >0]
+Eigner
+!item [->  0]
+nicht benutzt 
+!end_xlist
+!end_xlist
+!end_node
+
+
+!begin_node evnt_sem_SEM_CSET
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [a0 =]
+Zeiger auf Semaphore
+!item [d1 =]
+Timeout in 50Hz- Ticks
+!begin_xlist !short [-> -1]
+!item [->  0]
+OK
+!item [->  1]
+Semaphore von anderer APPL gesetzt.
+!item [->  -1]
+Semaphore war schon von mir gesetzt.
+!end_xlist
+!end_xlist
+!end_node
+
+
+
+!begin_node evnt_sem_SEM_GET
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [d1 =]
+Name der Semaphore
+!begin_xlist !short [-> -1]
+!item [-> >0]
+Zeiger auf Semaphore.
+!item [-> -1]
+Semaphore nicht gefunden.
+!end_xlist
+!end_xlist
+!end_node
+
+
+
+!begin_node evnt_sem_SEM_CREATE
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [a0 =]
+Zeiger auf Semaphore (32 Bytes auf gerader Adresse)
+!item [d1 =]
+Name void
+!end_xlist
+!end_node
+
+
+
+!begin_node evnt_sem_SEM_DEL
+
+(!B)Parameter:(!b)
+!begin_xlist !short [a0 =]
+!item [a0 =]
+Zeiger auf Semaphore
+!begin_xlist !short [-> -1]
+!item [->  0]
+OK
+!item [-> -1]
+Semaphore ungÅltig
+!end_xlist
+!end_xlist
+!end_node
+
+
+
+!begin_node mxk_Pfree
+
+Gibt den Speicher fÅr einen Prozeû frei, der mit (!B)Ptermres(!b) beendet~
+wurde. Dies ist notwendig, um einen GerÑtetreiber korrekt zu entfernen.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! void *pd
+!end_table
+!end_node
+
+
+
+!begin_node mxk_int_msize
+
+Die LÑnge eines Speicherblocks der internen (Kernel-) Speicherverwaltung.
+!end_node
+
+
+
+!begin_node mxk_int_malloc
+
+Alloziert einen internen Speicherblock. Ist kein Speicher mehr frei, wird
+zunÑchst eine globale (!B)"garbage collection"(!b) durchgefÅhrt (siehe
+Beschreibung des XFS), dann bei Miûerfolg das System angehalten. Interne
+Speicherblîcke dÅrfen nur in kleinen Mengen angefordert werden, sonst erhÑlt
+man sehr bald ein "Out of internal memory", und das System steht.
+!end_node
+
+
+
+!begin_node mxk_int_mfree
+
+Gibt einen Block wieder frei.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! void *memblk
+!end_table
+!end_node
+
+
+
+!begin_node mxk_resv_intmem
+
+Erweitert den Kernelspeicher. Es ist (!I)keine(!i) Mîglichkeit vorgesehen,
+den Speicher zurÅckzufordern. Da der Kernel nur zur Bootzeit ausreichend
+internen Speicher fÅr die FAT-Laufwerke anfordert, kann es fÅr ein XFS
+notwendig sein, beim Start mit dieser Funktion weiteren Kernelspeicher
+zu reservieren.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! void *mem
+d0 !! = !! long bytes
+!end_table
+!end_node
+
+
+
+!begin_node mxk_diskchange
+
+Muss aufgerufen werden, wenn ein XFS- oder DFS-Treiber einen
+(!B)Diskwechsel(!b) erkannt hat. Der XFS-Treiber gibt seine Dateien und
+Strukturen frei, anschlieûend der Kernel.
+
+RÅckgabe:
+
+!begin_xlist !short [EDRIVE]
+!item [EDRIVE]
+Laufwerk ungÅltig
+!item [E_CHNG]
+Laufwerk mit neuer Disk gÅltig
+!end_xlist
+          
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+d0 !! = !! int drv
+!end_table
+!end_node
+
+
+
+!begin_node mxk_DMD_rdevinit
+
+Initialisiert die Felder (!I)d_driver(!i) und (!I)d_devcode(!i) des DMD und
+benutzt dazu das Feld (!I)d_biosdev(!i). Wird fÅr Diskwechselmechanismen
+benîtigt, und steht erst ab Kernelversion 1 zur VerfÅgung.
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+a0 !! = !! DMD *dmd
+!end_table
+!end_node
+
+
+
+!begin_node mxk_proc_info
+
+Ermittelt Daten fÅr den aktuellen Prozeû, und steht ab Kernelversion 2 zur
+VerfÅgung.
+
+!begin_xlist !short [a0 = 0:]
+!item [d0 = 0:]
+hîchste verfÅgbare Unterfunktionsnummer,
+!item [d0 = 1:]
+Domain bzw. d0 = 2: Process-ID.
+!end_xlist
+
+(!B)Dabei gilt:(!b)
+!begin_table [r l l]
+d0 !! = !! WORD code
+a0 !! = !! PD *pd
+!end_table
+!end_node
+!end_node
+
+
+
+!begin_node Symbolische Links und das XFS-Konzept
+
+Symbolische Links (in der Benutzerdokumentation in öbereinstimmung mit der
+Macintosh Nomenklatur auch als (!I)Aliase(!i) bezeichnet) sind Dateien, die
+in irgendeiner Form besonders gekennzeichnet sind und statt Daten einen Pfad
+enthalten, der wiederum auf eine andere Datei zeigt. Ein derartiger Pfad
+kann auch auf eine nicht (mehr) bzw. noch nicht existierende Datei zeigen.
+Pfade kînnen (!I)absolut(!i) oder (!I)relativ(!i) sein, wobei letztere das
+Verzeichnis als Bezug haben, in dem der Link liegt.
+
+(!B)Im Speicher werden derartige Links als Strukturen verwaltet:(!b)
+
+!begin_verbatim
+{
+   WORD n;         /* auf gerade Anzahl aufgerundet, inkl. EOS */
+   char path[n];   /* Pfad mit EOS am Ende */
+}
+!end_verbatim
+
+(!B)Hinweis:(!b) Einige XFS-Funktionen mÅssen, wenn sie auf einen Symlink
+stoûen, diesen dereferenzieren, d.h. sie liefern dem Kernel in d0 den
+Fehlercode ELINK und in a0 einen Zeiger auf eine Struktur der obigen Form.
+Der Kernel sorgt dann fÅr die Dereferenzierung und die Begrenzung der
+maximalen Verschachtelung (falls der Symlink wieder auf einen solchen
+zeigt). Die XFS-Funktionen, die ELINK liefern dÅrfen, sind:
+
+xfs_path2DD, xfs_sfirst, xfs_snext, xfs_fopen, xfs_xattr, xfs_attrib.
+
+Querverweis:
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node MX_DOSLIMITS
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    UWORD version;        /* Versionsnummer               */
+    UWORD num_drives;     /* max. Anzahl Laufwerke        */
+    ULONG max_secsizb;    /* max. Sektorgrîûe in Bytes    */
+    UWORD min_nfats;      /* min. Anzahl FATs             */
+    UWORD max_nfats;      /* max. Anzahl FATs             */
+    ULONG min_nclsiz;     /* min. Anzahl Sektoren/Cluster */
+    ULONG max_nclsiz;     /* max. Anzahl Sektoren/Cluster */
+    ULONG max_ncl;        /* max. Anzahl Cluster          */
+    ULONG max_nsec;       /* max. Anzahl Sektoren         */
+} MX_DOSLIMITS;
+!end_verbatim
+
+Querverweis:
+Dcntl ~  KER_DOSLIMITS ~  (!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+!begin_node XFS-Strukturen
+
+!toc [all]
+
+!begin_node dev_descr
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+struct dev_descr
+{
+    DEVDRV  *driver;
+    SHORT   dinfo;
+    SHORT   flags;
+    struct tty *tty;
+    LONG    devdrvsiz;
+    LONG    reserved[4];
+};
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)devdrvsiz(!i) beschreibt dabei die Grîûe
+der DEVDRV-Struktur.
+
+Querverweis: Dcntl ~ (!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+
+!begin_node DEVDRV
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct devdrv
+{
+    LONG (*open)      (FILEPTR *f);
+    LONG (*write)     (FILEPTR *f, BYTE *buf, LONG bytes);
+    LONG (*read)      (FILEPTR *f, BYTE *buf, LONG bytes);
+    LONG (*lseek)     (FILEPTR *f, LONG where, WORD whence);
+    LONG (*ioctl)     (FILEPTR *f, WORD mode, VOID *buf);
+    LONG (*datime)    (FILEPTR *f, WORD *timeptr, WORD rwflag);
+    LONG (*close)     (FILEPTR *f, WORD pid);
+    LONG (*select)    (FILEPTR *f, LONG proc, WORD mode);
+    VOID (*unselect)  (FILEPTR *f, LONG proc, WORD mode);
+    LONG reserved[3];
+} DEVDRV;
+!end_verbatim
+
+Querverweis: Dcntl ~ dev_descr ~ FILESYS ~
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+!begin_node FILESYS
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct filesys
+{
+    struct  filesys *next;
+    LONG    fsflags;
+    LONG    (*root)       (WORD drv, fcookie *fc);
+    LONG    (*lookup)     (fcookie *dir, BYTE *name, fcookie *fc);
+    LONG    (*creat)      (fcookie *dir, BYTE *name, UWORD mode,
+                           WORD attrib, fcookie *fc);
+    DEVDRV *(*getdev)     (fcookie *fc, LONG *devspecial);
+    LONG    (*getxattr)   (fcookie *fc, XATTR *xattr);
+    LONG    (*chattr)     (fcookie *fc, WORD attr);
+    LONG    (*chown)      (fcookie *fc, WORD uid, WORD gid);
+    LONG    (*chmode)     (fcookie *fc, UWORD mode);
+    LONG    (*mkdir)      (fcookie *dir, BYTE *name, UWORD mode);
+    LONG    (*rmdir)      (fcookie *dir, BYTE *name);
+    LONG    (*remove)     (fcookie *dir, BYTE *name);
+    LONG    (*getname)    (fcookie *relto, fcookie *dir, BYTE *pathname,
+                           WORD size);
+    LONG    (*rename)     (fcookie *olddir, BYTE *oldname,
+                           fcookie *newdir, BYTE *newname);
+    LONG    (*opendir)    (DIR *dirh, WORD tosflag);
+    LONG    (*readdir)    (DIR *dirh, BYTE *nm, WORD nmlen, fcookie *fc);
+    LONG    (*rewinddir)  (DIR *dirh);
+    LONG    (*closedir)   (DIR *dirh);
+    LONG    (*pathconf)   (fcookie *dir, WORD which);
+    LONG    (*dfree)      (fcookie *dir, LONG *buf);
+    LONG    (*writelabel) (fcookie *dir, BYTE *name);
+    LONG    (*readlabel)  (fcookie *dir, BYTE *name, WORD namelen);
+    LONG    (*symlink)    (fcookie *dir, BYTE *name, BYTE *to);
+    LONG    (*readlink)   (fcookie *dir, BYTE *buf, WORD len);
+    LONG    (*hardlink)   (fcookie *fromdir, BYTE *fromname,
+                           fcookie *todir, BYTE *toname);
+    LONG    (*fscntl)     (fcookie *dir, BYTE *name, WORD cmd, LONG arg);
+    LONG    (*dskchng)    (WORD drv);
+    LONG    (*release)    (fcookie *fc);
+    LONG    (*dupcookie)  (fcookie *dest, fcookie *src);
+} FILESYS;
+!end_verbatim
+
+Querverweis: Dcntl ~ fs_descr ~
+(!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+!begin_node fs_descr
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+struct fs_descr
+{
+    FILESYS *file_system;
+    SHORT   dev_no;
+    LONG    flags;
+    LONG    reserved[4];
+};
+!end_verbatim
+
+Querverweis: Dcntl ~ (!link [XFS-Konzept in MagiC] [Das XFS-Konzept von MagiC])
+!end_node
+
+!end_node
+
+!end_node
