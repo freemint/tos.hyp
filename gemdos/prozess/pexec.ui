@@ -1,0 +1,379 @@
+!iflang [english]
+
+!begin_node Pexec
+(!begin_liste) [Availability]
+!item [Name:]
+Øprogram executionÆ - Programm laden und ausfÅhren.
+!item [Opcode:]
+75
+!item [Syntax:]
+int32_t Pexec ( uint16_t mode, ... );
+
+!item [Description:]
+Die Funktion lÑdt und startet ein Programm. öber den Parameter (!I)mode(!i)
+lassen sich verschiedene Varianten auswÑhlen:
+!begin_xlist [mode]
+!item [mode]
+Bedeutung
+!item [~]
+~
+
+!item [0]
+int32_t Pexec (0, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Load and go:(!b) LÑdt und startet das in (!I)name(!i) angegebene
+Programm, und Åbergibt die Kommandozeile (!I)cmdline(!i). FÅr den Parameter
+(!I)env(!i) gilt:
+!begin_xlist !short [NULL]
+!item [-1]
+=  kein Environment anlegen.
+!item [NULL]
+=  Environment des Parent vererben.
+!end_xlist
+Jeder andere Wert ist ein Zeiger auf das zu vererbene Environment.
+
+!item [3]
+(!nolink [PD]) *Pexec (3, int8_t* name, int8_t *cmdline, int8_t *env); (!nl)
+
+(!B)Load, don't go:(!b) wird meist zum Starten von Overlays oder zum Laden
+von Prgrammen in einem Debugger benutzt. Entspricht (!I)mode(!i) 0, mit dem
+Unterschied, daû das Programm nicht sofort gestartet wird, sondern ein
+Zeiger auf die Basepage zurÅckgeliefert wird.
+
+!item [4]
+int32_t Pexec (4, 0L, PD *basepage, 0L); (!nl)
+
+(!B)Just go:(!b) startet ein bereits geladenes Programm. Die Basepage sollte
+mit mode 3 oder 5 erzeugt worden sein.
+
+!item [5]
+(!nolink [PD]) *Pexec (5, 0L, int8_t *cmdline, int8_t *env); (!nl)
+
+(!B)Create Basepage:(!b) ZunÑchst legt GEMDOS ein neues Environment an. Dann
+wird der grîûte zusammenhÑngende Speicherblock alloziert und in den ersten
+256 Byte eine Basepage angelegt. FÅr den Parameter (!I)env(!i) gilt:
+!begin_xlist !short [NULL]
+!item [-1]
+=  kein Environment anlegen.
+!item [NULL]
+=  Environment des Parent vererben.
+!end_xlist
+Jeder andere Wert ist ein Zeiger auf das zu vererbende Environment.
+
+!item [6]
+int32_t Pexec (6, 0L, PD *basepage, 0L); (!nl)
+
+(!B)Just go, then free:(!b) Entspricht (!I)mode(!i) 4, mit dem Unterschied,
+daû allozierter Speicher dem gestarteten Prozess und nicht dem Starter
+gehîrt. Zusammen mit Modus 3 kann damit der gleiche Effekt erzielt werden,
+wie durch Modus 0. Dieser Modus steht erst ab (!nolink [GEMDOS])-Version 0.15 zur
+VerfÅgung.
+
+!item [7]
+PD *Pexec (7, uint32_t prgflags, int8_t *cmdline, int8_t *env);
+
+(!B)Create Basepage, respecting prgflags:(!b) Analog (!I)mode(!i) 5, nur
+kann in (!I)prgflags(!i) die gleiche Information wie im Feld ph_prgflags des
+Programm-Headers Åbergeben werden. Dieser Modus wird vom BIOS des TT
+benutzt, um GEM zu starten, und steht erst ab GEMDOS Version 0.19 zur
+VerfÅgung.
+
+!item [100]
+int32_t Pexec (100, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Asynchron load and go:(!b) Analog (!I)mode(!i) 0, nur wartet der
+Aufrufer nicht, bis das gestartete Programm beendet wird. Der RÅckgabewert
+ist ein negativer Fehlercode oder die positive PID des Childs.
+
+!item [101]
+da dieser Modus nur MagiC-intern zum Vererben von Pfad- und Dateihandles
+benutzt wird, wird auf die Angabe der genauen Syntax an dieser Stelle
+verzichtet.
+
+!item [102]
+wird (!nolink [MagiC])-intern verwendet, um einen bestimmten Prozess zu entfernen. Auf
+die genaue Syntax wird daher an dieser Stelle verzichtet.
+
+!item [104]
+int32_t Pexec (104, int8_t *name, PD *basepage, 0L); (!nl)
+
+(!B)Asynchron just go:(!b) Analog (!I)mode(!i) 4, nur wartet der Aufrufer
+nicht, bis das gestartete Programm beendet wird. Es wird ein Prozess
+gestartet, dessen Basepage vorher durch einen Modus von 3, 5 oder 7 gesetzt
+wurde. Zu beachten ist, daû das Environment und die Basepage des Childs sich
+auch im Besitz des Parents befinden (tatsÑchlich erbt der Child allen
+Speicher, der sich im Besitz des Parents befindet). Der Parameter
+(!I)name(!i) ist ein Zeiger auf einen String, der den Namen des neuen
+Prozesses beschreibt; bei einem NULL-Wert wird der Name des Parent-Prozesses
+benutzt. Die Funktion liefert einen negativen Fehlercode, oder die positive
+PID des Childs zurÅck.
+
+!item [106]
+int32_t Pexec (106, int8_t *name, PD *basepage, 0L); (!nl)
+
+(!B)Asynchron go, then free:(!b) Analog (!I)mode(!i) 104, allerdings
+befinden sich Environment und Basepage des Childs (!I)nicht(!i) im Besitz des
+Parents, und der Child hat keinen Zugriff auf Speicher, welcher dem
+Parent-Prozess zugeteilt wurde. Beim Beenden des Childs wird dessen
+Speicherplatz wieder freigegeben. In Verbindung mit Modus 3 entspricht Pexec
+(106, ...) daher dem Modus 100 (wÑhrend Modus 3 gefolgt von Modus 6 einem
+Aufruf von Pexec (0, ...) entspricht).
+ (!nl)
+Wird ab MagiC 2.0 nicht mehr unterstÅtzt.
+
+!item [107]
+entspricht im wesentlichen (!I)mode(!i) 7, und wird intern von MagiC
+verwendet. Auf die genaue Syntax wird daher an dieser Stelle verzichtet.
+
+!item [108]
+wird von (!nolink [MagiC]) intern zum Starten eines Accessories verwendet. Da die genaue
+Syntax offiziell nicht dokumentiert ist, sollten eigene Programme besser auf
+shel_write zurÅckgreifen.
+
+!item [200]
+int32_t Pexec (200, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Overlay:(!b) Analog (!I)mode(!i) 100, jedoch Åberschreibt der neue
+Prozess den alten vollstÑndig. Der alte Prozess behÑlt zwar seine PID und
+die meisten seiner Attribute, aber sein gesamter Speicherplatz wird
+freigegeben. WÑhrend Pexec (0, ...) als Unterprogrammaufruf (call...return)
+angesehen werden kann, wirkt dieser Modus eher wie ein 'goto'.
+!end_xlist
+(!B)Hinweis:(!b) Nicht alle Modi sind unter allen Betriebssystemvarianten
+verfÅgbar; deshalb sollte der RÅckgabewert der Funktion beachtet werden.
+Unbekannte Modi sorgen fÅr ein Funktionsergebnis von EINVFN.
+
+Kommandozeilen werden als String im (!I)Pascal-Format(!i) Åbergeben, d.h. im
+ersten Byte befindet sich die LÑnge der Zeile (maximal 124 Zeichen).
+
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert als Ergebnis den Abschluûcode des Child-Prozesses. Wenn
+ein Overlay geladen wurde, enthÑlt das Ergebnis die Basepage des Overlays.
+Bei einem negativen Resultat ist ein Fehler aufgetreten.
+
+
+!item [Availability:] All GEMDOS versions.
+
+!item [Group:]
+Process Functions
+
+!item [See Also:] (!link [Binding] [Bindings for Pexec]) ~ shel_write  ~
+    (!link [Programmflags][Die Programmflags]) ~ ARGV-Verfahren
+(!ende_liste)
+
+
+!begin_node Bindings for Pexec
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t Pexec ( uint16_t mode, ... );
+!item [Assembler:]
+!begin_verbatim
+pea       env          ; Offset 12
+pea       cmdline      ; Offset  8 
+pea       name         ; Offset  4 
+move.w    mode,-(sp)   ; Offset  2
+move.w    #75,-(sp)    ; Offset  0
+trap      #1           ; GEMDOS
+lea       $10(sp),sp   ; correct stack
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+!else
+
+!begin_node Pexec
+(!begin_liste) [Beschreibung]
+!item [Name:]
+Øprogram executionÆ - Programm laden und ausfÅhren.
+!item [Gemdosnummer:]
+75
+!item [Deklaration:]
+int32_t Pexec ( uint16_t mode, ... );
+
+!item [Beschreibung:]
+Die Funktion lÑdt und startet ein Programm. öber den Parameter (!I)mode(!i)
+lassen sich verschiedene Varianten auswÑhlen:
+!begin_xlist [mode]
+!item [mode]
+Bedeutung
+!item [~]
+~
+
+!item [0]
+int32_t Pexec (0, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Load and go:(!b) LÑdt und startet das in (!I)name(!i) angegebene
+Programm, und Åbergibt die Kommandozeile (!I)cmdline(!i). FÅr den Parameter
+(!I)env(!i) gilt:
+!begin_xlist !short [NULL]
+!item [-1]
+=  kein Environment anlegen.
+!item [NULL]
+=  Environment des Parent vererben.
+!end_xlist
+Jeder andere Wert ist ein Zeiger auf das zu vererbene Environment.
+
+!item [3]
+(!nolink [PD]) *Pexec (3, int8_t* name, int8_t *cmdline, int8_t *env); (!nl)
+
+(!B)Load, don't go:(!b) wird meist zum Starten von Overlays oder zum Laden
+von Prgrammen in einem Debugger benutzt. Entspricht (!I)mode(!i) 0, mit dem
+Unterschied, daû das Programm nicht sofort gestartet wird, sondern ein
+Zeiger auf die Basepage zurÅckgeliefert wird.
+
+!item [4]
+int32_t Pexec (4, 0L, PD *basepage, 0L); (!nl)
+
+(!B)Just go:(!b) startet ein bereits geladenes Programm. Die Basepage sollte
+mit mode 3 oder 5 erzeugt worden sein.
+
+!item [5]
+(!nolink [PD]) *Pexec (5, 0L, int8_t *cmdline, int8_t *env); (!nl)
+
+(!B)Create Basepage:(!b) ZunÑchst legt GEMDOS ein neues Environment an. Dann
+wird der grîûte zusammenhÑngende Speicherblock alloziert und in den ersten
+256 Byte eine Basepage angelegt. FÅr den Parameter (!I)env(!i) gilt:
+!begin_xlist !short [NULL]
+!item [-1]
+=  kein Environment anlegen.
+!item [NULL]
+=  Environment des Parent vererben.
+!end_xlist
+Jeder andere Wert ist ein Zeiger auf das zu vererbende Environment.
+
+!item [6]
+int32_t Pexec (6, 0L, PD *basepage, 0L); (!nl)
+
+(!B)Just go, then free:(!b) Entspricht (!I)mode(!i) 4, mit dem Unterschied,
+daû allozierter Speicher dem gestarteten Prozess und nicht dem Starter
+gehîrt. Zusammen mit Modus 3 kann damit der gleiche Effekt erzielt werden,
+wie durch Modus 0. Dieser Modus steht erst ab (!nolink [GEMDOS])-Version 0.15 zur
+VerfÅgung.
+
+!item [7]
+PD *Pexec (7, uint32_t prgflags, int8_t *cmdline, int8_t *env);
+
+(!B)Create Basepage, respecting prgflags:(!b) Analog (!I)mode(!i) 5, nur
+kann in (!I)prgflags(!i) die gleiche Information wie im Feld ph_prgflags des
+Programm-Headers Åbergeben werden. Dieser Modus wird vom BIOS des TT
+benutzt, um GEM zu starten, und steht erst ab GEMDOS Version 0.19 zur
+VerfÅgung.
+
+!item [100]
+int32_t Pexec (100, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Asynchron load and go:(!b) Analog (!I)mode(!i) 0, nur wartet der
+Aufrufer nicht, bis das gestartete Programm beendet wird. Der RÅckgabewert
+ist ein negativer Fehlercode oder die positive PID des Childs.
+
+!item [101]
+da dieser Modus nur MagiC-intern zum Vererben von Pfad- und Dateihandles
+benutzt wird, wird auf die Angabe der genauen Syntax an dieser Stelle
+verzichtet.
+
+!item [102]
+wird (!nolink [MagiC])-intern verwendet, um einen bestimmten Prozess zu entfernen. Auf
+die genaue Syntax wird daher an dieser Stelle verzichtet.
+
+!item [104]
+int32_t Pexec (104, int8_t *name, PD *basepage, 0L); (!nl)
+
+(!B)Asynchron just go:(!b) Analog (!I)mode(!i) 4, nur wartet der Aufrufer
+nicht, bis das gestartete Programm beendet wird. Es wird ein Prozess
+gestartet, dessen Basepage vorher durch einen Modus von 3, 5 oder 7 gesetzt
+wurde. Zu beachten ist, daû das Environment und die Basepage des Childs sich
+auch im Besitz des Parents befinden (tatsÑchlich erbt der Child allen
+Speicher, der sich im Besitz des Parents befindet). Der Parameter
+(!I)name(!i) ist ein Zeiger auf einen String, der den Namen des neuen
+Prozesses beschreibt; bei einem NULL-Wert wird der Name des Parent-Prozesses
+benutzt. Die Funktion liefert einen negativen Fehlercode, oder die positive
+PID des Childs zurÅck.
+
+!item [106]
+int32_t Pexec (106, int8_t *name, PD *basepage, 0L); (!nl)
+
+(!B)Asynchron go, then free:(!b) Analog (!I)mode(!i) 104, allerdings
+befinden sich Environment und Basepage des Childs (!I)nicht(!i) im Besitz des
+Parents, und der Child hat keinen Zugriff auf Speicher, welcher dem
+Parent-Prozess zugeteilt wurde. Beim Beenden des Childs wird dessen
+Speicherplatz wieder freigegeben. In Verbindung mit Modus 3 entspricht Pexec
+(106, ...) daher dem Modus 100 (wÑhrend Modus 3 gefolgt von Modus 6 einem
+Aufruf von Pexec (0, ...) entspricht).
+ (!nl)
+Wird ab MagiC 2.0 nicht mehr unterstÅtzt.
+
+!item [107]
+entspricht im wesentlichen (!I)mode(!i) 7, und wird intern von MagiC
+verwendet. Auf die genaue Syntax wird daher an dieser Stelle verzichtet.
+
+!item [108]
+wird von (!nolink [MagiC]) intern zum Starten eines Accessories verwendet. Da die genaue
+Syntax offiziell nicht dokumentiert ist, sollten eigene Programme besser auf
+shel_write zurÅckgreifen.
+
+!item [200]
+int32_t Pexec (200, int8_t *name, int8_t *cmdline, int8_t *env);
+
+(!B)Overlay:(!b) Analog (!I)mode(!i) 100, jedoch Åberschreibt der neue
+Prozess den alten vollstÑndig. Der alte Prozess behÑlt zwar seine PID und
+die meisten seiner Attribute, aber sein gesamter Speicherplatz wird
+freigegeben. WÑhrend Pexec (0, ...) als Unterprogrammaufruf (call...return)
+angesehen werden kann, wirkt dieser Modus eher wie ein 'goto'.
+!end_xlist
+(!B)Hinweis:(!b) Nicht alle Modi sind unter allen Betriebssystemvarianten
+verfÅgbar; deshalb sollte der RÅckgabewert der Funktion beachtet werden.
+Unbekannte Modi sorgen fÅr ein Funktionsergebnis von EINVFN.
+
+Kommandozeilen werden als String im (!I)Pascal-Format(!i) Åbergeben, d.h. im
+ersten Byte befindet sich die LÑnge der Zeile (maximal 124 Zeichen).
+
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis den Abschluûcode des Child-Prozesses. Wenn
+ein Overlay geladen wurde, enthÑlt das Ergebnis die Basepage des Overlays.
+Bei einem negativen Resultat ist ein Fehler aufgetreten.
+
+
+!item [VerfÅgbar:] Alle GEMDOS Versionen.
+
+!item [Gruppe:]
+Prozessfunktionen
+
+!item [Querverweis:] (!link [Binding] [Bindings fÅr Pexec]) ~ shel_write  ~
+		(!link [Programmflags][Die Programmflags]) ~ ARGV-Verfahren
+(!ende_liste)
+
+
+!begin_node Bindings fÅr Pexec
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t Pexec ( uint16_t mode, ... );
+!item [Assembler:]
+!begin_verbatim
+pea       env          ; Offset 12
+pea       cmdline      ; Offset  8 
+pea       name         ; Offset  4 
+move.w    mode,-(sp)   ; Offset  2
+move.w    #75,-(sp)    ; Offset  0
+trap      #1           ; GEMDOS aufrufen
+lea       $10(sp),sp   ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+!endif

@@ -1,0 +1,344 @@
+!iflang [english]
+
+!begin_node Mxalloc
+(!begin_liste) [Availability]
+!item [Name:]
+ØAllocate memory (with preference)Æ - Speicherplatz reservieren.
+!item [Opcode:]
+68
+!item [Syntax:]
+void *Mxalloc ( int32_t amount, int16_t mode );
+
+!item [Description:]
+Die GEMDOS-Routine Mxalloc reserviert einen Speicherbereich der Grîûe
+(!I)amount(!i). öber die Bits des Parameters (!I)mode(!i) kann die
+gewÅnschte Speicherart spezifiziert werden; es gilt:
+!begin_xlist !short [Bits]
+!item [Bits]
+Bedeutung
+!item [~]
+~
+!item [0-1]
+(!B)Behandlung des TT-RAMs(!b)
+!begin_xlist !short [0 =]
+!item [0 =]
+nur ST-RAM
+!item [1 =]
+nur TT-RAM
+!item [2 =]
+egal, ST-RAM bevorzugt
+!item [3 =]
+egal, TT-RAM bevorzugt
+!end_xlist
+!item [2]
+reserviert
+!item [3]
+falls gesetzt, wird Åber die Bits 4-7 der Speicherschutz-Modus ausgewÑhlt
+!item [4-7]
+(!B)Speicherschutz-Modus(!b)
+!begin_xlist !short [0 =]
+!item [0 =]
+AbhÑngig von den Programmflags
+!item [1 =]
+Privat
+!item [2 =]
+Global
+!item [3 =]
+Super
+!item [4 =]
+nur lesbar
+!end_xlist
+Alle anderen Werte sind undefiniert, und fÅr zukÅnftige Zwecke reserviert.
+!item [14]
+(!B)No-Free-Modus(!b)
+(!nl)
+Wenn dieses Bit gesetzt ist und der Besitzer dieses Speichers terminiert,
+wird der Speicherbereich nicht freigegeben, sondern an das Betriebssystem
+vererbt. Dieser Modus ist nur fÅr das Betriebssystem interessant, und steht
+normalen Anwenderprogrammen nicht zur VerfÅgung.
+!end_xlist
+Alle weiteren Bits sind fÅr zukÅnftige Zwecke reserviert. Mit dem Wert -1
+fÅr (!I)amount(!i) kann man die LÑnge des grîûten zusammenhÑngend
+verfÅgbaren Speicherblocks (abhÑngig von (!I)mode(!i)) erfragen.
+
+Unter MagiC werden alle Speicherallozierungen mitprotokolliert. Wenn die mit
+LIMITMEM vorgegebene BeschrÑnkung Åberschritten wird, wird ein Nullzeiger
+zurÅckgegeben. Im Fall (!I)amount(!i) = -1 wird das Minimum von freiem
+Speicher und noch nicht ausgeschîpfter LIMITMEM-BeschrÑnkung zurÅckgegeben.
+Ausnahmen sind Aufrufe des Bildschirm-Managers (SCRENMGR), der die MenÅs
+kontrolliert. Dadurch wird sichergestellt, daû auch per LIMITMEM beschrÑnkte
+Programme keine Probleme mit dem Redraw bei MenÅs haben.
+
+(!B)Hinweis:(!b)  Ein
+Problem besteht darin, festzustellen, wann die erweiterten Modi (Bits 3 und
+folgende) benutzt werden dÅrfen. Einige Ñltere Versionen des (!nolink [GEMDOS]) kommen
+nÑmlich nicht mit diesen Modi zurecht, und sorgen z.T. fÅr den Absturz der
+Applikation bzw. des ganzen Systems. Aus diesem Grund testen viele
+Programmierer explizit auf das Vorhandensein von MiNT/MultiTOS oder
+Versionen von (!nolink [MagiC]) >= 2.0. Alternativ kann auch die Funktion Mxmask benutzt
+werden.
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert als Ergebnis die Anfangsadresse des reservierten
+Bereichs als typenlosen Zeiger. Mxalloc liefert als Ergebnis eine 0, wenn
+nicht mehr genÅgend Speicher vorhanden ist.
+
+!item [Availability:] 
+Diese Funktion existiert erst ab (!nolink [GEMDOS])-Version 0.19.
+
+!item [Group:]
+Memory Management
+
+!item [See Also:] (!link [Binding] [Bindings for Mxalloc]) ~
+        Mfree ~ Malloc ~ Maddalt ~ (!link [Programmflags][Die Programmflags])
+(!ende_liste)
+
+
+!begin_node Bindings for Mxalloc
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+void *Mxalloc ( int32_t amount, int16_t mode );
+!item [Assembler:]
+!begin_verbatim
+move.w    mode,-(sp)    ; Offset 6
+move.l    amount,-(sp)  ; Offset 2
+move.w    #68,-(sp)     ; Offset 0
+trap      #1            ; GEMDOS
+addq.l    #8,sp         ; correct stack
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node Mxmask
+
+!begin_verbatim
+/*
+   Mxmask() liefert eine Bitmaske mit der man das Moduswort eines
+   Mxalloc() Aufrufs maskieren sollte, falls man Protectionbits
+   benutzen mîchte. Dies ist notwendig, da Mxalloc() bei der Angabe
+   von Protectionbits leider in einigen GEMDOS Implementierungen
+   fehlerhafte Resultate liefert, die in der Folge zum Absturz des
+   Systems fuehren koennen. ((c) 1994 Martin Osieka)
+   Anwendungsbeispiel:
+   mxMask = Mxmask();
+   p = mxMask ? Mxalloc( size, 0x43 & mxMask) : Malloc( size); */
+
+SHORT Mxmask (void)
+{
+    void *svStack;      /* Supervisor-Stack */
+    int32_t sRAM, sRAMg;   /* ST-RAM          */
+    int32_t aRAM, aRAMg;   /* Alternate RAM   */
+ 
+    /*
+    // Beispieltabelle moeglicher Werte:
+    //           | newfashion  | oldfashion
+    // sRAM aRAM | sRAMg aRAMg | sRAMg aRAMg
+    //   1    0  |   1     0   |   1     1
+    //   0    2  |   0     2   |   2     2
+    //   1    2  |   1     2   |   3     3
+    */
+
+    svStack = (void *) Super( 0);  /* unterbinde Taskwechsel */
+ 
+    sRAM  = (int32_t) Mxalloc( -1, 0);
+    sRAMg = (int32_t) Mxalloc( -1, 0x40); /* im Fehlerfall Mxalloc( -1, 3) */
+    aRAM  = (int32_t) Mxalloc( -1, 1);
+    aRAMg = (int32_t) Mxalloc( -1, 0x41); /* im Fehlerfall Mxalloc( -1, 3) */
+ 
+    Super( svStack);  /* erlaube Taskwechsel */
+
+    if (sRAM == -32)
+        return 0x0000;  /* Mxalloc() ist nicht implementiert */
+ 
+    else if ( ((sRAM + aRAM) == sRAMg) && ((sRAM + aRAM) == aRAMg) )
+        return 0x0003;  /* oldfashion Mxalloc() */
+ 
+    else
+        return 0xFFFF;
+ 
+} /* Mxmask */
+!end_verbatim
+
+See Also: GEMDOS ~ Memory Management
+!end_node
+!end_node
+
+!else
+
+!begin_node Mxalloc
+(!begin_liste) [Beschreibung]
+!item [Name:]
+ØAllocate memory (with preference)Æ - Speicherplatz reservieren.
+!item [Gemdosnummer:]
+68
+!item [Deklaration:]
+void *Mxalloc ( int32_t amount, int16_t mode );
+
+!item [Beschreibung:]
+Die GEMDOS-Routine Mxalloc reserviert einen Speicherbereich der Grîûe
+(!I)amount(!i). öber die Bits des Parameters (!I)mode(!i) kann die
+gewÅnschte Speicherart spezifiziert werden; es gilt:
+!begin_xlist !short [Bits]
+!item [Bits]
+Bedeutung
+!item [~]
+~
+!item [0-1]
+(!B)Behandlung des TT-RAMs(!b)
+!begin_xlist !short [0 =]
+!item [0 =]
+nur ST-RAM
+!item [1 =]
+nur TT-RAM
+!item [2 =]
+egal, ST-RAM bevorzugt
+!item [3 =]
+egal, TT-RAM bevorzugt
+!end_xlist
+!item [2]
+reserviert
+!item [3]
+falls gesetzt, wird Åber die Bits 4-7 der Speicherschutz-Modus ausgewÑhlt
+!item [4-7]
+(!B)Speicherschutz-Modus(!b)
+!begin_xlist !short [0 =]
+!item [0 =]
+AbhÑngig von den Programmflags
+!item [1 =]
+Privat
+!item [2 =]
+Global
+!item [3 =]
+Super
+!item [4 =]
+nur lesbar
+!end_xlist
+Alle anderen Werte sind undefiniert, und fÅr zukÅnftige Zwecke reserviert.
+!item [14]
+(!B)No-Free-Modus(!b)
+(!nl)
+Wenn dieses Bit gesetzt ist und der Besitzer dieses Speichers terminiert,
+wird der Speicherbereich nicht freigegeben, sondern an das Betriebssystem
+vererbt. Dieser Modus ist nur fÅr das Betriebssystem interessant, und steht
+normalen Anwenderprogrammen nicht zur VerfÅgung.
+!end_xlist
+Alle weiteren Bits sind fÅr zukÅnftige Zwecke reserviert. Mit dem Wert -1
+fÅr (!I)amount(!i) kann man die LÑnge des grîûten zusammenhÑngend
+verfÅgbaren Speicherblocks (abhÑngig von (!I)mode(!i)) erfragen.
+
+Unter MagiC werden alle Speicherallozierungen mitprotokolliert. Wenn die mit
+LIMITMEM vorgegebene BeschrÑnkung Åberschritten wird, wird ein Nullzeiger
+zurÅckgegeben. Im Fall (!I)amount(!i) = -1 wird das Minimum von freiem
+Speicher und noch nicht ausgeschîpfter LIMITMEM-BeschrÑnkung zurÅckgegeben.
+Ausnahmen sind Aufrufe des Bildschirm-Managers (SCRENMGR), der die MenÅs
+kontrolliert. Dadurch wird sichergestellt, daû auch per LIMITMEM beschrÑnkte
+Programme keine Probleme mit dem Redraw bei MenÅs haben.
+
+(!B)Hinweis:(!b)  Ein
+Problem besteht darin, festzustellen, wann die erweiterten Modi (Bits 3 und
+folgende) benutzt werden dÅrfen. Einige Ñltere Versionen des (!nolink [GEMDOS]) kommen
+nÑmlich nicht mit diesen Modi zurecht, und sorgen z.T. fÅr den Absturz der
+Applikation bzw. des ganzen Systems. Aus diesem Grund testen viele
+Programmierer explizit auf das Vorhandensein von MiNT/MultiTOS oder
+Versionen von (!nolink [MagiC]) >= 2.0. Alternativ kann auch die Funktion Mxmask benutzt
+werden.
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis die Anfangsadresse des reservierten
+Bereichs als typenlosen Zeiger. Mxalloc liefert als Ergebnis eine 0, wenn
+nicht mehr genÅgend Speicher vorhanden ist.
+
+!item [VerfÅgbar:] 
+Diese Funktion existiert erst ab (!nolink [GEMDOS])-Version 0.19.
+
+!item [Gruppe:]
+Speicherverwaltung
+
+!item [Querverweis:] (!link [Binding] [Bindings fÅr Mxalloc]) ~
+				Mfree ~ Malloc ~ Maddalt ~ (!link [Programmflags][Die Programmflags])
+(!ende_liste)
+
+
+!begin_node Bindings fÅr Mxalloc
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+void *Mxalloc ( int32_t amount, int16_t mode );
+!item [Assembler:]
+!begin_verbatim
+move.w    mode,-(sp)    ; Offset 6
+move.l    amount,-(sp)  ; Offset 2
+move.w    #68,-(sp)     ; Offset 0
+trap      #1            ; GEMDOS aufrufen
+addq.l    #8,sp         ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+
+
+!begin_node Mxmask
+
+!begin_verbatim
+/*
+   Mxmask() liefert eine Bitmaske mit der man das Moduswort eines
+   Mxalloc() Aufrufs maskieren sollte, falls man Protectionbits
+   benutzen mîchte. Dies ist notwendig, da Mxalloc() bei der Angabe
+   von Protectionbits leider in einigen GEMDOS Implementierungen
+   fehlerhafte Resultate liefert, die in der Folge zum Absturz des
+   Systems fuehren koennen. ((c) 1994 Martin Osieka)
+   Anwendungsbeispiel:
+   mxMask = Mxmask();
+   p = mxMask ? Mxalloc( size, 0x43 & mxMask) : Malloc( size); */
+
+SHORT Mxmask (void)
+{
+    void *svStack;      /* Supervisor-Stack */
+    int32_t sRAM, sRAMg;   /* ST-RAM          */
+    int32_t aRAM, aRAMg;   /* Alternate RAM   */
+ 
+    /*
+    // Beispieltabelle moeglicher Werte:
+    //           | newfashion  | oldfashion
+    // sRAM aRAM | sRAMg aRAMg | sRAMg aRAMg
+    //   1    0  |   1     0   |   1     1
+    //   0    2  |   0     2   |   2     2
+    //   1    2  |   1     2   |   3     3
+    */
+
+    svStack = (void *) Super( 0);  /* unterbinde Taskwechsel */
+ 
+    sRAM  = (int32_t) Mxalloc( -1, 0);
+    sRAMg = (int32_t) Mxalloc( -1, 0x40); /* im Fehlerfall Mxalloc( -1, 3) */
+    aRAM  = (int32_t) Mxalloc( -1, 1);
+    aRAMg = (int32_t) Mxalloc( -1, 0x41); /* im Fehlerfall Mxalloc( -1, 3) */
+ 
+    Super( svStack);  /* erlaube Taskwechsel */
+
+    if (sRAM == -32)
+        return 0x0000;  /* Mxalloc() ist nicht implementiert */
+ 
+    else if ( ((sRAM + aRAM) == sRAMg) && ((sRAM + aRAM) == aRAMg) )
+        return 0x0003;  /* oldfashion Mxalloc() */
+ 
+    else
+        return 0xFFFF;
+ 
+} /* Mxmask */
+!end_verbatim
+
+Querverweis: GEMDOS ~ Speicherverwaltung
+!end_node
+!end_node
+!endif
