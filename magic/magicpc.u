@@ -10,13 +10,26 @@
 !begin_node MagiCPC-Schnittstelle
 !ignore_subtoc
 
+MagiCPC kennt zwei Schnittelstellen mit denen man Funktionen des Windowssystem aufrufen kann.
+
+!begin_itemize
+ !item  mec0 (MPS) Schnittstelle diese dient dazu beliebigen (selbstgeschriebenen)
+        Windowscode auszufÅhren. Dieser wird in einer DLL abgelegt, und Åber
+        illegale Opcodes aus MagicPC heraus aufgerufen. 
+                
+ !item mec1 Schnittstelle hiermit kann ein vorgegebenes Set an (!nolink [Spezialfunktionen])
+       aufgerufen werden.
+!end_itemize
+
+!begin_node mec0 (MPS) Schnittstelle
+
 (!U)0. Allgemeines(!u)
 
 MPS = Magic_Programmier_Schnittstelle
 
 
 Dateien des Demobeispieles:
-!begin_xlist [mps_base.def ]
+!begin_xlist [mps_base.def ] !short
 !item [mps_base.def]   Die Exportliste der DLL, NICHT éNDERN
 !item [mps_base.h]  Definition der MPS_Schnittstelle, NICHT éNDERN
 !item [mps_base.cpp]   Basis-Funktionen der DLL, NICHT éNDERN
@@ -518,6 +531,198 @@ wait:
 
 Querverweise: MagiCPC-Schnittstelle
 !end_node
+!end_node
 
+!begin_node mec1 Schnittstelle
+!begin_enumerate
+!item Konzept
+
+Die mec1-Schnittstelle ermîglicht es, im Motorola-Code von Emulator
+vorgebenene Funktionen aufrufen. Sie entspricht der mec0-Schnittstelle;
+die Funktionen sind jedoch nicht in einer DLL frei definierbar, sondern
+schon vom Emulator vorgegeben.Aufruf:Die Funktionen werden einheitlich
+durch den Opcode $43bf aufgerufen, mit nachfolgender Funktionsnummer,
+also 4 Bytes GesamtlÑnge. Beispiel:
+
+dc.w   $43bf,$0031
+
+ruft die mec1-Funktion mit der Nummer 0x31 auf. ($43bf ist der Opcode
+fÅr chk <ea>,D1, mit <ea> = 111111 binÑr, also ungÅltig).
+Die Parameter-öbergabe erfolgt wie bei mec0 Åber die Motorola Register.
+
+!item Die Funktionen
+!begin_xlist [$0001 ]
+  !item [$0001] long emu_version:
+
+        !begin_table [l l]
+        Parameter: !! keine 
+        return: !! d0: Versions-Nummer
+           ~    !! d1: Versions-Datum
+           ~    !! d2: Bit0: Ist Demo-Version?
+        !end_table
+
+
+  !item [$0002] long emu_enquire:     Ermittelt Verschiedenes.
+
+
+        !begin_table [l l]
+        Parameter: !! long d0: was willst Du wissen?
+        return: !!long d0: Wert
+        !end_table
+
+        bisher definiert:
+        !begin_table [l l]
+        was: !! 1: Versionsnumemr
+        ~    !! 2: Versionsdatume
+        ~    !! 3: Ist Demo?
+        !end_table
+
+
+  !item [$0003] void emu_getexepath:
+       Ermittelt vollen Pfad (incl. Laufwerk, ohne MAGIC_PC.EXE)
+
+        !begin_table [l l]
+        Parameter:!! a0: char *bufadr (Buffer)
+             ~    !! d0: short nb_max (max. Byteszahl fÅr Buffer)
+        !end_table
+
+
+  !item [$0004] int emu_install_newvdi:
+
+        !begin_table [l l]
+        Parameter: !! a0: Byte *bufadr (neuer Inhalt von NVDI_PC.DLL)
+                ~  !! d0: long nbytes  (LÑnge)
+       return: !!  d0: >0: erfolgreich NVDI_PC.DLN erzeugt.
+        ~      !!  Beim nÑchsten  Hochstarten wird automatisch
+        ~      !!  umbenannt in NVDI_PC.DLL, wie besprochen.
+        !end_table
+
+  !item [$0010] void dw_addline: ~! ab 03.97
+
+        Text in neuer Zeile im Debug-Fenster ausgeben
+
+        !begin_table [l l]
+        Parameter: !! a0: Zeiger auf den Text.
+        !end_table
+
+  !item [$0011] void dw_addtext:    ~! ab 03.97
+  
+        Text im Debug-Fenster ausgeben
+
+        !begin_table [l l]
+        Parameter: !! a0: Zeiger auf den Text.
+        !end_table
+
+  !item [$0011] void dw_formtxt:    ~! ab 03.97
+
+       Text sprintf-like im Debug-Fenster ausgeben
+
+        !begin_table [l l]
+        Parameter: !! a0: Zeiger auf den Format-String
+             ~     !! d0, d1, ...  zusÑtzliche Parameter, passend zu
+             ~     !! dem Format-String der Formatstring entspricht
+             ~     !! ungefÑhr sprintf(format,...); Stringpointer
+             ~     !! sind jedoch nicht zulÑssig.
+        !end_table
+
+  !item [$0031] int printer_open         ~! ab 03.97
+
+        printer_open îffnet den Standarddrucker und beginnt ein neues Dokument
+
+        !begin_table [l l]
+        Parameter: !! a0: char *DocName (NULL-Pointer erlaubt)
+        return: !! d0>0: alles klar
+            ~   !! d0<=0 Fehler
+        !end_table
+
+  !item [$0032] int printer_close            ~! ab 03.97
+
+        printer_close beendet das zuvor geîffnete Dokument und schlieût den Drucker
+
+        !begin_table [l l]
+        Parameter: !! keine
+        return: !! d0>0: alles klar
+           ~    !! d0<=0 Fehler
+        !end_table
+
+  !item [$0033] int printer_write            ~! ab 03.97
+
+        !begin_table [l l]
+        Parameter: !! a0: Byte *pData;  // Zeiger auf den DatenBuffer
+                   !! d0: long nBytes;  // Zahl der Bytes im Buffer
+        return: !! d0: Åbertragene Bytes.
+        !end_table
+
+  !item [$0040] DWORD getTickCount           ~! ab 03.97
+
+        !begin_table [l l]
+        return: !! d0: TickCount (msec seit Start des Rechners)
+        !end_table
+
+  !item [$0041] DWORD getDrivePath           ~! ab 02.99
+
+        Die Funktion ermittelt den Windows-Pfad fÅr ein Magic-Laufwerk.
+
+        !begin_table [l l]
+        Parameter: !! d0: DriveNr (0 fÅr A:, 1 fÅr B:, ...)
+        ~          !! a0: Textbuffer fÅr den Pfad
+        ~          !! d1: Grîûe des Textbuffers
+        return:    !! d0: 0:  nicht gefunden,
+        ~          !! ~~~ 1:  Container-Laufwerk,
+        ~          !! ~~~ 2:  xfs-Laufwerk (Windows-Laufwerk)
+        ~          !! ~~~ 4:  Floppy-Laufwerk
+        !end_table
+
+  !item [$0042] DWORD setClipboardDir            ~! ab 02.99
+
+        !begin_table [l l]
+        Parameter:  !! a0: char *pPath // NULL: auf Default setzen
+        return:     !! d0: 1
+        !end_table
+
+        Beispiel:
+        !begin_verbatim
+        movea.l stringadr,a0    *
+        dc.w    $43bf,$0042     * mec1,Funktion $42 aufrufen
+        tst.l   d0              * -1: Fkt. nicht implementiert
+        jl  nichtimplementiert
+        !end_verbatim
+
+
+  !item [$0043] long getMouseWheel
+
+        !begin_table [l l]
+        Parameter: !! d0.l: 1: Position nach dem Auslesen zurÅcksetzen
+                   !! ~~~~~~0: Position nach dem Auslesen nicht zurÅcksetzen
+        return:    !! d0.l: aktuelle Position des Mausrades
+        !end_table
+
+        Beispiel:
+        !begin_verbatim
+        moveq   #1,d0       * Position nach dem Auslesen zurÅcksetzen
+        dc.w    $43bf,$0043 * mec1,Funktion $43 aufrufen
+        tst.l   d0          * Position seit letztem zurÅcksetzen geÑndert
+        je  no_action
+        <d0.l verarbeiten>
+        !end_verbatim
+
+
+  !item [$0045] long setCompiler         ~! ab 17.06.99
+
+        !begin_table [l l]
+         Parameter: !! d0.l: Auswahl, im Moment realisert:
+           ~        !! d0 = 1: Compiler ein/ausschalten:
+           ~        !! -------------------------
+           ~        !! d1 = 0: Compiler aus,
+           ~        !! d1 = 1: Compiler ein
+           ~        !! d1 = -1: Modus erfragen (Nach meinen Erfahrungen
+           ~        !! ~~~~~~~~~funtioniert dies nicht, soll aber in
+           ~        !! ~~~~~~~~~der 6.20 funktionieren)
+         return: !! alter Modus (0 oder 1).
+        !end_table
+!end_xlist
+!end_enumerate
+
+!end_node
 
 !end_node
