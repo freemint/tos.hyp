@@ -1,0 +1,178 @@
+!begin_node Detecting the presence of TosBox, Steem and PaCifiST
+!label PaCifiST
+!label Steem
+!label Tosbox
+
+!begin_verbatim
+; FOR ST Programmers - How to detect PaCifiST (0.46 of greater)
+;
+; When Vsync is called with D6=D7='Emu?' and those registers are
+; altered, you can assume you're running under an Emulator.
+
+; If D6='PaCi' & D7='fiST', then it's under PaCifiST and A0 points out
+; some extra hardware registers:
+;
+; 0     BYTE    major version (BCD)
+; 1     BYTE    minor version (BCD)
+
+; TosBox
+; The approved method, a la PaCifiST, is to call Vsync() with D6 = D7 =
+; 'Emu?'($456D753F). On return, D6 will contain 'TBox' ($54426f78) and D7
+; will contain the ASCII-encoded version number.
+
+; Steem
+; modified 16/4/02 by Anthony Hayward to recognise Steem - that
+; returns D6='STEe'=$53544565, D7='mEng'=$6d456e67. Since v2.4
+; a0 points to extra information (read-only unless stated):
+;
+; 0     BYTE    Major version (BCD)
+; 1     BYTE    Minor version (BCD)
+; 2     BYTE    Slow motion flag
+; 3     BYTE    Slow motion speed (%)
+; 4     BYTE    Fast forward flag
+; 5     BYTE    Millions of cpu cycles per second
+; 6     BYTE    Debug build flag
+; 7     BYTE    Snapshot loaded flag (read-write). If you set this
+;               flag to 0 at the start of your program then you 
+;               can detect users loading snapshots.
+; 8     WORD    Run speed (%)
+; 10    WORD    How fast Steem is actually managing to run 
+;               as a percentage. If the computer is fast enough
+;               this will equal run speed most of the time. It
+;               is updated every 12 VBLs and can jump around a bit!
+; 12    LONG    Cycle count (overflows every 8 minutes at 8Mhz)
+; 16    LONG    Cycle count at start of frame
+; 20    LONG    Cycle count at start of line
+; 24    WORD    Signed word containing the number of the current line. 
+;               In low/medium res the first line after the top border
+;               is 0, the last before the bottom border is 199.
+; 26    BYTE    Print ST logs in user build flag (read-write). If you set
+;               this flag then writing the address of a null terminated
+;               string to 0xffc1f0 will output it to the parallel port.
+;               In the debug build the string is always written to the
+;               log file.
+;
+; 27-31 Reserved for future use (won't cause bus errors). If you want
+;       anything put in here let us know (steem@gmx.net).
+
+        move.l  #'Emu?',d5
+        move.l  d5,d7
+        move.l  d5,d6
+        move    #$25,-(a7)
+        trap    #$e
+        addq.l  #2,a7
+        move.l  a0,regbase
+
+        cmp.l   d5,d6
+        bne.s   under_emu
+        cmp.l   d5,d7
+        bne.s   under_emu
+
+        lea     no_emu(pc),a0
+        bra.s   print_and_quit
+
+under_emu:
+        cmp.l  #'PaCi',d6
+        bne.s  not_pacifist
+        cmp.l  #'fiST',d7
+        bne.s  not_pacifist
+
+        pea     getversion_pacifist(pc)
+        move.w  #$26,-(a7)
+        trap    #$e
+        addq.l  #6,a7
+        lea     pacifist_emu(pc),a0
+        bra.s   print_and_quit
+
+not_pacifist:
+        cmp.l   #"TBox",d6
+        bne.s   not_tosbox
+
+        move.l  #tosbver+1,d0
+        and     #$fffe,d0
+        move.l  d0,a0
+        move.l  d7,(a0)
+        lea     tosbox_emu(pc),a0
+        bra.s   print_and_quit
+
+not_tosbox:
+        cmp.l   #'STEe',d6
+        bne.s   not_steem
+        cmp.l   #'mEng',d7
+        bne.s   not_steem
+
+        pea     getversion_steem(pc)
+        move.w  #$26,-(a7)
+        trap    #$e
+        addq.l  #6,a7
+        lea     steem_emu(pc),a0
+        bra.s   print_and_quit
+
+not_steem:
+        lea     an_emu(pc),a0
+
+print_and_quit:
+        pea     (a0)
+        move    #9,-(a7)
+        trap    #1
+
+        addq.l  #6,a7
+        move    #1,-(a7)
+        trap    #1
+
+        addq.l  #2,a7
+        clr.w   -(a7)
+        trap    #1
+
+getversion_pacifist:
+        move.l  regbase(pc),a0
+        move.b  (a0),d0
+        add.b   d0,pacifist_majorv
+        move.b  1(a0),d0
+        move    d0,d1
+        lsr     #4,d1
+        and     #$f,d0
+        and     #$f,d1
+        add.b   d1,pacifist_minorv
+        add.b   d0,pacifist_minorv+1
+        rts
+
+getversion_steem:
+        move.l  regbase(pc),a0
+        move.b  (a0),d0
+        add.b   d0,steem_majorv
+        move.b  1(a0),d0
+        move    d0,d1
+        lsr     #4,d1
+        and     #$f,d0
+        and     #$f,d1
+        add.b   d1,steem_minorv
+        add.b   d0,steem_minorv+1
+        rts
+
+
+  SECTION DATA
+
+regbase     dc.l    0
+
+no_emu:          dc.b    "It seems you're running under a",13,10
+                 dc.b    "mere ST.",13,10,0
+
+an_emu:          dc.b    "It seems you're running under an",13,10
+                 dc.b    "emulator.",13,10,0
+
+steem_emu:       dc.b    "You're running under Steem v"
+steem_majorv:    dc.b    "0."
+steem_minorv:    dc.b    "00.",13,10,0
+
+pacifist_emu:    dc.b    "You're running under PaCifiST v"
+pacifist_majorv: dc.b    "0."
+pacifist_minorv: dc.b    "00.",13,10,0
+
+tosbox_emu:      dc.b    "You're running under TOSBOX "
+tosbver          dcb.b   32,5
+                 dc.b    13,10,0
+!end_verbatim
+
+
+!end_node
