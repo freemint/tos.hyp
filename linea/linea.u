@@ -1,0 +1,518 @@
+!iflang [english]
+
+
+!begin_node Der Line-A-Emulator
+!label Line-A
+
+Der Line-A Emulator stellt schnelle Grafikroutinen zur VerfÅgung, die als
+Basis fÅr die VDI Funktionen dienen. Allerdings sind die Line-A Funktionen
+nur fÅr die 3 ST Auflîsungen verwendbar! Da sie nicht auflîsungsunabhÑngig
+arbeiten, sollten sie deshalb im Hinblick auf andere Grafiksysteme
+keinesfalls verwendet werden! Im TT sind die Line-A Funktionen nur noch zur
+KompatibilitÑt vorhanden.
+
+Man spricht auch von Line-A Emulator, weil es in den Prozessoren der 68k
+Reihe keine Opcodes gibt, die mit $A oder $F im hîchsten Nibble anfangen.
+Stattdessen wird eine Exception ausgelîst. Da der Exceptionhandler nun
+selbst mehr oder weniger sinvolle Dinge tun kann, lÑût sich dieser Vorgang
+auch als eine Befehlserweiterung ansehen, wobei die Opcodes nicht direkt
+im Prozessor ablaufen, sondern ein Programm darstellen. Es wird also ein
+Maschinenbefehl quasi emuliert.
+
+Die ParamterÅbergabe an die Line-A Funktionen erfolgt in dem Line-A
+Parameterblock. Die Adresse dieser Struktur kann mit Initialization $A000
+erfragt werden.
+
+Durch den Aufruf einer Line-A Funktion werden die Register D0-D2 und A0-A2
+verÑndert. Werden weitere Register verÑndert, wird in der Beschreibung der
+jeweiligen Funktion gesondert darauf hingewiesen.
+!end_node
+
+
+!begin_node LINEA
+
+FÅr die öbergabe der Parameter an die Line-A Funktionen wird eine Struktur
+benutzt. Dieser statisch angelegte Line-A Parameterblock hat den nachfolgend
+beschriebenen Aufbau. Die Zahl im Kommentar gibt jeweils den Offset der
+Komponente zum Anfang der Struktur an.
+
+!begin_verbatim
+!ifdest [stg]
+!begin_raw
+@width 75
+!end_raw
+!endif
+typedef struct
+{
+    int16_t v_planes,               /*   0: # Bitplanes (1, 2 od. 4)     */
+            v_lin_wr,               /*   2: # Bytes/Scanline             */
+            *contrl,
+            *intin,
+            *ptsin,                 /*  12: Koordinaten-Eingabe          */
+            *intout,
+            *ptsout,                /*  20: Koordinaten-Ausgabe          */
+            fg_bp_1,                /*  24: Plane 0                      */
+            fg_bp_2,                /*  26: Plane 1                      */
+            fg_bp_3,                /*  28: Plane 2                      */
+            fg_bp_4,                /*  30: Plane 3                      */
+            lstlin;
+    uint16_t ln_mask;               /*  34: Linienmuster                 */
+    int16_t wrt_mode,               /*  36: Schreib-Modus                */
+            x1, y1, x2, y2;         /*  38: Koordinaten                  */
+    void *patptr;                   /*  46: FÅllmuster                   */
+    uint16_t patmsk;                /*  50: .. dazugehîrige Maske        */
+    int16_t multifill,              /*  52: FÅllmuster fÅr Planes        */
+            clip,                   /*  54: Flag fÅr Clipping            */
+            xmn_clip, ymn_clip,
+            xmx_clip, ymx_clip,     /*  60: Clipping Rechteck            */
+                                    /*      Rest fÅr text_blt:           */
+            xacc_dda,
+            dda_inc,                /*  66: Vergrîûerungsfaktor          */
+            t_sclsts,               /*  68: Vergrîûerungsrichtung        */
+            mono_status,            /*  70: Proportionalschrift          */
+            sourcex, sourcey,       /*  72: Koordinaten im Font          */
+            destx, desty,           /*  76: Bildschirmkoordinaten        */
+            delx, dely;             /*  80: Breite und Hîhe des Zeichen  */
+    FONT_HDR *fbase;                /*  84: Start der Font-Daten         */
+    int16_t fwidth,                 /*  88: Breite des Fontimage         */
+            style;                  /*  90: Schreibstil                  */
+    uint16_t litemask,              /*  92: Maske fÅr Light              */
+             skewmask;              /*  94: Maske fÅr Kursiv             */
+    int16_t weight,                 /*  96: Breite bei Bold              */
+            r_off,                  /*  98: Kursiv-Offset rechts         */
+            l_off,                  /* 100: Kursiv-Offset links          */
+            scale,                  /* 102: Vergrîûerung ja/nein         */
+            chup,                   /* 104: Rotationswinkel *10          */
+            text_fg;                /* 106: Textfarbe                    */
+    void *scrtchp;                  /* 108: Buffer                       */
+    int16_t scrpt2,                 /* 112: Index in Buffer              */
+            text_bg,                /* 114: unbenutzt                    */
+            copy_tran,              /* 116: --                           */
+            (*fill_abort)( void );  /* 118: Testet Seed Fill             */
+} LINEA;
+!end_verbatim
+!ifdest [stg]
+!begin_raw
+@width 70
+!end_raw
+!endif
+!end_node
+
+
+!begin_node Die negativen Line-A Variablen
+
+ZusÑtzlich lassen sich Åber negative Offsets zu der Anfangsadresse der
+(!nolink [Line-A]) Variablen die lokalen Variablen des Bildschirmtreibers
+auslesen. Der Lesezugriff ist durch das Dokument "S.A.L.A.D." von Atari
+offiziell freigegeben worden. Allerdings sind dort die Offsets falsch
+angegeben. Diese Variablen lassen sich durch die nachfolgende Struktur
+beschreiben. Die Zahl im Kommentar gibt jeweils den Offset der Komponente
+zum Anfang Line-A Variablen LINEA an.
+
+!ifdest [stg]
+!begin_raw
+@width 75
+!end_raw
+!endif
+!begin_verbatim
+typedef struct
+{
+   int32_t reserved6;          /* -$38E: reserviert                   */
+   FONT_HDR *cur_font;         /* -$38A: Zeiger auf Header akt. Font  */
+   int16_t reserved5[23],      /* -$386: reserviert                   */
+           m_pos_hx,           /* -$358: X-Koordinate Maus Hotspot    */
+           m_pos_hy,           /* -$356: Y-Koordinate Maus Hotspot    */
+           m_planes,           /* -$354: Zeichenmodus der Maus        */
+                               /*        1 Replace, -1 XOR-Modus      */
+           m_cdb_bg,           /* -$352: Maus Hintergrundfarbe        */
+           m_cdb_fg,           /* -$350: Maus Vordergrundfarbe        */
+           mask_form[32],      /* -$34E: Vordergrund und Maske        */
+                               /*        abwechselnd 1 WORD           */
+                               /*        Vordergrund und Maske        */
+           inq_tab[45],        /* -$30E: wie vq_extnd()               */
+           dev_tab[45],        /* -$2B4: wie v_opnwk()                */
+           gcurx,              /* -$25A: X-Position Maus              */
+           gcury,              /* -$258: Y-Position Maus              */
+           m_hid_ct,           /* -$256: Anzahl der hide_mouse-calls  */
+           mouse_bt,           /* -$254: Status der Mausknîpfe        */
+           req_col[3][16],     /* -$252: Interne Daten fÅr vq_color() */
+           siz_tab[15],        /* -$1F2: wie v_opnwk()                */
+           reserved4[2];       /*        reserviert                   */
+    void *cur_work;            /* -$1D0: Attribute der akt. Workstn.  */
+    FONT_HDR *def_font;        /* -$1CC: Standard Systemzeichensatz   */
+    FONT_HDR *font_ring[4];    /* -$1C8: Zeichensatzlisten            */
+                               /*        verkette FONT_HDR Strukturen */
+                               /*        0 als Endekennung            */
+    int16_t font_count,        /* -$1B8: Anzahl der ZeichensÑtze      */
+            reserved3[45];     /*        reserviert                   */
+    int8_t cur_ms_stat,        /* -$15C: Mausstatus                   */
+                               /*        Bit 0:    linker Knopf       */
+                               /*        Bit 1:    rechter Knopf      */
+                               /*        Bit 2..4: reserviert         */
+                               /*        Bit 5:    1 Maus wurde bew.  */
+                               /*        Bit 6:    1 Status des r.    */
+                               /*                  Knopfs geÑndert    */
+                               /*        Bit 7:    1 Status des l.    */
+                               /*                  Knopfs geÑndert    */
+           reserved2;          /*        reserviert                   */
+    int16_t v_hid_cnt,         /*        Anzahl der Hide_cursor-calls */
+            cur_x,             /* -$158: X-Position Maus              */
+            cur_y;             /* -$156: Y-Position Maus              */
+    int8_t cur_flag,           /* -$154: != 0: im VBL Maus neu zeich. */
+           mouse_flag;         /* -$153: != 0: Maus-Interrupt ein     */
+    int32_t reserved1;         /*        reserviert                   */
+    int16_t v_sav_xy[2],       /* -$14E: gerettete X-Y-Koordinaten    */
+            save_len;          /* -$14A: Anzahl der Bildschirmzeilen  */
+    void *save_addr;           /* -$148: Erstes gepuffertes Byte im   */
+                               /*        Bildspeicher                 */
+    int16_t save_stat;         /* -$144: Dirty-Flag                   */
+                               /*        Bit 0: 1 Buffer ist gÅltig   */
+                               /*        Bit 1: 1 Long, 0 Word gebuf. */
+    int32_t save_area[4][16];  /* -$142: Buffer fÅr Bild unter Maus   */
+    void (*user_tim)( void );  /*  -$42: Timer-Interrupt-Vektor       */
+                               /*        sollte zum Beenden next_tim  */
+                               /*        anspringen                   */
+    void (*next_tim)( void );  /*  -$3E: alter Timer-Interrupt        */
+    void (*user_but)( void );  /*  -$3A: Maustasten-Vektor            */
+    void (*user_cur)( void );  /*  -$36: Maus-Vektor                  */
+    void (*user_mot)( void );  /*  -$32: Mausbewegungs-Vektor         */
+    int16_t v_cel_ht,          /*  -$2E: Zeichenhîhe                  */
+            v_cel_mx,          /*  -$2C: maximale Cursorspalte        */
+            v_cel_my,          /*  -$2A: maximale Cursorzeile         */
+            v_cel_wr,          /*  -$28: Characterzeilenbreite        */
+            v_col_bg,          /*  -$26: Hintergrundfarbe             */
+            v_col_fg;          /*  -$24: Vordergrundfarbe             */
+    void *v_cur_ad;            /*  -$22: Adresse der Cursorposition   */
+    int16_t v_cur_off,         /*  -$1E: Vertikaler Bildschirmoffset  */
+            v_cur_xy[2];       /*  -$1C: X-Y-Cursor                   */
+    int8_t v_period,           /*  -$18: Blinkgeschwindigkeit         */
+           v_cur_ct;           /*  -$17: ZÑhler fÅr Blinken           */
+    void *v_fnt_ad;            /*  -$16: Zeiger auf Font              */
+    int16_t v_fnt_nd,          /*  -$12: grîûter ASCII-Wert           */
+            v_fnt_st,          /*  -$10: kleinster ASCII-Wert         */
+            v_fnt_wd,          /*   -$E: Breite des Fontimage in Byte */
+            v_rez_hz,          /*   -$C: Bildschirmbreite in Pixel    */
+            *v_off_ad,         /*   -$A: Font-Offset-Tabelle          */
+            reserved,          /*   -$6: Cursorflag (TOS 1.00)/res.   */
+                               /*        Bit 0: Blinken aus/ein       */
+                               /*        Bit 1: Blinkstatus norm/inv  */
+                               /*        Bit 2: Cursor unsichtb/sicht */
+                               /*        Bit 3: Wrapping ein/aus      */
+                               /*        Bit 4: invers ein/aus        */
+                               /*        Bit 5: Cursorpos. gesp. n/j  */
+            v_rez_vt,          /*   -$4: Bildschirmhîhe in Pixel      */
+            bytes_lin;         /*   -$2: Bytes pro Pixelzeile         */
+} VDIESC;
+!end_verbatim
+!ifdest [stg]
+!begin_raw
+@width 70
+!end_raw
+!endif
+!end_node
+
+
+!begin_node BITBLT
+
+Die Parameter fÅr die Bit Block Transfer Funktion werden in der folgenden
+Struktur Åbergeben:
+
+!begin_verbatim
+typedef struct
+{
+    int16_t b_wd,       /* Breite des Blocks in Pixeln  */
+            b_ht,       /* Hîhe des Blocks in Pixeln    */
+            plane_ct,   /* Anzahl der Farbplanes        */
+            fg_col,     /* Vordergrundfarbe             */
+            bg_col;     /* Hintergrundfarbe             */
+    int8_t op_tab[4];   /* VerknÅpfung (fÅr jede Plane) */
+    int16_t s_xmin,     /* X-Quellraster                */
+            s_ymin;     /* Y-Quellraster                */
+    void *s_form;       /* Adresse des Quellrasters     */
+    int16_t s_nxwd,     /* Offset zum nÑchsten Wort     */
+            s_nxln,     /* Breite des Quellrasters      */
+            s_nxpl,     /* Offset zur nÑchsten Plane    */
+            d_xmin,     /* X-Zielraster                 */
+            d_ymin;     /* Y-Zielraster                 */
+    void *d_form;       /* Adresse des Zielrasters      */
+    int16_t d_nxwd,     /* Offset zum nÑchsten Wort     */
+            d_nxln,     /* Breite des Quellrasters      */
+            d_nxpl;     /* Offset zur nÑchsten Plane    */
+    void *p_addr;       /* 16-Bit-Masken zum Undieren   */
+    int16_t p_nxln,     /* Breite der Maske in Bytes    */
+            p_nxpl,     /* Offset zur nÑchsten Plane    */
+            p_mask;     /* Hîhe der Maske in Zeilen     */
+    int8_t filler[24];  /* Interner Buffer              */
+}   BITBLT;
+!end_verbatim
+!end_node
+
+
+!else
+
+
+!begin_node Der Line-A-Emulator
+!label Line-A
+
+Der Line-A Emulator stellt schnelle Grafikroutinen zur VerfÅgung, die als
+Basis fÅr die VDI Funktionen dienen. Allerdings sind die Line-A Funktionen
+nur fÅr die 3 ST Auflîsungen verwendbar! Da sie nicht auflîsungsunabhÑngig
+arbeiten, sollten sie deshalb im Hinblick auf andere Grafiksysteme
+keinesfalls verwendet werden! Im TT sind die Line-A Funktionen nur noch zur
+KompatibilitÑt vorhanden.
+
+Man spricht auch von Line-A Emulator, weil es in den Prozessoren der 68k
+Reihe keine Opcodes gibt, die mit $A oder $F im hîchsten Nibble anfangen.
+Stattdessen wird eine Exception ausgelîst. Da der Exceptionhandler nun
+selbst mehr oder weniger sinvolle Dinge tun kann, lÑût sich dieser Vorgang
+auch als eine Befehlserweiterung ansehen, wobei die Opcodes nicht direkt
+im Prozessor ablaufen, sondern ein Programm darstellen. Es wird also ein
+Maschinenbefehl quasi emuliert.
+
+Die ParamterÅbergabe an die Line-A Funktionen erfolgt in dem Line-A
+Parameterblock. Die Adresse dieser Struktur kann mit Initialization $A000
+erfragt werden.
+
+Durch den Aufruf einer Line-A Funktion werden die Register D0-D2 und A0-A2
+verÑndert. Werden weitere Register verÑndert, wird in der Beschreibung der
+jeweiligen Funktion gesondert darauf hingewiesen.
+!end_node
+
+
+!begin_node LINEA
+
+FÅr die öbergabe der Parameter an die Line-A Funktionen wird eine Struktur
+benutzt. Dieser statisch angelegte Line-A Parameterblock hat den nachfolgend
+beschriebenen Aufbau. Die Zahl im Kommentar gibt jeweils den Offset der
+Komponente zum Anfang der Struktur an.
+
+!ifdest [stg]
+!begin_raw
+@width 77
+!end_raw
+!endif
+!begin_verbatim
+typedef struct
+{
+    int16_t v_planes,               /*   0: # Bitplanes (1, 2 od. 4)     */
+            v_lin_wr,               /*   2: # Bytes/Scanline             */
+            *contrl,
+            *intin,
+            *ptsin,                 /*  12: Koordinaten-Eingabe          */
+            *intout,
+            *ptsout,                /*  20: Koordinaten-Ausgabe          */
+            fg_bp_1,                /*  24: Plane 0                      */
+            fg_bp_2,                /*  26: Plane 1                      */
+            fg_bp_3,                /*  28: Plane 2                      */
+            fg_bp_4,                /*  30: Plane 3                      */
+            lstlin;
+    uint16_t ln_mask;               /*  34: Linienmuster                 */
+    int16_t wrt_mode,               /*  36: Schreib-Modus                */
+            x1, y1, x2, y2;         /*  38: Koordinaten                  */
+    void *patptr;                   /*  46: FÅllmuster                   */
+    uint16_t patmsk;                /*  50: .. dazugehîrige Maske        */
+    int16_t multifill,              /*  52: FÅllmuster fÅr Planes        */
+            clip,                   /*  54: Flag fÅr Clipping            */
+            xmn_clip, ymn_clip,
+            xmx_clip, ymx_clip,     /*  60: Clipping Rechteck            */
+                                    /*      Rest fÅr text_blt:           */
+            xacc_dda,
+            dda_inc,                /*  66: Vergrîûerungsfaktor          */
+            t_sclsts,               /*  68: Vergrîûerungsrichtung        */
+            mono_status,            /*  70: Proportionalschrift          */
+            sourcex, sourcey,       /*  72: Koordinaten im Font          */
+            destx, desty,           /*  76: Bildschirmkoordinaten        */
+            delx, dely;             /*  80: Breite und Hîhe des Zeichen  */
+    FONT_HDR *fbase;                /*  84: Start der Font-Daten         */
+    int16_t fwidth,                 /*  88: Breite des Fontimage         */
+            style;                  /*  90: Schreibstil                  */
+    uint16_t litemask,              /*  92: Maske fÅr Light              */
+             skewmask;              /*  94: Maske fÅr Kursiv             */
+    int16_t weight,                 /*  96: Breite bei Bold              */
+            r_off,                  /*  98: Kursiv-Offset rechts         */
+            l_off,                  /* 100: Kursiv-Offset links          */
+            scale,                  /* 102: Vergrîûerung ja/nein         */
+            chup,                   /* 104: Rotationswinkel *10          */
+            text_fg;                /* 106: Textfarbe                    */
+    void *scrtchp;                  /* 108: Buffer                       */
+    int16_t scrpt2,                 /* 112: Index in Buffer              */
+            text_bg,                /* 114: unbenutzt                    */
+            copy_tran,              /* 116: --                           */
+            (*fill_abort)( void );  /* 118: Testet Seed Fill             */
+} LINEA;
+!end_verbatim
+!ifdest [stg]
+!begin_raw
+@width 70
+!end_raw
+!endif
+!end_node
+
+
+!begin_node Die negativen Line-A Variablen
+
+ZusÑtzlich lassen sich Åber negative Offsets zu der Anfangsadresse der
+(!nolink [Line-A]) Variablen die lokalen Variablen des Bildschirmtreibers
+auslesen. Der Lesezugriff ist durch das Dokument "S.A.L.A.D." von Atari
+offiziell freigegeben worden. Allerdings sind dort die Offsets falsch
+angegeben. Diese Variablen lassen sich durch die nachfolgende Struktur
+beschreiben. Die Zahl im Kommentar gibt jeweils den Offset der Komponente
+zum Anfang Line-A Variablen LINEA an.
+
+!ifdest [stg]
+!begin_raw
+@width 75
+!end_raw
+!endif
+!begin_verbatim
+typedef struct
+{
+   int32_t reserved6;          /* -$38E: reserviert                   */
+   FONT_HDR *cur_font;         /* -$38A: Zeiger auf Header akt. Font  */
+   int16_t reserved5[23],      /* -$386: reserviert                   */
+           m_pos_hx,           /* -$358: X-Koordinate Maus Hotspot    */
+           m_pos_hy,           /* -$356: Y-Koordinate Maus Hotspot    */
+           m_planes,           /* -$354: Zeichenmodus der Maus        */
+                               /*        1 Replace, -1 XOR-Modus      */
+           m_cdb_bg,           /* -$352: Maus Hintergrundfarbe        */
+           m_cdb_fg,           /* -$350: Maus Vordergrundfarbe        */
+           mask_form[32],      /* -$34E: Vordergrund und Maske        */
+                               /*        abwechselnd 1 WORD           */
+                               /*        Vordergrund und Maske        */
+           inq_tab[45],        /* -$30E: wie vq_extnd()               */
+           dev_tab[45],        /* -$2B4: wie v_opnwk()                */
+           gcurx,              /* -$25A: X-Position Maus              */
+           gcury,              /* -$258: Y-Position Maus              */
+           m_hid_ct,           /* -$256: Anzahl der hide_mouse-calls  */
+           mouse_bt,           /* -$254: Status der Mausknîpfe        */
+           req_col[3][16],     /* -$252: Interne Daten fÅr vq_color() */
+           siz_tab[15],        /* -$1F2: wie v_opnwk()                */
+           reserved4[2];       /*        reserviert                   */
+    void *cur_work;            /* -$1D0: Attribute der akt. Workstn.  */
+    FONT_HDR *def_font;        /* -$1CC: Standard Systemzeichensatz   */
+    FONT_HDR *font_ring[4];    /* -$1C8: Zeichensatzlisten            */
+                               /*        verkette FONT_HDR Strukturen */
+                               /*        0 als Endekennung            */
+    int16_t font_count,        /* -$1B8: Anzahl der ZeichensÑtze      */
+            reserved3[45];     /*        reserviert                   */
+    int8_t cur_ms_stat,        /* -$15C: Mausstatus                   */
+                               /*        Bit 0:    linker Knopf       */
+                               /*        Bit 1:    rechter Knopf      */
+                               /*        Bit 2..4: reserviert         */
+                               /*        Bit 5:    1 Maus wurde bew.  */
+                               /*        Bit 6:    1 Status des r.    */
+                               /*                  Knopfs geÑndert    */
+                               /*        Bit 7:    1 Status des l.    */
+                               /*                  Knopfs geÑndert    */
+           reserved2;          /*        reserviert                   */
+    int16_t v_hid_cnt,         /*        Anzahl der Hide_cursor-calls */
+            cur_x,             /* -$158: X-Position Maus              */
+            cur_y;             /* -$156: Y-Position Maus              */
+    int8_t cur_flag,           /* -$154: != 0: im VBL Maus neu zeich. */
+           mouse_flag;         /* -$153: != 0: Maus-Interrupt ein     */
+    int32_t reserved1;         /*        reserviert                   */
+    int16_t v_sav_xy[2],       /* -$14E: gerettete X-Y-Koordinaten    */
+            save_len;          /* -$14A: Anzahl der Bildschirmzeilen  */
+    void *save_addr;           /* -$148: Erstes gepuffertes Byte im   */
+                               /*        Bildspeicher                 */
+    int16_t save_stat;         /* -$144: Dirty-Flag                   */
+                               /*        Bit 0: 1 Buffer ist gÅltig   */
+                               /*        Bit 1: 1 Long, 0 Word gebuf. */
+    int32_t save_area[4][16];  /* -$142: Buffer fÅr Bild unter Maus   */
+    void (*user_tim)( void );  /*  -$42: Timer-Interrupt-Vektor       */
+                               /*        sollte zum Beenden next_tim  */
+                               /*        anspringen                   */
+    void (*next_tim)( void );  /*  -$3E: alter Timer-Interrupt        */
+    void (*user_but)( void );  /*  -$3A: Maustasten-Vektor            */
+    void (*user_cur)( void );  /*  -$36: Maus-Vektor                  */
+    void (*user_mot)( void );  /*  -$32: Mausbewegungs-Vektor         */
+    int16_t v_cel_ht,          /*  -$2E: Zeichenhîhe                  */
+            v_cel_mx,          /*  -$2C: maximale Cursorspalte        */
+            v_cel_my,          /*  -$2A: maximale Cursorzeile         */
+            v_cel_wr,          /*  -$28: Characterzeilenbreite        */
+            v_col_bg,          /*  -$26: Hintergrundfarbe             */
+            v_col_fg;          /*  -$24: Vordergrundfarbe             */
+    void *v_cur_ad;            /*  -$22: Adresse der Cursorposition   */
+    int16_t v_cur_off,         /*  -$1E: Vertikaler Bildschirmoffset  */
+            v_cur_xy[2];       /*  -$1C: X-Y-Cursor                   */
+    int8_t v_period,           /*  -$18: Blinkgeschwindigkeit         */
+           v_cur_ct;           /*  -$17: ZÑhler fÅr Blinken           */
+    void *v_fnt_ad;            /*  -$16: Zeiger auf Font              */
+    int16_t v_fnt_nd,          /*  -$12: grîûter ASCII-Wert           */
+            v_fnt_st,          /*  -$10: kleinster ASCII-Wert         */
+            v_fnt_wd,          /*   -$E: Breite des Fontimage in Byte */
+            v_rez_hz,          /*   -$C: Bildschirmbreite in Pixel    */
+            *v_off_ad,         /*   -$A: Font-Offset-Tabelle          */
+            reserved,          /*   -$6: Cursorflag (TOS 1.00)/res.   */
+                               /*        Bit 0: Blinken aus/ein       */
+                               /*        Bit 1: Blinkstatus norm/inv  */
+                               /*        Bit 2: Cursor unsichtb/sicht */
+                               /*        Bit 3: Wrapping ein/aus      */
+                               /*        Bit 4: invers ein/aus        */
+                               /*        Bit 5: Cursorpos. gesp. n/j  */
+            v_rez_vt,          /*   -$4: Bildschirmhîhe in Pixel      */
+            bytes_lin;         /*   -$2: Bytes pro Pixelzeile         */
+} VDIESC;
+!end_verbatim
+!ifdest [stg]
+!begin_raw
+@width 70
+!end_raw
+!endif
+!end_node
+
+
+!begin_node BITBLT
+
+Die Parameter fÅr die Bit Block Transfer Funktion werden in der folgenden
+Struktur Åbergeben:
+
+!begin_verbatim
+typedef struct
+{
+    int16_t b_wd,       /* Breite des Blocks in Pixeln  */
+            b_ht,       /* Hîhe des Blocks in Pixeln    */
+            plane_ct,   /* Anzahl der Farbplanes        */
+            fg_col,     /* Vordergrundfarbe             */
+            bg_col;     /* Hintergrundfarbe             */
+    int8_t op_tab[4];   /* VerknÅpfung (fÅr jede Plane) */
+    int16_t s_xmin,     /* X-Quellraster                */
+            s_ymin;     /* Y-Quellraster                */
+    void *s_form;       /* Adresse des Quellrasters     */
+    int16_t s_nxwd,     /* Offset zum nÑchsten Wort     */
+            s_nxln,     /* Breite des Quellrasters      */
+            s_nxpl,     /* Offset zur nÑchsten Plane    */
+            d_xmin,     /* X-Zielraster                 */
+            d_ymin;     /* Y-Zielraster                 */
+    void *d_form;       /* Adresse des Zielrasters      */
+    int16_t d_nxwd,     /* Offset zum nÑchsten Wort     */
+            d_nxln,     /* Breite des Quellrasters      */
+            d_nxpl;     /* Offset zur nÑchsten Plane    */
+    void *p_addr;       /* 16-Bit-Masken zum Undieren   */
+    int16_t p_nxln,     /* Breite der Maske in Bytes    */
+            p_nxpl,     /* Offset zur nÑchsten Plane    */
+            p_mask;     /* Hîhe der Maske in Zeilen     */
+    int8_t filler[24];  /* Interner Buffer              */
+}   BITBLT;
+!end_verbatim
+!end_node
+
+!endif
+
+
+!include linea/init.ui
+!include linea/putpixel.ui
+!include linea/getpixel.ui
+!include linea/line.ui
+!include linea/hline.ui
+!include linea/fillrect.ui
+!include linea/fillpoly.ui
+!include linea/bitblt.ui
+!include linea/textblt.ui
+!include linea/shmouse.ui
+!include linea/hdmouse.ui
+!include linea/trmouse.ui
+!include linea/udrsprit.ui
+!include linea/drsprite.ui
+!include linea/cpraster.ui
+!include linea/seedfill.ui

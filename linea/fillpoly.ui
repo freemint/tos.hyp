@@ -1,0 +1,286 @@
+!iflang [english]
+
+
+!begin_node Filled polygon
+(!begin_liste) [Availability]
+
+!item [Name:]
+ØFilled polygonÆ
+
+!item [Line-A number:]
+$A006
+
+!item [Syntax:]
+(!link [Bindings fÅr filled_polygon] [Bindings fÅr filled_polygon])
+
+!item [Description:]
+Diese Line-A Funktion zeichnet eine Zeile eine ausgefÅllten Polygons durch
+Aufrufe der Horizontal line Funktion. Zum Zeichnen des gesamten Polygons
+muû diese Funktion fÅr jede mîgliche Y-Koordinate aufgerufen werden.
+ZusÑtzlich besteht wie bei Filled rectangle die Mîglichkeit, das Zeichnen
+des Rechtecks nur in einem zusÑtzlich Åbergebenen Clip-Bereich zuzulassen.
+
+SÑmtliche Punkte des Polygons werden in dem Feld ptsin Åbergeben, die Anzahl
+der Punkte steht im zweiten Element des contrl Feldes. In C steht damit in
+contrl[1] die Anzahl Punkte, ptsin[0] die X-Koordinate des ersten Punkts,
+ptsin[1] die Y-Koordinate des ersten Punkts, ptsin[2] die X-Koordinate des
+zweiten Punkts, ... Der letzte Punkt in ptsin muû wieder der erste Punkt
+sein, damit das Polygon geschlossen ist! Die Y-Koordinate der zu zeichnenden
+Zeile wird in dem Line-A Parameterblock in y1 Åbergeben.
+
+Die folgenden Line-A Variablen werden benutzt:
+
+!begin_xlist !short [xmn_clip]
+!item [Variable]
+Bedeutung
+!item [~]
+~
+!item [y1]
+Y-Koordinate der zu zeichnenden Zeile.
+!item [fg_bp_1]
+Bitwert der ersten Plane fÅr die Farbe, mit der gefÅllt werden soll.
+!item [fg_bp_2]
+Bitwert der zweiten Plane (nur niedrige oder mittlere Auflîsung).
+!item [fg_bp_3]
+Bitwert der dritten Plane (nur niedrige Auflîsung).
+!item [fg_bp_4]
+Bitwert der vierten Plane (nur niedrige Auflîsung).
+!item [patptr]
+Zeiger auf ein Feld mit 16 Bit Linienmustern.
+!item [patmsk]
+Anzahl Linienmuster - 1. In AbhÑngigkeit von der y-Koordinate wird nun aus
+dem Feld mit den Linienmustern eines ausgewÑhlt. Der Index des verwendeten
+Linienmusters lÑût sich durch (y mod (patmsk + 1)) berechnen. Durch die
+Angabe mehrerer Linienmuster und mehrmaliges Aufrufen dieser Funktion fÅr
+aufeinanderfolgende Zeilen lassen sich leicht auch komplexe Muster zeichnen.
+!item [wrt_mode]
+Schreibmodes, es sind die folgenden Modie mîglich:
+
+!begin_xlist [REPLACE 0] !short
+!item [REPLACE 0]
+Replace
+!item [TRANS   1]
+Transparent (OR)
+!item [XOR     2]
+Inverse (XOR)
+!item [INVERS  3]
+Inverse Transparent (XOR mit not(LN_MASK))
+!end_xlist
+
+!item [clip]
+1 wenn Clipping gewÅnscht wird, 0 sonst.
+!item [xmn_clip]
+X-Koordinate der linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymn_clip]
+Y-Koordinate der linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [xmx_clip]
+X-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymx_clip]
+Y-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!end_xlist
+
+Das Binding von TC Åbergibt Linienmuster, Schreibmodus und Farbe nicht an
+die filled_polygon() Funktion, sondern benutzt separate Funktionen
+set_fg_bp(), set_wrt_mode(), set_pattern() und set_clipping() zum Setzen der
+Parameter in dem Line-A Paramterblock.
+
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert keinen Returnwert.
+
+!item [Availability:]
+All TOS versions.
+
+!item [See Also:]
+(!link [Binding] [Bindings fÅr filled_polygon]) ~
+(!link [Horizontal line][Horizontal line]) ~
+(!link [Filled rectangle][Filled rectangle])
+
+(!ende_liste)
+
+
+!begin_node Bindings fÅr filled_polygon
+!ignore_index
+(!begin_liste) [Turbo-C/Pure-C:]
+!item [Turbo-C/Pure-C:]
+void filled_polygon( int16_t *xy, int16_t count );
+!item [Assembler:]
+Es wird angenommen, daû das contrl Feld schon in den Line-A Parameterblock
+eingetragen wurde.
+
+!begin_verbatim
+movem.l   D0-D2/A0-A2,-(A7)  ; Register retten
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.w    (4,A0),A1          ; contrl nach A1
+move.w    count,(2,A1)       ; Anzahl Punkte nach contrl[1]
+move.l    (12,A0),-(A7)      ; alten Wert des ptsin Feldes retten
+move.l    xy,(12,A0)         ; Feld mit Koordinaten der Ecken in LINEA.ptsin
+move.w    y1,(40,A0)         ; zu zeichnende Zeile, Y-Koordinate in LINEA.y1
+move.w    colbit0,(24,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_1
+move.w    colbit1,(26,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_2
+move.w    colbit2,(28,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_3
+move.w    colbit3,(30,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_4
+move.w    wmode,(36,A0)      ; Writemode in LINEA.wrt_mode
+move.w    patptr,(46,A0)     ; Linienmuster in LINEA.patptr
+move.w    patmsk,(50,A0)     ; Anzahl Muster in LINEA.patmsk
+move.w    mode,(54,A0)       ; Clipmode in LINEA.clip
+move.w    cx1,(56,A0)        ; linke obere Clip-Ecke, X-Koordinate in LINEA.xmn_clip
+move.w    cy1,(58,A0)        ; linke obere Clip-Ecke, Y-Koordinate in LINEA.ymn_clip
+move.w    cx2,(60,A0)        ; rechte untere Clip-Ecke, X-Koordinate in LINEA.xmx_clip
+move.w    cy2,(62,A0)        ; rechte untere Clip-Ecke, Y-Koordinate in LINEA.ymx_clip
+dc.w      $A006              ; Lina-A Opcode
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.l    (A7)+,(12,A0)      ; alten Wert des ptsin Feldes restaurieren
+movem.l   (A7)+,D0-D2/A0-A2  ; Register restaurieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node Filled polygon
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØFilled polygonÆ
+
+!item [(!nolink [Line-A]) Nummer:]
+$A006
+!item [Binding:]
+(!link [Bindings fÅr filled_polygon] [Bindings fÅr filled_polygon])
+
+!item [Beschreibung:]
+Diese Line-A Funktion zeichnet eine Zeile eine ausgefÅllten Polygons durch
+Aufrufe der Horizontal line Funktion. Zum Zeichnen des gesamten Polygons
+muû diese Funktion fÅr jede mîgliche Y-Koordinate aufgerufen werden.
+ZusÑtzlich besteht wie bei Filled rectangle die Mîglichkeit, das Zeichnen
+des Rechtecks nur in einem zusÑtzlich Åbergebenen Clip-Bereich zuzulassen.
+
+SÑmtliche Punkte des Polygons werden in dem Feld ptsin Åbergeben, die Anzahl
+der Punkte steht im zweiten Element des contrl Feldes. In C steht damit in
+contrl[1] die Anzahl Punkte, ptsin[0] die X-Koordinate des ersten Punkts,
+ptsin[1] die Y-Koordinate des ersten Punkts, ptsin[2] die X-Koordinate des
+zweiten Punkts, ... Der letzte Punkt in ptsin muû wieder der erste Punkt
+sein, damit das Polygon geschlossen ist! Die Y-Koordinate der zu zeichnenden
+Zeile wird in dem Line-A Parameterblock in y1 Åbergeben.
+
+Die folgenden Line-A Variablen werden benutzt:
+
+!begin_xlist !short [xmn_clip]
+!item [Variable]
+Bedeutung
+!item [~]
+~
+!item [y1]
+Y-Koordinate der zu zeichnenden Zeile.
+!item [fg_bp_1]
+Bitwert der ersten Plane fÅr die Farbe, mit der gefÅllt werden soll.
+!item [fg_bp_2]
+Bitwert der zweiten Plane (nur niedrige oder mittlere Auflîsung).
+!item [fg_bp_3]
+Bitwert der dritten Plane (nur niedrige Auflîsung).
+!item [fg_bp_4]
+Bitwert der vierten Plane (nur niedrige Auflîsung).
+!item [patptr]
+Zeiger auf ein Feld mit 16 Bit Linienmustern.
+!item [patmsk]
+Anzahl Linienmuster - 1. In AbhÑngigkeit von der y-Koordinate wird nun aus
+dem Feld mit den Linienmustern eines ausgewÑhlt. Der Index des verwendeten
+Linienmusters lÑût sich durch (y mod (patmsk + 1)) berechnen. Durch die
+Angabe mehrerer Linienmuster und mehrmaliges Aufrufen dieser Funktion fÅr
+aufeinanderfolgende Zeilen lassen sich leicht auch komplexe Muster zeichnen.
+!item [wrt_mode]
+Schreibmodes, es sind die folgenden Modie mîglich:
+
+!begin_xlist [REPLACE 0] !short
+!item [REPLACE 0]
+Replace
+!item [TRANS   1]
+Transparent (OR)
+!item [XOR     2]
+Inverse (XOR)
+!item [INVERS  3]
+Inverse Transparent (XOR mit not(LN_MASK))
+!end_xlist
+
+!item [clip]
+1 wenn Clipping gewÅnscht wird, 0 sonst.
+!item [xmn_clip]
+X-Koordinate der linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymn_clip]
+Y-Koordinate der linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [xmx_clip]
+X-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymx_clip]
+Y-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!end_xlist
+
+Das Binding von TC Åbergibt Linienmuster, Schreibmodus und Farbe nicht an
+die filled_polygon() Funktion, sondern benutzt separate Funktionen
+set_fg_bp(), set_wrt_mode(), set_pattern() und set_clipping() zum Setzen der
+Parameter in dem Line-A Paramterblock.
+
+!item [Ergebnis:]
+Die Funktion liefert keinen Returnwert.
+
+!item [VerfÅgbar:]
+Alle TOS-Versionen.
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fÅr filled_polygon]) ~
+(!link [Horizontal line][Horizontal line]) ~
+(!link [Filled rectangle][Filled rectangle])
+
+(!ende_liste)
+
+
+!begin_node Bindings fÅr filled_polygon
+!ignore_index
+(!begin_liste) [Turbo-C/Pure-C:]
+!item [Turbo-C/Pure-C:]
+void filled_polygon( int16_t *xy, int16_t count );
+!item [Assembler:]
+Es wird angenommen, daû das contrl Feld schon in den Line-A Parameterblock
+eingetragen wurde.
+
+!begin_verbatim
+movem.l   D0-D2/A0-A2,-(A7)  ; Register retten
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.w    (4,A0),A1          ; contrl nach A1
+move.w    count,(2,A1)       ; Anzahl Punkte nach contrl[1]
+move.l    (12,A0),-(A7)      ; alten Wert des ptsin Feldes retten
+move.l    xy,(12,A0)         ; Feld mit Koordinaten der Ecken in LINEA.ptsin
+move.w    y1,(40,A0)         ; zu zeichnende Zeile, Y-Koordinate in LINEA.y1
+move.w    colbit0,(24,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_1
+move.w    colbit1,(26,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_2
+move.w    colbit2,(28,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_3
+move.w    colbit3,(30,A0)    ; Bit fÅr erste Plane in LINEA.fg_bp_4
+move.w    wmode,(36,A0)      ; Writemode in LINEA.wrt_mode
+move.w    patptr,(46,A0)     ; Linienmuster in LINEA.patptr
+move.w    patmsk,(50,A0)     ; Anzahl Muster in LINEA.patmsk
+move.w    mode,(54,A0)       ; Clipmode in LINEA.clip
+move.w    cx1,(56,A0)        ; linke obere Clip-Ecke, X-Koordinate in LINEA.xmn_clip
+move.w    cy1,(58,A0)        ; linke obere Clip-Ecke, Y-Koordinate in LINEA.ymn_clip
+move.w    cx2,(60,A0)        ; rechte untere Clip-Ecke, X-Koordinate in LINEA.xmx_clip
+move.w    cy2,(62,A0)        ; rechte untere Clip-Ecke, Y-Koordinate in LINEA.ymx_clip
+dc.w      $A006              ; Lina-A Opcode
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.l    (A7)+,(12,A0)      ; alten Wert des ptsin Feldes restaurieren
+movem.l   (A7)+,D0-D2/A0-A2  ; Register restaurieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif

@@ -1,0 +1,403 @@
+!iflang [english]
+
+
+!begin_node Text block transfer
+(!begin_liste) [Availability]
+
+!item [Name:]
+ØText block transferÆ
+
+!item [Line-A number:]
+$A008
+
+!item [Syntax:]
+(!link [Bindings fÅr text_blt] [Bindings fÅr text_blt])
+
+!item [Description:]
+Diese Line-A Funktion gibt ein einzelnes Zeichen aus. Die Quelle fÅr das
+Zeichen muû den gleichen Aufbau wie in einem GDOS Rasterfont haben. Man
+kann die Fontdaten als ein groûes Bild betrachten, dessen Hîhe der
+Zeichenhîhe entspricht. SÑmtliche Zeichen stehen dicht nebeneinander in
+diesem "Bild". ZusÑtzlich enthÑlt ein GDOS Font eine Offset Tabelle, in
+der fÅr jedes Zeichen der Offset in diesem groûen Bild steht. Der Parameter
+ade_lo des Fontheaders gibt dabei das erste ASCII Zeichen an, fÅr das ein
+Image und damit auch ein Offset enthalten ist. Dieser Offset ist neben dem
+Anfang der Fontdaten an diese Line-A Funktion zu Åbergeben. Der Y-Offset ist
+gewîhnlich 0. Da Line-A die ZeichensÑtze nicht selbst verwaltet und auch
+den Fontheader nicht kennt, mÅssen entsprechende Paramter auf die Fontdaten
+Åbergeben werden. Hinzu kommen eine Reihe weiterer Paramter fÅr die diversen
+Effekte wie z.B. kursiv, ... Die folgenden Line-A Variablen werden benutzt:
+
+!begin_xlist !short [mono_status]
+!item [Variable]
+Bedeutung
+!item [~]
+~
+!item [wrt_mode]
+Schreibmodes, es sind die folgenden Modie mîglich:
+
+!begin_xlist [REPLACE 0] !short
+!item [REPLACE 0]
+Replace
+!item [TRANS   1]
+Transparent (OR)
+!item [XOR     2]
+Inverse (XOR)
+!item [INVERS  3]
+Inverse Transparent (XOR mit not(LN_MASK))
+!end_xlist
+!item [xacc_dda]
+Sollte vor jedem Aufruf auf $8000 gesetzt werden.
+!item [dda_inc]
+Vergrîûerungsfaktor.
+!item [t_sclsts]
+Vergrîûerungsrichtung, also ob Verkleinert oder Vergrîûert wird.
+!item [mono_status]
+1 wenn sÑmtliche Zeichen die gleiche Breite haben, es also ein
+nichtproportionaler Font ist, sonst 0.
+!item [sourcex]
+X-Koordinate des auszugebenden Zeichens im Font und kann durch die Offset
+Tabelle ermittelt werden.
+!item [sourcey]
+Y-Koordinate des auszugebenden Zeichens im Font, normalerweise 0.
+!item [destx]
+X-Koordinate der Bildschirmposition, an der das Zeichen ausgegeben werden
+soll.
+!item [desty]
+Y-Koordinate der Bildschirmposition, an der das Zeichen ausgegeben werden
+soll.
+!item [delx]
+Breite des Zeichens, kann ebenfalls aus dem Fontheader ermittelt werden.
+!item [dely]
+Hîhe des Zeichens, kann ebenfalls aus dem Fontheader ermittelt werden.
+!item [fbase]
+Der Zeiger auf die Fontdaten, also das "Bild" mit den einzelnen Zeichen.
+!item [fwidth]
+Breite des Fontimage.
+!item [style]
+Gibt die Texteffekte an. Einzelne Bits stehen fÅr einzelne Effekte und
+kînnen kombiniert werden:
+
+!begin_xlist [Bit 0] !short
+!item [Bit 0]
+Fettschrift
+!item [Bit 1]
+Helle Schrift
+!item [Bit 2]
+Kursivschrift
+!item [Bit 3]
+Unterstrichen (wird ignoriert)
+!item [Bit 4]
+Umrissene Schrift "outline"
+!end_xlist
+!item [litemask]
+Eine Maske fÅr helle (light) Schrift.
+!item [skewmask]
+Eine Maske fÅr kursive (skew) Schrift.
+!item [weight]
+Die Breite bei Fettschrift (Bold).
+!item [r_off]
+Der rechten Offset fÅr Kursivschrift, also quasi ein Paramter fÅr die
+"SchrÑgstellung" des Zeichens.
+!item [l_off]
+Der linke Offset fÅr Kursivschrift, also quasi ein Paramter fÅr die
+"SchrÑgstellung" des Zeichens.
+!item [scale]
+1, wenn eine Skalierung erwÅnscht ist.
+!item [chup]
+Rotationswinkel in 1/10 Grad. Es sind allerdings nur Drehungen um ein
+Vielfaches von 90 Grad mîglich, also die Werte 0, 900, 1800, 2700.
+!item [text_fg]
+Textfarbe.
+!item [text_bg]
+Hintergrundfarbe.
+!item [scrtchp]
+Ein Puffer, der doppelt soviel Platz bieten sollte, wie das Zeichen belegt,
+damit (!nolink [Line-A]) die Texteffekte berechnen kann.
+!item [scrpt2]
+Ein Index in den Puffer, der auf die Puffermitte zeigt, also die halbe
+Puffergrîûe angibt.
+!item [clip]
+1 wenn Clipping gewÅnscht wird, 0 sonst.
+!item [xmn_clip]
+X-Koordinate die linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymn_clip]
+Y-Koordinate die linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [xmx_clip]
+X-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymx_clip]
+Y-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!end_xlist
+
+Das Binding von TC Åbergibt einen Zeiger auf den Font Header, Flags fÅr
+Skalierung, Stil, Rotationsvektor, Vorder- und Hintergrundfarbe nicht an
+die text_blt Funktion, sondern benutzt die separate Funktion set_text_blt()
+zum Setzen der Parameter in dem Line-A Paramterblock. Daten Åber den Font
+werden dabei automatisch gesetzt.
+
+!item [(!nolink [Return]) Value:]
+Die Funktion liefert keinen Returnwert.
+
+!item [Availability:]
+All TOS versions.
+
+!item [See Also:]
+(!link [Binding] [Bindings fÅr text_blt]) ~
+(!link [Bit block transfer][Bit block transfer])
+
+(!ende_liste)
+
+
+!begin_node Bindings fÅr text_blt
+!ignore_index
+(!begin_liste) [Turbo-C/Pure-C:]
+!item [Turbo-C/Pure-C:]
+void text_blt( int16_t x, int16_t y, uint8_t c );
+!item [Assembler:]
+!begin_verbatim
+movem.l   D0-D2/A0-A2,-(A7)  ; Register retten
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.w    wmode,(36,A0)      ; Writemode in LINEA.wrt_mode
+move.w    mode,(54,A0)       ; Clipmode in LINEA.clip
+move.w    cx1,(56,A0)        ; linke obere Clip-Ecke, X-Koordinate in LINEA.xmn_clip
+move.w    cy1,(58,A0)        ; linke obere Clip-Ecke, Y-Koordinate in LINEA.ymn_clip
+move.w    cx2,(60,A0)        ; rechte untere Clip-Ecke, X-Koordinate in LINEA.xmx_clip
+move.w    cy2,(62,A0)        ; rechte untere Clip-Ecke, Y-Koordinate in LINEA.ymx_clip
+move.w    #$8000,(64,A0)     ; xacc_dda mit $8000 besetzen
+move.w    dda_inc,(66,A0)    ; Vergrîûerungsfaktor in LINEA.dda_inc
+move.w    t_sclsts,(68,A0)   ; Vergrîûerungsrichtung in LINEA.t_sclsts
+move.w    mono_status,(70,A0); Proportionalschrift in LINEA.mono_status
+move.w    sourcex,(72,A0)    ; X-Koordinate im Font in LINEA.sourcex
+move.w    sourcey,(74,A0)    ; Y-Koordinate im Font in LINEA.sourcey
+move.w    destx,(76,A0)      ; X-Zielkoordinate in LINEA.destx
+move.w    desty,(78,A0)      ; Y-Zielkoordinate in LINEA.desty
+move.w    delx,(80,A0)       ; Breite des Zeichens in LINEA.delx
+move.w    dely,(82,A0)       ; Hîhe des Zeichens in LINEA.dely
+move.l    fbase,(84,A0)      ; Start der Font-Daten in LINEA.fbase
+move.w    fwidth,(88,A0)     ; Breite des Fontimage in LINEA.fwidth
+move.w    style,(90,A0)      ; Schreibstil in LINEA.style
+move.w    litemask,(92,A0)   ; Maske fÅr Light in LINEA.litemask
+move.w    skewmask,(94,A0)   ; Maske fÅr Kursiv in LINEA.skewmask
+move.w    weight,(96,A0)     ; Breite bei Bold in LINEA.weight
+move.w    r_off,(98,A0)      ; Kursiv-Offset rechts in LINEA.r_off
+move.w    l_off,(100,A0)     ; Kursiv-Offset links in LINEA.l_off
+move.w    scale,(102,A0)     ; Vergrîûerung ja/nein in LINEA.scale
+move.w    chup,(104,A0)      ; Rotationswinkel in LINEA.chup
+move.w    text_fg,(106,A0)   ; Textfarbe in LINEA.text_fg
+move.l    scrtchp,(108,A0)   ; Puffer in LINEA.scrtchp
+move.w    scrpt2,(112,A0)    ; Index in Puffermitte in LINEA.scrpt2
+move.w    text_bg,(114,A0)   ; Hintergrundfarbe in LINEA.text_bg
+dc.w      $A008              ; Lina-A Opcode
+movem.l   (A7)+,D0-D2/A0-A2  ; Register restaurieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node Text block transfer
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØText block transferÆ
+
+!item [(!nolink [Line-A]) Nummer:]
+$A008
+
+!item [Binding:]
+(!link [Bindings fÅr text_blt] [Bindings fÅr text_blt])
+
+!item [Beschreibung:]
+Diese Line-A Funktion gibt ein einzelnes Zeichen aus. Die Quelle fÅr das
+Zeichen muû den gleichen Aufbau wie in einem GDOS Rasterfont haben. Man
+kann die Fontdaten als ein groûes Bild betrachten, dessen Hîhe der
+Zeichenhîhe entspricht. SÑmtliche Zeichen stehen dicht nebeneinander in
+diesem "Bild". ZusÑtzlich enthÑlt ein GDOS Font eine Offset Tabelle, in
+der fÅr jedes Zeichen der Offset in diesem groûen Bild steht. Der Parameter
+ade_lo des Fontheaders gibt dabei das erste ASCII Zeichen an, fÅr das ein
+Image und damit auch ein Offset enthalten ist. Dieser Offset ist neben dem
+Anfang der Fontdaten an diese Line-A Funktion zu Åbergeben. Der Y-Offset ist
+gewîhnlich 0. Da Line-A die ZeichensÑtze nicht selbst verwaltet und auch
+den Fontheader nicht kennt, mÅssen entsprechende Paramter auf die Fontdaten
+Åbergeben werden. Hinzu kommen eine Reihe weiterer Paramter fÅr die diversen
+Effekte wie z.B. kursiv, ... Die folgenden Line-A Variablen werden benutzt:
+
+!begin_xlist !short [mono_status]
+!item [Variable]
+Bedeutung
+!item [~]
+~
+!item [wrt_mode]
+Schreibmodes, es sind die folgenden Modie mîglich:
+
+!begin_xlist [REPLACE 0] !short
+!item [REPLACE 0]
+Replace
+!item [TRANS   1]
+Transparent (OR)
+!item [XOR     2]
+Inverse (XOR)
+!item [INVERS  3]
+Inverse Transparent (XOR mit not(LN_MASK))
+!end_xlist
+!item [xacc_dda]
+Sollte vor jedem Aufruf auf $8000 gesetzt werden.
+!item [dda_inc]
+Vergrîûerungsfaktor.
+!item [t_sclsts]
+Vergrîûerungsrichtung, also ob Verkleinert oder Vergrîûert wird.
+!item [mono_status]
+1 wenn sÑmtliche Zeichen die gleiche Breite haben, es also ein
+nichtproportionaler Font ist, sonst 0.
+!item [sourcex]
+X-Koordinate des auszugebenden Zeichens im Font und kann durch die Offset
+Tabelle ermittelt werden.
+!item [sourcey]
+Y-Koordinate des auszugebenden Zeichens im Font, normalerweise 0.
+!item [destx]
+X-Koordinate der Bildschirmposition, an der das Zeichen ausgegeben werden
+soll.
+!item [desty]
+Y-Koordinate der Bildschirmposition, an der das Zeichen ausgegeben werden
+soll.
+!item [delx]
+Breite des Zeichens, kann ebenfalls aus dem Fontheader ermittelt werden.
+!item [dely]
+Hîhe des Zeichens, kann ebenfalls aus dem Fontheader ermittelt werden.
+!item [fbase]
+Der Zeiger auf die Fontdaten, also das "Bild" mit den einzelnen Zeichen.
+!item [fwidth]
+Breite des Fontimage.
+!item [style]
+Gibt die Texteffekte an. Einzelne Bits stehen fÅr einzelne Effekte und
+kînnen kombiniert werden:
+
+!begin_xlist [Bit 0] !short
+!item [Bit 0]
+Fettschrift
+!item [Bit 1]
+Helle Schrift
+!item [Bit 2]
+Kursivschrift
+!item [Bit 3]
+Unterstrichen (wird ignoriert)
+!item [Bit 4]
+Umrissene Schrift "outline"
+!end_xlist
+!item [litemask]
+Eine Maske fÅr helle (light) Schrift.
+!item [skewmask]
+Eine Maske fÅr kursive (skew) Schrift.
+!item [weight]
+Die Breite bei Fettschrift (Bold).
+!item [r_off]
+Der rechten Offset fÅr Kursivschrift, also quasi ein Paramter fÅr die
+"SchrÑgstellung" des Zeichens.
+!item [l_off]
+Der linke Offset fÅr Kursivschrift, also quasi ein Paramter fÅr die
+"SchrÑgstellung" des Zeichens.
+!item [scale]
+1, wenn eine Skalierung erwÅnscht ist.
+!item [chup]
+Rotationswinkel in 1/10 Grad. Es sind allerdings nur Drehungen um ein
+Vielfaches von 90 Grad mîglich, also die Werte 0, 900, 1800, 2700.
+!item [text_fg]
+Textfarbe.
+!item [text_bg]
+Hintergrundfarbe.
+!item [scrtchp]
+Ein Puffer, der doppelt soviel Platz bieten sollte, wie das Zeichen belegt,
+damit (!nolink [Line-A]) die Texteffekte berechnen kann.
+!item [scrpt2]
+Ein Index in den Puffer, der auf die Puffermitte zeigt, also die halbe
+Puffergrîûe angibt.
+!item [clip]
+1 wenn Clipping gewÅnscht wird, 0 sonst.
+!item [xmn_clip]
+X-Koordinate die linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymn_clip]
+Y-Koordinate die linken oberen Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [xmx_clip]
+X-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!item [ymx_clip]
+Y-Koordinate der rechten unteren Ecke des Clipping Bereichs, wenn Clipping
+eingeschaltet ist.
+!end_xlist
+
+Das Binding von TC Åbergibt einen Zeiger auf den Font Header, Flags fÅr
+Skalierung, Stil, Rotationsvektor, Vorder- und Hintergrundfarbe nicht an
+die text_blt Funktion, sondern benutzt die separate Funktion set_text_blt()
+zum Setzen der Parameter in dem Line-A Paramterblock. Daten Åber den Font
+werden dabei automatisch gesetzt.
+
+!item [Ergebnis:]
+Die Funktion liefert keinen Returnwert.
+
+!item [VerfÅgbar:]
+Alle TOS-Versionen.
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fÅr text_blt]) ~
+(!link [Bit block transfer][Bit block transfer])
+
+(!ende_liste)
+
+
+!begin_node Bindings fÅr text_blt
+!ignore_index
+(!begin_liste) [Turbo-C/Pure-C:]
+!item [Turbo-C/Pure-C:]
+void text_blt( int16_t x, int16_t y, uint8_t c );
+!item [Assembler:]
+!begin_verbatim
+movem.l   D0-D2/A0-A2,-(A7)  ; Register retten
+move.l    pParamblk,A0       ; Zeiger Parameterblock LINEA
+move.w    wmode,(36,A0)      ; Writemode in LINEA.wrt_mode
+move.w    mode,(54,A0)       ; Clipmode in LINEA.clip
+move.w    cx1,(56,A0)        ; linke obere Clip-Ecke, X-Koordinate in LINEA.xmn_clip
+move.w    cy1,(58,A0)        ; linke obere Clip-Ecke, Y-Koordinate in LINEA.ymn_clip
+move.w    cx2,(60,A0)        ; rechte untere Clip-Ecke, X-Koordinate in LINEA.xmx_clip
+move.w    cy2,(62,A0)        ; rechte untere Clip-Ecke, Y-Koordinate in LINEA.ymx_clip
+move.w    #$8000,(64,A0)     ; xacc_dda mit $8000 besetzen
+move.w    dda_inc,(66,A0)    ; Vergrîûerungsfaktor in LINEA.dda_inc
+move.w    t_sclsts,(68,A0)   ; Vergrîûerungsrichtung in LINEA.t_sclsts
+move.w    mono_status,(70,A0); Proportionalschrift in LINEA.mono_status
+move.w    sourcex,(72,A0)    ; X-Koordinate im Font in LINEA.sourcex
+move.w    sourcey,(74,A0)    ; Y-Koordinate im Font in LINEA.sourcey
+move.w    destx,(76,A0)      ; X-Zielkoordinate in LINEA.destx
+move.w    desty,(78,A0)      ; Y-Zielkoordinate in LINEA.desty
+move.w    delx,(80,A0)       ; Breite des Zeichens in LINEA.delx
+move.w    dely,(82,A0)       ; Hîhe des Zeichens in LINEA.dely
+move.l    fbase,(84,A0)      ; Start der Font-Daten in LINEA.fbase
+move.w    fwidth,(88,A0)     ; Breite des Fontimage in LINEA.fwidth
+move.w    style,(90,A0)      ; Schreibstil in LINEA.style
+move.w    litemask,(92,A0)   ; Maske fÅr Light in LINEA.litemask
+move.w    skewmask,(94,A0)   ; Maske fÅr Kursiv in LINEA.skewmask
+move.w    weight,(96,A0)     ; Breite bei Bold in LINEA.weight
+move.w    r_off,(98,A0)      ; Kursiv-Offset rechts in LINEA.r_off
+move.w    l_off,(100,A0)     ; Kursiv-Offset links in LINEA.l_off
+move.w    scale,(102,A0)     ; Vergrîûerung ja/nein in LINEA.scale
+move.w    chup,(104,A0)      ; Rotationswinkel in LINEA.chup
+move.w    text_fg,(106,A0)   ; Textfarbe in LINEA.text_fg
+move.l    scrtchp,(108,A0)   ; Puffer in LINEA.scrtchp
+move.w    scrpt2,(112,A0)    ; Index in Puffermitte in LINEA.scrpt2
+move.w    text_bg,(114,A0)   ; Hintergrundfarbe in LINEA.text_bg
+dc.w      $A008              ; Lina-A Opcode
+movem.l   (A7)+,D0-D2/A0-A2  ; Register restaurieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif
