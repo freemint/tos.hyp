@@ -258,6 +258,25 @@ Querverweis: (!link [CD-ROM Opcodes fÅr Fcntl][Fcntl, CD-ROM-Kommandos fÅr])
 !end_node
 
 
+!begin_node DISKINFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    ULONG   b_free;    /* Anzahl der freien Cluster */
+    ULONG   b_total;   /* Gesamtzahl der Cluster    */
+    ULONG   b_secsiz;  /* Bytes pro Sektor          */
+    ULONG   b_clsiz;   /* Sektoren pro Cluster      */
+} DISKINFO;
+!end_verbatim
+
+Querverweis:
+Dfree ~  GEMDOS
+!end_node
+
+
 !begin_node DOSTIME
 
 Diese Struktur ist wie folgt definiert:
@@ -371,7 +390,42 @@ typedef struct
 } DTA;
 !end_verbatim
 
-Querverweis: Fgetdta ~ Fsetdta ~ GEMDOS
+(!B)rekursive Suche in Ordnern(!b)
+
+In je einer DTA werden genau alle nîtigen Informationen gespeichert,
+die nach einem (!nolink [Fsfirst]) fÅr weitere (!nolink [Fsnext]) benîtigt werden.
+Das heiût, daû auf keinen Fall erneut (!nolink [Fsfirst]) fÅr andere
+Verzeichnisse/Wildcards aufrufen sollte, solange noch weitere
+(!nolink [Fsnext])-Aufrufe in der Ebene gemachen werden. (!nl)
+Bei einer rekursiven Suche muût fÅr jedes neue (!nolink [Fsfirst]) eine eigene
+DTA verwendet werden, die solange erhalten bleiben muû, bis alle
+(!nolink [Fsnext]) fÅr den (!nolink [Fsfirst]) getÑtigt sind.
+Hier ein Bsp in pseudo-C:
+
+!begin_verbatim
+void durchsuche_verzeichnis (char *pfadname)
+{
+  DTA_Record local_dta, saved_dta;
+ 
+  saved_dta = GetDTA ();
+  SetDTA (local_dta);
+ 
+  err = Fsfirst (pfadname, ...);
+  while (err == 0) {
+    if (local_dta.attrib == subdir) {
+      // rekursive suche in sub-dir
+      durchsuche_verzeichnis (subdir-pfadname);
+    } else {
+      ... normales file auswerten
+    }
+    err = Fsnext ();
+  }
+ 
+  SetDTA (saved_dta);
+}
+!end_verbatim
+
+Querverweis: Fgetdta ~ Fsetdta ~Fsfirst ~ Fsnext~ GEMDOS
 !end_node
 
 !begin_node flock, Fcntl
@@ -507,7 +561,7 @@ SIGCHLD nur beim Terminieren, und nicht beim Anhalten eines Childs ausgelîst
 wird; andere Werte fÅr (!I)sa_flags(!i) sind z.Zt. noch nicht definiert.
 
 Querverweis: Signale  ~    Signalhandler in MagiC  ~ GEMDOS ~
-Psigaction ~  (!link [Prozessfunktionen][Prozessfunktionen des GEMDOS])
+Psigaction ~  Prozessfunktionen
 !end_node
 
 !begin_node tchars
@@ -647,8 +701,8 @@ Leider lassen sich die hard file IDs fÅr normale Dateien (d.h. nicht
 Unterverzeichnisse) (!I)nicht(!i) weiter verwenden, da sie von keiner
 Funktion des MacOS verarbeitet werden.
 
-Querverweis: (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
-
+Querverweis: (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~
+Fxattr ~ Dxreaddir
 
 
 !begin_node XATTR, dev-Komponente
@@ -747,6 +801,9 @@ struct xkey
     BYTE    xk_def[8];
 };
 !end_verbatim
+
+Querverweise: Fcntl ~ TIOCGXKEY
+
 !end_node
 
 !end_node

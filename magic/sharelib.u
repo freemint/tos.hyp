@@ -5,9 +5,396 @@
 ##
 ## Kapitel x: Shared Libraries in MagiC ab V6.00
 
+!iflang [english]
+
+
 !begin_node Shared Libraries
 
-(!U)Gemeinsame Bibliotheken (Shared Libraries) in (!nolink [MagiC])(!u)
+(!U)Shared Libraries in (!nolink [MagiC]) from V6.00 onwards(!u)
+
+
+!begin_itemize !short
+!item What are shared libraries?
+!item Why shared libraries?
+!item How do I use a library?
+!item How do I write a library?
+!end_itemize
+
+
+(!B)Note:(!b)
+Shared libraries were introduced already with (!nolink [MagiC]) version 5.20. Due to
+a design error had to change the format of the library from version
+6.00 onwards. As different "magic" IDs are used this can not cause 
+crashes; it's just that the libraries for 6.00 will not be recognised by the
+old version 5.20, and vice versa. Due to several inadequacies in version 5.20
+one should in any case only create libraries for 6.00.
+
+
+!begin_node What are shared libraries?
+
+Usually libraries with frequently used procedures are collected in 
+their own object module and then linked with several programs during
+compilation. In that case each program receives a copy of the library, 
+which is integrated firmly into the PRG file.
+Shared libraries, on the other hand, exist as separate files only once 
+on the hard disk and can be used by several programs, even simultaneously.
+
+!end_node
+
+!begin_node Why shared libraries?
+
+Compared to hard-linked libraries this results in a series of advantages:
+
+!begin_itemize !short
+!item Saving of storage space on the hard disk. The more programs that 
+  use the same libraries, the greater the saving.
+!item Saving of storage space in main memory (RAM). This only comes into 
+  play when several programs that use the same library are loaded 
+  simultaneously.
+!item Systematic maintenance by the programmer: For an update it may suffice 
+  at times just to distribute a new library. All programs that use the 
+  library will then profit from the update.   
+  Additionally there will be fewer source texts to maintain. When a 
+  library has been altered there is no need to newly translate all 
+  programs that use it.
+!end_itemize
+
+Naturally there are also disadvantages:
+
+!begin_itemize !short
+!item Program loading takes somewhat longer; however this is so only if 
+  the library has not been loaded yet.
+!item There may be interaction between updates of various programs. When 
+  exchanging a library, several programs may be affected (positively 
+  or negatively).
+!item During installation of a program the files have to be copied to the 
+  XTENSION folder or to the first folder specified in the searchlist 
+  SLBPATH (from (!nolink [MagiC]) 6), so it is no longer possible to establish 
+  easily which shared library belongs to which program. 
+	Remedies, for instance:
+!begin_itemize !short
+  !item Only place aliases in the XTENSION folder or the first folder 
+       specified by the environmental variable SLBPATH (see below).
+  !item Leave the shared libraries in a subdirectory of the program and
+       merely extend the environmental variable SLBPATH in MAGX.INF by 
+       this directory (possible from (!nolink [MagiC]) 6 onwards). If no SLBPATH 
+       variable exists as yet then one has to enter the XTENSION path 
+       in it first.
+!end_itemize
+!end_itemize
+
+!end_node
+
+!begin_node How do I use a library?
+
+To start with, one needs the object module SLB_BIND for calling the 
+two new DOS functions, for which one has to link the file SLB.H.
+
+For each library used one declares a descriptor of the type SHARED_LIB 
+and a function pointer of the type SLB_EXEC.
+
+Each library is opened with Slbopen() (opening and closing should only  
+take place in user-mode), during which the following parameters are 
+passed:
+!begin_xlist [char *name ] !short
+!item [char *name]   The name of the library, in capitals, including the
+										 extension (".SLB"). The library name is also the filename.
+!item [char *path]   If this parameter is not NULL, then first of 
+                     all a search will be made for the library 
+                     (the path must end with '\' in (!nolink [MagiC]) 5.20; 
+                     this is no longer necessary in (!nolink [MagiC]) 6).
+                     The path should be an absolute one, so that 
+                     the shared library knows where it lies.
+                     If the parameter is NULL or the library was 
+                     not found in the specified path, then a 
+                     search is made in the XTENSION folder.  (!nl)
+                     From (!nolink [MagiC]) 6 onwards the environmental variable
+                     SLBPATH will be evaluated. Like PATH it contains
+                     a list of search-paths, each separated by ';'.
+                     If the variable is defined no additional search 
+                     will be made in the XTENSION folder.
+!item [LONG min_ver]    Minimum required version number of the library. (!nl)
+                        If a program needs, say, version 3 but the 
+                        library present is only version 2, then 
+                        ERANGE will be returned. The return value will
+                        be the actual version number of the library. 
+!item [SHARED_LIB *sl]  Pointer to the descriptor. When the library 
+                        is opened the descriptor will be entered here.
+!item [SLB_EXEC *fn]    Pointer to the function pointer. When the 
+                        library is opened the function pointer will 
+                        be entered here.
+!end_xlist
+Return values can be:
+!begin_verbatim
+  >= 0        All OK, version number of the library
+  ERANGE      Version number too low
+  EACCDN      Library already opened by this process
+  EFILNF      Library not found
+  ENSMEM      Insufficient memory free
+  ...         Other error-codes.
+!end_verbatim
+The library can now be used and finally closed again with Slbclose(). 
+This is not absolutely necessary as all open libraries are closed 
+automatically at program termination, but it is good programming practice.
+On no account may a library be closed more than once, since the kernel 
+can not recognise such errors.
+
+Some libraries such as EDITOBJC.SLB, for instance, install new system 
+calls, in this case the AES calls 210..217. For these libraries the 
+function pointer is not needed. Otherwise all functions of the library 
+are called via the function pointer.
+The library call function is declared in the following way:
+
+!begin_verbatim
+ typedef LONG (cdecl *SLB_EXEC)( SHARED_LIB *sl, LONG fn,
+        WORD nargs, ... );
+!end_verbatim
+
+As unfortunately PureC has an error here, I was forced to declare 
+this functions as "typedef LONG (*SLB_EXEC)( void , ... );" 
+This unfortunately inhibits all type checking. So take care!
+
+The call expects the following parameters:
+!begin_verbatim
+     The descriptor of the library
+     A longword (!) for the function number
+     A WORD, that specifies the number of arguments in WORDs
+             (i.e. all "..." arguments)
+     Further arguments, depending on the function.
+!end_verbatim
+
+The best way is to make the call via a macro, which should be defined 
+in a header file for the library, e.g.:
+
+JPEG.H:
+
+#define SLBJPEG_WANDELN (a,b) (*slbjpeg_exec)(slbjpeg, 7L, 4, a, b)
+
+With this <slbjpeg_exec> and <slbjpeg> will be ascertained at Slbopen(), 
+7L is the function number for the call WANDELN (convert), 4 describes the 
+length of the following arguments (a and b are two pointers => 2*4 bytes 
+=> 4 WORDs), and a and b are the arguments of the function WANDELN.
+
+If the function is not present (the library contains a null-pointer for 
+this function, or the function number is higher than the number of 
+functions actually present), one will receive EINVFN as the function 
+result (in fact this only works correctly from (!nolink [MagiC]) 6 onwards).
+
+!end_node
+
+
+!begin_node How do I write a library?
+
+For this too there is a sample library SLB_DEMO, which contains all the 
+required elements and descriptions.
+The best thing is to copy SLB_DEMO.C, LIBHEAD.S and SLB_DEMO.PRJ and 
+then modify the files to suit your requirements. It is most important 
+to ensure that bit 3 of the flag in the program header of a library is  
+set; one can use PH_BIT3.TTP for this.
+
+LIBHEAD is the header for a shared library. The pointer to the function 
+names can be omitted, otherwise it points to a table of pointers with 
+the names of the library functions.
+The number of functions must be stated correctly, as must the table of 
+functions and the library name, which is identical to the filename.
+When adding a functions one has to ensure that the function number is 
+adapted accordingly, and perhaps that the version number is increased.
+
+For publicly available shared libraries one has to ensure that documented 
+function calls are never altered! They can either be supplemented with 
+new parameters (the called function can inquire the number of parameters 
+actually passed), or a new function number should be used.
+
+Null-pointers are also permissible for the function pointers; they return 
+a EINVFN when the function is called.
+
+The following functions for (de-)initialisation are obligatory:
+
+(!U)slb_init()/slb_exit()(!u)
+
+These are called during loading and removal of the library respectively, 
+and at that in supervisor mode and in the context (process) of the library.
+Typically, slb_init() loads a configuration file, allocates global 
+memory for the library and opens a virtual VDI workstation. slb_exit() 
+writes back the configuration file, releases the memory again and closes 
+the (!nolink [VDI]) workstation.
+
+If slb_init() opens a file, then the handle can only be accessed again 
+at slb_exit(), as all other calls of the library run in the context of 
+the calling application.
+                                                                  
+From (!nolink [MagiC]) 6 onwards the library is passed a normal 'C' character string
+in the command line structure which contains the complete path of the 
+shared library. If the shared library has to load configuration or RSC 
+files, the path can be extracted and the filename of the configuration 
+file assembled correspondingly.
+
+If slb_init() terminates by reason of a bus error, for instance, then 
+the caller will get EXCPT as the result of the Slbopen() call. In order 
+to intercept an unplanned termination of the library, the kernel installs 
+an etv_term handler for the library before calling slb_init()/exit().
+
+
+(!U)slb_open()/slb_close()(!u)
+
+These are called at the opening or closing of the library respectively.
+Once the library has been opened, the order is:
+!begin_verbatim
+  slb_init()
+  slb_open()
+  slb_close()
+  slb_exit()
+!end_verbatim
+
+Unlike slb_init()/slb_exit(), slb_open()/slb_close() run in the context 
+of the caller and in user-mode, with the user-stack of the caller, even 
+if the Slbopen() call was performed in supervisor mode.
+
+The library can also allocate memory at slb_open, though this belongs 
+to the caller and should be released again at slb_close(). In order to 
+permit allocation of this reserved memory to the caller, the library is 
+also passed the current process descriptor at slb_open(), slb_close() 
+and at every function call.
+
+(!B)Warning:(!b)  Due to a bug in 5.20, the passing of the (!nolink [PD]) to slb_open()
+						and slb_close() only works from (!nolink [MagiC]) 6 onwards.
+
+
+The kernel ensures that the open/close calls are nested correctly, 
+i.e. a process can not open a library more than once. 
+
+(!U)Functions(!u)
+
+Functions are not obligatory, so a library can hook in system calls 
+also via the AES or DOS that are removed again at termination, yet 
+generally functions are made available.
+
+A function is called with the following parameters on the stack:
+!begin_xlist [WORD nargs ] !short
+!item [PD *pd]    Process descriptor of the caller, corresponds 
+                  to the associated slb_open()/close()
+!item [LONG fn]   Function number. Practical when several  
+                  functions are amalgamated (identical 
+                  function pointers in LIBHEAD)
+!item [WORD nargs]  Number of the following arguments, in WORDs. 
+                    If a function has a variable number of 
+                    parameters, one can ascertain the actual 
+                    number. Very useful for extensions,     
+                    without having to incorporate new functions.
+                    Example: If a function always expects a pointer,
+                    but optionally also a WORD, it will receive 
+                    either 2 or 3 as <nargs>.
+!item [...]         The remaining parameters
+!end_xlist
+The functions are executed in the context of the caller and with 
+its stack. As this call is generally made in user-mode, multitasking 
+will not be interrupted even for longer operations. Depending on the 
+function, the function result can be a LONG, a WORD, void etc.
+
+A function may alter registers d0-d2 and a0-a1, all other registers 
+have to be saved if appropriate. In particular, register a2 must not 
+be altered, so that PureC routines may be called.
+
+!end_node
+
+!begin_node SLB_BIND
+(!B)Achtung:(!b) Die Funktion Slbopen enth„lt einen zus„tzliche
+       Paramter (!I)param(!i). Dieser taucht in der SLB.H nicht mehr auf.
+       Am besten einfach ignorieren.
+!begin_verbatim
+/*
+*
+* Binding for the use of a "shared library"
+*
+* Andreas Kromke
+* 22.10.97
+*
+*/
+
+#include <mgx_dos.h>
+
+/*****************************************************************
+*
+* Opens a "shared lib".
+*
+* Input:
+*     name             Name of the library, including extension
+*     path             Search path with '\', optional
+*     min_ver          Minimum required version number
+* Returns:
+*     sl               Library descriptor
+*     fn               Function for calling a library function
+*     <ret>            Actual version number, or error code
+*
+*****************************************************************/
+
+LONG Slbopen( char *name, char *path, LONG min_ver,
+        SHARED_LIB *sl, SLB_EXEC *fn,
+        LONG param )
+{
+  return(gemdos(0x16, name, path, min_ver, sl, fn, param));
+}
+
+
+/*****************************************************************
+*
+* Closes a "shared lib".
+*
+* Returns:
+*     <ret>          EACCDN, if library not opened
+*
+*****************************************************************/
+
+extern LONG Slbclose( SHARED_LIB *sl )
+
+{
+  return(gemdos(0x17, sl));
+}
+
+!end_verbatim
+
+!end_node 
+
+!begin_node SLB.H
+
+!begin_verbatim
+/*
+*
+* Binding for the use of "shared libraries"
+*
+* Andreas Kromke
+* 22.10.97
+* Last change 19.2.99  - SLB_EXEC with cdecl corrected
+*
+*/
+
+#ifndef LONG
+#include <portab.h>
+#endif
+
+typedef void *SHARED_LIB;
+typedef LONG (*SLB_EXEC)( void , ... );
+/*
+  das geht leider in PureC nicht, weil PureC hier einen
+  Fehler (!!!) hat: cdecl wird ignoriert, wenn die Funktion
+  eine variable Anzahl von Parametern hat.
+
+typedef LONG (cdecl *SLB_EXEC)( SHARED_LIB *sl, LONG fn, WORD nargs, ... );
+*/
+
+extern LONG Slbopen( char *name, char *path, LONG min_ver,
+        SHARED_LIB *sl, SLB_EXEC *fn );
+extern LONG Slbclose( SHARED_LIB *sl );
+!end_verbatim
+!end_node
+
+!end_node
+
+!else
+
+!begin_node Shared Libraries
+
+(!U)Gemeinsame Bibliotheken (Shared Libraries) in (!nolink [MagiC]) in MagiC ab V6.00(!u)
 
 
 !begin_itemize !short
@@ -259,7 +646,7 @@ Bibliothek nur einmal ge”ffnet wird, ist die Reihenfolge:
 
 Im Gegensatz zu slb_init()/slb_exit() laufen slb_open()/slb_close() 
 im Kontext des Aufrufers und im Usermodus mit dem Userstack des 
-Aufrufers ab, auch dann, wenn der Slbopen()-Aufruf im Supervisormodus 
+Aufrufers ab, auch dann, wenn der Slbopen()-Aufruf im Supervisor-Modus 
 erfolgt ist.
 
 Die Bibliothek kann auch bei slb_open Speicher allozieren, dieser 
@@ -402,3 +789,6 @@ extern LONG Slbclose( SHARED_LIB *sl );
 !end_node
 
 !end_node
+
+
+!endif

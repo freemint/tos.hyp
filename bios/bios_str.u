@@ -2,6 +2,34 @@
 
 !subtoc all
 
+!begin_node BPB
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+  WORD   recsiz;       /* Bytes pro Sektor                    */
+  WORD   clsiz;        /* Sektoren pro Cluster                */
+  WORD   clsizb;       /* Bytes pro Cluster                   */
+  WORD   rdlen;        /* Verzeichnisl„nge                    */
+  WORD   fsiz;         /* L„nge der FAT                       */
+  WORD   fatrec;       /* Start der 2. FAT                    */
+  WORD   datrec;       /* 1. freier Sektor                    */
+  WORD   numcl;        /* Gesamtzahl an Cluster               */
+  WORD   bflags;       /* Flags als Bitvektor                 */
+                       /* Bit 0: 0 (12-Bit-FAT), 1 16-Bit-FAT */
+                       /* Bit 1: 0 (zwei FATs), 1 (eine FAT)  */
+                       /*        erst ab TOS 2.06 verfgbar   */
+} BPB ;
+!end_verbatim
+
+Querverweis: Getbpb
+# Quelle: Maus.Computer.Atari.Programmieren, 20 Aug 2000
+!end_node
+
+
+
 !begin_node MPB
 
 Diese Struktur ist wie folgt definiert:
@@ -18,6 +46,81 @@ typedef struct
 !end_verbatim
 Querverweis: BIOS ~ Getmpb
 !end_node 
+
+
+
+!begin_node PUN_INFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD puns;               /* Anzahl der Ger„te               */
+    BYTE pun[16];            /* diverse Flags                   */
+    LONG part_start[16];     /* Partitionsanf„nge               */
+    LONG P_cookie;           /* muss "AHDI" sein                */
+    LONG *P_cooptr;          /* zeigt auf das vorherige Element */
+    UWORD P_version;         /* Versionsnummer (>= 0x0300)      */
+    UWORD P_max_sector;      /* maximale Sektorgr”že            */
+    LONG  reserved[16];      /* reserviert                      */
+} PUN_INFO;
+!end_verbatim
+
+!begin_xlist [P_max_sector]
+!item [puns]  Enth„lt die Anzahl vom Hard-Disk-Treiber gefundenen Festplatten.
+
+!item [pun]
+	!begin_xlist [Bit 0..2:]
+		!item [Bit 0..2:] Ger„tenummer der Festplatte.
+    !item [Bit 3:]    Bei gesetzem Bit handelt es sich um ein Ger„t an
+                      der SCSI-Schnittstelle (sonst: ASCI): Diese Bit
+                      ist zwar noch nicht offiziell dokumentiert, kann
+                      aber wohl ohne Vorbehalt benutzt werden.
+    !item [Bit 4..6:] Reserviert.
+    !item [Bit 7:]    Wenn dieses Bit gesetzt ist, dann wird das
+                      BIOS-Ger„t nicht vom Plattentreiber verwaltet (gilt
+                      beispielsweise fr die beiden Diskettenlaufwerke
+                      auf den Ger„tenummern 0 und 1)
+  !end_xlist
+
+!item [part_start] Enth„lt fr jede (untersttzte) Ger„tenummer die Nummer des
+                   Startsektors auf der betreffenden Festplatte.
+
+!item [P_Cokkie]   Magic-Wert; immer "AHDI"
+
+!item [P_cookptr]  Sollte immer auf das vorherige Strukrurelement zeigen.
+
+!item [P_version]  Versionsnummer z.B. 0x0300
+
+!item [P_max_sector] Beschreibt die gr”žte auftretbare Blockgr”že
+                     fr BIOS-Sektoeren.
+!end_xlist
+
+Beispiel wie man die Adresse der Struktur bekommt:
+!begin_verbatim
+PUN_INFO *GetPunPtr (void)
+{
+  PUN_INFO *P;
+  long oldstack;
+  
+  oldstack = Super (0L);
+  P = *((PUN_INFO **)(0x516L));
+  Super ((void *)oldstack);
+  
+  if (p)
+    if (P->P_cookptr == &(P->P_cookie)) /* Cookie ok? */
+      if (P->P_version >= 0x300)
+        return P;
+  
+  return 0L;
+}
+!end_verbatim
+              
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI]) ~  pun_ptr
+!end_node
 
 
 !end_node
