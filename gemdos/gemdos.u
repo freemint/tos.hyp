@@ -1,3 +1,443 @@
+!iflang [english]
+
+!begin_node Das GEMDOS
+
+Das (!nolink [GEMDOS]) ist, abgesehen von den hardware-abhÑngigen BIOS und XBIOS, das
+eigentliche Betriebssystem des Atari. Seine Funktionen werden Åber den
+680X0-Trap #1 aufgerufen. Die Betriebssystemfunktionen lassen sich sehr
+leicht aufgrund des ersten Buchstabens des Funktionsnamens in Kategorien
+einteilen:
+!begin_xlist [˘ Zeichenweise Ein-/Ausgabe ] !short
+!item [˘ Dateifunktionen]            (F...),
+!item [˘ Datum und Uhrzeit]          (T...),
+!item [˘ Prozessfunktionen]          (P...),
+!item [˘ Speicherverwaltung]         (M...),
+!item [˘ Systemfunktionen]           (S...),
+!item [˘ Verzeichnisfunktionen]      (D...),
+!item [˘ Zeichenweise Ein-/Ausgabe]  (C...)
+!end_xlist
+(!nolink [GEMDOS]) arbeitet unter MagiC reentrant (ab MagiC 3.0 gilt dies sogar fÅr das
+Dateisystem!). Sichtbar ist dies z.B. daran, daû Altertboxen des Typs
+"Daten auf Disk A: defekt" verschiebbar sind - hierzu muû nÑmlich Speicher
+angefordert werden, was unter (Multi)TOS nicht funktioniert, da gerade eine
+Dateioperation im (!nolink [GEMDOS]) abgearbeitet wird. 
+
+!label MiNT-kompatible Funktionen
+Mit dem Erscheinen von MiNT wurde das (!nolink [GEMDOS]) um viele Funktionen erweitert.
+Die neuen Funktionen mÅssen jedoch nicht nur dann vorhanden sein, wenn MiNT
+installiert ist: (!nolink [MagiC]) besitzt ab Version 3.0 MiNT-kompatible Funktionen,
+und auch MetaDOS-Treiber mit entsprechender FunktionalitÑt sind schon
+gesichtet worden. Aus diesem Grund sollten Abfragen auf den MiNT-Cookie
+unbedingt aus allen Programmen entfernt werden. Das Vorhandensein einer
+(!nolink [GEMDOS])-Funktion wird daran erkannt, daû als Funktionsergebnis (!I)nicht(!i)
+der Wert EINVFN zurÅckgeliefert wird.
+
+!label GEMDOS, ParameterÅbergabe im
+!label ParameterÅbergabe im GEMDOS
+Das (!nolink [GEMDOS]) nimmt seine Parameter auf dem Stack entgegen; dabei wird das
+letzte Argument aus der Parameterliste als erstes auf dem Stack abgelegt. 
+Funktionsergebnisse werden im Prozessorregister d0 zurÅckgeliefert. Nur die
+Register d3-d7 und a3-a7 werden gerettet, alle anderen werden durch den
+Aufruf verÑndert.
+
+Querverweis: (!nl)
+(!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~
+(!link [Hintergrund-DMA][Der Hintergrund-DMA von MagiC])  ~
+(!link [Programmformat][GEMDOS, Programmformat unter]) ~
+(!link [Function list][GEMDOS function list])
+
+!end_node
+
+
+!include gemdos\filesys.u
+
+
+!begin_node GEMDOS-Fehlermeldungen
+
+Fehler werden von GEMDOS als negative LONG-Werte gemeldet. Die folgende
+Liste enthÑlt alle bekannten Fehlermeldungen:
+
+
+!begin_xlist !short [Nr. Bezeichnung]
+!item [Nr. Bezeichnung]
+Bedeutung
+!item [~]
+~
+
+!label E_OK
+!item [~~0 E_OK]
+Ok. Kein Fehler aufgetreten.
+
+!label EINVFN
+!item [-32 EINVFN]
+Unbekannte Funktionsnummer.
+
+!label EFILNF
+!item [-33 EFILNF]
+Datei nicht gefunden.
+
+!label EPTHNF
+!item [-34 EPTHNF]
+Verzeichnis (Ordner) nicht gefunden.
+
+!label ENHNDL
+!item [-35 ENHNDL]
+Keine Datei-Handles mehr verfÅgbar.
+
+!label EACCDN
+!item [-36 EACCDN]
+Zugriff nicht erlaubt.
+
+!label EIHNDL
+!item [-37 EIHNDL]
+Datei-Handle war nicht korrekt.
+
+!label ENSMEM
+!item [-39 ENSMEM]
+Speicher reicht nicht aus.
+
+!label EIMBA
+!item [-40 EIMBA]
+Adresse des Speicherblocks ungÅltig.
+
+!label EDRIVE
+!item [-46 EDRIVE]
+Laufwerksbezeichnung ungÅltig.
+
+!label ECWD
+!item [-47 ECWD]
+Aktuelles Verzeichnis kann nicht gelîscht werden.
+
+!label ENSAME
+!item [-48 ENSAME]
+Dateien auf versch. logischen Laufwerken.
+
+!label ENMFIL
+!item [-49 ENMFIL]
+Es kînnen keine Dateien mehr geîffnet werden.
+
+!label ELOCKED
+!item [-58 ELOCKED]
+Bereich einer Datei ist geschÅtzt (Netzwerk).
+
+!label ENSLOCK
+!item [-59 ENSLOCK]
+Angegebenes Locking existiert nicht.
+
+!label ERANGE
+!item [-64 ERANGE]
+Dateizeiger in ungÅltigem Bereich.
+
+!label EINTRN
+!item [-65 EINTRN]
+Interner Fehler des (!nolink [GEMDOS]).
+
+!label EPLFMT
+!item [-66 EPLFMT]
+UngÅltiges Programm-Format.
+
+!label EGSBF
+!item [-67 EGSBF]
+Allozierter Speicherblock konnte nicht vergrîûert werden.
+
+!label EBREAK
+!item [-68 EBREAK]
+Programm-Abbruch durch Control-C.
+
+!label EXCPT
+!item [-69 EXCPT]
+68000er Exception (Bomben). 
+
+!label EPTHOV
+!item [-70 EPTHOV]
+Pfad öberlauf.
+
+!label ELOOP
+!item [-80 ELOOP]
+Endlosschleife mit symbolischen Links.
+
+!label EPIPE
+!item [-81 EPIPE]
+Write to broken pipe.
+!end_xlist
+
+Querverweis: (!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~
+(!link [BIOS und XBIOS Fehlermeldungen][BIOS und XBIOS-Fehlermeldungen])
+
+!end_node
+
+
+
+!begin_node Pipes, Test auf
+
+Um zu testen ob Pipes vorhanden sind, kann man wie folgt
+vorgehen:
+
+!begin_itemize
+!item Ist Laufwerk U vorhanden?
+!item Gibt es dort ein Verzeichnis PIPE?
+!item Sind dort erstellte Dateien wirklich (!nolink [Pipes]), d.h. liefert Fxattr nach
+einem Fcreate den Typ PIPE zurÅck?
+!end_itemize
+!end_node
+
+
+!begin_node Die Programmflags
+!label Flags eines Programms
+
+Bei den Programmflags handelt es sich um einen Bitvektor innerhalb des
+Programmheaders, der wie folgt aufgebaut ist:
+
+!begin_xlist !short [11-22]
+!item [Bits]
+Bedeutung
+!item [~]
+~
+!item [~~~0]
+(!B)Fastload-Flag(!b). Wenn dieses Bit gesetzt ist, wird der Heap nicht
+gelîscht, sondern lediglich das BSS-Segment vorinitialisiert.
+!item [~~~1]
+Wenn dieses Bit gesetzt ist, darf das Programm in das schnelle Alternate-RAM
+geladen werden.
+!item [~~~2]
+Wenn dieses Bit gesetzt ist, dÅrfen Speicheranforderungen per Malloc aus dem
+Alternate-RAM bedient werden.
+!item [~~~3]
+reserviert, sollte Null sein.
+
+!label Memory-Protection
+!label Protection, Memory-
+!label Speicherschutz, Modi beim
+!item [~4-7]
+(!B)Speicherschutz-Modus(!b)
+!label Speicherschutz, Privat-
+!label Memory-Protection, Private-
+!begin_xlist [3 = Nur lesbar]
+!item [0 = Privat]
+(!nl)
+Nur der Prozess selbst, und das Betriebssystem kann auf den Speicher
+zugreifen.
+!label Speicherschutz, Global-
+!label Memory-Protection, Global-
+ !item [1 = Global]
+(!nl)
+Der Speicher ist vîllig ungeschÅtzt, und daher kann von allen Programmen auf
+diesen zugegriffen werden.
+!label Speicherschutz, Super-
+!label Memory-Protection, Super-
+!item [2 = (!nolink [Super])]
+(!nl)
+Auf den Speicher kann von allen Prozessen zugegriffen werden, die im
+Supervisor-Modus arbeiten.
+!label Speicherschutz, nur lesbar
+!label Memory-Protection, nur lesbar
+!item [3 = Nur lesbar]
+(!nl)
+Jeder Prozess kann aus dem Speicher lesen; das Schreiben ist jedoch nur dem
+Prozess selbst, sowie dem Betriebssystem erlaubt.
+!end_xlist
+
+!item [8-11]
+reserviert, sollte Null sein.
+
+!label Shared-Text
+!item [~~12]
+(!B)Shared-Text(!b). Wenn dieses Bit gesetzt ist, darf das Text-Segment des
+Programms (!I)geshared(!i) werden. Wenn ein derartiges Programm
+beispielsweise 3-mal gestartet wird, dann existieren 3 verschiedene DATA-
+und BSS-Segmente, aber nur ein gemeinsames Text-Segment. (!B)Achtung:(!b)
+Das Bit sollte nur gesetzt werden, wenn das Programm keine absoluten
+Zugriffe auf das DATA- oder BSS-Segment durchfÅhrt.
+
+!item [13-27]
+reserviert, sollte Null sein.
+
+!label TPA-Grîûenfeld
+!label Grîûenfeld der TPA
+!item [28-31]
+(!B)TPA-Grîûenfeld(!b). Hier kann in Schritten zu 128 Kbyte festgelegt
+werden, wieviel Speicher aus dem Alternate-RAM dem Programm maximal
+zugeteilt werden soll, wenn der Rechner Åber mehr ST-RAM als Alternate-RAM
+verfÅgt. Die 16 mîglichen Werte stehen fÅr Angaben zwischen 128 Kbyte und
+2MByte.
+!end_xlist
+
+Querverweis: (!link [Programmheader][GEMDOS, Programmformat unter]) ~ Programmstart und TPA
+!end_node
+
+
+!begin_node Das Programmformat
+!label GEMDOS, Programmformat unter
+Eine Programmdatei besteht unter GEMDOS aus den folgenden Komponenten:
+
+!begin_itemize !short
+!item Header
+!item Text-, DATA- und BSS-Segment
+!item Symboltabelle (optional)
+!item Relokationstabelle (optional)
+!end_itemize
+
+(!B)Der Header ist dabei wie folgt aufgebaut:(!b)
+!label PH
+!label Programmheader
+!label Header eines Programms
+!begin_verbatim
+typedef struct
+{
+   WORD  ph_branch;        /* Branch zum Anfang des Programms  */
+                           /* (muû 0x601a sein!)               */
+ 
+   LONG  ph_tlen;          /* LÑnge  des TEXT - Segments       */
+   LONG  ph_dlen;          /* LÑnge  des DATA - Segments       */
+   LONG  ph_blen;          /* LÑnge  des BSS  - Segments       */
+   LONG  ph_slen;          /* LÑnge  der Symboltabelle         */
+   LONG  ph_res1;          /* reserviert, sollte 0 sein        */
+   LONG  ph_prgflags;      /* Programmflags                    */
+   WORD  ph_absflag;       /* 0 = Relozierungsinf. vorhanden   */
+} PH;
+!end_verbatim
+!label Symboltabelle
+Eine Symboltabelle im (!I)Digital-Research-Format(!i) besteht aus jeweils 14
+Bytes langen EintrÑgen, die aus dem Symbolnamen (maximal 8 Bytes; lediglich
+kÅrzere Namen sind mit einer 0 abgeschlossen!), einem 2 Bytes langen
+Symboltyp und dem eigentlichen Symbolwert (4 Bytes) bestehen. Die
+unterstÅtzten Symboltypen sind in der folgenden Tabelle zusammengefaût:
+
+!begin_table [l|l]
+Wert !! Symboltyp
+!hline
+0x0100 !! in der BSS
+0x0200 !! im Programmtext
+0x0280 !! Start eines Objektmoduls
+0x02c0 !! Start einer Library
+0x0400 !! im DATA-Bereich
+0x0800 !! External
+0x1000 !! Register
+0x2000 !! Globales Symbol
+0x4000 !! Equated
+0x8000 !! Defined
+!end_table
+!label Relokationstabelle
+Viele Entwicklungssysteme (z.B. Pure-C) benutzen allerdings ein eigenes
+(i.d.R. leistungsfÑhigeres) Symbolformat. Da Programme unter TOS an eine
+beliebige Stelle des Arbeitsspeichers geladen werden kînnen (und dort
+ablauffÑhig sein mÅssen), enthÑlt eine Programmdatei normalerweise eine
+(!I)Relokationstabelle(!i), mit deren Hilfe die im Programmcode angegebenen
+(!nolink [Adressen]) auf die tatsÑchlich zugewiesenen Bereiche umgerechnet werden
+kînnen.
+
+Ob Relokations-Informationen vorhanden sind oder nicht, kann der Komponente
+(!I)ph_absflag(!i) des Programmheaders (s.o.) entnommen werden. Es ist
+grundsÑtzlich nur eine Relozierung von 32-Bit-Werten (d.h. (!nolink [Adressen]))
+mîglich; vor GEMDOS-Version 0.15 (bzw. TOS-Version 1.04) durften die
+Relozierungsinformationen nur maximal 32 Kbyte umfassen.
+
+Die Relokationstabelle selbst beginnt mit einem 32-Bit-Wert, welcher den
+Offset des ersten zu relozierenden Wertes (!I)relativ(!i) zum Beginn des
+Textsegmentes markiert. FÅr alle folgenden Offsets werden dann einzelne
+Bytes benutzt. (!B)Um auch AbstÑnde grîûer als 255 korrekt handhaben zu
+kînnen, wird dabei wie folgt verfahren:(!b) Wird als Offset eine 1 gefunden
+(dies ist aufgrund der Charakteristika der MC-680x0 Prozessorfamilie
+unmîglich), wird automatisch zum Offset der Wert 254 addiert. FÅr besonders
+groûe AbstÑnde kann dieser Vorgang natÅrlich auch wiederholt werden. Eine
+(!I)leere(!i) Relokationstabelle wird Åbrigens durch einen Long-Wert von 0
+gekennzeichnet.
+
+Querverweis: Fcntl ~  (!link [ARHEADER][Archivheader (ARHEADER)]) ~  OHEADER ~
+OSHEADER  ~ PSETFLAGS
+
+!end_node
+
+
+!begin_node Programmstart und TPA
+!label TPA und Programmstart
+!label Transient Program Area
+
+Zu Beginn eines Programms ist es sehr wichtig ÅberflÅssigen Speicher per
+Mshrink an das Betriebssystem zurÅckzugeben, da anderenfalls kein
+Speicherplatz mehr fÅr andere Prozesse zur VerfÅgung steht.
+
+Ein Compiler Åbernimmt diese Aufgabe normalerweise automatisch; als
+Assembler-Programmierer muss man diese Prozedur jedoch selbst durchfÅhren.
+Die entsprechende Routine kînnte wie folgt aussehen:
+
+!begin_verbatim
+            .text
+ 
+            move.l    4(sp),a0      ; Zeiger auf BASEPAGE
+            lea       mystack,sp    ; Stack-Pointer setzen
+            move.l    #$100,d0      ; LÑnge der Basepage
+            add.l     $c(a0),d0     ; LÑnge des Text-Segments
+            add.l     $14(a0),d0    ; LÑnge des Data-Segments
+            add.l     $1c(a0),d0    ; LÑnge des BSS-Segments
+            move.l    d0,-(sp)      ; Ergebnis auf dem Stack
+            move.l    a0,-(sp)      ; Basepage-Adresse auf Stack
+            clr.w     -(sp)         ; FÅllparameter
+            move.w    #$4a,-(sp)    ; Mshrink
+            trap      #1            ; GEMDOS aufrufen
+            lea       $c(sp),sp     ; Stack korrigieren
+            jsr       main          ; Hauptprogramm aufrufen
+            move.w    d0,-(sp)      ; Return-Wert des Programms
+            move.w    #$4c,-(sp)    ; Pterm
+            trap      #1            ; GEMDOS aufrufen
+
+            .bss
+
+            .ds.l     2000          ; 8000 Bytes Stack
+mystack:    .ds.l     2
+!end_verbatim
+
+(!B)Im Klartext:(!b) Der benîtigte Speicherplatzbedarf wird errechnet, indem
+die LÑnge der Basepage, des Text-, Data- und BSS-Segments sowie ggfs. des
+Stacks aufaddiert werden. Alle notwendigen Angaben befinden sich in der
+Basepage, deren Adresse als Parameter auf dem Stack (4(sp)) mitgeteilt
+wird. Der errechnete Wert ist dann die Anzahl der Bytes, auf die die TPA
+(Transient Program Area, Speicherbereich eines Programms) geschrumpft werden
+kann.
+
+(!B)Nach AusfÅhrung dieser Prozedur besitzt die TPA eines Programms dann
+die folgende Gestalt:(!b)
+
+!image (!picture_path)\tpa
+
+Der so freigegebene Speicherplatz kann nun vom GEMDOS fÅr andere Zwecke
+genutzt werden: etwa zum Starten weiterer Programme, oder um
+Speicheranforderungen per Malloc bzw. Mxalloc zu befriedigen.
+
+!label TSR-Programme
+!label Terminate and Stay Resident
+Auch bei einem TSR-Programm (Terminate and Stay Resident) kann der benîtigte
+Speicherplatz nach der oben angegebenen Methode berechnet werden; der
+einzige Unterschied ist, daû Programme dieser Art sich (!I)nicht(!i) per
+(!nolink [Pterm]) sondern per Ptermres beenden, und sich dadurch resident im Speicher
+verankern.
+
+Querverweis: (!link [BASEPAGE][PD]) ~ Speicherverwaltung
+!end_node
+
+
+!include gemdos\signale.u
+
+!begin_node gemdos-Trap
+!label gemdos
+(!begin_liste) [Beschreibung]
+!item [Name:]
+ØgemdosÆ - (!nolink [GEMDOS])-Trap ausfÅhren.
+!item [Deklaration:]
+LONG gemdos ( VOID , ... );
+!item [Beschreibung:]
+Die Routine gemdos fÅhrt einen TRAP #1 durch. Die
+Åbergebenen Parameter hÑngen von der jeweiligen
+(!nolink [GEMDOS])-Funktion ab.
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis einen Wert vom
+Datentyp LONG.
+!item [Querverweis:] bios ~ xbios ~ GEMDOS ~ (!link [Dispatcher][GEMDOS-Dispatcher])
+(!ende_liste)
+!end_node
+
+!else
+
 !begin_node Das GEMDOS
 
 Das (!nolink [GEMDOS]) ist, abgesehen von den hardware-abhÑngigen BIOS und XBIOS, das
@@ -434,7 +874,7 @@ Datentyp LONG.
 (!ende_liste)
 !end_node
 
-
+!endif
 
 !include gemdos\file\file.u
 !include gemdos\datetime\datetime.u
