@@ -30,19 +30,22 @@
 ; 2     BYTE    Slow motion flag
 ; 3     BYTE    Slow motion speed (%)
 ; 4     BYTE    Fast forward flag
-; 5     BYTE    Millions of cpu cycles per second
+; 5     BYTE    Millions of cpu cycles per second (read-write on v3+, changes at next VBL)
 ; 6     BYTE    Debug build flag
 ; 7     BYTE    Snapshot loaded flag (read-write). If you set this
 ;               flag to 0 at the start of your program then you 
 ;               can detect users loading snapshots.
-; 8     WORD    Run speed (%)
+; 8     WORD    Run speed (%) (read-write on v3+)
 ; 10    WORD    How fast Steem is actually managing to run 
 ;               as a percentage. If the computer is fast enough
 ;               this will equal run speed most of the time. It
-;               is updated every 12 VBLs and can jump around a bit!
+;               is updated every 12 VBLs and can jump around a bit.
+;
+; The following are available on Steem v2.5 and higher:
+;
 ; 12    LONG    Cycle count (overflows every 8 minutes at 8Mhz)
-; 16    LONG    Cycle count at start of frame
-; 20    LONG    Cycle count at start of line
+; 16    LONG    Cycle count at start of frame (last VBL interrupt)
+; 20    LONG    Cycle count at start of line (last HBL interrupt)
 ; 24    WORD    Signed word containing the number of the current line. 
 ;               In low/medium res the first line after the top border
 ;               is 0, the last before the bottom border is 199.
@@ -52,8 +55,48 @@
 ;               In the debug build the string is always written to the
 ;               log file.
 ;
-; 27-31 Reserved for future use (won't cause bus errors). If you want
-;       anything put in here let us know (steem@gmx.net).
+; The following are available on Steem v3.2 and higher:
+;
+; 27    BYTE    Super video mode (read-write). This register is here to
+;               allow developers to test Falcon graphics using Steem. 
+;               Possible values are 0 - normal ST mode, 1 - Falcon 256
+;               colour (palette at $FF9800), 2 - Falcon true colour (16-bit).
+;               Note: You can't switch to super video from ST high res or
+;               if Steem is running in 256 colour mode. To check for this
+;               read the register back immediately after setting it.
+; 28    BYTE    Super video size (read-write) 0=320x200, 1=640x400, 
+;               2=320x240, 3=640x480.
+;
+; There are two write-only registers:
+;
+; 0     LONG    (Steem v3+) This register allows you to create new disk 
+;               images in the user's home directory. You must write the address
+;               of a string in ST memory that contains the disk name and
+;               a parameter list separated by nulls, the string must
+;               be double null terminated. The first parameter is the 
+;               number of sides the disk should have, the second the
+;               number of tracks and the third sets the sectors per track.
+;               All parameters are passed as strings, here is an example:
+;
+;   create_disk_string:    dc.b     'New Disk Name',0,'2',0,'80',0,'11',0,0
+;
+;               That will create a 900Kb disk with the name 
+;               "New Disk Name.st". Once the disk is created it will be
+;               inserted into drive A. Make sure you delay for half a
+;               second after creating a new disk before accessing it, this
+;               allows TOS to detect media change.
+;
+; 4     BYTE    (Steem v3.2+) Writing anything to this address will disable
+;               the extra hardware registers. When the hardware registers
+;               are available some ST programs may detect they are running
+;               on a Falcon, to stop that write to this when you no longer
+;               need the extra features. Any writes to extra registers after
+;               writing a byte here will cause a bus error.
+;
+; Every address up to offset 31 is reserved for future use (won't cause bus 
+; errors on read or write). If you want anything put in here let us know 
+; (steem@gmx.net).
+
 
         move.l  #'Emu?',d5
         move.l  d5,d7
