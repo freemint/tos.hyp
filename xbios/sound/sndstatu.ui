@@ -1,0 +1,341 @@
+!iflang [english]
+
+
+!begin_node sndstatus
+(!begin_liste) [Availability]
+
+!item [Name:]
+¯sndstatus® - Status des A/D und D/A Wandlers ermitteln
+
+!item [Opcode:]
+140
+
+!item [Syntax:]
+(!link [Bindings fr sndstatus] [Bindings fr sndstatus])
+
+!item [Description:]
+Die XBIOS-Routine sndstatus ermittelt den aktuellen Status des A/D- und
+D/A-Wandlers. Sie kann diesen ebenfalls neu initialisieren.
+
+Hat (!I)reset(!i) den Wert 1 wird der A/D- und D/A-Wandler neu
+initialisiert (unteranderem werden die šberlaufbits gel”scht). Andernfalls
+wird der aktuelle Status ermittelt.
+
+Ist Bit 5 im '_SND' Cookie gesetzt stehen noch weitere Statusabfragen
+zur Verfgung.
+
+!begin_verbatim
+reset  Funktion
+        return
+
+ 2     Bittiefen abfragen.
+        Bit  0 gesetzt: 8Bit
+        Bit  1 gesetzt: 16Bit
+        Bit  2 gesetzt: 24Bit
+        Bit  3 gesetzt: 32Bit
+
+ 3     Fr MasterMix-Ausgang vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: A/D-Wandler (ADC-InMix bypass)
+        Bit  1 gesetzt: D/A-Wandler (DAC/Multiplexer)
+        Bit  2 gesetzt: Mic
+        Bit  3 gesetzt: FM-Generator
+        Bit  4 gesetzt: Line
+        Bit  5 gesetzt: CD
+        Bit  6 gesetzt: TV
+        Bit  7 gesetzt: Aux1
+
+ 4     Fr A/D-Wandler vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: Mic rechts
+        Bit  1 gesetzt: Mic links
+        Bit  2 gesetzt: FM-Generator rechts
+        Bit  3 gesetzt: FM-Generator links
+        Bit  4 gesetzt: Line rechts
+        Bit  5 gesetzt: Line links
+        Bit  6 gesetzt: CD rechts
+        Bit  7 gesetzt: CD links
+        Bit  8 gesetzt: TV rechts
+        Bit  9 gesetzt: TV links
+        Bit 10 gesetzt: Aux1 rechts
+        Bit 11 gesetzt: Aux1 links
+        Bit 12 gesetzt: Mixer rechts (MasterMix)
+        Bit 13 gesetzt: Mixer links (MasterMix)
+
+        Bit 16 gesetzt: D/A-Wandler rechts
+        Bit 17 gesetzt: D/A-Wandler links
+
+ 5     Duplexbetrieb erfragen.
+        Bit  0 gesetzt: Aufnahme/Wiedergabe gleichzeitig
+                        m”glich
+
+ 8     8 Bit Sampleformate erfragen.
+ 9     16 Bit Sampleformate erfragen.
+10     24 Bit Sampleformate erfragen.
+11     32 Bit Sampleformate erfragen.
+        Bit  0 gesetzt: signed.
+        Bit  1 gesetzt: unsigned.
+        Bit  2 gesetzt: Motorola bigendian wenn > 8Bit.
+        Bit  3 gesetzt: Intel littleendian wenn > 8Bit.
+
+0x8900 Wert der Falcon 030 Registers 0xff8900 und 0xff8901
+       abfragen.
+        %0000 xxxx 00xx 00xx
+              ||||   ||   ||
+              ||||   ||   ||>Playback enable
+              ||||   ||   |>Playback repeat
+              ||||   ||>Record enable
+              ||||   |>Record repeat
+              ||||>MFP-15 Int at Playback end
+              |||>MFP-15 Int at Record end
+              ||>Timer A Int at Playback end
+              |>Timer A Int at Record end
+
+0x8902 Wert der Falcon 030 Registers 0xff8902, 0xff8904
+       und 0xff8906 abfragen.
+        ret = Frame Base Address.
+
+0x890e Wert der Falcon 030 Registers 0xff890e, 0xff8910
+       und 0xff8912 abfragen.
+        ret = Frame End Address.
+
+0x8920 Wert der Falcon 030 Registers 0xff8920 und
+       0xff8921 abfragen.
+        %00xx 00xx xx00 00xx
+           ||   || ||     ||
+           ||   || ||     ||>00 = 6258 Hz
+           ||   || ||     ||>01 = 12517 Hz
+           ||   || ||     ||>10 = 25033 Hz
+           ||   || ||     ||>11 = 50066 Hz
+           ||   || ||>00 = 8-bit Stereo
+           ||   || ||>01 = 16-bit Stereo
+           ||   || ||>10 = 8-bit Mono
+           ||   || ||>11 = 16-bit Mono
+           ||   ||>Play Tracks
+           ||>Monitor Track
+!end_verbatim
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+
+!item [(!nolink [Return]) Value:]
+Liegt kein Fehler vor erh„lt man als Ergebnis den Wert Null. Ansonsten
+stellt das Resultat einen Bitvektor dar, der sich wie folgt entschlsselt:
+!begin_table [l|l]
+Bits !! Bedeutung
+!hline
+0-3  !! 1 ~Ungltiges Kontrollfeld
+~~   !! 2 ~Ungltiges Syncformat
+~~   !! 3 ~Ungltiger Takt
+4    !! Linker šberlauf
+5    !! Rechter šberlauf
+!end_table
+
+!item [Group:]
+Soundroutinen
+
+!item [Availability:]
+Die Funktion ist nur auf Computern der Falcon-Serie verfgbar oder bei
+erweiterten XBiosroutinen (_SND).
+
+!item [See Also:]
+(!link [Binding] [Bindings fr sndstatus]) ~ buffoper ~ buffptr ~
+devconnect ~ dsptristate ~ gpio ~ locksnd ~ setbuffer ~ setinterrupt ~
+setmontracks ~ setmode ~ settracks ~ soundcmd ~ unlocksnd
+
+(!ende_liste)
+
+
+!begin_node Bindings fr sndstatus
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+#include <tos.h>
+
+int32_t sndstatus( int16_t reset );
+!item [Assembler:]
+!begin_verbatim
+move.w    reset,-(sp)  ; Offset 2
+move.w    #140,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #4,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node sndstatus
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+¯sndstatus® - Status des A/D und D/A Wandlers ermitteln
+
+!item [Xbiosnummer:]
+140
+
+!item [Binding:]
+(!link [Bindings fr sndstatus] [Bindings fr sndstatus])
+
+!item [Beschreibung:]
+Die XBIOS-Routine sndstatus ermittelt den aktuellen Status des A/D- und
+D/A-Wandlers. Sie kann diesen ebenfalls neu initialisieren.
+
+Hat (!I)reset(!i) den Wert 1 wird der A/D- und D/A-Wandler neu
+initialisiert (unteranderem werden die šberlaufbits gel”scht). Andernfalls
+wird der aktuelle Status ermittelt.
+
+Ist Bit 5 im '_SND' Cookie gesetzt stehen noch weitere Statusabfragen
+zur Verfgung.
+
+!begin_verbatim
+reset  Funktion
+        return
+
+ 2     Bittiefen abfragen.
+        Bit  0 gesetzt: 8Bit
+        Bit  1 gesetzt: 16Bit
+        Bit  2 gesetzt: 24Bit
+        Bit  3 gesetzt: 32Bit
+
+ 3     Fr MasterMix-Ausgang vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: A/D-Wandler (ADC-InMix bypass)
+        Bit  1 gesetzt: D/A-Wandler (DAC/Multiplexer)
+        Bit  2 gesetzt: Mic
+        Bit  3 gesetzt: FM-Generator
+        Bit  4 gesetzt: Line
+        Bit  5 gesetzt: CD
+        Bit  6 gesetzt: TV
+        Bit  7 gesetzt: Aux1
+
+ 4     Fr A/D-Wandler vorhandene Eing„nge erfragen.
+        Bit  0 gesetzt: Mic rechts
+        Bit  1 gesetzt: Mic links
+        Bit  2 gesetzt: FM-Generator rechts
+        Bit  3 gesetzt: FM-Generator links
+        Bit  4 gesetzt: Line rechts
+        Bit  5 gesetzt: Line links
+        Bit  6 gesetzt: CD rechts
+        Bit  7 gesetzt: CD links
+        Bit  8 gesetzt: TV rechts
+        Bit  9 gesetzt: TV links
+        Bit 10 gesetzt: Aux1 rechts
+        Bit 11 gesetzt: Aux1 links
+        Bit 12 gesetzt: Mixer rechts (MasterMix)
+        Bit 13 gesetzt: Mixer links (MasterMix)
+
+        Bit 16 gesetzt: D/A-Wandler rechts
+        Bit 17 gesetzt: D/A-Wandler links
+
+ 5     Duplexbetrieb erfragen.
+        Bit  0 gesetzt: Aufnahme/Wiedergabe gleichzeitig
+                        m”glich
+
+ 8     8 Bit Sampleformate erfragen.
+ 9     16 Bit Sampleformate erfragen.
+10     24 Bit Sampleformate erfragen.
+11     32 Bit Sampleformate erfragen.
+        Bit  0 gesetzt: signed.
+        Bit  1 gesetzt: unsigned.
+        Bit  2 gesetzt: Motorola bigendian wenn > 8Bit.
+        Bit  3 gesetzt: Intel littleendian wenn > 8Bit.
+
+0x8900 Wert der Falcon 030 Registers 0xff8900 und 0xff8901
+       abfragen.
+        %0000 xxxx 00xx 00xx
+              ||||   ||   ||
+              ||||   ||   ||>Playback enable
+              ||||   ||   |>Playback repeat
+              ||||   ||>Record enable
+              ||||   |>Record repeat
+              ||||>MFP-15 Int at Playback end
+              |||>MFP-15 Int at Record end
+              ||>Timer A Int at Playback end
+              |>Timer A Int at Record end
+
+0x8902 Wert der Falcon 030 Registers 0xff8902, 0xff8904
+       und 0xff8906 abfragen.
+        ret = Frame Base Address.
+
+0x890e Wert der Falcon 030 Registers 0xff890e, 0xff8910
+       und 0xff8912 abfragen.
+        ret = Frame End Address.
+
+0x8920 Wert der Falcon 030 Registers 0xff8920 und
+       0xff8921 abfragen.
+        %00xx 00xx xx00 00xx
+           ||   || ||     ||
+           ||   || ||     ||>00 = 6258 Hz
+           ||   || ||     ||>01 = 12517 Hz
+           ||   || ||     ||>10 = 25033 Hz
+           ||   || ||     ||>11 = 50066 Hz
+           ||   || ||>00 = 8-bit Stereo
+           ||   || ||>01 = 16-bit Stereo
+           ||   || ||>10 = 8-bit Mono
+           ||   || ||>11 = 16-bit Mono
+           ||   ||>Play Tracks
+           ||>Monitor Track
+!end_verbatim
+(!B)Hinweis:(!b) Die Funktion ist nur auf Computern der Falcon-Serie
+verfgbar oder bei erweiterten XBiosroutinen (_SND).
+
+!item [Ergebnis:]
+Liegt kein Fehler vor erh„lt man als Ergebnis den Wert Null. Ansonsten
+stellt das Resultat einen Bitvektor dar, der sich wie folgt entschlsselt:
+!begin_table [l|l]
+Bits !! Bedeutung
+!hline
+0-3  !! 1 ~Ungltiges Kontrollfeld
+~~   !! 2 ~Ungltiges Syncformat
+~~   !! 3 ~Ungltiger Takt
+4    !! Linker šberlauf
+5    !! Rechter šberlauf
+!end_table
+
+!item [Gruppe:]
+Soundroutinen
+
+!item [Verfgbar:]
+Die Funktion ist nur auf Computern der Falcon-Serie verfgbar oder bei
+erweiterten XBiosroutinen (_SND).
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr sndstatus]) ~ buffoper ~ buffptr ~
+devconnect ~ dsptristate ~ gpio ~ locksnd ~ setbuffer ~ setinterrupt ~
+setmontracks ~ setmode ~ settracks ~ soundcmd ~ unlocksnd
+
+(!ende_liste)
+
+
+!begin_node Bindings fr sndstatus
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+#include <tos.h>
+
+int32_t sndstatus( int16_t reset );
+!item [Assembler:]
+!begin_verbatim
+move.w    reset,-(sp)  ; Offset 2
+move.w    #140,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #4,sp        ; Stack korrigieren
+!end_verbatim
+!ifdest [html]
+!item [GFA-Basic]
+!begin_raw
+<A HREF="http://www.milanstation.de/at/gfahutil/gfau7xbi.htm">GFA-H-Util XBios</A>
+!end_raw
+!endif
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif
