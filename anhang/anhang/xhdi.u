@@ -1,0 +1,1406 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fÅr den ST-Guide
+##
+## Last Edit: 03.05.96
+##
+## Kapitel x: XHDI-Spezifikation (Version 1.30)
+
+
+
+!begin_node XHDI - eXtended HardDisk Interface (Version 1.30)
+!label XHDI
+
+Wie unschwer am Namen zu erkennen ist, soll die XHDI-Spezifikation die
+Mîglichkeiten der Kommunikation mit Treibern fÅr blockorientierte
+Massenspeicher verbessern. Ausgangspunkt war die öberlegung, einige
+zusÑtzliche Eigenschaften, die viele Treiber bereits haben, Åber eine
+dokumentierte Schnittstelle nach auûen zu fÅhren. Dies sollte speziell
+Virtual-Memory-Programmen die Mîglichkeit geben, Wechselplatten zu
+verriegeln (wer wollte schon, daû die Swap-Partition wÑhrend des Swappens
+entfernt werden kann).
+
+Mit fortschreitender Diskussion hat sich herausgestellt, daû auch die durch
+die PUN_INFO-Struktur bereitgestellten Informationen nicht immer ausreichen
+und daher Åber die XHDI-Spezifikation erweitert werden sollten. GrÅnde:
+
+!begin_itemize
+!item die (!nolink [PUN_INFO])-Struktur hat nur Platz fÅr 16 GerÑte, obwohl das BIOS
+      (und einige GEMDOS-AufsÑtze) 32 GerÑte erlauben.
+!item eine Installation mehrerer AHDI-kompatibler Treiber im System ist
+      nicht mîglich.
+!item die Atari-Definition von GerÑtenummern geht davon aus, daû immer nur
+      LUN 0 eines ACSI- oder SCSI-Targets benutzt wird.
+!end_itemize
+
+(!B)Der Sinn und Zweck der XHDI-Spezifikation sieht damit so aus:(!b)
+
+!begin_itemize
+!item flexiblerer und umfassenderer Zugang zu den Informationen Åber die
+      einzelnen GerÑte.
+!item UnterstÅtzung erweiterter Treiberfunktionen wie Stop/Start oder
+      Verriegeln/Entriegeln.
+!end_itemize
+
+Nicht Sinn der Sache ist, vîllig neue Anforderungen an Treiber festzulegen.
+Die XHDI-Spezifikation soll sich nach Mîglichkeit auf einfache Weise in
+bestehende Treiber integrieren lassen.
+
+Querverweis: (!nl)
+XHDI-Cookie ~  XHDI-Terminologie  ~ (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+Arbitration ~  XHDI-Funktionen   ~  SCSI-Spezifikation
+
+
+
+!begin_node XHDI-Cookie
+
+Cookie-Kennung: "(!nolink [XHDI])". Der Parameter zeigt auf die Adresse einer Routine,
+die massenspeicherbezogene Funktionen zur VerfÅgung stellt. Zur Absicherung
+steht vor der Routine die Long-Konstante $27011992.
+
+Der Wert des Cookies kann sich im laufenden Betrieb Ñndern (wg.
+Zweitinstallation). Daher ggfs. (z. B. in Accessories) den Cookie jedesmal
+NEU abfragen!
+
+(!B)Installation mehrerer Programme im XHDI-Cookie:(!b)
+
+!begin_xlist [(1)]
+!item [(1)]
+Bei der Installation feststellen, ob der Cookie schon gesetzt ist. Falls ja,
+mÅssen folgende zusÑtzliche Aufrufkonventionen berÅcksichtigt werden:
+!item [(2)]
+Bei XHGetVersion() zunÑchst durch den alten Vektor springen und dann das
+Minimun der dort erhaltenen und der eigenen Versionsnummer zurÅckliefern.
+!item [(3)]
+Bei XHDrvMap() zunÑchst den alten Vektor durchspringen und anschlieûend die
+eigenen Drive-Bits hineinodern.
+!item [(4)]
+Bei den anderen Funktionen: wenn es das eigene GerÑt ist, normal verfahren.
+Ansonsten: keinen Fehler melden, sondern durch den alten Vektor springen.
+!end_xlist
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI])  ~ GEMDOS  ~ BIOS  ~ Cookie-Jar ~
+SCSI-Spezifikation
+!end_node
+
+
+!begin_node XHDI-Terminologie
+
+Folgende (!nolink [Datentypen]) seien vereinbart:
+!begin_verbatim
+UWORD:  16 Bit, unsigned
+LONG:   32 Bit, signed
+ULONG:  32 Bit, unsigned
+char *: 32 Bit, Zeiger auf eine nullterminierte Zeichenkette
+!end_verbatim
+
+!label Major Device Number
+!begin_xlist [major:]
+!item [major:]
+(!B)Major Device Number(!b)
+!begin_xlist !short [65..255:]
+!item [0..7:]
+Platten am ACSI-Bus mit Atari-kompatiblen Befehlssatz
+!item [8..15:]
+Platten am SCSI-Bus
+!item [16..17:]
+Platten an der primÑren IDE-Schnittstelle
+!item [18..19:]
+Platten an der sekundÑren IDE-Schnittstelle
+!item [20..23:]
+Weitere IDE-Platten
+!item [24..63:]
+Erweiterungen lt. PUN_INFO-Struktur (Feld: pun[])
+!item [64:]
+GerÑt am Floppycontroller
+!item [65..255:]
+weitere eigene Erweiterungen jenseits dem, was AHDI abdeckt
+!end_xlist
+!label Minor Device Number
+!item [minor:]
+Minor Device Number (fÅr 'major' 0..15: LUN des ACSI- oder
+SCSI-GerÑts), maximal 255.
+!item [key:]
+Entweder ein 16-Bit-SchlÅssel, ermittelt von XHReserve(), oder 0, wenn das
+GerÑt nicht reserviert wurde oder der SchlÅssel nicht bekannt ist.
+!end_xlist
+
+Notation:
+
+Numerische Werte sind, wenn nicht anders angegeben, dezimal dargestellt. 
+Hexadezimale Angaben (Basis 16) sind durch ein Dollarzeichen (`$') markiert.
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI]) ~  GEMDOS ~  BIOS ~
+SCSI-Spezifikation
+!end_node
+
+
+
+!begin_node Arbitration
+
+FÅr GerÑtetreiber, die den SCSI-Bus arbitrierend betreiben wollen, muû fÅr
+den Rechner eine eigene GerÑtekennung vergeben werden. Diese sollte
+natÅrlich einheitlich und nicht auf der Festplatte gespeichert sein. Atari
+hat dafÅr Byte 16 im NVM des Atari TT und Falcon reserviert. Die Bitbelegung
+ist:
+
+!begin_xlist !short [Bit 0..2:]
+!item [Bit 0..2:]
+GerÑtenummer
+!item [Bit 7:]
+Arbitration an (1) oder aus (0)
+!end_xlist
+
+(!B)Die Abfrage der GerÑtenummer kînnte zum Beispiel wie folgt
+geschehen:(!b)
+
+!begin_verbatim
+WORD arbitration_id (VOID)
+{
+   LONG ret = EINVFN;
+   UBYTE nvmdata = 0;
+   OSHEADER *Sys;
+   LONG oldstack = Super(0L);
+   Sys = *_sysbase;
+   Super((VOID *)oldstack);
+
+   host_id = -1;   /* no arbitration by default */
+
+   if (Sys->os_version >= 0x300)
+      ret = NVMaccess (0, 16, (WORD) sizeof (nvmdata), &nvmdata);
+
+   if (ret == E_OK && (nvmdata & 0x80))
+      host_id = nvmdata & 7;
+
+   return host_id;
+}
+!end_verbatim
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI])  ~ SCSI-Spezifikation ~  GEMDOS  ~ BIOS
+!end_node
+
+
+
+!begin_node Empfohlene Partitiontypen
+!label Partitiontyp, BGM
+!label Partitiontyp, GEM
+
+!begin_xlist !short [GEM]
+!item [Typ]
+Bedeutung
+!item [~]
+~
+!item [BGM]
+(!nolink [GEMDOS])-Partition > 16 MB
+!item [(!nolink [GEM])]
+(!nolink [GEMDOS])-Partition < 16 MB
+!item [RAW]
+(!link [Partitiontyp-RAW][Partitiontyp RAW])
+!end_xlist
+
+Folgende Typen kînnen optional unterstÅtzt (zum Beispiel anhand einer
+konfigurierbaren Liste von Kennungen) werden.
+
+!begin_xlist !short [GEM]
+!item [Typ]
+Bedeutung
+!item [~]
+~
+!label Partitiontyp, F32
+!label Partitiontyp, LNX
+!label Partitiontyp, MAC
+!label Partitiontyp, MIX
+!label Partitiontyp, QWA
+!label Partitiontyp, SWP
+!label Partitiontyp, UNX
+!item [F32]  TOS-kompatible FAT32-Partition
+!item [LNX]  Linux-Ext2-Partition, sollte ggfs. wie RAW behandelt werden
+!item [MAC]
+Mac-HFS-Partition, sollte ggfs wie RAW behandelt werden.
+!item [MIX]
+Minix-Partition, sollte ggfs wie RAW behandelt werden.
+!item [QWA]
+QDOS-Partition, sollte ggfs wie RAW behandelt werden.
+!item [SWP]
+Swap-Partition, sollte ggfs wie RAW behandelt werden.
+!item [UNX]
+ASV (Atari Systen V R4), sollte ggfs wie RAW behandelt werden.
+!end_xlist
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI]) ~  GEMDOS  ~ BIOS
+
+
+
+!begin_node Partitiontyp RAW
+
+(!nolink [XHDI])-1.10-kompatible Treiber mÅssen zusÑtzlich zu (!nolink [GEM]) und
+BGM den dritten
+Partitiontyp RAW unterstÅtzen. FÅr Partitionen dieses Typs mÅssen folgende
+Eigenschaften unterstÅtzt werden:
+
+!begin_xlist [(1)]
+!item [(1)]
+Die PartitionlÑnge ist beliebig (im Rahmen der 32-Bit-Sektornummern).
+!item [(2)]
+Die Partition ist als (!nolink [BIOS])-GerÑt ansprechbar; Getbpb() liefert einen
+Nullzeiger (damit GEMDOS keinen Zugriff versucht, zusÑtzlich wird auch der
+Media-Change-Status fÅr das BIOS-GerÑt zurÅckgesetzt).
+!item [(3)]
+Es kann per (!nolink [Rwabs])() (nicht nur im physikalischen Modus) und
+(!nolink [XHReadWrite])() auf die Partition zugegriffen werden. Dabei wird die physikalische
+Blockgrîûe des Mediums benutzt (siehe (!nolink [XHInqTarget])()).
+!item [(4)]
+(!nolink [XHInqDev2])() liefert im Gegensatz zu (!nolink [XHInqDev])() auch die
+LÑnge und den Typ der Partition zurÅck.
+!end_xlist
+
+Diese Erweiterungen sollen die Programmierung zuverlÑssiger
+Filesystemtreiber fÅr MiNT (siehe zum Beispiel das Minix-FS) erleichtern.
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI])  ~ GEMDOS ~  BIOS
+!end_node
+!end_node
+
+
+
+!begin_node XHDI-Funktionen
+
+Alle Funktionen mÅssen im Supervisor-Modus aufgerufen werden. Das Verhalten
+fÅr Aufrufe im User-Modus ist undefiniert. Bis auf D0 werden keine
+Prozessorregister verÑndert. Undefinierte Opcodes fÅhren zur Fehlermeldung
+(!nolink [EINVFN]).
+
+Einige der Funktionsaufrufe - insbesondere XHReadWrite() - kînnen zum Aufruf
+von (!nolink [BIOS])- oder (!nolink [XBIOS])-Routinen im Betriebssystem und
+damit zur Aktivierung des Critical Error Handler fÅhren. Im Zweifel muû der
+CEH also vom Aufrufer abgeschaltet werden.
+!label XHDI-Fehlercodes
+
+FÅr alle Funktionen seien folgende (!nolink [Return])-Werte definiert:
+
+(!B)TOS-Fehlernummern:(!b)
+
+!begin_table [r l]
+  0: !! OK (OK)
+ -1: !! unspezifizierter Fehler ((!nolink [ERROR]))
+ -2: !! GerÑt nicht bereit ((!nolink [EDRVNR]))
+-15: !! ungÅltige Device/Targetnummer ((!nolink [EUNDEV]))
+-32: !! falsche Funktionsnummer ((!nolink [EINVFN]))
+-36: !! GerÑt ist zur Zeit 'reserved' ((!nolink [EACCDN]))
+-46: !! (!nolink [BIOS])-Device wird vom Treiber nicht bedient ((!nolink [EDRIVE]))
+!end_table
+
+(!B)SCSI-Fehlernummern (Bereich von -200..-455)(!b)
+
+!begin_xlist [(-200 - N):]
+!item [(-200 - N):]
+SCSI-Errorcode N (der `Additional Sense Code' aus Byte 12 des
+`Extended Sense Format', siehe (!nolink [Anhang]) B in `draft proposed
+American National Standard for information systems -
+Revision 11a - SCSI-3 Primary Commands, 28 March 1997').
+!end_xlist
+
+(!B)IDE-Fehlernummern (Bereich von -456..-711)(!b)
+
+!begin_xlist [(-456 - N):]
+!item [(-456 - N):]
+IDE-Errorcode N (Wert des IDE-Fehlerregisters).
+!end_xlist
+
+Hinweis: SCSI-Fehlercodes kînnen logischerweise nur bei ACSI-/SCSI-GerÑten
+auftreten. FÅr Platten am IDE-Interface des ST-Book oder Falcon030 (oder
+Maschinen, bei denen ein derartiges Interface nachgerÅstet worden ist), kann
+auch optional folgende Zuordnung benutzt werden:
+
+!begin_table [l l l l]
+Bit im IDE- !! ~ !! ~ !! ~
+Fehlerregister !! Bedeutung !! SCSI-Fehler !! (!nolink [XHDI])-Fehler
+!hline
+1 !! Track 0 not found      !! $06 !! -206
+0 !! DAM not found          !! $13 !! -219
+4 !! ID-Field not found     !! $12 !! -218
+7 !! Bad block mark         !! $10 !! -216
+6 !! Uncorrectable error    !! $11 !! -217
+2 !! Command aborted        !! $20 !! -232
+5 !! Media Change           !! $28 !! -240
+3 !! Media Change requested !! $5A !! -290
+!end_table
+
+(Es empfiehlt sich, die einzelnen Bits in der angegebenen Reihenfolge zu
+testen).
+
+Bei andersartigen GerÑten, wie zum Beispiel Diskettenlaufwerken an der
+Floppy-Controller-Schnittstelle, kînnen auch andere, hier noch nicht
+spezifizierte Error-Codes zurÅckgeliefert werden.
+
+FÅr die (!nolink [ParameterÅbergabe]) gilt die GEMDOS-öbergabe-Konvention. Alle
+Parameter werden auf dem Stack abgelegt (zuletzt, also an der niedrigsten
+Adresse, der Opcode als 16-Bit-Wert). Das 32 Bit groûe Ergebnis wird in D0
+zurÅckgeliefert.
+
+Immer dann, wenn dokumentiert ist, daû der Aufrufer Nullzeiger Åbergeben
+darf, bedeutet die öbergabe eines Nullzeigers, daû der Aufrufer sich fÅr den
+zurÅckzuliefernden Wert nicht interessiert. Treibersoftware muû also solche
+Zeiger vor einer Dereferenzierung immer ÅberprÅfen.
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI])  ~ SCSI-Spezifikation ~  BIOS
+
+
+
+!begin_node XHDOSLimits
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHDOSLimitsÆ - interne Limits von DOS erfragen/setzen
+
+!item [Opcode:]
+17
+
+!item [Deklaration:]
+LONG XHDOSLimits ( UWORD which, ULONG limit );
+
+!item [Beschreibung:]
+Diese Funktion erfragt beim Treiber die interne Limits des laufenden DOS
+bzw. setzt sie. Sie kann zum Beispiel von einem FAT-Dateisystemtreiber
+benutzt werden, um den Harddisktreiber mitzuteilen, daû sich einige Limits
+geÑndert haben. (!I)which(!i) gibt an, welches Limit erfragt wird, (!I)limit(!i) gibt den
+neuen Wert an (Null steht fÅr: nicht Ñndern).
+
+Ab (!nolink [XHDI])-Version 1.30 muû ein XHDI-Treiber bei seiner Initialisierung 
+versuchen, die Limits von einem vorhandenen Treiber zu Åbernehmen. Wird 
+wÑhrend des Betriebs ein Limit gesetzt, dann muû der Aufruf anschlieûend an 
+andere Treiber weitergereicht werden.
+
+!begin_xlist !short [XH_DL_SECSIZ (0)]
+!item [which]
+Bedeutung
+!item [~]
+~
+!item [XH_DL_SECSIZ (0)]
+maximale Sektorgrîûe auf BIOS-Ebene
+!item [XH_DL_MINFAT (1)]
+minimale Anzahl von FATs
+!item [XH_DL_MAXFAT (2)]
+maximale Anzahl von FATs
+!item [XH_DL_MINSPC (3)]
+Sektoren/Cluster minimal
+!item [XH_DL_MAXSPC (4)]
+Sektoren/Cluster maximal
+!item [XH_DL_CLUSTS (5)]
+maximale Clusterzahl einer 16-Bit-FAT
+!item [XH_DL_MAXSEC (6)]
+maximale Zahl von Sektoren
+!item [XH_DL_DRIVES (7)]
+maximale Zahl der vom DOS unterstÅtzen (!nolink [BIOS])-Laufwerke
+!item [XH_DL_CLSIZB (8)]
+ maximale Clustergrîûe
+!end_xlist
+
+- Ab (!nolink [XHDI])-Version 1.30 -
+!begin_xlist !short [XH_DL_SECSIZ (0)]
+!item [XH_DL_RDLEN (9)]     max. (bpb->rdlen * bpb->recsiz / 32)
+!item [XH_DL_CLUSTS12 (12)] maximale Clusterzahl einer 12-Bit-FAT
+!item [XH_DL_CLUSTS32 (13)] maximale Clusterzahl einer 32-Bit-FAT
+!item [XH_DL_BFLAGS (14)]   unterstÅtzte Bits in bpb->bflags
+!end_xlist
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+(!nolink [EINVFN]) beantwortet werden.
+
+!item [Ergebnis:]
+Die Funktion liefert den Wert des bisherigen Limits.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits    ~  (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHDriverSpecial
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHDriverSpecialÆ - treiberspezifische Erweiterungen nutzen
+
+!item [Opcode:]
+13
+
+!item [Deklaration:]
+LONG XHDriverSpecial ( ULONG key1, ULONG key2, UWORD subopcode,
+                       VOID *data );
+
+!item [Beschreibung:]
+Dieser Opcode kann fÅr treiberspezifische Erweiterungen benutzt werden. Auf
+welche Art und Weise die Daten in subopcode und data interpretiert werden,
+hÑngt ausschlieûlich vom betroffenen Treiber ab. key1 und key2 dienen zur
+Identifikation des anzusprechenden Treibers:
+
+key1 sollte dabei aus vier druckbaren (!link [ASCII-Zeichen][ASCII-Tabelle])
+bestehen, key2 aus einem mîglichst willkÅrlich gewÑhlten Longwert (etwa dem
+Datum der Definition im BCD-Format).
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+EINVFN beantwortet werden.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits    ~  (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen]) ~     XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHDrvMap
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHDrvMapÆ - Bitvektor mit BIOS XHDI-GerÑtenummern liefern
+
+!item [Opcode:]
+6
+
+!item [Deklaration:]
+ULONG XHDrvMap ( VOID );
+
+!item [Beschreibung:]
+Die Funktion liefert einen Bitvektor mit den Åber das (!nolink [XHDI])-Protokoll
+unterstÅtzten (!nolink [BIOS])-GerÑtenummern (wie etwa bei Drvmap()).
+
+!item [Ergebnis:]
+Der RÅckgabewert ist der entsprechende Bitvektor.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration     ~     _drvbits    ~  (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])  ~    XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHEject
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHEjectÆ - Medium auswerfen bzw. wieder einziehen
+
+!item [Opcode:]
+5
+
+!item [Deklaration:]
+LONG XHEject ( UWORD major, UWORD minor, UWORD do_eject, UWORD key );
+
+!item [Beschreibung:]
+Medium wird ausgeworfen oder eingezogen.
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [do_eject]
+!begin_xlist !short [(1)]
+!item [(1)]
+Medium auswerfen
+!item [(0)]
+Medium einziehen
+!end_xlist
+!item [key]
+Falls GerÑt reserviert, sonst Null Åbergeben.
+!end_xlist
+
+!item [Ergebnis:]
+Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
+Informationen werden allerdings auch nicht benîtigt, da man ja mit
+XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration     ~     _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHGetCapacity
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHGetCapacityÆ - Anzahl der adressierbaren Sektoren und deren Grîûe
+ermitteln
+
+!item [Opcode:]
+14
+
+!item [Deklaration:]
+LONG XHGetCapacity ( UWORD major, UWORD minor, ULONG *blocks,
+                     ULONG *blocksize );
+
+!item [Beschreibung:]
+Diese Funktion liefert in (!I)blocks(!i) die Anzahl der adressierbaren Sektoren auf
+dem Medium und in (!I)blocksize(!i) ihre Grîûe zurÅck (Vorsicht: je nach verwendeter
+Hardware kann die AusfÅhrung dieser Funktion mehrere Sekunden dauern!).
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+(!nolink [EINVFN]) beantwortet werden.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits ~     (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~   XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHGetVersion
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHGetVersionÆ - Protokollversion erfragen
+
+!item [Opcode:]
+0
+
+!item [Deklaration:]
+UWORD XHGetVersion ( VOID );
+
+!item [Beschreibung:]
+Die Funktion liefert die Protokollversion zurÅck. Formatbeispiel: $0119 ist
+Version 1.19 (identisch mit (!nolink [GEMDOS])-Sversion(), nur sind die beiden Bytes
+NICHT verdreht).
+
+!item [Ergebnis:]
+Der RÅckgabewert beschreibt die Versionsnummer des (!nolink [XHDI])-Protokolls. Dabei
+enthÑlt das High-Byte die Versionsnummer und das Low-Byte die Revision.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits  ~    (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHInqDev
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHInqDevÆ - Major, (!nolink [Minor Device Number]), Startsektor und
+Bios-Parameter-Block ((!nolink [BPB])) eines (!nolink [BIOS])-GerÑts ermitteln
+
+!item [Opcode:]
+7
+
+!item [Deklaration:]
+LONG XHInqDev ( UWORD bios_device, UWORD *major, UWORD *minor,
+                ULONG *start_sector, BPB *bpb );
+
+!item [Beschreibung:]
+Liefert Major Device Number, Minor Device Number, Startsektor und (!nolink [BPB]) eines
+(!nolink [BIOS])-GerÑts (im Gegensatz zu (!nolink [Getbpb])() wird dadurch
+der Media-Change-Status des GerÑts NICHT zurÅckgesetzt).
+
+Anmerkung: es wird ein Zeiger auf eine vom Aufrufer bereitgestellte
+(!nolink [BPB])-Struktur Åbergeben, die vom (!nolink [XHDI])-Treiber gefÅllt wird.
+
+!item [Ergebnis:]
+OK, (!nolink [EDRVNR]) (GerÑt kann zur Zeit nicht angesprochen werden, zum Beispiel
+Medium nicht eingelegt), (!nolink [EDRIVE]) (falsche GerÑtenummer) oder eine andere
+Fehlernummer. Bei EDRVNR darf man sich darauf verlassen, daû major und minor
+korrekt zurÅckgeliefert werden.
+
+Ein start_sector mit Wert $FFFFFFFF soll auf eine Partition hinweisen, die
+zur Zeit vom Treiber nicht bedient wird (zum Beispiel, wenn ein
+Wechselmedium mit 'zu wenig' Partitionen eingelegt ist).
+
+Der zurÅckgelieferte (!nolink [BPB]) ist ungÅltig, wenn das Element recsiz Null ist.
+
+(!B)Hinweis:(!b) ein Dateisystem ist durch major- und minor GerÑtenummer
+sowie Startsektor (mit der obigen EinschrÑnkung) exakt spezifiziert. öber
+die Art des Dateisystems (FAT oder etwas anderes) ist damit nichts
+ausgesagt!
+
+Anmerkung: fÅr major, minor, start_sector und bpb dÅrfen auch Nullzeiger
+Åbergeben werden.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration   ~       _drvbits    ~  (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie  ~ XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHInqDev2
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHInqDev2Æ - Major, (!nolink [Minor Device Number]), Startsektor und
+Bios-Parameter-Block (BPB) eines GerÑts erfragen
+
+!item [Opcode:]
+12
+
+!item [Deklaration:]
+LONG XHInqDev2 ( UWORD bios_device, UWORD *major, UWORD *minor,
+                 ULONG *start_sector, BPB *bpb, ULONG *blocks,
+                 BYTE *partid );
+
+!item [Beschreibung:]
+Liefert Major Device Number, Minor Device Number, Startsektor, (!nolink [BPB]) (im
+Gegensatz zu (!nolink [Getbpb])() wird dadurch der Media-Change-Status des GerÑts NICHT
+zurÅckgesetzt), LÑnge und Partitionkennung (maximal drei Zeichen zzgl.
+terminierender Null) eines (!nolink [BIOS])-GerÑts.
+
+Anmerkung: es wird ein Zeiger auf eine vom Aufrufer bereitgestelle
+(!nolink [BPB])-Struktur Åbergeben, die vom (!nolink [XHDI])-Treiber gefÅllt wird.
+
+Die Funktion steht erst ab (!nolink [XHDI])-Version 1.10 zur VerfÅgung.
+
+!item [Ergebnis:]
+OK, EDRVNR (GerÑt kann zur Zeit nicht angesprochen werden, zum Beispiel
+Medium nicht eingelegt), (!nolink [EDRIVE]) (falsche GerÑtenummer) oder eine andere
+Fehlernummer. Bei EDRVNR darf man sich darauf verlassen, daû major und minor
+korrekt zurÅckgeliefert werden.
+
+Ein start_sector mit Wert $FFFFFFFF soll auf eine Partition hinweisen, die
+zur Zeit vom Treiber nicht bedient wird (zum Beispiel, wenn ein
+Wechselmedium mit 'zu wenig' Partitionen eingelegt ist).
+
+Der zurÅckgelieferte (!nolink [BPB]) ist ungÅltig, wenn das Element recsiz Null ist.
+
+Wenn die Partitionkennung nicht verfÅgbar ist (keine Atari-Partitionierung
+oder Åberhaupt keine Partitionierung, beispielsweise bei normal formatierten
+Disketten in SCSI-Diskettenlaufwerken), wird als Partitionkennung eine leere
+Zeichenkette zurÅckgegeben.
+
+Bei MSDOS-kompatibel partitionierten Medien wird ab (!nolink [XHDI])-Version 1.20 die
+ein Byte lange Partitionkennung wie folgt in partid abgelegt:
+partid[0] = '\0' (Nullbyte), partid[1] = 'D' (fÅr DOS), partid[2] = Kennung.
+
+(!B)Hinweis:(!b) ein Dateisystem ist durch major- und minor- GerÑtenummer
+sowie Startsektor (mit der obigen EinschrÑnkung) exakt spezifiziert. öber
+die Art des Dateisystems (FAT oder etwas anderes) ist damit nichts
+ausgesagt!
+
+!begin_xlist !short [Anmerkung]
+!item [Anmerkung:]
+fÅr major, minor, start_sector, bpb, blocks und partid dÅrfen auch
+Nullzeiger Åbergeben werden.
+!end_xlist
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHInqDriver
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHInqDriverÆ - Informationen Åber den Treiber erfragen
+
+!item [Opcode:]
+8
+
+!item [Deklaration:]
+LONG XHInqDriver ( UWORD bios_device, BYTE *name, BYTE *version,
+                   BYTE *company, UWORD *ahdi_version, UWORD *maxIPL );
+
+!item [Beschreibung:]
+Die Funktion liefert Informationen Åber den Treiber, der das angesprochene
+GerÑt bedient.
+
+!item [Ergebnis:]
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [name]
+Zeichenkette mit Treibernamen (max. 17 Zeichen).
+!item [version]
+Zeichenkette mit Versionsnummer (max. 7 Zeichen).
+!item [company]
+Zeichenkette mit Namen des Herstellers (max. 17 Zeichen).
+!item [ahdi_version]
+AHDI-Versionslevel (wie PUN_INFO-Struktur).
+!item [maxIPL:]
+Hîchster IPL, unter dem der Treiber fÅr das angegebene GerÑt arbeitsfÑhig
+ist (Normalwert fÅr Treiber, die ihr Timing per _hz_200 erledigen: 5).
+!end_xlist
+!begin_xlist !short [Anmerkung]
+!item [Anmerkung:]
+fÅr name, version, company, ahdi_version und maxIPL dÅrfen auch Nullzeiger
+Åbergeben werden.
+!end_xlist
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration     ~     _drvbits  ~    (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHInqTarget
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHInqTargetÆ - Informationen Åber ein GerÑt liefern
+
+!item [Opcode:]
+1
+
+!item [Deklaration:]
+LONG XHInqTarget ( UWORD major, UWORD minor, ULONG *blocksize,
+                   ULONG *device_flags, BYTE *product_name );
+
+!item [Beschreibung:]
+Liefert Informationen Åber das durch (!I)major(!i) und (!I)minor(!i) spezifizierte
+GerÑt (in ((!I)device_flags(!i): ein Attributvektor). Mit XHReserve() vorgenommene
+Reservierungen werden dabei berÅcksichtigt.
+
+!item [Ergebnis:]
+!begin_xlist !short [device_flags:]
+!item [block_size:]
+Blockgrîûe auf dem GerÑt (fÅr XHReadWrite() sehr wichtig). Normalerweise
+512.
+!item [device_flags:]
+(Bit gesetzt -> FÑhigkeit verfÅgbar):
+!begin_xlist !short [Bit]
+!item [Bit]
+Bedeutung
+!item [~]
+~
+!item [0]
+GerÑt kann gestoppt werden (XH_TARGET_STOPPABLE)
+!item [1]
+GerÑt hat wechselbare Medien (XH_TARGET_REMOVABLE)
+!item [2]
+Auswurf des GerÑts kann verriegelt werden (XH_TARGET_LOCKABLE)
+!item [3]
+Medium kann per Kommando ausgeworfen werden (XH_TARGET_EJECTABLE)
+!item [29]
+Auswurf des GerÑts ist vom Treiber blockiert worden (XH_TARGET_LOCKED, ab
+(!nolink [XHDI]) 1.25).
+!item [30]
+GerÑt ist vom Treiber gestoppt worden (XH_TARGET_STOPPED, ab (!nolink [XHDI]) 1.25).
+!item [31]
+GerÑt ist zur Zeit blockiert (XH_TARGET_RESERVED).
+!end_xlist
+Alle weiteren Bits sind reserviert und sollten vom Treiber auf Null gesetzt
+werden.
+!item [product_name:]
+Produktbezeichnung des GerÑts (max. 33 Zeichen inkl. Leerzeichen). Falls die
+Information nicht verfÅgbar ist, wird eine Zeichenkette der LÑnge Null
+zurÅckgeliefert.
+!end_xlist
+!begin_xlist !short [Anmerkung]
+!item [Anmerkung:]
+!begin_xlist !short
+!item [-]
+fÅr blocksize, device_flags und product_name dÅrfen auch Nullzeiger
+Åbergeben werden.
+!item [-]
+fÅr IDE-GerÑte wird bei product_name gegebenenfalls auf 32 Zeichen gekÅrzt.
+Siehe auch die neue Funktion XHInqTarget2.
+!end_xlist
+!end_xlist
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHInqTarget2
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHInqTarget2Æ - Informationen Åber GerÑt liefern
+
+!item [Opcode:]
+11
+
+!item [Deklaration:]
+LONG XHInqTarget2 ( UWORD major, UWORD minor, ULONG *blocksize,
+                    ULONG *device_flags, BYTE *product_name,
+                    UWORD stringlen );
+
+!item [Beschreibung:]
+Liefert Informationen Åber das durch (!I)major(!i) und (!I)minor(!i) spezifizierte
+GerÑt (in (!I)device_flags(!i): ein Attributvektor, in (!I)product_name(!i): optional die 
+Produktbezeichnung des GerÑts).
+Mit XHReserve () vorgenommene Reservierungen werden dabei berÅcksichtigt.
+
+Die Funktion steht erst ab (!nolink [XHDI])-Version 1.01 zur VerfÅgung.
+
+!item [Ergebnis:]
+!begin_xlist !short [device_flags]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [block_size]
+Blockgrîûe auf dem GerÑt (fÅr XHReadWrite() sehr wichtig). Normalerweise
+512.
+!item [device_flags]
+(Bit gesetzt -> FÑhigkeit verfÅgbar):
+!begin_xlist !short [Bit 29]
+!item [Bit 0:]
+GerÑt kann gestoppt werden (XH_TARGET_STOPPABLE)
+!item [Bit 1:]
+GerÑt hat wechselbare Medien (XH_TARGET_REMOVABLE)
+!item [Bit 2:]
+Auswurf des GerÑts kann verriegelt werden (XH_TARGET_LOCKABLE)
+!item [Bit 3:]
+Medium kann per Kommando ausgeworfen werden (XH_TARGET_EJECTABLE)
+!item [Bit 29:]
+Auswurf des GerÑts ist vom Treiber blockiert worden (XH_TARGET_LOCKED, ab
+(!nolink [XHDI]) 1.25)
+!item [Bit 30:]
+GerÑt ist vom Treiber gestoppt worden (XH_TARGET_STOPPED, ab (!nolink [XHDI]) 1.25)
+!item [Bit 31:]
+GerÑte ist zur Zeit blockiert (XH_TARGET_RESERVED)
+!end_xlist
+Alle weiteren Bits sind reserviert und sollten vom Treiber auf Null gesetzt
+werden.
+!item [product_name]
+Produktbezeichnung des GerÑts (max. (!I)stringlen(!i) Zeichen inkl. Leerzeichen).
+Falls die Information nicht verfÅgbar ist, wird eine Zeichenkette der LÑnge
+Null zurÅckgeliefert.
+!item [stringlen]
+LÑnge der (!I)product_name(!i) Åbergebenen Zeichenkette.
+!end_xlist
+
+!begin_xlist !short [Anmerkung:]
+!item [Anmerkung:]
+fÅr blocksize, device_flags und product_name dÅrfen auch Nullzeiger
+Åbergeben werden. Produktbezeichnungen von IDE-GerÑten kînnen bis
+zu 40 Zeichen lang sein.
+!end_xlist
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration       ~   _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])  ~    XHDI-Cookie  ~ XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHLastAccess
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHLastAccessÆ - Anzahl der Millisekunden seit dem letzten Zugriff ermitteln
+
+!item [Opcode:]
+18
+
+!item [Deklaration:]
+LONG XHLastAccess ( UWORD major, UWORD minor, ULONG *ms );
+
+!item [Beschreibung:]
+Liefert in (!I)ms(!i) zurÅck, wieviele Millisekunden seit dem letzten erfolgreichen
+Lese- oder Schreibzugriff auf das GerÑt vergangen sind.
+
+Diese Funktion steht erst ab (!nolink [XHDI])-Version 1.25 zur VerfÅgung.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration       ~   _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHLock
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHLockÆ - Auswurfknopf verriegeln bzw. entriegeln
+
+!item [Opcode:]
+3
+
+!item [Deklaration:]
+LONG XHLock ( UWORD major, UWORD minor, UWORD do_lock, UWORD key );
+
+!item [Beschreibung:]
+Verriegelt bzw. entriegelt den Auswurfknopf eines GerÑts. Der Treiber hat
+sich darum zu kÅmmern, ob dieser Befehl an das GerÑt weitergeleitet wird
+oder nicht (falls das Medium nicht verriegelbar ist).
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [do_lock]
+!begin_xlist !short [(1)]
+!item [(1)]
+Verriegeln
+!item [(0)]
+Entriegeln
+!end_xlist
+!item [key]
+Falls GerÑt reserviert, sonst Null Åbergeben.
+!end_xlist
+
+!item [Ergebnis:]
+Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
+Informationen werden allerdings auch nicht benîtigt, da man ja mit
+XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration       ~   _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])    ~  XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHMediumChanged
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHMediumChangedÆ - Treiber Åber Mediumwechsel informieren
+
+!item [Opcode:]
+15
+
+!item [Deklaration:]
+LONG XHMediumChanged ( UWORD major, UWORD minor );
+
+!item [Beschreibung:]
+Diese Funktion informiert den Treiber darÅber, daû das Medium in dem
+angegebenen GerÑt gewechselt worden ist. Der Treiber sollte daraufhin so
+vorgehen, als habe das GerÑt selbst einen Medienwechsel gemeldet.
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+(!nolink [EINVFN]) beantwortet werden.
+
+!item [Ergebnis:]
+OK wird nur dann zurÅckgeliefert, wenn die Information richtig verarbeitet
+wurde (also alle logischen Laufwerke auf dem GerÑt entweder deaktiviert sind
+oder benutzt werden kînnen).
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits  ~    (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie  ~ XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHMiNTInfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHMiNTInfoÆ - MiNT spezifische Informationen setzen bzw. abfragen
+
+!item [Opcode:]
+16
+
+!item [Deklaration:]
+LONG XHMiNTInfo ( UWORD opcode, VOID *data );
+
+!item [Beschreibung:]
+Diese Funktion setzt MiNT-spezifische Informationen bzw. fragt diese ab.
+
+Folgende Opcodes sind definiert (unbekannte Opcodes werden mit (!nolink [EINVFN])
+quittiert, (!nolink [E_OK]) wird genau dann zurÅckgeliefert, wenn die verlangte Funktion
+korrekt ausgefÅhrt werden konnte):
+
+XH_MI_SETKERINFO (0) [struct kerinfo *data]
+
+öbermittelt in data dem Treiber einen Zeiger auf die
+MiNT-Kernel-Info-Struktur. Der Treiber kann diese benutzen, um
+beispielsweise direkt Kernelfunktionen aufzurufen.
+
+XH_MI_GETKERINFO (1) [struct kerinfo **data]
+
+Erfragt beim Treiber die eventuell schon bekannte Adresse der
+MiNT-Kernel-Info-Struktur. Der Zeiger auf die Struktur wird in die in (!I)data(!i)
+angegebene Adresse geschrieben (wenn kein Treiber bekannt ist, wird ein
+Nullzeiger zurÅckgeliefert).
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+(!nolink [EINVFN]) beantwortet werden.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])  ~    XHDI-Cookie  ~ XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHNewCookie
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHNewCookieÆ - zusÑtzlichen (!nolink [XHDI]) Handler installieren
+
+!item [Opcode:]
+9
+
+!item [Deklaration:]
+LONG XHNewCookie ( ULONG newcookie );
+
+!item [Beschreibung:]
+Installiert einen zusÑtzlichen (!nolink [XHDI])-Handler. Vorteil: der XHDI-Cookie zeigt
+nach wie vor auf die gleiche Adresse. Wer diese Funktion unterstÅtzt muû
+also folgendes tun:
+
+!begin_xlist !short [1.]
+!item [1.]
+Falls dies der erste Aufruf dieser Art ist: anschlieûend so vorgehen, als
+hÑtte der (!nolink [XHDI])-Cookie bei der Installation bereits auf newcookie gezeigt.
+!item [2.]
+Falls nicht: Funktion an 'nÑchsten' Handler weiterleiten.
+!end_xlist
+
+Wer eine Mehrfachinstallation vornehmen mîchte, sollte so vorgehen:
+
+!begin_xlist !short [1.]
+!item [1.]
+Testen, ob XHNewCookie() zum Erfolg fÅhrt.
+!item [2.]
+Anderenfalls den Cookie `per Hand' versetzen.
+!end_xlist
+
+(!B)Achtung:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
+(!nolink [EINVFN]) beantwortet werden.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration      ~    _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])  ~    XHDI-Cookie ~   XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHReaccess
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHReaccessÆ - GerÑt auf Mediachange ÅberprÅfen
+
+!item [Opcode:]
+19
+
+!item [Deklaration:]
+LONG XHReaccess ( UWORD major, UWORD minor );
+
+!item [Beschreibung:]
+Ein Aufruf dieser Funktion veranlaût den Treiber, das angegebene GerÑt auf
+einen Mediachange zu ÅberprÅfen und gegebenenfalls die
+Partitioninformationen entsprechend zu aktualisieren. Die Funktion
+entspricht im wesentlichen XHMediumChanged(), nur daû der Treiber selbst das
+GerÑt befragt, ob ein Medienwechsel stattgefunden hat.
+
+Diese Funktion steht erst ab (!nolink [XHDI])-Version 1.25 zur VerfÅgung.
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration       ~   _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~ 
+(!link [Systemvariablen][Die Systemvariablen])    ~  XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node XHReadWrite
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHReadWriteÆ - physikalische Blocknummern lesen/schreiben
+
+!item [Opcode:]
+10
+
+!item [Deklaration:]
+LONG XHReadWrite ( UWORD major, UWORD minor, UWORD rwflag, ULONG recno,
+                   UWORD count, VOID *buf );
+
+!item [Beschreibung:]
+équivalent zur (!nolink [BIOS])-Funktion (!nolink [Rwabs])() zum Lesen bzw.
+Schreiben physikalischer
+Blocknummern.
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [rwflag]
+!begin_xlist !short [Bit 0..2:]
+!item [Bits 0..2:]
+wie in den AHDI-Release-Notes (3.00, 18. April 1990) beschrieben.
+!item [Bit 3:]
+(physikalischer Modus) wird ignoriert.
+!end_xlist
+Alle weiteren Bits sind reserviert und auf Null zu setzen.
+!item [recno]
+Sektornummer
+!item [count]
+Anzahl der Blîcke
+!item [buf]
+Zeiger auf Puffer
+!end_xlist
+
+!item [Ergebnis:]
+XHDI-Fehlercodes
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration       ~   _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])   ~   XHDI-Cookie ~   XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+!begin_node XHReserve
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHReserveÆ - GerÑt reservieren bzw. wieder freigeben
+
+!item [Opcode:]
+2
+
+!item [Deklaration:]
+LONG XHReserve ( UWORD major, UWORD minor, UWORD do_reserve, UWORD key );
+
+!item [Beschreibung:]
+Reserviert ein GerÑt bzw. gibt es wieder frei. Auf reservierte GerÑte kann
+nur bei Angabe des korrekten SchlÅssels per XHLock(), XHStop() oder
+XHEject() zugegriffen werden.
+
+Sinn: man mîchte nicht, daû man eine Wechselplatte per (!nolink [CPX-Modul]) entriegeln
+kann, nachdem sie gerade von einer virtuellen Speicherverwaltung verriegelt
+worden ist. Dies sollte nur die Speicherverwaltung selbst machen kînnen.
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [do_reserve]
+!begin_xlist !short [(1)]
+!item [(1)]
+Reservieren
+!item [(0)]
+wieder freigeben
+!end_xlist
+!item [key]
+nur beim Freigeben benutzt
+!end_xlist
+
+!item [Ergebnis:]
+Beim Reservieren des GerÑts wird im Erfolgsfall ein 16-Bit SchlÅssel
+zurÅckgeliefert. Dieser SchlÅssel muû bei allen weiteren Zugriffen auf das
+GerÑt angegeben sowie beim Wieder-Freigeben angegeben werden.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration   ~       _drvbits ~     (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])    ~  XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+
+
+!begin_node XHStop
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+ØXHStopÆ - GerÑt stoppen bzw. wieder starten
+
+!item [Opcode:]
+4
+
+!item [Deklaration:]
+LONG XHStop ( UWORD major, UWORD minor, UWORD do_stop, UWORD key );
+
+!item [Beschreibung:]
+GerÑt wird gestoppt (geparkt) bzw. gestartet (entparkt).
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [do_stop]
+!begin_xlist !short [(1)]
+!item [(1)]
+Stoppen
+!item [(0)]
+Starten
+!end_xlist
+!item [key]
+Falls GerÑt reserviert, sonst Null Åbergeben.
+!end_xlist
+
+Anmerkung: Bei etwaigen Zugriffen auf das gestoppte GerÑt sollte der Treiber
+selbst fÅr das Wiederhochfahren sorgen.
+
+!item [Ergebnis:]
+Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
+Informationen werden allerdings auch nicht benîtigt, da man ja mit
+XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+
+!item [Gruppe:]
+XHDI-Funktionen
+
+!item [Querverweis:]
+Arbitration        ~  _drvbits   ~   (!link [Partitiontypen][Empfohlene Partitiontypen]) ~
+(!link [Systemvariablen][Die Systemvariablen])    ~  XHDI-Cookie ~  XHDI-Funktionen ~
+XHDI-Terminologie
+
+(!ende_liste)
+!end_node
+!end_node
+!end_node

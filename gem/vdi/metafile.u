@@ -1,0 +1,953 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fÅr den ST-Guide
+##
+## Last Edit: 06.05.96
+##
+## Kapitel x: Beschreibung des Metafile-Formats
+
+
+
+!begin_node Metafile-Format
+
+Metadateien sind nichts anderes als abgespeicherte VDI-Befehle, die in
+objektorientierten Programmen wie (!I)GEMDRAW(!i) oder (!I)Kandinsky(!i)
+benutzt werden. Der Hauptzweck ist dabei der standardisierte Datenaustausch
+zwischen verschiedenen GEM-Applikationen. Eine Metadatei beginnt mit einem
+Kopf, der die Charakteristika der in ihr enthaltenen Grafik beschreibt, und
+wie folgt aufgebaut ist:
+!label META_HEADER
+!begin_verbatim
+typedef struct
+{
+   WORD id;           /* besitzt stets den Wert 0xffff          */
+   WORD headlen;      /* LÑnge des Kopfes                       */
+   WORD version;      /* Versionsnummer                         */
+   WORD transform;    /* NDC- oder RC-Koordinatensystem         */
+   WORD extents[4];   /* max. Ausmaûe der Grafik (optional)     */
+   WORD pagesize[2];  /* Seitengrîûe in 1/10mm   (optional)     */
+   WORD coords[4];    /* Koordinatensystem       (optional)     */
+   WORD bit_image;    /* Bit-Image vorhanden (1) oder nicht (0) */
+   WORD reserved[9];  /* reserviert */
+} META_HEADER;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)bit_image(!i) des Headers gibt an, ob
+sich eine Bit-Image-Datei in der Metafile-Datei befindet. TatsÑchlich
+befindet sich jedoch in keiner Metadatei eine Pixelgrafik; zeichnet man
+beispielsweise in (!I)GEMPAINT(!i) ein Bild namens 'test', so erstellt das
+Programm auûer der Datei 'test.img' noch die Datei 'test.gem'. In letzterer
+befindet sich genau ein (!nolink [VDI])-Befehl (v_bit_image), und die Komponente
+(!I)bit_image(!i) besitzt dann den Wert 1.
+
+Beim Lesen von Metafiles wird keine feste LÑnge benutzt; vielmehr liest
+eine Applikation zunÑchst die ersten beiden Wîrter (und damit die LÑnge)
+des Headers. Anschlieûend wird der Rest des Kopfes gelesen. Es folgen
+dann beliebig viele EintrÑge der Form:
+
+!begin_table [c l l]
+Wort !! Inhalt !! Belegung
+!hline
+ 0     !! contrl[0] !! (!nolink [VDI])-Befehlsnummer
+ 1     !! contrl[1] !! Anzahl der Werte in (!nolink [ptsin])
+ 2     !! contrl[3] !! Anzahl der Werte in (!nolink [intin])
+ 3     !! contrl[5] !! Unterfunktionsnummer
+ab 4   !! ptsin[]   !! Belegung des ptsin-Feldes
+danach !! intin[]   !! Belegung des intin-Feldes
+!end_table
+
+Das Ende eines Metafiles wird durch den Wert -1 (fÅr (!nolink [contrl])[0]) angezeigt.
+(!B)Wichtig:(!b) Metadateien liegen immer im (!I)Intel-Format(!i) (low-high)
+vor. Um auf einem 680X0er-System Metadateien zu bearbeiten, muss daher beim
+Einlesen in jedem Wort das nieder- und hîherwertige Byte vertauscht werden.
+
+öber die Komponente (!I)pagesize(!i) lassen sich Angaben zur Seitenbreite
+und -hîhe ermitteln. Mîchte man Metadateien erstellen, so wird man diesen
+beiden Werten Standardgrîûen geben. Folgende Standardgrîûen werden von
+den meisten GEM-Programmen unterstÅtzt:
+!label Papierformate
+!label Seitenformate
+!label Formate, Papier-
+!label Formate, Seiten-
+!label Format, Letter-
+!label Letter-Format
+!label Format, Legal-
+!label Legal-Format
+!label Format, Half-
+!label Half-Format
+!label Format, Ledger-
+!label Ledger-Format
+!label Format, DIN-A3
+!label DIN-A3 Format
+!label Format, DIN-A4
+!label DIN-A4 Format
+!label Format, DIN-A5
+!label DIN-A5 Format
+!label Format, DIN-B5
+!label DIN-B5 Format
+!label Format, Wide-
+!label Wide-Format
+
+!begin_table [l c c]
+Bezeichnung !! Zoll !! Zentimeter
+!hline
+Letter !!  8,50 * 11,00 !! 21,59 * 27,94
+Legal  !!  8,50 * 14,00 !! 21,59 * 35,56
+Half   !!  8,50 *  5,50 !! 21,59 * 13,97
+Ledger !! 11,00 * 17,00 !! 27,94 * 43,18
+DIN-A3 !! 11,69 * 16,54 !! 29,70 * 42,00
+DIN-A4 !!  8,07 * 11,69 !! 21,00 * 29,70
+DIN-A5 !!  5,85 *  8,27 !! 14,85 * 21,00
+DIN-B5 !!  7,17 *  9,84 !! 18,20 * 25,00
+Wide   !! 14,00 * 11,00 !! 35,56 * 27,94
+!end_table
+
+Die Werte fÅr (!I)pagesize[0](!i) (Breite) und (!I)pagesize[1](!i) (Hîhe)
+ergeben sich dabei aus den Zentimeter-Werten multipliziert mit 100.
+
+Querverweis:
+(!nl)
+Metafile-Treiber ~  Metafile-Funktionen  ~ (!link [Sub-Opcodes][Metafile Sub-Opcodes]) ~
+Grafikformate  ~    (!nolink [XIMG-Format][Das XIMG-Format fÅr Pixelbilder])   ~
+(!link [OUT-Dateiformat][Das OUT-Dateiformat])
+
+
+
+!begin_node Metafile Sub-Opcodes
+
+Das GEM-Metafile-Format kann durch benutzerdefinierte Sub-Opcodes nahezu
+beliebig erweitert werden, ohne daû InkompatibilitÑten entstehen. Es sollten
+lediglich die folgenden zwei Punkte beachtet werden:
+
+!begin_itemize
+!item da die Nummern von 0 bis 100 fÅr das Betriebssystem reserviert sind,
+      kommen fÅr Sub-Opcodes nur Nummern ab 101 in Frage.
+!item jeder Entwickler sollte darauf achten, daû der von ihm vorgesehene
+      Opcode nicht bereits anderweitig belegt ist, um einen reibungslosen
+      Datenaustausch zu gewÑhrleisten.
+!end_itemize
+
+Die folgende Liste enthÑlt eine Beschreibung der z.Zt. definierten
+und bekannten Opcodes:
+
+!begin_xlist !short [~123 GEM_START_BEZIER]
+!item [Code Name]
+Beschreibung
+
+!item [~]
+~
+
+!label GEM_START_GROUP
+!label vm_start_group
+!item [~~10 GEM_START_GROUP]
+Definiert den Beginn einer Gruppe, d.h. einer Menge zusammengehîrender
+Objekte.
+                                 
+!label GEM_END_GROUP
+!label vm_end_group
+!item [~~11 GEM_END_GROUP]
+Markiert das Ende einer Gruppe, d.h. einer Menge zusammengehîrender Objekte.
+
+!label GEM_BEZ_QUAL
+!item [~~32 GEM_BEZ_QUAL]
+siehe v_bez_qual                           
+
+!item [~~34 ???]
+z.Zt. keine Informationen bekannt.
+
+!label GEM_NO_LINE_STYLE
+!label vm_no_outline
+!item [~~49 GEM_NO_LINE_STYLE]
+Jeglicher Linienstil soll ausgeschaltet werden.
+
+!label GEM_START_SHADOW
+!label vm_start_shadow
+!item [~~50 GEM_START_SHADOW]
+Informiert darÅber, daû die bis GEM_END_SHADOW folgenden VDI-Befehle dazu
+benutzt werden, um fÅr das erste Objekt nach GEM_END_SHADOW einen Schatten
+zu zeichnen.
+
+!label GEM_END_SHADOW
+!label vm_end_shadow
+!item [~~51 GEM_END_SHADOW]
+Markiert das Ende einer Folge von Befehlen die zum Zeichnen eines
+Objektschattens benutzt werden, und per GEM_START_SHADOW eingeleitet werden.
+
+!label GEM_START_FILL
+!label vm_start_fill
+!label GEM_END_FILL
+!label vm_end_fill
+!item [~~80 GEM_START_FILL]
+~
+!item [~~81 GEM_END_FILL]
+Alle zwischen diesen beiden Codes liegenden Befehle werden dazu benutzt, um
+eine ausgefÅllte FlÑche mit oder ohne Umrandung zu zeichnen.
+
+(!B)Beispiel:(!b) Schrittweises Zeichnen einer PolygonflÑche mit Schatten
+und Umrandung.
+!begin_itemize
+!item GEM_START_FILL
+!item GEM_START_SHADOW
+!item FÅllattribute fÅr Schatten setzen
+!item v_fillarea versetzt um dx und dy
+!item GEM_END_SHADOW
+!item FÅllattribute der FlÑche setzen
+!item v_fillarea
+!item Linienattribute fÅr Umrandung setzen
+!item v_pline
+!item GEM_END_FILL
+!end_itemize
+
+!label VM_VER_APP
+!label vm_ver_app
+!item [~101 VM_VER_APP]
+Gibt Auskunft Åber den Namen und die Versionsnummer der Applikation, die
+eine Metadatei erstellt hat. Es gilt:
+!begin_xlist !short
+!item [(!nolink [intin])[0!]]
+= VM_VER_APP
+!item [(!nolink [intin])[1!]]
+= Versionsnummer
+!item [(!nolink [intin])[2!]]
+= Name der Applikation, welche
+!item [:]
+die Metadatei erstellt hat.
+!item [:]
+~
+!item [(!nolink [intin])[n!]]
+~
+!end_xlist
+
+(!B)Hinweis:(!b) Der Name der Applikation sollte immer (!I)ohne(!i) Suffix
+angegeben werden, da dieses auf verschiedenen GEM-Systemen unterschiedlich
+sein kann.
+
+!label GEM_COLOR
+!label vm_color
+!item [~102 GEM_COLOR]
+z.Zt. keine Informationen bekannt.
+
+!item [~103 ???]
+z.Zt. keine Informationen bekannt.
+
+!item [~107 ???]
+z.Zt. keine Informationen bekannt.
+
+!item [~111 ???]
+z.Zt. keine Informationen bekannt.
+
+!label GEM_START_BGIF
+!label vm_start_bgif
+!item [~170 GEM_START_BGIF]
+Leitet eine Textausgabe per BGI-Vektorzeichensatz ein. Es gilt:
+
+!begin_xlist !short [intin+10+ =]
+!item [(!nolink [intin])[0!]  =]
+GEM_START_BGIF
+!item [(!nolink [intin])[1!]  =]
+nicht-proportional (Wert 0)
+!item [(!nolink [intin])[2!]  =]
+Name, z.B. EURO
+!item [:]
+==> (!nolink [intin])[2] = 69
+!item [:]
+~
+!item [(!nolink [intin])[10!]]
+~
+!item [(!nolink [intin])[11!] =]
+Text mit abschliessender Null
+!item [:]
+~
+!item [:]
+~
+!item [(!nolink [ptsin])[0!]  =]
+x-Koordinate
+!item [(!nolink [ptsin])[1!]  =]
+y-Koordinate des Textes in 1/10mm
+!item [(!nolink [ptsin])[2!]  =]
+Buchstabenbreite
+!item [(!nolink [ptsin])[3!]  =]
+Buchstabenhîhe in 1/10mm
+!item [(!nolink [ptsin])[4!]  =]
+Rotation in 1/10 Grad
+!end_xlist
+
+Bis GEM_END_BGIF folgen die v_pline Befehle, die zur Darstellung des Textes
+notwendig sind, falls ein Programm diese Sub-Opcodes nicht interpretieren
+kann.
+
+!label GEM_END_BGIF
+!label vm_end_bgif
+!item [~171 GEM_END_BGIF]
+kennzeichnet das Ende einer Textausgabe per BGI-Vektorschrift.
+
+!label GEM_WIND
+!label vm_wind
+!item [~190 GEM_WIND]
+Legt Position, Zoomstufe und Format eines Fensters fest; es gilt:
+
+!begin_xlist !short
+!item [(!nolink [intin])[0!] =]
+GEM_WIND
+!item [(!nolink [intin])[1!] =]
+x-Position
+!item [(!nolink [intin])[2!] =]
+y-Position
+!item [(!nolink [intin])[3!] =]
+Breite
+!item [(!nolink [intin])[4!] =]
+Hîhe des Fensters in Pixeln
+!item [(!nolink [intin])[5!] =]
+x-Position
+!item [(!nolink [intin])[6!] =]
+y-Position des Sliders (Pixel)
+!item [(!nolink [intin])[7!] =]
+Zoomstufe in Prozent
+!item [(!nolink [intin])[8!] =]
+Format (0 = Hoch, 1 = Quer)
+!end_xlist
+
+!label GEM_GRID
+!label vm_grid
+!item [~191 GEM_GRID]
+Ermîglicht das dauerhafte Sichern der Rastereinstellungen eines Fensters; es
+gilt:
+
+!begin_xlist !short
+!item [(!nolink [intin])[0!] =]
+GEM_GRID
+!item [(!nolink [intin])[1!] =]
+Raster inaktiv (bei Wert 0)
+!item [(!nolink [intin])[2!] =]
+Raster nicht zeichnen (bei 0)
+!item [(!nolink [intin])[3!] =]
+Rasterbreite in 1/10mm
+!item [(!nolink [intin])[4!] =]
+Rasterhîhe in 1/10mm
+!item [(!nolink [intin])[5!] =]
+Hilfslinien-Abstand (horiz.)
+!item [(!nolink [intin])[6!] =]
+Hilfslinien-Abstand (vertikal) in 1/10mm
+!item [(!nolink [intin])[7!] =]
+Hilfslinien (0) bzw. Punkte
+!end_xlist
+
+!label GEM_ALIGN
+!label vm_align
+!item [~192 GEM_ALIGN]
+Beschreibt das Bezugs-Objekt; es gilt:
+
+!begin_xlist !short
+!item [(!nolink [intin])[0!] =]
+GEM_ALIGN
+!item [(!nolink [intin])[1!] =]
+Bezugsobjekt nicht zeichnen (0)
+!item [(!nolink [intin])[2!] =]
+x-Koordinate
+!item [(!nolink [intin])[3!] =]
+y-Koordinate des Bezugsobjektes in 1/10mm
+!item [(!nolink [intin])[4!] =]
+Breite
+!item [(!nolink [intin])[5!] =]
+Hîhe des Objektes in 1/10mm
+!end_xlist
+
+!label GEM_START_GREY
+!label vm_start_grey
+!item [~193 GEM_START_GREY]
+Legt einen Grauton als FÅllflÑche fest; dabei sind Abstufungen im Bereich
+von 0..255 (weiû..schwarz) mîglich. Es gilt:
+!begin_xlist !short
+!item [(!nolink [intin])[0!] =]
+GEM_START_GREY
+!item [(!nolink [intin])[1!] =]
+Graustufe (0..255)
+!end_xlist
+Die bis GEM_END_GREY folgenden Befehle setzen ein benutzerdefiniertes Muster
+mit dem entsprechenden Grauton; sie dienen nur fÅr Programme, die mit diesen
+Opcodes nichts anfangen 
+kînnen.
+
+!label GEM_END_GREY
+!label vm_end_grey
+!item [~194 GEM_END_GREY]
+Kennzeichnet das Ende eines benutzerdefinierten Grauton-Musters.
+
+!label GEM_START_BEZIER
+!label vm_start_bezier
+!item [~195 GEM_START_BEZIER]
+Definiert einen Bezier-Zug. Es gilt:
+
+!begin_xlist !short
+!item [(!nolink [intin])[0!]    =]
+GEM_START_BEZIER
+!item [(!nolink [intin])[1!]    =]
+Rekursionstiefe (< 5)
+!item [(!nolink [intin])[2!]    =]
+(!B)Attribute der Ankerpunkte(!b) als Bitvektor; gesetzte Bits bedeuten
+dabei:
+!item [:]
+Bit-0 = Ecke
+!item [:]
+Bit-1 = verschiebt
+!item [:]
+Bit-2 = sichtbar
+!item [:]
+Bit-3 = Linie statt Bezier
+!item [:]
+~
+!item [(!nolink [intin])[2n+1!]]
+~ 
+!item [(!nolink [ptsin])[0!]    =]
+Koordinaten der n Beziersegmente (jedes besteht aus vier Punkten)
+!item [(!nolink [ptsin])[4n-1!]]
+~
+!end_xlist
+
+Bis GEM_END_BEZIER folgen dann v_pline Aufrufe, die fÅr Programme, die den
+Sub-Opcode nicht verstehen, einen Ñquivalenten Polygonzug zeichnen.
+
+!label GEM_END_BEZIER
+!label vm_end_bezier
+!item [~196 GEM_END_BEZIER]
+Kennzeichnet das Ende eines Bezier-Zugs.
+
+!label GEM_START_JOIN
+!label vm_start_join
+!item [~197 GEM_START_JOIN]
+Erlaubt es, mehr Koordinaten abzuspeichern, als der Metafile-Treiber
+erlaubt. Findet eine Applikation diesen Sub-Opcode so werden die
+(!nolink [ptsin])-Felder der bis GEM_END_JOIN folgenden VDI-Blîcke zu einem grossen Feld
+zusammengefasst. Es gilt:
+!begin_xlist !short
+!item [(!nolink [intin])[0!] =]
+GEM_START_JOIN
+!item [(!nolink [intin])[1!] =]
+Anzahl der Koordinatenpaare
+!end_xlist
+
+!label GEM_END_JOIN
+!label vm_end_join
+!item [~198 GEM_END_JOIN]
+Kennzeichnet das Ende eines per GEM_START_JOIN definierten Abschnitts.
+
+!item [~199 ???]
+z.Zt. keine Informationen bekannt.
+
+!item [~201 ???]
+z.Zt. keine Informationen bekannt.
+
+!item [~203 ???]
+z.Zt. keine Informationen bekannt.
+
+!item [~230 ???]
+z.Zt. keine Informationen bekannt.
+!end_xlist
+
+(!B)Hinweis:(!b) Beim Lesen eines Metafiles sollte ein Programm unbekannte
+Anweisungen unbedingt ignorieren.
+
+Querverweis:
+v_write_meta ~  (!link [Beispiel-Binding][Binding eines Metafile-Subopcodes]) ~
+Analysieren eines Metafiles
+!end_node
+
+
+!begin_node Analysieren eines Metafiles
+
+Zum VerstÑndnis des Metafile-Formats kann es nÅtzlich sein, sich den Inhalt
+einer Metadatei im Klartext anzeigen zu lassen. Die hierzu notwendigen Tools
+befinden sich in vielen Mailboxen des Mausnetzes.
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image metafile
+!else
+!image (!picture_path)\metafile
+!endif
+!else
+!image (!picture_path)\metafile
+!endif
+
+(!B)Beispiel:(!b) Die Abbildung oben zeigt ein Fenster der Graphiksoftware
+(!I)(!nolink [GEM])-Look(!i), mit einer darin befindlichen Vektorgrafik im
+Metafile-Format.
+
+Die Software erlaubt es u.a. sich den Inhalt einer GEM-Metadatei im Klartext
+anzeigen, und diesen sogar in beliebigen Schritten abarbeiten zu lassen.
+
+DarÅber hinaus kann Åber eine Dialogbox genau spezifiziert werden welche
+Informationen bei der Analyse berÅcksichtigt bzw. ausgegeben werden sollen,
+und in welchem Format die Ausgabe erscheinen soll.
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image meta_3
+!else
+!image (!picture_path)\meta_3
+!endif
+!else
+!image (!picture_path)\meta_3
+!endif
+
+Die Klartext-Information wird dabei in einem Fenster dargestellt, und kann
+(ganz oder teilweise) Åber das Klemmbrett in andere Programme Åbertragen
+werden.
+
+Dadurch, daû sich alle Befehle des Ausgabefensters auch einzeln und in
+beliebiger Reihenfolge ausfÅhren lassen, lassen sich die in einer Metadatei
+gespeicherten Befehle sehr leicht nachvollziehen.
+
+Querverweis:
+(!nl)
+(!link [Beispiel-Analyse][Beispiel-Analyse eines Metafile]) ~
+(!link [Metafile-Format][Metafile-Format]) ~ Metafile Sub-Opcodes
+!end_node
+
+
+
+!begin_node Binding eines Metafile-Subopcodes
+
+!begin_verbatim
+/* Das folgende Code-Fragment erlaubt es, den Namen und die
+   Versionsnummer der Applikation, die eine Metadatei er-
+   stellt, im Metafile abzulegen... */
+
+GLOBAL VOID vm_ver_app(WORD vdi_handle, WORD version, UBYTE *app_name)
+{
+    WORD i;
+    
+    contrl[0] = 5;
+    contrl[1] = 0;
+    contrl[3] = 2 + strlen (app_name);
+    contrl[5] = 99;                      /* v_write_meta */
+    contrl[6] = vdi_handle;
+
+    intin[0] = VM_VER_APP;
+    intin[1] = version;
+
+    i = 2;
+    while ((intin [i++] = (WORD) (UBYTE)*app_name++) != 0)
+    		;
+    
+    vdi ();
+} /* vm_ver_app */
+!end_verbatim
+
+Querverweis: VDI-Bindings ~  Metafile-Format
+!end_node
+
+
+
+!begin_node Beispiel-Analyse eines Metafile
+
+!begin_verbatim
+// Diese Analyse wurde erstellt von GEM-Look, dem Programm zum
+// Anzeigen und Analysieren von Grafiken im XIMG und Metafile-
+// Format; (c) 1994-1995 by Rolf Kotzian.
+//
+// Es ist nicht erlaubt, Teile der Analyse ohne diesen Header
+// zu verbreiten
+
+
+Analyse von: E:\C\GEISS\EXAMPLES\GEM_IMG\BEZIER.GEM
+
+Metafile-ID            :     -1
+LÑnge des Kopfes       :     24
+GEM-Version            :    3.10
+NDC/RC Flag            :     RC
+Ausmaû minimales x     :  -2720
+Ausmaû minimales y     :  -2136
+Ausmaû maximales x     :   2112
+Ausmaû maximales y     :   1592
+Seiten-Breite          :  14.80 cm
+Seiten-Hîhe            :  21.00 cm
+Koord.System linkes x  :  -3495
+Koord.System linkes y  :   4960
+Koord.System rechtes x :   3495
+Koord.System rechtes y :  -4960
+Bit-Image vorhanden?   :   nein
+
+
+***** Befehl #1 *****
+
+vswr_mode (vdi_handle, mode)
+contrl[0] = 32
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #2 *****
+
+vsl_type (vdi_handle, style)
+contrl[0] = 15
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #3 *****
+
+vsl_width (vdi_handle, width)
+contrl[0] = 16
+contrl[1] = 1
+contrl[3] = 0
+contrl[5] = 100
+
+ptsin[0] = x = 1
+ptsin[1] = y = 1
+
+***** Befehl #4 *****
+
+vsl_color (vdi_handle, index)
+contrl[0] = 17
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #5 *****
+
+vsl_ends (vdi_handle, beg_style, end_style)
+contrl[0] = 108
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 100
+
+intin[0] = 0
+intin[1] = 0
+
+***** Befehl #6 *****
+
+vsm_type (vdi_handle, symbol)
+contrl[0] = 18
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #7 *****
+
+vsm_height (vdi_handle, height)
+contrl[0] = 19
+contrl[1] = 1
+contrl[3] = 0
+contrl[5] = 100
+
+ptsin[0] = x = 1
+ptsin[1] = y = 1
+
+***** Befehl #8 *****
+
+vsm_color (vdi_handle, index)
+contrl[0] = 20
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #9 *****
+
+vst_rotation (vdi_handle, angle)
+contrl[0] = 13
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 0
+
+***** Befehl #10 *****
+
+vst_font (vdi_handle, font)
+contrl[0] = 21
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #11 *****
+
+vst_color (vdi_handle, index)
+contrl[0] = 22
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #12 *****
+
+vst_alignment (vdi_handle, hor_in, vert_in, hor_out, vert_out)
+contrl[0] = 39
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 100
+
+intin[0] = 0
+intin[1] = 0
+
+***** Befehl #13 *****
+
+vst_effects (vdi_handle, effect)
+contrl[0] = 106
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 0
+
+***** Befehl #14 *****
+
+vst_point (vdi_handle, point, char_width, char_height, cell_width,
+           cell_height)
+           
+contrl[0] = 107
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 12
+
+***** Befehl #15 *****
+
+vsf_interior (vdi_handle, style)
+contrl[0] = 23
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #16 *****
+
+vsf_style (vdi_handle, index)
+contrl[0] = 24
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #17 *****
+
+vsf_color (vdi_handle, index)
+contrl[0] = 25
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #18 *****
+
+vsf_perimeter (vdi_handle, per_vis)
+contrl[0] = 104
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 100
+
+intin[0] = 1
+
+***** Befehl #19 *****
+
+v_write_meta (vdi_handle, num_ints, ints, num_pts, pts)
+contrl[0] = 5
+contrl[1] = 0
+contrl[3] = 7
+contrl[5] = 99
+
+intin[0] = 34
+intin[1] = 3
+intin[2] = 1
+intin[3] = 42
+intin[4] = 42
+intin[5] = 42
+intin[6] = 42
+
+***** Befehl #20 *****
+
+v_bez_on (vdi_handle)
+contrl[0] = 11
+contrl[1] = 1
+contrl[3] = 0
+contrl[5] = 13
+
+***** Befehl #21 *****
+
+vsf_perimeter (vdi_handle, per_vis)
+contrl[0] = 104
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 13
+
+intin[0] = 1
+intin[1] = 1
+
+***** Befehl #22 *****
+
+vsf_color (vdi_handle, index)
+contrl[0] = 25
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 13
+
+intin[0] = 2
+
+***** Befehl #23 *****
+
+vsf_interior (vdi_handle, style)
+contrl[0] = 23
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 13
+
+intin[0] = 0
+
+***** Befehl #24 *****
+
+vsf_style (vdi_handle, index)
+contrl[0] = 24
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 13
+
+intin[0] = 0
+
+***** Befehl #25 *****
+
+vsl_color (vdi_handle, index)
+contrl[0] = 17
+contrl[1] = 0
+contrl[3] = 1
+contrl[5] = 13
+
+intin[0] = 3
+
+***** Befehl #26 *****
+
+vsl_width (vdi_handle, width)
+contrl[0] = 16
+contrl[1] = 1
+contrl[3] = 0
+contrl[5] = 13
+
+ptsin[0] = x = 1
+ptsin[1] = y = 0
+
+***** Befehl #27 *****
+
+vsf_perimeter (vdi_handle, per_vis)
+contrl[0] = 104
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 13
+
+intin[0] = 1
+intin[1] = 1
+
+***** Befehl #28 *****
+
+vsl_ends (vdi_handle, beg_style, end_style)
+contrl[0] = 108
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 13
+
+intin[0] = 0
+intin[1] = 0
+
+***** Befehl #29 *****
+
+v_bez (vdi_handle, count, xyarr, bezarr, minmax, npts, nmove)
+contrl[0] = 6
+contrl[1] = 17
+contrl[3] = 9
+contrl[5] = 13
+
+ptsin[0] = x = -2125
+ptsin[1] = y = 100
+ptsin[2] = x = -708
+ptsin[3] = y = -441
+ptsin[4] = x = 237
+ptsin[5] = y = 640
+ptsin[6] = x = 1654
+ptsin[7] = y = -981
+ptsin[8] = x = 237
+ptsin[9] = y = 640
+ptsin[10] = x = -1180
+ptsin[11] = y = 2261
+ptsin[12] = x = 2127
+ptsin[13] = y = 1723
+ptsin[14] = x = 2127
+ptsin[15] = y = 100
+ptsin[16] = x = 2127
+ptsin[17] = y = -1522
+ptsin[18] = x = -708
+ptsin[19] = y = 100
+ptsin[20] = x = 237
+ptsin[21] = y = -981
+ptsin[22] = x = 1182
+ptsin[23] = y = -2062
+ptsin[24] = x = -2124
+ptsin[25] = y = -2601
+ptsin[26] = x = -2597
+ptsin[27] = y = -1522
+ptsin[28] = x = -3070
+ptsin[29] = y = -441
+ptsin[30] = x = -1653
+ptsin[31] = y = -440
+ptsin[32] = x = -2125
+ptsin[33] = y = 100
+
+intin[0] = 2344
+intin[1] = 4112
+intin[2] = 4105
+intin[3] = 2320
+intin[4] = 4112
+intin[5] = 4105
+intin[6] = 2320
+intin[7] = 4112
+intin[8] = 12
+
+***** Befehl #30 *****
+
+v_bez_off (vdi_handle)
+contrl[0] = 11
+contrl[1] = 0
+contrl[3] = 0
+contrl[5] = 13
+
+***** Befehl #31 *****
+
+vsf_perimeter (vdi_handle, per_vis)
+contrl[0] = 104
+contrl[1] = 0
+contrl[3] = 2
+contrl[5] = 13
+
+intin[0] = 0
+intin[1] = 0
+
+
+// Ende der Analyse
+// GEM-Look, (c) 1994/95 by Rolf Kotzian
+!end_verbatim
+
+Querverweis: (!nolink [Analyse eines Metafiles][Analysieren eines Metafiles]) ~  VDI-Bindings
+!end_node
+
+!begin_node Metafile-Version
+
+Die Versionsnummer hÑngt davon ab, mit welchem GEM-System die Metadatei
+erstellt worden ist; sie wird durch die Formel
+(!I)100 * Hauptversionsnummer + Nebenversionsnummer(!i) beschrieben.
+
+(!B)Beispiel:(!b) Der Wert 301 steht fÅr Version 3.1
+!end_node
+!end_node

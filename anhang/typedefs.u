@@ -1,0 +1,1127 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fÅr den ST-Guide
+##
+## Last Edit: 29.08.1998
+##
+## Kapitel 6: Typdefinitionen
+
+
+!begin_node Typdefinitionen
+
+In diesem Hypertext finden sich Verweise auf die folgenden Datentypen:
+
+!begin_table [l l l l l]
+AESVARS      !! APPLRECORD   !! ARHEADER     !! BASEPAGE     !! BCB
+BCONMAP      !! BITBLK       !! BPB          !! CD_DISC_INFO !! CD_TOC_ENTRY
+CICON        !! CICONBLK     !! CPXINFO      !! dev_descr    !! DEVDRV
+DISKINFO     !! DITHER_MODE  !! DOSTIME      !! DOSVARS      !! DRV_INFO
+DSPBLOCK     !! DTA          !! EVNT         !! fcookie      !! FILEPTR
+FILESYS      !! fix31        !! FNTS_ITEM    !! FONT_HDR     !! fs_descr
+GEM_MUPB     !! GRECT        !! HDFUNCS      !! HNDL_OBJ     !! ICONBLK
+IOREC        !! KBDVBASE     !! KEYTAB       !! LBOX_ITEM    !! LINE
+ltchars      !! MAPTAB       !! MCB          !! (!link [MD][Memory-Deskriptor (MD)]) !! MEDIA_SIZE
+MEDIA_TYPE   !! MENU         !! META_DRVINFO !! META_INFO_1  !! META_INFO_2
+META_HEADER  !! MFDB         !! MFORM        !! MN_SET       !! MOUSE
+MPB          !! MRETS        !! mutimbuf     !! OBJECT       !! OHEADER
+OSHEADER     !! OVERPATCH    !! PARMBLK      !! PBDEF        !! PD
+PDLG_SUB     !! PH           !! ploadinfo    !! POPINFO      !! PRN_ENTRY
+PRN_MODE     !! PRN_TRAY     !! PRN_SETTINGS !! PRN_SWITCH   !! PUN_INFO
+pxyarray     !! RGB_LIST     !! RSHDR        !! SCANX        !! SCREEN
+SET_ITEM     !! sgttyb       !! SHELTAIL     !! SLCT_ITEM    !! SWINFO
+tchars       !! timeval      !! timezone     !! ~            !! ~
+~            !! TEDINFO      !! THREADINFO   !! USERBLK      !! UTXT_FN
+winsize      !! XAESMSG      !! XATTR        !! XCPB         !! XDO_INF
+XFNT_INFO    !! XFSL_FILTER  !! XSHW_COMMAND !! XTED         !! xkey
+!end_table
+
+
+
+!begin_node AESVARS
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+     LONG magic;                   /* muû $87654321 sein         */
+     VOID *membot;                 /* Ende der AES- Variablen    */
+     VOID *aes_start;              /* Startadresse               */
+     LONG magic2;                  /* ist 'MAGX'                 */
+     LONG date;                    /* Erstelldatum               */
+     VOID (*chgres)(WORD res, WORD txt);  /* Auflîsung Ñndern    */
+     LONG (**shel_vector)(VOID);   /* residentes Desktop         */
+     BYTE *aes_bootdrv;            /* von hieraus wurde gebootet */
+     WORD *vdi_device;             /* vom AES benutzter Treiber  */
+     VOID *reservd1;               /* reserviert                 */
+     VOID *reservd2;               /* reserviert                 */
+     VOID *reservd3;               /* reserviert                 */
+     WORD version;                 /* Version ($0201 ist V2.1)   */
+     WORD release;                 /* 0=alpha..3=release         */ 
+} AESVARS;
+!end_verbatim
+
+(!B)Hinweis:(!b) Diese Variablen sind READ-ONLY!
+
+Die ersten drei Variablen sind auch unter TOS vorhanden, und kînnen dort
+Åber den Betriebssystem-Header ermittelt werden. Die Komponente
+(!I)vdi_device(!i) ist ab MagiC-2.0 ÅberflÅssig, weil man die GerÑtenummer
+Multi-TOS kompatibel Åber appl_getinfo (Opcode 2) erhÑlt. Die Routine zum
+éndern der Auflîsung ((!I)chgres(!i)) erwartet im Register d2 einen
+optionalen Falcon-Modus (als WORD).
+
+Querverweis:
+(!link [Cookie von MagiC][Cookie, MagX]) ~  DoMagixAESVars
+!end_node
+
+
+!begin_node Archivheader (ARHEADER)
+!label ARHEADER
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+	BYTE a_fname[14];  /* Dateiname                 */
+	LONG a_modti;      /* Zeitpunkt letzter Zugriff */
+ 	BYTE a_userid;     /* unbenutzt                 */
+	BYTE a_gid;        /* unbenutzt                 */
+	WORD a_fimode;     /* Filemodus                 */
+	LONG a_fsize;      /* DateilÑnge                */
+	WORD reserved;     /* reserviert                */
+} ARHEADER;
+!end_verbatim
+
+(!B)Hinweis:(!b) Eine Archivdatei im (!I)Digital-Research-Format(!i) besteht
+aus einem Dateikopf, beliebig vielen Dateien (jeweils durch eine
+ARHEADER-Struktur eingeleitet) sowie einer Ende-Kennung. Der Dateikopf
+besteht dabei lediglich aus dem Wort 0xff65, das Ende der Archivdatei wird
+durch den Wert 0x0000 gekennzeichnet.
+
+Querverweis: OHEADER
+!end_node
+
+
+
+!begin_node Buffer-Control-Block (BCB)
+!label BCB
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct _bcb
+{
+	struct _bcb   *b_link;        /* nÑchster BCB          */
+	WORD          b_negl;         /* auf -1 initialisieren */
+	WORD          b_private[5];   /* unbekannt             */
+	VOID          *b_buf;         /* eigentlicher Puffer   */
+} BCB;
+!end_verbatim
+
+!end_node
+
+
+!begin_node BPB
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+	WORD   recsiz;       /* Bytes pro Sektor      */
+	WORD   clsiz;        /* Sektoren pro Cluster  */
+	WORD   clsizb;       /* Bytes pro Cluster     */
+	WORD   rdlen;        /* VerzeichnislÑnge      */
+	WORD   fsiz;         /* LÑnge der FAT         */
+	WORD   fatrec;       /* Start der 2. FAT      */
+	WORD   datrec;       /* 1. freier Sektor      */
+	WORD   numcl;        /* Gesamtzahl an Cluster */
+	WORD   bflags;       /* Flags als Bitvektor   */
+} BPB ;
+!end_verbatim
+
+(!B)Hinweis:(!b) In der Komponente (!I)bflags(!i) ist z.Zt. nur Bit-0
+belegt; es gilt: Bit-0 = 0 ==> 12-Bit-FAT, Bit-0 = 1 ==> 16-Bit-FAT.
+
+Querverweis: Getbpb
+!end_node
+
+
+!begin_node CPXINFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD cdecl (*cpx_call)();
+    VOID cdecl (*cpx_draw)();
+    VOID cdecl (*cpx_wmove)();
+    VOID cdecl (*cpx_timer)();
+    VOID cdecl (*cpx_key)();
+    VOID cdecl (*cpx_button)();
+    VOID cdecl (*cpx_m1)();
+    VOID cdecl (*cpx_m2)();
+    WORD cdecl (*cpx_hook)();
+    VOID cdecl (*cpx_close)();
+} CPXINFO;
+!end_verbatim
+
+Querverweis:
+XCONTROL ~  cpx_init
+!end_node
+
+
+!begin_node DISKINFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    ULONG   b_free;    /* Anzahl der freien Cluster */
+    ULONG   b_total;   /* Gesamtzahl der Cluster    */
+    ULONG   b_secsiz;  /* Bytes pro Sektor          */
+    ULONG   b_clsiz;   /* Sektoren pro Cluster      */
+} DISKINFO;
+!end_verbatim
+
+Querverweis:
+Dfree ~  GEMDOS
+!end_node
+
+
+!begin_node fcookie
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct f_cookie
+{
+    struct filesys *fs; /* Filesystem welches diesen Cookie kennt     */
+    USHORT dev;         /* Device-Info (z.B. Rwabs GerÑtenummer)      */
+    USHORT aux;         /* weitere Daten fÅr das Filesystem           */
+    LONG   index;       /* dient zusammen mit dev zur Identifizierung */
+                        /* eines Files */
+} fcookie;
+!end_verbatim
+
+Querverweis:
+FILEPTR ~  FILESYS ~  (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node FILEPTR
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct fileptr
+{
+    SHORT   links;
+    USHORT  flags;
+    LONG    pos;
+    LONG    devinfo;
+    fcookie fc;
+    struct devdrv *dev;
+    struct fileptr *next;
+} FILEPTR;
+!end_verbatim
+
+Querverweis:
+Dcntl ~  DEVDRV
+!end_node
+
+
+!begin_node FlpDrvInfo
+
+Diese Struktur spielt im Zusammenhang mit (!nolink [MagiCMac]) eine Rolle, und ist wie
+folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   BOOLEAN  inserted;    /* true: disk is inserted and available */
+                         /* to GEMDOS/BIOS functions             */
+   BOOLEAN  highDensity; /* true: HD disk inserted, false: none  */
+                         /* or DD disk inserted                  */
+   SHORT    res1;        /* reserved */
+   LONG     res2;        /* reserved */
+} FlpDrvInfo;
+!end_verbatim
+
+Querverweis:
+(!link [Cookie von MagiCMac][Der Cookie von MagiCMac])
+!end_node
+
+
+!begin_node FONT_HDR
+!label Bitmap-Fonts, Header bei
+
+Die folgende Struktur beschreibt den Datei-Header fÅr einen Bitmap
+Zeichensatz im (!I)Digital Research(!i) Standardformat. In diesem Format
+wird der Font als breites, monochromes Rasterbild organisiert; die Breite
+des Rasters ist die Summe aller Zeichenbreiten, die Rasterhîhe entspricht
+der Hîhe eines einzelnen Zeichens. (!B)Daraus folgt:(!b) Der linke Rand
+eines Zeichens muss (!I)nicht(!i) unbedingt auf eine Bytegrenze fallen; nur
+am Ende jeder Rasterzeile wird soweit mit Null-Bits aufgefÅllt, bis der
+nÑchste Zeilenbeginn wieder auf eine Wortgrenze fÑllt.
+
+!begin_verbatim
+typedef struct font_hdr
+{
+   WORD     font_id;          /* Zeichensatz-Nummer                    */
+   WORD     point;            /* Grîûe in Punkten                      */
+   BYTE     name[32];         /* Name des Zeichensatzes                */
+   UWORD    first_ade;        /* erstes Zeichen im Zeichensatz         */
+   UWORD    last_ade;         /* letztes Zeichen im Zeichensatz        */
+   UWORD    top;              /* Abstand: Topline     <-> Baseline     */
+   UWORD    ascent;           /* Abstand: Ascentline  <-> Baseline     */
+   UWORD    half;             /* Abstand: Halfline    <-> Baseline     */
+   UWORD    descent;          /* Abstand: Descentline <-> Baseline     */
+   UWORD    bottom;           /* Abstand: Bottomline  <-> Baseline     */
+   UWORD    max_char_width;   /* grîûte Zeichenbreite                  */
+   UWORD    max_cell_width;   /* grîûte Zeichenzellenbreite            */
+   UWORD    left_offset;      /* linker Offset fÅr Kursivschrift       */
+   UWORD    right_offset;     /* rechter Offset fÅr Kursivschrift      */
+   UWORD    thicken;          /* Verbreiterungsfaktor fÅr Fettschrift  */
+   UWORD    ul_size;          /* Dicke der Unterstreichung             */
+   UWORD    lighten;          /* Maske fÅr helle Schrift (0x5555)      */
+   UWORD    skew;             /* Maske fÅr Kursivschrift (0x5555)      */
+   UWORD    flags;            /* verschiedene Flags:
+                                 gesetzt falls System-Font
+                                 Bit-1: gesetzt falls Horizontal
+                                        Offset-Table benutzt wird
+                                 Bit-2: gesetzt falls Motorola-Format
+                                 Bit-3: gesetzt falls nicht proport.   */
+   UBYTE    *hor_table;       /* Zeiger auf Horizontal-Offset-Table    */
+   UWORD    *off_table;       /* Zeiger auf Character-Offset-Table     */
+   UWORD    *dat_table;       /* Zeiger auf Fontimage                  */
+   UWORD    form_width;       /* Breite des Zeichensatz-Image          */
+   UWORD    form_height;      /* Hîhe des Zeichensatz-Image            */
+   font_hdr *next_font;       /* Zeiger auf nÑchsten Font-Header       */
+} FONT_HDR;
+!end_verbatim
+
+(!B)Hinweis:(!b) Da das (!nolink [GEM]) ursprÅnglich auf dem PC entwickelt wurde, liegen
+alle Daten normalerweise im (!I)Intel-Format(!i) vor, so daû auf Maschinen
+mit Motorola-Prozessoren bei allen Wîrtern oberes und unteres Byte
+vertauscht werden mÅssen. (!B)Achtung:(!b) Um das Motorola/Intel-Flag
+(Bit-2 der Komponente (!I)flags(!i)) abfragen zu kînnen, muss eigentlich
+schon bekannt sein, in welchem Format der Zeichensatz vorliegt. Die Lîsung
+des Problems: Davon ausgehen, dass Bit-10 der Flags niemals benutzt sein
+wird, und testen, ob Bit-2 im 67-ten Byte des Headers gesetzt ist (denn dann
+liegt der Zeichensatz im Motorola-Format vor).
+
+!label Character-Offset-Table
+(!B)Die Character-Offset-Table(!b) besitzt EintrÑge von 16-Bit-Werten, die
+den horizontalen Pixeloffset fÅr jedes Zeichen innerhalb des Fontrasters
+angibt. Als Index muss man also den ASCII-Code abzÅglich des ASCII-Codes des
+ersten Zeichens im Zeichensatz benutzen (Komponente (!I)first_ade(!i)). Die
+Breite eines Zeichens ergibt sich aus der Differenz zum Offsetwert des
+nÑchsthîheren Zeichens; damit diese Formel auch fÅr das letzte Zeichen
+funktioniert, enthÑlt die Tabelle Åbrigens stets einen Eintrag mehr, als
+Zeichen verfÅgbar sind.
+
+!label Horizontal-Offset-Table
+(!B)Die Horizontal-Offset-Table(!b) enthÑlt positive oder negative
+Offsetwerte die vor der Ausgabe eines Zeichens auf die x-Position addiert
+werden; sie wird allerdings nur bei wenigen ZeichensÑtzen unterstÅtzt.
+
+Last but not least sei darauf hingewiesen, daû sich eine normale Anwendung
+niemals mit diesem Format befassen muû; lediglich fÅr Entwickler von
+Zeichensatzeditoren oder GDOS-Versionen sind diese Informationen wichtig.
+
+Querverweis: (!nl)
+GDOS          ~     NVDI ~           Speedo-GDOS ~
+(!link [Vektorfonts][Details zu Vektorschriften])   ~     vst_alignment  ~ vst_load_fonts ~
+vst_unload_fonts ~  vqt_fontheader
+!end_node
+
+
+
+!begin_node GEM_MUPB
+
+Diese Struktur beschreibt den '(!nolink [GEM]) memory usage parameter block', der wie
+folgt definiert ist:
+
+!begin_verbatim
+typdef struct
+{
+   LONG gm_magic;   /* muss 0x87654321 sein                  */
+   VOID *gm_end;    /* Ende des vom GEM benîtigten Speichers */
+   VOID *gm_init;   /* Startadresse von GEM                  */
+} GEM_MUPB;
+!end_verbatim
+
+Querverweis:
+_sysbase ~  OSHEADER ~  (!link [Systemvariablen][Die Systemvariablen]) ~
+(!link [Systemvektoren][Die Systemvektoren])
+!end_node
+
+
+!begin_node GRECT
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   WORD x;   /* x-Koordinate */
+   WORD y;   /* y-Koordinate */
+   WORD w;   /* Breite       */
+   WORD h;   /* Hîhe         */
+} GRECT;
+!end_verbatim
+
+Querverweis:
+AES ~  GEM  ~ VDI
+!end_node
+
+
+
+!begin_node HDFUNCS
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    LONG dma_begin ( VOID);
+    LONG dma_end   ( VOID );
+    LONG dma_wait  ( d0 = LONG ticks_200hz );
+    LONG ncr_begin ( VOID );
+    LONG ncr_end   ( VOID );
+    LONG ncr_wait  ( d0 = LONG ticks_200hz );
+} HDFUNCS;
+!end_verbatim
+
+(!B)Hinweis:(!b) Direkt vor der Struktur (2 Bytes vorher) liegt ein WORD,
+das die TabellenlÑnge in LONGs angibt (in diesem Fall 6). Alle 6 Zeiger
+liegen im Systemvariablenbereich und dÅrfen notfalls verÑndert werden. Die
+internen Funktionen fÅr die Floppy springen ebenfalls Åber die 6 Zeiger.
+(!B)Wichtig:(!b) Der Zeiger (!I)hddrv_functions(!i) im MagX-Cookie darf
+(!I)nicht(!i) verÑndert werden.
+
+Querverweis: Hintergrund-DMA in MagiC
+!end_node
+
+
+!begin_node IOREC
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   VOID    *ibuf;           /* Zeiger auf den Buffer   */
+   WORD    ibufsiz;         /* Grîûe des Buffers       */
+   WORD    ibufhd;          /* nÑchste Schreibposition */
+   WORD    ibuftl;          /* nÑchste Leseposition    */
+   WORD    ibuflow;         /* Marke fÅr Xon           */
+   WORD    ibufhi;          /* Marke fÅr Xoff          */
+} IOREC;
+!end_verbatim
+
+(!B)Hinweis:(!b) FÅr die serielle Schnittstelle schlieût sich direkt ein
+entsprechender Puffer fÅr die Ausgabe an. Die beiden letzten Zeiger werden
+nur fÅr die serielle Schnittstelle im XON/XOFF bzw. RTS/CTS-Betrieb genutzt.
+
+FÑllt nÑmlich der Pegel unter die untere 'Wassermarke', so wird der Sender
+aufgefordert weitere Zeichen zu senden; Åbersteigt er hingegen die obere
+'Wassermarke' so wird ihm signalisiert, keine Zeichen mehr zu schicken.
+
+Querverweis: Iorec
+!end_node
+
+
+!begin_node LINE
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    UBYTE   maxlen;        /* max. ZeilenlÑnge     */
+    UBYTE   actuallen;     /* aktuelle ZeilenlÑnge */
+    BYTE    buffer[255];   /* Zeilen-Puffer        */
+} LINE;
+!end_verbatim
+
+Querverweis:
+Cconrs  ~ GEMDOS
+!end_node
+
+
+!begin_node MacVersion
+
+Diese Struktur spielt im Zusammenhang mit MagiCMac eine Rolle, und ist wie
+folgt definiert:
+
+!begin_verbatim
+typedef struct /* 'vers' resource definition, see Inside Mac docs */
+{
+   BYTE	vm;      /* first part of version number in BCD */
+   BYTE	vn;      /* second and third part of version    */
+                  /* number in BCD                       */
+   BYTE  vt;      /* development: 0x20, alpha: 0x40,     */
+                  /* beta: 0x60, release: 0x80           */
+   BYTE  vd;      /* stage of prerelease version         */
+   SHORT region;  /* region code                         */
+   BYTE  str[];   /* two version strings                 */
+} MacVersion;
+!end_verbatim
+
+Querverweis: (!link [Cookie von MagiCMac][Der Cookie von MagiCMac])
+!end_node
+
+
+!begin_node Memory-Control-Block (MCB)
+!label Speicherverwaltung in MagiC
+!label MagiC, Speicherverwaltung in
+!label MCB
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    LONG mcb_magic;        /* 'ANDR' oder 'KROM' (letzter)    */
+    LONG mcb_len;          /* NettolÑnge                      */
+    LONG mcb_owner;        /* Zeiger auf PD-Struktur          */
+    LONG mcb_prev;         /* vorh. Block oder NULL           */
+    BYTE mcb_data[0];
+} MCB;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)mcb_magic(!i) besitzt den Wert 'KROM',
+falls kein weiterer MCB folgt, und anderenfalls den Wert 'ANDR'. Im
+letzteren Fall liegt der nÑchste MCB (!I)mcb_len(!i) Bytes hinter dem
+aktuellen MCB. Die Liste ist per (!I)mcb_prev(!i) rÅckwÑrts verkettet, was
+viele Operationen erheblich beschleunigt.
+
+Bei allen Speicheroperationen wird immer die Komponente (!I)mcb_magic(!i)
+ÅberprÅft, und das System bei einem Fehler sofort angehalten. Beim Anhalten
+aufgrund eines Speicherfehlers werden die Adresse des fehlerhaften MCB sowie
+die Daten (4 Langworte) ausgegeben. Anschlieûend wird man gefragt, auf
+!label core dump
+!label Systemauszug (core dump)
+welches Laufwerk man einen (!B)Systemauszug (core dump)(!b) speichern
+mîchte. Gibt man ein gÅltiges Laufwerk an, so wird der gesamte ST-Speicher
+von 0 bis phystop auf das Wurzelverzeichnis des angegebenen Laufwerks
+!label core dump, Name fÅr
+geschrieben, und zwar unter dem Namen "_sys_". Die Datei kann natÅrlich je
+nach ST-Modell bis zu 4 oder gar 16 MB lang werden.
+
+Speicherresidente Programme (beenden sich Åber Ptermres) arbeiten jetzt im
+Gegensatz zu frÅher einfach nur so, daû die Blîcke (!I)nicht(!i) freigegeben
+werden, alle MCBs bleiben intakt und werden auch weiterhin benutzt
+(jedesmal, wenn man in die MenÅleiste klickt, wird der freie Speicher
+ausgegeben, dazu wird die gesamte Liste einmal durchlaufen und dabei alle
+MCBs ÅberprÅft).  Wer mîchte, kann also speicherresidente Programme (oder
+auch Teile davon) nachtrÑglich freigeben.
+
+Querverweis:
+GEMDOS  ~ MagiC ~  (!link [MD][Memory-Deskriptor (MD)]) ~
+(!link [Speicherverwaltung][Speicherverwaltung des GEMDOS])
+!end_node
+
+
+
+!begin_node Memory-Deskriptor (MD)
+!label Speicherverwaltung in TOS
+!label TOS, Speicherverwaltung in
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct md
+{
+    struct md *m_link;   /* Zeiger auf nÑchsten MD    */
+    LONG      m_start;   /* Anfangsadresse des Blocks */
+    LONG      m_length;  /* LÑnge des Blocks          */
+    BASEPAGE  *m_own;    /* Zeiger auf die Basepage   */
+} MD;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)m_own(!i) zeigt dabei auf die Basepage
+des Prozesses, dem der Speicherblock gehîrt.
+
+Diese Strukturen werden in der internen Speicherverwaltung von TOS (aber
+(!I)nicht(!i) von MagiC!) verwaltet. Diese Deskriptoren, soweit benutzt,
+hÑngen in drei Speicherlisten, und zwar fÅr freie Blîcke, belegte Blîcke und
+fÅr den nÑchsten zu belegenden Block (mem_rover). Mit dem mem_rover-Konzept
+sollte erreicht werden, daû aufeinanderfolgende Malloc-Aufrufe mîglichst
+aufeinanderfolgenden Speicher anfordern (wurde an anderer Stelle schon als
+Fehler bezeichnet). Damit sollte die Segmentierung verringert werden.
+
+(!B)Diese Idee ist jedoch unbrauchbar, wenn mehrere Programme gleichzeitig
+laufen und abwechselnd Mallocs machen(!b). Das von Atari implementierte
+Konzept hat den Vorteil, daû es unempfindlich gegen amoklaufende Programme
+ist, da die MDs im Systemspeicher liegen, weit weg vom Benutzerspeicher. Ein
+bekannter Nachteil des beschriebenen Konzepts ist, daû nur eine sehr
+begrenzte Anzahl von (!nolink [Malloc])-Aufrufen mîglich sind, da jeder Aufruf einen MD
+des begrenzten Systemspeichers aufzehrt; dieser wird auûerdem noch massiv
+von geîffneten Ordnern und Dateien belastet. Ein weiterer Nachteil der
+Speicherverwaltung des TOS: Wenn ein Programm einen Speicherblock Åberlaufen
+lÑût, d.h. Åber dessen Ende hinausschreibt, bleibt dies i.a. vîllig
+unbemerkt.
+
+Besonders im Multitaskingsystem ist die Gefahr eines Åberschriebenen
+Speicherblocks ungleich hîher als im TOS. Ferner ist die Anzahl der
+benîtigten Speicherblîcke sowie auch die der Ordner (jedes Programm hat
+eigene Dateien und Standardverzeichnisse) wesentlich hîher. Aus diesem Grund
+hat (!nolink [MagiC]) ein vîllig anderes Konzept; dort gibt es nur noch eine
+Speicherliste deren Zeiger auf den ersten MCB zeigt.
+
+Querverweis:
+GEMDOS ~  MCB  ~ MPB ~
+(!link [Speicherverwaltung][Speicherverwaltung des GEMDOS]) ~  themd
+!end_node
+
+
+
+!begin_node MEDIA_SIZE
+
+Diese Struktur dient der Beschreibung eines Papierformates, und ist wie
+folgt definiert:
+
+!begin_verbatim
+typedef struct _media_size   
+{
+   struct _media_size *next;   /* Zeiger auf Nachfolger     */
+   LONG        size_id;        /* Kennung des Papierformats */
+   BYTE        name[32];       /* Name des Papierformats    */
+} MEDIA_SIZE;
+!end_verbatim
+
+Querverweis:
+Druckdialoge ~  pdlg_add_printers
+!end_node
+
+
+
+!begin_node MEDIA_TYPE
+
+Diese Struktur dient der Beschreibung eines Papiertyps bzw. Druckmediums,
+und ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct _media_type        
+{
+   struct _media_type   *next;   /* Zeiger auf Nachfolger     */
+   LONG        type_id;          /* Kennung des Papierformats */
+   BYTE        name[32];         /* Name des Papierformats    */
+} MEDIA_TYPE;
+!end_verbatim
+
+Querverweis:
+Druckdialoge ~  pdlg_add_printers
+!end_node
+
+
+
+!begin_node MRETS
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD x;
+    WORD y;
+    WORD buttons;
+    WORD kstate;
+} MRETS;
+!end_verbatim
+
+Querverweis:
+cpx_button ~  cpx_m1  ~ cpx_m2 ~  XCONTROL
+!end_node
+
+
+!begin_node mutimbuf
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+struct mutimbuf
+{
+   UWORD actime;     /* Zugriffszeit                 */
+   UWORD acdate;     /* Zugriffsdatum                */
+   UWORD modtime;    /* Uhrzeit der letzten énderung */
+   UWORD moddate;    /* Datum der letzten énderung   */
+};
+!end_verbatim
+
+Querverweis:
+Dcntl  ~ Fcntl ~  GEMDOS
+!end_node
+
+
+
+!begin_node OHEADER
+
+Diese Struktur beschreibt den Header einer Objektdatei im
+(!I)Digital-Research(!i) Format:
+
+!begin_verbatim
+typedef struct
+{
+   WORD magic;          /* magischer Wert: 0x601a      */
+   LONG tsize;          /* Grîûe des Text-Segments     */
+   LONG dsize;          /* Grîûe des Data-Segments     */
+   LONG bsize;          /* Grîûe der BSS               */
+   LONG ssize;          /* Grîûe der Symboltabelle     */
+   BYTE reserved[10];   /* reserviert, auf Null setzen */
+} OHEADER;
+!end_verbatim
+
+Querverweis:
+ARHEADER  ~ BASEPAGE
+!end_node
+
+
+
+!begin_node OSHEADER
+
+Diese Struktur ist wie folgt definiert:
+
+!label TOS, Versionsnummer von
+!begin_verbatim
+typedef struct _osheader
+{
+    UWORD    os_entry;          /* BRAnch-Instruktion zum Reset-Handler */
+    UWORD    os_version;        /* TOS-Versionsnummer                   */
+    VOID     *reseth;           /* Zeiger auf Reset-Handler             */
+    struct _osheader *os_beg;   /* Basisadresse des Betriebssystems     */
+    VOID     *os_end;           /* erstes nicht vom BS benutztes Byte   */
+    LONG     os_rsvl;           /* reserviert                           */
+    GEM_MUPB *os_magic;         /* GEM-Memory-Usage-Parameter-Block     */
+    LONG     os_date;           /* TOS-Datum (englisch !) im BCD-Format */
+    UWORD    os_conf;           /* verschiedene Konfigurationsbits      */
+    UWORD    os_dosdate;        /* TOS-Datum im GEMDOS-Format           */
+    /* Die folgenden Komponenten stehen erst ab TOS-Version 1.02
+       (Blitter-TOS) zur VerfÅgung */
+    BYTE     **p_root;          /* Basisadresse des GEMDOS-Pools        */
+    BYTE     **pkbshift;        /* Zeiger auf BIOS-Kbshift-Variable     */
+    BASEPAGE **p_run;           /* Adresse der Variablen, die einen
+                                   Zeiger auf den aktuellen GEMDOS-
+                                   Prozess enthÑlt.                     */
+    BYTE     *p_rsv2;           /* reserviert                           */
+} OSHEADER;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)os_conf(!i) enthÑlt im untersten Bit das
+sogenannte NTSC/PAL-Flag; ist dieses Bit gesetzt, so handelt es sich um ein
+PAL-Videosystem. Die restlichen Bits beinhalten eine LÑnderkennung, die z.B.
+dazu dienen kann, die zu benutzende Sprache zu erkennen. Es gilt die
+folgende Belegung:
+
+!begin_table [c l]
+Wert !! Land
+~ !! ~
+ 0 !! USA
+ 1 !! Deutschland
+ 2 !! Frankreich
+ 3 !! England
+ 4 !! Spanien
+ 5 !! Italien
+ 6 !! Schweden
+ 7 !! franz. Schweiz
+ 8 !! deutsche Schweiz
+ 9 !! TÅrkei
+10 !! Finnland
+11 !! Norwegen
+12 !! DÑnemark
+13 !! Saudi-Arabien
+14 !! Holland
+15 !! CSSR
+16 !! Ungarn
+!end_table
+
+(!B)Achtung:(!b) Um die zu benutzende Sprache zu ermitteln, sollte nach
+Mîglichkeit (!I)nicht(!i) auf den OSHEADER, sondern auf den _AKP-Cookie bzw.
+auf die Funktion appl_getinfo (Opcode 3) zurÅckgegriffen werden.
+
+Querverweis: 
+Kbshift ~  _sysbase ~ 
+(!link [Systemvariablen][Die Systemvariablen]) ~
+(!link [Systemvektoren][Die Systemvektoren])!end_node
+
+
+!begin_node PrintDesc
+
+Diese Struktur spielt im Zusammenhang mit MagiCMac eine Rolle, und ist wie
+folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    THPrint printHdl;          /* Printer-Konfiguration fÅr NVDI */
+    PrSetupProc doPrintSetup;  /* dto.       */
+    VoidProcPtr saveSetup;     /* dto.       */
+    LONG        reserved[7];   /* reserviert */
+} PrintDesc;
+!end_verbatim
+
+Querverweis:  (!link [Cookie von MagiCMac][Der Cookie von MagiCMac])
+!end_node
+
+
+!begin_node PUN_INFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD puns;               /* Anzahl der GerÑte               */
+    BYTE pun[16];            /* diverse Flags                   */
+    LONG part_start[16];     /* PartitionsanfÑnge               */
+    LONG P_cookie;           /* muss "AHDI" sein                */
+    LONG *P_cooptr;          /* zeigt auf das vorherige Element */
+    UWORD P_version;         /* Versionsnummer (>= 0x0300)      */
+    UWORD P_max_sector;      /* maximale Sektorgrîûe            */
+    LONG  reserved[16];      /* reserviert                      */
+} PUN_INFO;
+!end_verbatim
+
+Querverweis:
+(!link [XHDI-Spezifikation][XHDI]) ~  pun_ptr
+!end_node
+
+
+!begin_node RGB_LIST
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    UWORD red;     /* Rot-Anteil  in Promille */
+    UWORD green;   /* GrÅn-Anteil in Promille */
+    UWORD blue;    /* Blau-Anteil in Promille */
+} RGB_LIST;
+!end_verbatim
+
+Querverweis: (!link [XIMG-Format][Das XIMG-Format fÅr Pixelbilder])
+!end_node
+
+
+
+!begin_node RSHDR
+!label Resource-Header
+!label Resource-Kopf
+!label Header einer Resource-Datei
+!label Kopf einer Resource-Datei
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   UWORD rsh_vrsn;      /* Null                              */
+   UWORD rsh_object;    /* Position des Objekt-Feldes        */
+   UWORD rsh_tedinfo;   /* Position der TEDINFO-Strukturen   */
+   UWORD rsh_iconblk;   /* Position der ICONBLK-Strukturen   */
+   UWORD rsh_bitblk;    /* Position der BITBLK-Strukturen    */
+   UWORD rsh_frstr;     /* Position der freien Strings       */
+   UWORD rsh_string;    /* unbenutzt                         */
+   UWORD rsh_imdata;    /* Position der Image-Daten          */
+   UWORD rsh_frimg;     /* Position der freien Images        */
+   UWORD rsh_trindex;   /* Position der Objektbaumtabelle    */
+   UWORD rsh_nobs;      /* Gesamtzahl der Objekte            */
+   UWORD rsh_ntree;     /* Gesamtzahl der ObjektbÑume        */
+   UWORD rsh_nted;      /* Gesamtzahl der TEDINFO-Strukturen */
+   UWORD rsh_nib;       /* Gesamtzahl der ICONBLK-Strukturen */
+   UWORD rsh_nbb;       /* Gesamtzahl der BITBLK-Strukturen  */
+   UWORD rsh_nstring;   /* Gesamtzahl der Strings            */
+   UWORD rsh_nimages;   /* Gesamtzahl der Images             */
+   UWORD rsh_rssize;    /* GesamtlÑnge der RSC-Datei         */
+} RSHDR;
+!end_verbatim
+
+(!B)Hinweis:(!b) Alle Positionsangaben sind relativ zum Dateianfang zu
+verstehen. Noch ein Wort zu den 'freien Strings': zu diesen gehîren nicht
+nur die Zeichenketten, in denen sich die Daten fÅr die Alarmboxen befinden,
+sondern auch alle anderen Strings, die ein Programm zu seiner Arbeit
+benutzt. Ein Beispiel dafÅr wÑre der Dateiname einer einzulesenden Datei
+oder ein Eintrag, der mit menu_text in einem MenÅ vorgenommen wird.
+
+!label Resourcedateien, Grîûe von
+Diesem Kopf folgen die eigentlichen Resource-Daten. Man beachte dabei, daû
+eine Resource-Datei aufgrund der Verwendung von 16-Bit-Werten als Zeiger nur
+eine Gesamtgrîûe von (!I)maximal 64 Kbyte(!i) erreichen kann. Dateien dieses
+Formats werden von allen RCS-Programmen abgespeichert. Anwender des
+Programms Interface kînnen auch mit Resource-Dateien > 64 Kbyte arbeiten.
+Auch das Betriebssystem MagiC unterstÅtzt ab Version 3 Resourcedateien von
+mehr als 64 Kbyte; das Laden der Resource erfolgt wie Åblich per rsrc_load,
+der Rest wird vîllig transparent vom System Åbernommen.
+
+Querverweis: rsrc_rcfix
+!end_node
+
+
+!begin_node SHELTAIL
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD dummy;       /* ein Nullwort               */
+    LONG magic;       /* 'SHEL', wenn Shell...      */
+    WORD isfirst;     /* erster Aufruf der Shell    */
+    LONG lasterr;     /* letzter Fehler             */
+    WORD wasgr;       /* Programm war Grafikapp.    */
+} SHELTAIL;
+!end_verbatim
+
+(!B)Hinweis:(!b) Diese Informationen bekommt ein alternatives Desktop von
+MagiC beim Programmstart Åbermittelt (per shel_read zu ermitteln). Gibt die
+Shell einen negativen Fehlercode zurÅck, so wird MAGXDESK wieder aktiviert.
+
+Wenn die Komponente (!I)isfirst(!i) gesetzt ist, ist der Status etwa aus der
+DESKTOP.INF-Datei zu lesen, anderenfalls aus einer temporÑren Datei bzw. dem
+Shell-Puffer. Die Komponente (!I)lasterr(!i) entspricht dem RÅckgabewert des
+vorher gelaufenen Programms. Wenn dies ein GEM-Programm war, ist der Fehler
+bereits per Alertbox angezeigt worden. Das Langwort ist negativ, wenn der
+Fehler beim Pexec selbst auftrat; ein Programm-RÅckgabewert besitzt immer
+ein High-Word von 0.
+
+Querverweis:
+AES  ~ GEM  ~ shel_wdef
+!end_node
+
+
+!begin_node struct tty
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+struct tty
+{
+    SHORT           pgrp;
+    SHORT           state;
+    SHORT           use_cnt;
+    SHORT           res1;
+    struct sgttyb   sg;
+    struct tchars   tc;
+    struct ltchars  ltc;
+    struct winsize  wsiz;
+    LONG            rsel;
+    LONG            wsel;
+    BYTE            *xkey;
+    LONG            hup_ospeed;
+    USHORT          vmin, vtime;
+    LONG            resrvd[1];
+};
+!end_verbatim
+
+Querverweis:
+Dcntl ~  dev_descr ~  (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+!end_node
+
+
+
+!begin_node THREADINFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   LONG cdecl (*proc)(VOID *par);
+   VOID *user_stack;
+   ULONG stacksize;
+   WORD mode;
+   LONG res1;
+} THREADINFO;
+!end_verbatim
+
+(!B)Hinweis:(!b) Ist die Komponente (!I)user_stack(!i) NULL, so legt das
+System selbst den Stack an. Wenn der Thread terminiert, wird der Stack
+automatisch vom System wieder freigegeben. Die Komponente (!I)stacksize(!i)
+ist in jedem Fall anzugeben, damit das System den Stackpointer des Threads
+auf das Ende des Stacks setzen kann. Der Systemstapel (Supervisior-Stack)
+wird vom Betriebssystem selbst festgelegt, so daû dessen Grîûe nicht
+beeinfluût werden kann.
+
+Die Komponenten (!I)mode(!i) und (!I)res1(!i) sind fÅr zukÅnftige Zwecke
+reserviert, und sollten deshalb auf den Wert 0 bzw. 0L gesetzt werden. In
+Solaris 2.x kann man damit z.B. einen Thread bis zum endgÅltigen Start
+anhalten. Der gestartete Thread fÅhrt die Funktion (!I)proc(!i) aus, der als
+Parameter die Komponente (!I)par(!i) (auf dem Stack) Åbergeben wird. Die
+CPU-Register d0-d2 und a0-a2 dÅrfen von der Funktion verÑndert werden.
+
+Querverweis:
+Threads in MagiC ~  shel_write ~
+(!link [Beispiel-Code][Threads, Beispiel-Code zu])
+!end_node
+
+
+
+!begin_node USERBLK
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   WORD cdecl (*ub_code)(PARMBLK *parmblock);
+   LONG ub_parm;
+} USERBLK;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Funktion (!I)ub_code(!i) wird bei jedem Aufruf von
+objc_draw und objc_change fÅr das entsprechende Objekt aufgerufen. Die
+Komponente (!I)ub_parm(!i) kann als optionaler Parameter angesehen werden.
+!end_node
+
+
+
+!begin_node UTXT_FN
+
+Diese Funktion ist wie folgt deklariert:
+
+!begin_verbatim
+typedef VOID (cdecl *UTXT_FN) (WORD x, WORD y, WORD *clip_rect, 
+                               LONG id, LONG pt, LONG ratio, 
+                               BYTE *string);
+!end_verbatim
+
+Querverweis:
+AES  ~ fnts_add ~  FNTS_ITEM  ~ Zeichensatzauswahl
+!end_node
+
+
+!begin_node XAESMSG
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct 
+{
+   WORD  dst_apid;       /* ID der Ziel-Applikation    */
+   WORD  unique_flg;     /* Nachrichten Åberschreiben? */
+   VOID *attached_mem;   /* Zeiger auf Speicherblock   */
+   WORD  *msgbuf;        /* Nachrichenpuffer           */	
+} XAESMSG;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponente (!I)unique_flg(!i) gibt an, ob gleichartige
+Nachrichten (d.h. solche mit gleichem Nachrichtentyp msgbuf[0]) von der
+neuen Nachricht Åberschrieben werden sollen.
+
+Wenn (!I)attached_mem(!i) nicht NULL ist, wird damit ein per Malloc
+allozierter Speicherblock angegeben, der die erweiterten
+(!nolink [Nachrichten])-Informationen enthÑlt. Die LÑnge dieses Blocks ist beliebig und
+fÅr das System uninteressant, sie kînnte z.B. als erstes Langwort des Blocks
+oder in (!I)msgbuf(!i) [4,5] Åbergeben werden. Das System weist den
+Speicherblock der Zielapplikation zu und Åbermittelt dessen Adresse in
+msgbuf[6,7].
+
+(!B)Wichtig:(!b) Die aufrufende Applikation muû davon ausgehen, daû
+(!I)msgbuf[6,7](!i) nach dem Aufruf von appl_write zerstîrt sind. Das System
+behÑlt sich vor, den Inhalt des Speicherblocks umzukopieren und den
+Åbergebenen Block freizugeben. Der Aufrufer darf nach dem (!nolink [appl_write])
+(!B)nicht mehr(!b) auf den Block zugreifen und ihn auf gar keinen Fall
+freigeben!
+
+Gibt appl_write einen Fehlercode zurÅck, so ist der Block (!I)nicht(!i)
+Åbergeben worden und gehîrt nach wie vor der aufrufenden Applikation. Ein
+Fehler tritt dann auf, wenn:
+
+!begin_itemize
+!item die Zielapplikation ungÅltig (nicht existent oder eingefroren) ist
+!item der Nachrichtenpuffer der Zielapplikation voll ist
+!item die Zielapplikation kein Prozeû ist (z.B. der (!link [SCRENMGR][Der Screen-Manager]))
+			und ein attached memory block angegeben worden ist.
+!end_itemize
+
+Querverweis:
+AES  ~ appl_write ~  GEM
+!end_node
+
+
+!begin_node XCPB
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    WORD  handle;
+    WORD  booting;
+    WORD  reserved;  
+    WORD  SkipRshFix;
+    VOID  *reserve1;
+    VOID  *reserve2;
+    VOID cdecl    (*rsh_fix)();
+    VOID cdecl    (*rsh_obfix)();
+    WORD cdecl    (*Popup)();
+    VOID cdecl    (*Sl_size)();
+    VOID cdecl    (*Sl_x)();
+    VOID cdecl    (*Sl_y)();
+    VOID cdecl    (*Sl_arrow)();
+    VOID cdecl    (*Sl_dragx)();
+    VOID cdecl    (*Sl_dragy)();
+    WORD cdecl    (*Xform_do)();
+    GRECT * cdecl (*GetFirstRect)();
+    GRECT * cdecl (*GetNextRect)();
+    VOID cdecl    (*Set_Evnt_Mask)();
+    WORD cdecl    (*XGen_Alert)();
+    WORD cdecl    (*CPX_Save)();
+    VOID cdecl *  (*Get_Buffer)();
+    WORD cdecl    (*getcookie)();
+    WORD Country_Code; 
+    VOID cdecl    (*MFsave)();
+} XCPB;
+!end_verbatim
+
+Querverweis:
+cpx_init ~  XCONTROL
+!end_node
+
+
+!begin_node XSHW_COMMAND
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   BYTE *command;
+   LONG limit;
+   LONG nice;
+   BYTE *defdir;
+   BYTE *env;
+} XSHW_COMMAND;
+!end_verbatim
+
+Querverweis: shel_write
+!end_node
+
+
+
+!begin_node XTED
+
+Diese Struktur wird im Zusammenhang mit scrollbaren Texteditfeldern
+benîtigt, und ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct _xted
+{
+   BYTE *xte_ptmplt;
+   BYTE *xte_pvalid;
+   WORD  xte_vislen;
+   WORD  xte_scroll;
+} XTED;
+!end_verbatim
+
+Querverweis:
+(!link [Scrollende Eingabefelder][scrollende Eingabefelder]) ~  TEDINFO
+!end_node
+
+
+!end_node
+

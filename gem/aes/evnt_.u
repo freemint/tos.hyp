@@ -1,0 +1,680 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fr den ST-Guide
+##
+## Last Edit: 04.05.96
+##
+## Kapitel 4: AES-Ereignisverwaltung
+
+
+
+!begin_node evnt_button
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Button® - wartet auf einen Mausknopfereignis.
+!item [AES-Nummer:]
+21
+!item [Binding:]
+(!link [Bindings fr evnt_button] [Bindings fr evnt_button])
+!item [Beschreibung:]
+Die Funktion wartet auf einen Button-Event, d.h. bis die in (!I)ev_bmask(!i)
+spezifizierten Mauskn”pfe in den in (!I)ev_bstate(!i) angegeben Zustand
+versetzt werden. Genauer:
+
+Die Funktion wartet bis das verlangte Ereignis (!I)einmal(!i) eingetreten
+ist. Danach wird gewartet und kontrolliert, ob das Ereignis noch einmal
+auftritt. Falls das Ereignis (!I)ev_bclicks(!i) mal eingetreten (oder die
+ber evnt_dclick einstellbare Zeit abgelaufen) ist, kehrt die Funktion
+sofort zurck.
+!begin_xlist !short [ev_bclicks]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [ev_bclicks]
+maximale Anzahl der Klicks
+!item [ev_bmask]
+einen Bitvektor, der die zu betrachtenden Kn”pfe mit einer 1 maskiert. Dabei
+gilt
+!begin_table [l l l]
+Bit-0 !! = !! linker Knopf
+Bit-1 !! = !! rechter Knopf.
+!end_table
+!item [ev_bstate]
+einen Bitvektor wie (!I)ev_bmask(!i), der fr jeden Knopf festlegt welchen
+Status er erreichen mu. Es gilt:
+!begin_table [l l l]
+0 !! = !! nicht gedrckt
+1 !! = !! gedrckt
+!end_table
+!item [ev_bmx]
+~
+!item [ev_bmy]
+die x bzw. y Koordinate der Maus zum Zeitpunkt des Auftretens des
+Ereignisses
+!item [ev_bbutton]
+der Zustand der Mauskn”pfe beim Auftreten des Ereignisses (analog
+(!I)ev_bstate(!i))
+!item [ev_bkstate]
+den Zustand der Sondertasten der Tastatur beim Auftreten des Ereignisses
+!begin_table [l l l]
+0x001 !! = !! rechte Shifttaste
+0x002 !! = !! linke Shifttaste
+0x004 !! = !! Controltaste
+0x008 !! = !! Alternatetaste
+!end_table
+Bei gedrckter Taste wird das entsprechende Bit gesetzt
+!end_xlist
+(!B)Hinweis:(!b) Ab PC-GEM/3 untersttzen die Event-Funktionen nur noch eine
+Maustaste. Obwohl offiziell (!I)nicht(!i) dokumentiert, ist es auch m”glich
+beide Maustasten unabh„ngig voneinander abzufragen. Die folgende Methode
+wird z.B. vom Atari-Desktop benutzt, und funktioniert seit TOS 1.0:
+
+ev_bclicks += 0x100;
+
+In diesem Fall wird auf das folgende Ereignis gewartet:
+(ev_bstate & ev_bmask) != (*ev_bbutton & ev_bmask)
+!item [Ergebnis:]
+Die Funktion liefert die Anzahl der tats„chlich vorgenommenen Mausklicks.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_button]) ~  evnt_multi ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_button
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_button ( WORD ev_bclicks, WORD ev_bmask, WORD ev_bstate,
+                   WORD *ev_bmx, WORD *ev_bmy, WORD *ev_bbutton,
+                   WORD *ev_bkstate );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_button (WORD ev_bclicks, WORD ev_bmask, WORD ev_bstate,  
+                  WORD *ev_bmx, WORD *ev_bmy, WORD *ev_bbutton,
+                  WORD *ev_bkstate )
+{
+   int_in[0] = ev_bclicks;
+   int_in[1] = ev_bmask;
+   int_in[2] = ev_bstate;
+
+   crys_if (21);
+
+   *ev_bmx     = int_out[1];
+   *ev_bmy     = int_out[2];
+   *ev_bbutton = int_out[3];
+   *ev_bkstate = int_out[4];
+
+   return ( int_out[0] );	
+}
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 21    Opcode der Funktion
+control+2 !! control[1] !! 3     # Eintr„ge in int_in
+control+4 !! control[2] !! 5     # Eintr„ge in int_out
+control+6 !! control[3] !! 0     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in !! int_in[0] !! ev_bclicks
+int_in+2 !! int_in[1] !! ev_bmask
+int_in+4 !! int_in[2] !! ev_bstate
+int_out !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! ev_bmx
+int_out+4 !! int_out[2] !! ev_bmy
+int_out+6 !! int_out[3] !! ev_bbutton
+int_out+8 !! int_out[4] !! ev_bkstate
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node evnt_dclick
+!label evnt_dclicks
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Doubleclick® - ermittelt oder legt den Zeitraum zwischen den beiden
+Klicks eines Doppelklicks fest.
+!item [AES-Nummer:]
+26
+!item [Binding:]
+(!link [Bindings fr evnt_dclick] [Bindings fr evnt_dclick])
+!item [Beschreibung:]
+Die Funktion setzt oder ermittelt die Geschwindigkeit mit der Doppelklicks
+der Maus ausgefhrt werden mssen. Es gilt:
+!begin_xlist !short [ev_dgetset]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [ev_dnew]
+neue Geschwindigkeit (0..4)
+!item [ev_dgetset]
+!begin_table [l l l]
+0 !! = !! aktuellen Wert ermitteln
+1 !! = !! neuen Wert setzen
+!end_table
+!end_xlist
+(!B)Hinweis:(!b) Man sollte immer daran denken, da es Menschen gibt, die
+mit zu hohen Geschwindigkeiten Probleme haben, und dann keine Doppelklicks
+mehr ausfhren k”nnen.
+
+Die Funktion wird in „lteren GEM-Dokumentationen h„ufig auch
+(!I)evnt_dclicks(!i) genannt.
+!item [Ergebnis:]
+Die Funktion liefert die gltige Geschwindigkeit fr Doppelklicks zurck.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_dclick]) ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_dclick
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_dclick ( WORD ev_dnew, WORD ev_dgetset );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_dclick (WORD ev_dnew, WORD ev_dgetset)
+{
+   int_in[0] = ev_dnew;
+   int_in[1] = ev_dgetset;
+
+   return ( crys_if(26) );	
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 26    Opcode der Funktion
+control+2 !! control[1] !! 2     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 0     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in !! int_in[0] !! ev_dnew
+int_in+2 !! int_in[1] !! ev_dgetset
+int_out !! int_out[0] !! Return-Wert
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node evnt_keybd
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Keyboard® - wartet auf ein Tastaturereignis.
+!item [AES-Nummer:]
+20
+!item [Binding:]
+(!link [Bindings fr evnt_keybd] [Bindings fr evnt_keybd])
+!item [Beschreibung:]
+Die Funktion wartet auf ein Tastaturereignis, und gibt den entsprechenden
+Code zurck.
+
+(!B)Hinweis:(!b) Tastatur-Events werden immer nur der Applikation gemeldet,
+die das aktive Fenster besitzt.
+!item [Ergebnis:]
+Die Funktion liefert in den Bits 0..7 den ASCII-Code, und in den Bits
+8..15 den Scan-Code der gedrckten Taste.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_keybd]) ~  evnt_multi ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_keybd
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_keybd ( VOID );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_keybd (VOID)
+{
+   return ( crys_if (20) );
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 20    Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 0     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_out !! int_out[0] !! Return-Wert
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node evnt_mesag
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Message® - wartet auf eine Mitteilung des (!nolink [AES]).
+!item [AES-Nummer:]
+23
+!item [Binding:]
+(!link [Bindings fr evnt_mesag] [Bindings fr evnt_mesag])
+!item [Beschreibung:]
+Die Funktion wartet bis in der Message-Pipe der Applikation ein Ereignis
+vorliegt.
+
+Der Parameter (!I)ev_mgpbuff(!i) ist ein Zeiger auf den 16 Bytes groen
+Nachrichten-Puffer.
+!item [Ergebnis:]
+Als Ergebnis wir immer 1 zurckgegeben.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_mesag])  ~ Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_mesag
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_mesag ( WORD *ev_mgpbuff );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_mesag (WORD *ev_mgpbuff)
+{
+   addr_in[0] = ev_mgpbuff;
+   return ( crys_if (23) );
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 23    Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_out !! int_out[0] !! Return-Wert
+addr_in !! addr_in[0] !! ev_mgpbuff
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node evnt_mouse
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Mouse® - wartet darauf, da der Mauszeiger in einen Bereich hinein-
+oder hinausgeschoben wird.
+!item [AES-Nummer:]
+22
+!item [Binding:]
+(!link [Bindings fr evnt_mouse] [Bindings fr evnt_mouse])
+!item [Beschreibung:]
+Die Funktion wartet darauf, bis der Mauszeiger einen bestimmten Teil des
+Bildschirms betritt oder verl„t.
+!begin_xlist !short [ev_moheight]               
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [ev_moflags]
+!begin_table [l l l]
+0 !! = !! Ereignis beim Betreten
+1 !! = !! Ereignis beim Verlassen
+!end_table
+!item [ev_mox,]
+x-Koordinate
+!item [ev_moy]
+y-Koordinate des zu berwachenden Rechtecks
+!item [ev_mowidth,]
+Breite und
+!item [ev_moheight]
+H”he des zu berwachenden Rechtecks
+!item [ev_momx,]
+x-Koordinate
+!item [ev_momy]
+y-Koordinate des Mauszeigers beim Betreten bzw. Verlassen des Rechtecks
+!item [ev_mobutton]
+der Zustand der Mauskn”pfe (Bit-0 = linker Knopf, Bit-1 = rechter Knopf)
+!item [ev_mokstate]
+den Zustand der Sondertasten bei Auftreten des Ereignisses. Es gilt:
+!begin_table
+0x0001 !! = !! Shift-rechts
+0x0002 !! = !! Shift-links
+0x0004 !! = !! Control
+0x0008 !! = !! Alternate
+!end_table
+!end_xlist
+!item [Ergebnis:]
+Als Ergebnis wird immer eine 1 zurckgeliefert.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_mouse]) ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_mouse
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_mouse ( WORD ev_moflags, WORD ev_mox, WORD ev_moy,
+                  WORD ev_mowidth, WORD ev_moheight,
+                  WORD *ev_momx, WORD *ev_momy,
+                  WORD *ev_mobutton, WORD *ev_mokstate );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_mouse (WORD ev_moflags, WORD ev_mox, WORD ev_moy,
+                 WORD ev_mowidth, WORD ev_moheight, WORD *ev_momx, 
+                 WORD *ev_momy, WORD *ev_mobutton, WORD *ev_mokstate)
+{
+   int_in[0] = ev_moflags;
+   int_in[1] = ev_mox;
+   int_in[2] = ev_moy;
+   int_in[3] = ev_mowidth;
+   int_in[4] = ev_moheight;	
+
+   crys_if (22);
+
+   *ev_momx     = int_out[1];
+   *ev_momy     = int_out[2];
+   *ev_mobutton = int_out[3];
+   *ev_mokstate = int_out[4];
+
+   return (int_out[0]);
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 22    Opcode der Funktion
+control+2 !! control[1] !! 5     # Eintr„ge in int_in
+control+4 !! control[2] !! 5     # Eintr„ge in int_out
+control+6 !! control[3] !! 0     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in !! int_in[0] !! ev_moflags
+int_in+2 !! int_in[1] !! ev_mox
+int_in+4 !! int_in[2] !! ev_moy
+int_in+6 !! int_in[3] !! ev_mowidth
+int_in+8 !! int_in[4] !! ev_moheight
+int_out !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! ev_momx
+int_out+4 !! int_out[2] !! ev_momy
+int_out+6 !! int_out[3] !! ev_mobutton
+int_out+8 !! int_out[4] !! ev_mokstate
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node evnt_multi
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Multi® - wartet auf ein beliebiges Ereignis.
+!item [AES-Nummer:]
+25
+!item [Binding:]
+(!link [Bindings fr evnt_multi] [Bindings fr evnt_multi])
+!item [Beschreibung:]
+Die evnt_multi Funktion wartet auf eine Reihe verschiedener Events.
+!begin_xlist !short [ev_mtlocount]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [ev_mflags]
+gewnschtes Ereignis
+!begin_table [l l l]
+Bit-0 !! = !! Tastaturereignis (MU_KEYBD)
+Bit-1 !! = !! Buttonereignis   (MU_BUTTON)
+Bit-2 !! = !! Mausereignis-1   (MU_M1)
+Bit-3 !! = !! Mausereignis-2   (MU_M2)
+Bit-4 !! = !! Nachrichten      (MU_MESAG)
+Bit-5 !! = !! Zeitereignisse   (MU_TIMER)
+!end_table
+!item [ev_mbclicks]
+Anzahl der Klicks, siehe ev_bclicks in evnt_button
+!item [ev_mbmask]
+welche Mauskn”pfe sollen betrachtet werden (Format siehe (!I)ev_bmask(!i) in
+evnt_button)
+!item [ev_mbstate]
+welchen Zustand mssen die Mauskn”pfe einnehmen (Format, siehe
+(!I)ev_bstate(!i) in evnt_button)
+!item [ev_mm1flags]
+soll der Event beim Betreten (0) oder Verlassen (1) des ersten Rechtecks
+ausgel”st werden, siehe (!I)ev_moflags(!i) in evnt_mouse
+!item [ev_mm1x,]
+~
+!item [ev_mm1y]
+x und y Koordinate des ersten Rechtecks, siehe (!I)ev_mox(!i),
+(!I)ev_moy(!i) in evnt_mouse
+!item [ev_mm1width]
+die Breite des ersten Rechtecks, siehe (!I)ev_mowidth(!i) in evnt_mouse
+!item [ev_mm1height]
+die H”he des ersten Rechtecks, siehe (!I)ev_moheight(!i) in evnt_mouse
+!item [ev_mm2flags,]
+~
+!item [ev_mm2x,]
+~
+!item [ev_mm2y,]
+~
+!item [ev_mm2width,]
+~
+!item [ev_mm2height]
+sind die Parameter fr das zweite Maus-Event Rechteck
+!item [ev_mmgpbuff]
+ein 16 Byte Messagebuffer, siehe evnt_mesag und (!I)ev_mgpbuff(!i)
+!item [ev_mtlocount]
+low-Word fr den Timercounter, siehe evnt_timer
+!item [ev_mthicount]
+high-Word fr den Timercounter, siehe evnt_timer
+!item [ev_mmox,]
+~
+!item [ev_mmoy]
+die x und y Koordinate des Mauszeigers beim Auftreten des Events, siehe
+evnt_mouse
+!item [ev_mmobutton]
+Zustand der Mauskn”pfe beim Auftreten des Events (Format siehe evnt_button)
+!item [ev_mmokstate]
+den Zustand der Sondertasten der Tastatur beim Auftreten des Events (Format,
+siehe evnt_button)
+!item [ev_mkreturn]
+der Scancode der gedrckten Taste
+!item [ev_mbreturn]
+Anzahl der Klicks mit der Maustaste
+!end_xlist
+(!B)Hinweis:(!b) Durch die groe Anzahl der zu bergebenden Parameter
+verbraucht diese Funktion relativ viel CPU-Zeit; denn die Parameter mssen
+zun„chst auf dem Stack abgelegt, und dann noch auf die Eingabefelder des GEM
+verteilt werden.
+!item [Ergebnis:]
+Als Ergebnis liefert die Funktion die Nummer des oder der aufgetretenen
+Events im oben angegebenen Format.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_multi])  ~    evnt_keybd ~  evnt_button ~  evnt_mouse ~
+evnt_mesag ~  evnt_timer ~  evnt_dclick ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_multi
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_multi ( WORD ev_mflags, WORD ev_mbclicks,
+                  WORD ev_mbmask, WORD ev_mbstate,
+                  WORD ev_mm1flags, WORD ev_mm1x, WORD ev_mm1y,
+                  WORD ev_mm1width, WORD ev_mm1height,
+                  WORD ev_mm2flags, WORD ev_mm2x, WORD ev_mm2y,
+                  WORD ev_mm2width, WORD ev_mm2height,
+                  WORD *ev_mmgpbuff, WORD ev_mtlocount, WORD ev_mthicount,
+                  WORD *ev_mmox, WORD *ev_mmoy, WORD *ev_mmbutton,
+                  WORD *ev_mmokstate, WORD *ev_mkreturn,
+                  WORD *ev_mbreturn );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_multi (WORD ev_mflags,  WORD ev_mbclicks, WORD ev_mbmask,
+                 WORD ev_mbstate, WORD ev_mm1flags, WORD ev_mm1x,
+                 WORD ev_mm1y, WORD ev_mm1width, WORD ev_mm1height, 
+                 WORD ev_mm2flags, WORD ev_mm2x, WORD ev_mm2y,
+                 WORD ev_mm2width, WORD ev_mm2height,
+                 WORD *ev_mmgpbuff, WORD ev_mtlocount,
+                 WORD ev_mthicount, WORD *ev_mmox,
+                 WORD *ev_mmoy, WORD *ev_mmbutton,
+                 WORD *ev_mmokstate, WORD *ev_mkreturn,
+                 WORD *ev_mbreturn)
+{
+   int_in[0]  = ev_mflags;
+   int_in[1]  = ev_mbclicks;
+   int_in[2]  = ev_mbmask;
+   int_in[3]  = ev_mbstate;
+   int_in[4]  = ev_mm1flags;
+   int_in[5]  = ev_mm1x;
+   int_in[6]  = ev_mm1y;
+   int_in[7]  = ev_mm1width;
+   int_in[8]  = ev_mm1height;	
+   int_in[9]  = ev_mm2flags;
+   int_in[10] = ev_mm2x;
+   int_in[11] = ev_mm2y;		
+   int_in[12] = ev_mm2width;
+   int_in[13] = ev_mm2height;
+   int_in[14] = ev_mtlocount;
+   int_in[15] = ev_mthicount;
+   addr_in[0] = ev_mmgpbuff;
+
+   crys_if (25);
+
+   *ev_mmox      = int_out[1];
+   *ev_mmoy      = int_out[2];
+   *ev_mmbutton  = int_out[3];
+   *ev_mmokstate = int_out[4];
+   *ev_mkreturn  = int_out[5];
+   *ev_mbreturn  = int_out[6];
+
+   return (intout[0]);		
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 25    Opcode der Funktion
+control+2 !! control[1] !! 16    # Eintr„ge in int_in
+control+4 !! control[2] !! 7     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in !! int_in[0] !! ev_mflags
+int_in+2 !! int_in[1] !! ev_mbclicks
+int_in+4 !! int_in[2] !! ev_mbmask
+int_in+6 !! int_in[3] !! ev_mbstate
+int_in+8 !! int_in[4] !! ev_mm1flags
+int_in+10 !! int_in[5] !! ev_mm1x
+int_in+12 !! int_in[6] !! ev_mm1y
+int_in+14 !! int_in[7] !! ev_mm1width
+int_in+16 !! int_in[8] !! ev_mm1height
+int_in+18 !! int_in[9] !! ev_mm2flags
+int_in+20 !! int_in[10] !! ev_mm2x
+int_in+22 !! int_in[11] !! ev_mm2y
+int_in+24 !! int_in[12] !! ev_mm2width
+int_in+26 !! int_in[13] !! ev_mm2height
+int_in+28 !! int_in[14] !! ev_mtlocount
+int_in+30 !! int_in[15] !! ev_mthicount
+int_out !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! ev_mmox
+int_out+4 !! int_out[2] !! ev_mmoy
+int_out+6 !! int_out[3] !! ev_mmbutton
+int_out+8 !! int_out[4] !! ev_mmokstate
+int_out+10 !! int_out[5] !! ev_mkreturn
+int_out+12 !! int_out[6] !! ev_mbreturn
+addr_in !! addr_in[0] !! ev_mmgpbuff
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node evnt_timer
+(!begin_liste) [Beschreibung:]
+!item [Name:]
+¯Event Timer® - wartet einen Zeitabschnitt ab.
+!item [AES-Nummer:]
+24
+!item [Binding:]
+(!link [Bindings fr evnt_timer] [Bindings fr evnt_timer])
+!item [Beschreibung:]
+Die Funktion wartet bis eine bestimmte Zeit vergangen ist. Es gilt:
+!begin_xlist !short [ev_tlocount]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [ev_tlocount]
+Low-Word  der Millisekunden
+!item [ev_thicount]
+High-Word der Millisekunden
+!end_xlist
+(!B)Hinweis:(!b) Fr Warteschleifen in Programmen sollte (!I)immer(!i) diese
+Funktion benutzt werden. Das Betriebssystem kann dann (auch ohne echtes
+Multitasking) einem anderen Prozess die CPU zuteilen.
+!item [Ergebnis:]
+Als Ergebnis wird immer eine 1 zurckgeliefert.
+!item [Gruppe:]
+Ereignisverwaltung
+!item [Querverweis:]
+(!link [Binding] [Bindings fr evnt_timer]) ~  Nachrichten
+(!ende_liste)
+
+
+!begin_node Bindings fr evnt_timer
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+!item [C:]
+WORD evnt_timer ( WORD ev_tlocount, WORD ev_thicount );
+!item [Implementierung:]
+!begin_verbatim
+WORD evnt_timer (WORD ev_tlocount, WORD ev_thicount)
+{
+   int_in[0] = ev_tlocount;
+   int_in[1] = ev_thicount;
+
+   return ( crys_if (24) );
+} 
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control !! control[0] !! 24    Opcode der Funktion
+control+2 !! control[1] !! 2     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 0     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in !! int_in[0] !! ev_tlocount
+int_in+2 !! int_in[1] !! ev_thicount
+int_out !! int_out[0] !! Return-Wert
+!end_table
+(!ende_liste)
+!end_node
+!end_node

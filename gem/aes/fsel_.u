@@ -1,0 +1,363 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fr den ST-Guide
+##
+## Last Edit: 21.04.96
+##
+## Kapitel 4: AES-Fileselektoren
+
+
+
+!begin_node fsel_boxinput
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯File Selection Extended Input® - selektiert Dateinamen.
+
+!item [AES-Nummer:]
+91
+
+!item [Binding:]
+(!link [Bindings fr fsel_boxinput] [Bindings fr fsel_boxinput])
+
+!item [Beschreibung:]
+Die Funktion stellt eine Dateiauswahlbox zur Verfgung, der auch ein
+(!nolink [Titel-String]) bergeben werden kann. Es handelt sich hierbei um eine erweiterte
+Version der Dateiauswahl BoxKite.
+
+(!B)Der Funktion werden folgende Parameter bergeben:(!b)
+
+!begin_xlist !short [fs_eexbutton]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [fs_einpath]
+Name des Default-Zugriffspfades (absolut) mit angeh„ngter Suchmaske. Enth„lt
+nach dem Aufruf den neuen Pfadnamen.
+!item [fs_einsel]
+Name der Default-Datei. Enth„lt nach dem Aufruf den neuen Dateinamen.
+!item [fs_eexbutton]
+!begin_table [l l l]
+0 !! = !! es wurde Abbruch gew„hlt
+1 !! = !! es wurde Ok gew„hlt
+!end_table
+!item [fs_elabel]
+Titelzeile
+!item [callback]
+Adresse einer Funktion, welche von BoxKite aufgerufen wird falls eine GEM-Message
+an die Hauptapplikation bergeben werden soll. (!nl)
+Es handelt sich dabei nicht nur um die Message WM_REDRAW.
+Sondern z.B. auch um WM_MOVED, da es immerhin Betriebssystemversionen gibt, die
+das Verschieben von hintenliegenden Fenstern
+erm”glichen. (!nolink [Messages]), die implizit neue Fenster ”ffnen oder vorhandene 
+nach oben bringen, sollten dagegen ignoriert oder aufgehoben und erst 
+nach der Rckkehr aus dem Fileselector behandelt werden.
+WM_TOPPED-(!nolink [Messages]) werden nicht an den Message-Callback durchgereicht.
+!end_xlist
+
+
+!item [Ergebnis:]
+Der Rckgabewert der Funktion (0 = Fehler) sollte unbedingt beachtet werden,
+da z.B. bei Speichermangel kein Fileselektor mehr benutzt werden kann.
+
+!item [Verfgbar:]
+Wenn der BoxKite ab Versopn 1.71 installiert ist. Dazu kann der Cookie HBFS auf
+des vorhandensein geprft werden. Allerdings ist dieser auch schon vor der Version
+1.71 vorhanden.
+
+!item [Gruppe:]
+Dateiauswahl
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr fsel_boxinput]) ~
+(!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr fsel_boxinput
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+/* Prototyp des Message-Handlers. */
+typedef void cdecl (* FSEL_CALLBACK)(int *msg);
+
+WORD fsel_boxinput (  WORD *global, BYTE *fs_einpath, BYTE *fs_einsel,
+                    WORD *fs_eexbutton, BYTE *elabel, FSEL_CALLBACK callback );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD fsel_boxinput ( WORD *global, BYTE *fs_einpath, BYTE *fs_einsel,
+                   WORD *fs_eexbutton, BYTE *elabel, FSEL_CALLBACK callback )
+{
+	void *aespb[6], *addrin[6], *addrout[6];
+	int contrl[5], intin[16], intout[7];
+
+	aespb[0] = contrl;
+	aespb[1] = global;
+	aespb[2] = intin;
+	aespb[3] = intout;
+	aespb[4] = addrin;
+	aespb[5] = addrout;
+
+	contrl[0] = 91;
+	contrl[1] = 0;
+	contrl[2] = 2;
+	contrl[3] = 4;
+	contrl[4] = 0;
+
+   addr_in[0] = fs_einpath;
+   addr_in[1] = fs_einsel;
+   addr_in[2] = elabel;
+   addr_in[3] = callback;
+
+	_crystal((AESPB *)aespb);
+
+   *fs_eexbutton = int_out[1];
+   return ( int_out[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 91    Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 2     # Eintr„ge in int_out
+control+6 !! control[3] !! 4     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! fs_einpath
+addr_in+4 !! addr_in[1] !! fs_einsel
+addr_in+8 !! addr_in[2] !! elabel
+addr_in+10 !! addr_in[3] !! callback
+int_out   !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! fs_eexbutton
+!end_table
+
+(!ende_liste)
+(!B)Achtung(!b) BoxKite ben”tigt Informationen aus dem '(!nolink [global])'-Array der
+Hauptapplikation. Die mitgelieferten GEM-Bindings von Entwicklungssystemen
+bergeben dieses normalerweise automatisch.
+
+!end_node
+!end_node
+
+
+
+
+!begin_node fsel_exinput
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯File Selection Extended Input® - selektiert Dateinamen.
+
+!item [AES-Nummer:]
+91
+
+!item [Binding:]
+(!link [Bindings fr fsel_exinput] [Bindings fr fsel_exinput])
+
+!item [Beschreibung:]
+Die Funktion stellt eine Dateiauswahlbox zur Verfgung, der auch ein
+(!nolink [Titel])-String bergeben werden kann.
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image f_select
+!else
+!image (!picture_path)\f_select
+!endif
+!else
+!image (!picture_path)\f_select
+!endif
+
+(!B)Der Funktion werden folgende Parameter bergeben:(!b)
+
+!begin_xlist !short [fs_eexbutton]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [fs_einpath]
+Name des Default-Zugriffspfades (absolut) mit angeh„ngter Suchmaske. Enth„lt
+nach dem Aufruf den neuen Pfadnamen.
+!item [fs_einsel]
+Name der Default-Datei. Enth„lt nach dem Aufruf den neuen Dateinamen.
+!item [fs_eexbutton]
+!begin_table [l l l]
+0 !! = !! es wurde Abbruch gew„hlt
+1 !! = !! es wurde Ok gew„hlt
+!end_table
+!item [fs_elabel]
+Titelzeile
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion sollte mit wind_update (BEG_MCTRL bzw.
+END_MCTRL) geschachtelt werden, um zu verhindern, da Doppelklicks an
+darunter liegende Fenster weitergereicht werden.  
+
+Diese Funktion ist erst ab TOS 1.04 verfgbar.
+
+!item [Ergebnis:]
+Der Rckgabewert der Funktion (0 = Fehler) sollte unbedingt beachtet werden,
+da z.B. bei Speichermangel kein Fileselektor mehr benutzt werden kann.
+
+!item [Gruppe:]
+Dateiauswahl
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr fsel_exinput]) ~ fsel_input ~
+(!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr fsel_exinput
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD fsel_exinput ( BYTE *fs_einpath, BYTE *fs_einsel,
+                    WORD *fs_eexbutton, BYTE *elabel );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD fsel_exinput (BYTE *fs_einpath, BYTE *fs_einsel,
+                   WORD *fs_eexbutton, BYTE *elabel)
+{
+   addr_in[0] = fs_einpath;
+   addr_in[1] = fs_einsel;
+   addr_in[2] = elabel;
+
+   crys_if (91);
+
+   *fs_eexbutton = int_out[1];
+   return ( int_out[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 91    Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 2     # Eintr„ge in int_out
+control+6 !! control[3] !! 3     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! fs_einpath
+addr_in+4 !! addr_in[1] !! fs_einsel
+addr_in+8 !! addr_in[2] !! elabel
+int_out   !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! fs_eexbutton
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node fsel_input
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯File Selection Input® - selektiert Dateinamen.
+
+!item [AES-Nummer:]
+90
+
+!item [Binding:]
+(!link [Bindings fr fsel_input] [Bindings fr fsel_input])
+
+!item [Beschreibung:]
+Die Funktion stellt eine Dateiauswahlbox zur Verfgung. Es gilt:
+
+!begin_xlist !short [fs_iexbutton]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [fs_iinpath]
+Name des Default-Zugriffspfades (absolut) mit angeh„ngter Suchmaske. Enth„lt
+nach dem Aufruf den neuen Pfadnamen.
+!item [fs_iinsel]
+Name der Default-Datei. Enth„lt nach dem Aufruf den neuen Dateinamen.
+!item [fs_iexbutton]
+!begin_table [l l l]
+0 !! = !! es wurde Abbruch gew„hlt
+1 !! = !! es wurde Ok gew„hlt
+!end_table
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion sollte mit wind_update (BEG_MCTRL bzw.
+END_MCTRL) geschachtelt werden, um zu verhindern, da Doppelklicks an
+darunter liegende Fenster weitergereicht werden.
+
+In (!nolink [AES])-Versionen kleiner als 1.4 k”nnen brigens nur maximal 100 Dateien
+angezeigt werden; dort wird dann mit einem 'Ping'-Ger„usch gewarnt, wenn
+nicht alle Dateien angezeigt werden konnten.
+
+!item [Ergebnis:]
+Der Rckgabewert der Funktion (0 = Fehler) sollte unbedingt beachtet werden,
+da z.B. bei Speichermangel kein Fileselektor mehr benutzt werden kann.
+
+!item [Gruppe:]
+Dateiauswahl
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr fsel_input]) ~  fsel_exinput ~ 
+(!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr fsel_input
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD fsel_input ( BYTE *fs_iinpath, BYTE *fs_iinsel, WORD *fs_iexbutton );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD fsel_input (BYTE *fs_iinpath, BYTE *fs_iinsel, WORD *fs_iexbutton)
+{
+   addr_in[0] = fs_iinpath;
+   addr_in[1] = fs_iinsel;
+
+   crys_if (90);
+
+   *fs_iexbutton = int_out[1];
+   return ( int_out[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 90    Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 2     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! fs_iinpath
+addr_in+4 !! addr_in[1] !! fs_iinsel
+int_out   !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! fs_iexbutton
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node

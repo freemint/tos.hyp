@@ -1,0 +1,5225 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fr den ST-Guide
+##
+## Last Edit: 18.11.96
+##
+## Kapitel 5: VDI-Auskunftsfunktionen
+
+!begin_node v_get_driver_info
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire extended device status info® - Informationen ber einen Treiber
+ermitteln.
+
+!item [VDI-Nummer:]
+-1 (Unterfunktion 4)
+
+!item [Binding:]
+(!link [Bindings fr v_get_driver_info] [Bindings fr v_get_driver_info])
+
+!item [Beschreibung:]
+Die Funktion liefert Informationen Ger„tetreiber und Zeichens„tze.
+
+!begin_xlist !short [info_select]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [device_id]
+Nummer des (!link [Ger„tetreibers][GDOS-Treiber])
+!item [info_select]
+Je nach wert von (!I)info_select(!i) bekommt man in (!I)info_string(!i) bestimmte
+Informationen.
+   !begin_xlist !short [info_string]
+   !item [info_select]
+          info_string
+   !item [~]
+      ~
+   !item [1]
+      Dateiname des Treiber
+   !item [2]
+      Bezeichnung des Ger„tes
+   !item [3]
+      Zusatzinformationen, falls vorhanden
+   !item [4]
+      Zeichensatzdateien des Ger„tes
+   !item [5]
+      Patchadresse des Treibers (z.B. Drucker-Port-Nummer)
+   !end_xlist
+
+
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Verfgbar:]
+(!nolink [GEM])/3
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr v_get_driver_info])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr v_get_driver_info
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID v_get_driver_info ( WORD device_id, WORD info_select, BYTE *info_string );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID v_get_driver_info ( WORD device_id, WORD info_select,
+                         BYTE *info_string )
+{
+   intin[0] = device_id;
+   intin[1] = info_select;
+
+   contrl[0] = -1;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[5] = 4;
+   contrl[6] = 0;
+
+   vdi ();
+
+   if ( info_select != 5 )
+   {
+      bptr = (BYTE *) intout ;
+      for ( ii = 0; ii < contrl[ 4 ]; ii ++ )
+         *info_string++ = *bptr++ ;
+      *info_string = 0 ;
+   }
+   else
+      *(WORD *)info_string = intout[ 0 ] ;
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! -1   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! n     # Eintr„ge in intout
+contrl+10 !! contrl[5]      !! 4
+contrl+12 !! contrl[6]      !! 0
+intin     !! intin[0]       !! device_id
+intin+2   !! intin[1]       !! info_select
+intout    !! intout[0..n-1] !! info_string
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node v_getbitmap_info
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Get character bitmap information® - Informationen ber ein Vektorzeichen
+ermitteln
+
+!item [VDI-Nummer:]
+239
+
+!item [Binding:]
+(!link [Bindings fr v_getbitmap_info] [Bindings fr v_getbitmap_info])
+
+!item [Beschreibung:]
+Die Funktion liefert Informationen ber ein Zeichen eines
+Vektorzeichensatzes.
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [ch]
+gewnschtes Zeichen
+!item [advx]
+x-Position 
+!item [advy]
+y-Position fr darauffolgendes Zeichen
+!item [xoff]
+x-Offset 
+!item [yoff]
+y-Offset innerhalb der Pixel-Darstellung
+!item [width]
+Breite 
+!item [height]
+H”he der Pixeldarstellung
+!item [bitmap]
+Zeiger auf die Bitmap des Zeichens
+!end_xlist
+
+(!B)Hinweis:(!b) Um auch ohne NVDI nachvollziehbare Ausgaben zu bekommen,
+sollten die Texteffekte ausgeschaltet sein. Da der Zeiger auf die Bitmap in
+der Regel in den Zeichencache verweist, sollte man sich die Bitmap direkt
+nach dem Aufruf kopieren (Tip: AES-Kontextswitch durch wind_update
+verhindern!) - andernfalls k”nnte der Zeiger schon wieder ungltig sein.
+
+Auerdem sollte man v_getbitmap_info nicht fr enorm groe Zeichen (z.B.
+300 pt und mehr) aufrufen, da diese je nach Cache-Gr”e evtl. nicht mehr
+komplett aufgebaut werden k”nnen. Die Bitmap enth„lt in diesem Fall nur
+einen Teil des Zeichens.
+
+Man sollte diese Funktion nicht mibrauchen, um eine eigene Textausgabe zu
+bauen - es lohnt sich nicht und Pair-Kerning w„re auch nicht m”glich.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00 und ab NVDI 3.00
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr v_getbitmap_info]) ~ vst_effects ~ SpeedoGDOS ~  NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr v_getbitmap_info
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID v_getbitmap_info ( WORD handle, WORD ch, fix31 *advx, fix31 *advy,
+                        fix31 *xoff, fix31 *yoff, WORD *width,
+                        WORD *height, WORD **bitmap );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID v_getbitmap_info (WORD handle, WORD ch, fix31 *advx, fix31 *advy,
+                       fix31 *xoff, fix31 *yoff, WORD *width,
+                       WORD *height, WORD **bitmap)
+{
+   intin[0] = ch;
+
+   contrl[0] = 239;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *width  = intout[0];
+   *height = intout[1];
+   *advx   = intout[2..3];
+   *advy   = intout[4..5];
+   *xoff   = intout[6..7];
+   *yoff   = intout[8..9];
+   *bitmap = intout[10..11];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 239   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! 12    # Eintr„ge in intout
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0]       !! ch
+intout    !! intout[0]      !! width
+intout+2  !! intout[1]      !! height
+intout+4  !! intout[2..3]   !! advx
+intout+8  !! intout[4..5]   !! advy
+intout+12 !! intout[6..7]   !! xoff
+intout+16 !! intout[8..9]   !! yoff
+intout+20 !! intout[10..11] !! bitmap
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_cellarray
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Cell Array® - ermittelt Informationen ber eine dargestellte
+Farbtabelle.
+
+!item [VDI-Nummer:]
+27
+
+!item [Binding:]
+(!link [Bindings fr vq_cellarray] [Bindings fr vq_cellarray])
+
+!item [Beschreibung:]
+Die Funktion gibt Auskunft ber die Definition des Cell-Arrays. Es gilt:
+
+!begin_xlist !short [pxyarray+0+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [pxyarray[0!]]
+x-Koordinate
+!item [(!nolink [pxyarray])[1!]]
+y-Koordinate der oberen linken Ecke
+!item [(!nolink [pxyarray])[2!]]
+x-Koordinate
+!item [(!nolink [pxyarray])[3!]]
+y-Koordinate der unteren rechten Ecke
+!item [row_length]
+Zeilenl„nge im Farbindex-Array
+!item [num_rows]
+Anzahl der Zeilen im Farbindex-Array
+!item [el_used]
+Anzahl der Spalten
+!item [rows_used]
+Anzahl der benutzten Spalten im Farbindex-Array
+!item [status]
+!begin_xlist !short
+!item [0 =]
+keine Fehler
+!item [1 =]
+der Farbwert konnte fr einige Pixel nicht bestimmt werden
+!end_xlist
+!item [colarray]
+Farbindex-Array, das zeilenweise die Farbinformationen enth„lt bzw. -1,
+falls der Farbindex fr den angegebenen Bereich nicht ermittelt werden
+konnte
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion ist (!I)nicht(!i) auf allen Ger„ten verfgbar.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_cellarray])  ~ v_cellarray
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_cellarray
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vq_cellarray ( WORD handle, WORD *pxyarray, WORD row_length,
+                    WORD num_rows, WORD *el_used, WORD *rows_used,
+                    WORD *status, WORD *colarray );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vq_cellarray (WORD handle, WORD *pxyarray, WORD row_length,
+                   WORD num_rows, WORD *el_used, WORD *rows_used,
+                   WORD *status, WORD *colarray)
+{
+   ptsin[0..3] = pxarray[0..3];
+
+   contrl[0] = 27;
+   contrl[1] = 2;
+   contrl[3] = 0;
+   contrl[6] = handle;
+   contrl[7] = row_length;
+   contrl[8] = num_rows;   
+
+   vdi ();
+
+   *el_used   = contrl[9];
+   *rows_used = contrl[10];
+   *status    = contrl[11];
+
+   colarray[0..n-1] = intout[0..n-1];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 27    Opcode der Funktion
+contrl+2  !! contrl[1]      !! 2     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! n     # Eintr„ge in intout
+contrl+12 !! contrl[6]      !! handle
+contrl+14 !! contrl[7]      !! row_length
+contrl+16 !! contrl[8]      !! num_rows
+contrl+18 !! contrl[9]      !! el_used
+contrl+20 !! contrl[10]     !! rows_used
+contrl+22 !! contrl[11]     !! status
+ptsin     !! ptsin[0..3]    !! pxyarray[0..3]
+intout    !! intout[0..n-1] !! colarray[0..n-1]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Color Representation® - ermittelt die Intensit„t einer Farbe.
+
+!item [VDI-Nummer:]
+26
+
+!item [Binding:]
+(!link [Bindings fr vq_color] [Bindings fr vq_color])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die eingestellten Farbintensit„ten der Farbpalette.
+Es gilt:
+
+!begin_xlist !short [color_index]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [color_index]
+zu erfragendes Farbregister
+!item [set_flag]
+Flag fr Farbintensit„t
+!begin_xlist !short
+!item [0 =]
+gesetzte Intensit„t
+!item [1 =]
+tats„chliche Intensit„t
+!end_xlist
+!item [rgb_in[0!]]
+Rotanteil   in Promille
+!item [rgb_in[1!]]
+Grnanteil  in Promille
+!item [rgb_in[2!]]
+Blaunanteil in Promille
+!end_xlist
+
+(!B)Hinweis:(!b) Gesetzte und tats„chliche Farbintensit„t k”nnen bei
+Systemen mit einer CLUT voneinander abweichen, wenn die Anzahl der m”glichen
+Farbabstufungen zu klein ist. 
+
+(!B)Beispiel:(!b) Verfgt ein Monitor nur ber zwei Intensit„ten, so teilt
+sich der Bereich in die Teilbereiche 0..500 und 501..1000. Die
+(!I)tats„chliche(!i) Intensit„t kann aber nur 0 oder 1000 sein; egal welche
+Zahl aus dem Bereich von 501 bis 1000 gew„hlt wird, es wird immer die
+Intensit„t 1000 gesetzt. Daher kann z.B. die gesetzte Intensit„t den Wert
+623 und die tats„chliche den Wert 1000 haben.
+
+Bei Direct-RGB (keine CLUT) wird meistens die tats„chlich eingestellte
+Intensit„t auch als die vom Anwender bergebene Intensit„t zurckgeliefert,
+da die Anzahl der Abstufungen ausreichend gro ist.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_color]) ~  vs_color ~  vs_color2
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vq_color ( WORD handle, WORD color_index, WORD set_flag, WORD *rgb );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vq_color (WORD handle, WORD color_index, WORD set_flag, WORD *rgb)
+{
+   intin[0] = color_index;
+   intin[1] = set_flag;
+
+   contrl[0] = 26;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[6] = handle;
+
+   vdi ();
+
+   rgb[0] = intout[1];
+   rgb[1] = intout[2];
+   rgb[2] = intout[3];
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 26    Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 4     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intin     !! intin[0]     !! color_index
+intin+2   !! intin[1]     !! set_flag
+intout    !! intout[0]    !! Return-Wert
+intout+2  !! intout[1..3] !! rgb[0..2]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_devinfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire device status info® - Status des Ausgabeger„ts erfragen.
+
+!item [VDI-Nummer:]
+248
+
+!item [Binding:]
+(!link [Bindings fr vq_devinfo] [Bindings fr vq_devinfo])
+
+!item [Beschreibung:]
+Die Funktion berprft, ob ein Treiber fr ein bestimmtes Ausgabeger„t
+installiert worden ist. Es gilt:
+
+!begin_xlist !short [device_name]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [device]
+(!nolink [VDI-Ger„tenummer]) (0..99)
+!item [dev_open]
+Treiber
+!begin_xlist !short
+!item [0 =]
+noch nicht ge”ffnet
+!item [1 =]
+bereits ge”ffnet
+!end_xlist
+!item [file_name]
+Dateiname des Treibers
+!item [device_name]
+Klartextname des Treibers
+!end_xlist
+
+(!B)Hinweis:(!b) Wenn der Dateiname leer ist, ist der Treiber nicht
+vorhanden. Die Funktion steht unter NVDI ab Version 3.00 zur Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_devinfo]) ~ vq_ext_devinfo ~  GDOS  ~ Speedo-GDOS
+NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_devinfo
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vq_devinfo ( WORD handle, WORD device, WORD *dev_open, BYTE *file_name,
+                  BYTE *device_name );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vq_devinfo (WORD handle, WORD device, WORD *dev_open,
+                 BYTE *file_name, BYTE *device_name)
+{
+   intin[0] = device;
+
+   contrl[0] = 248;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *dev_open = ptsout[0];
+   dev_name[0..p]    = ptsout[1..p-1];
+   file_name[0..i-1] = intout[0..i-1]
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 248   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! p     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! i     # Eintr„ge in intout
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0]       !! device
+intout    !! intout[0..i-1] !! file_name[0..i-1]
+ptsout    !! ptsout[0]      !! dev_open
+ptsout+2  !! ptsout[1..p-1] !! device_name[0..p-2]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_ext_devinfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire extended device status info® - Informationen ber einen Treiber
+ermitteln.
+
+!item [VDI-Nummer:]
+248 (Unterfunktion 4242)
+
+!item [Binding:]
+(!link [Bindings fr vq_ext_devinfo] [Bindings fr vq_ext_devinfo])
+
+!item [Beschreibung:]
+Die Funktion ermittelt Informationen ber einen GDOS-Treiber. Es gilt:
+
+!begin_xlist !short [dev_exists]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [device]
+(!nolink [VDI-Ger„tenummer]) (0..99)
+!item [dev_exists]
+Treiber
+!begin_xlist !short [<>0 =]
+!item [~~0 =]
+nicht vorhanden
+!item [<>0 =]
+vorhanden
+!end_xlist
+!item [file_path]
+Datei-Pfad
+!item [file_name]
+Dateiname
+!item [name]
+Klartextname des Treibers
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion steht unter NVDI ab Version 3.00 zur
+Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis den Wert 0, wenn der Treiber noch nicht
+ge”ffnet worden ist.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_ext_devinfo]) ~  vq_devinfo ~   GDOS ~  Speedo-GDOS
+NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_ext_devinfo
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vq_ext_devinfo ( WORD handle, WORD device, WORD *dev_exists,
+                      BYTE *file_path, BYTE *file_name, BYTE *name );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vq_ext_devinfo (WORD handle, WORD device, WORD *dev_exists,
+                     BYTE *file_path, BYTE *file_name, BYTE *name)
+{
+   intin[0] = device;
+   intin[1..2] = file_path;
+   intin[3..4] = file_name;
+   intin[5..6] = name;
+
+   contrl[0] = 248;
+   contrl[1] = 0;
+   contrl[3] = 7;
+   contrl[5] = 4242;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *dev_exists = intout[0];
+   return ( intout[1] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]   !! 248   Opcode der Funktion
+contrl+2  !! contrl[1]   !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]   !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]   !! 7     # Eintr„ge in intin
+contrl+8  !! contrl[4]   !! 2     # Eintr„ge in intout
+contrl+10 !! contrl[5]   !! 4242
+contrl+12 !! contrl[6]   !! handle
+intin     !! intin[0]    !! device
+intin+2   !! intin[1..2] !! file_path
+intin+6   !! intin[3..4] !! file_name
+intin+10  !! intin[5..6] !! name
+intout    !! intout[0]   !! dev_exists
+intout+2  !! intout[1]   !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_extnd
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Extended Inquire Funktion® - ermittelt Informationen ber eine
+Arbeitsstation.
+
+!item [VDI-Nummer:]
+102
+
+!item [Binding:]
+(!link [Bindings fr vq_extnd] [Bindings fr vq_extnd])
+
+!item [Beschreibung:]
+Die Funktion ermittelt Angaben ber die F„higkeiten einer Workstation. Es
+gilt:
+
+!begin_xlist !short [work_out+00+]
+
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+
+!item [handle]
+Kennung der Workstation
+!item [owflag]
+Typ der Informationen
+!begin_xlist !short
+!item [0 =]
+Informationen analog v_opnwk
+!item [1 =]
+erweiterte Informationen
+!end_xlist
+
+!item [work_out[0!]]
+(!B)genaue Spezifikation des Bildschirms(!b)
+!begin_xlist !short
+!item [0 =]
+kein Bildschirm
+!item [1 =]
+getrennte Grafik/Textbildschirme mit getrennten Kontrollern
+!item [2 =]
+gemeinsame Grafik/Textbildschirme mit getrennten Kontrollern
+!item [3 =]
+getrennte Grafik/Textbildschirme mit gemeinsamen Kontroller
+!item [4 =]
+gemeinsamer Grafik/Textbildschirm mit gemeinsamen Kontroller
+!end_xlist
+
+!item [work_out[1!]]
+Anzahl der verfgbaren Hintergrundfarben
+
+!item [work_out[2!]]
+Bitvektor der verfgbaren Texteffekte
+
+!item [work_out[3!]]
+(!B)Vergr”erungsflag(!b)
+!begin_xlist !short
+!item [0 =]
+Ger„t untersttzt vergr”ern (!I)nicht(!i)
+!item [1 =]
+Ger„t untersttzt vergr”ern
+!end_xlist
+
+!item [work_out[4!]]
+Anzahl der Farbebenen
+
+!item [work_out[5!]]
+Lookup-Table Untersttzung (0 = nicht m”glich, 1 = m”glich)
+
+!item [work_out[6!]]
+Anzahl der m”glichen 16x16 Rasteroperationen pro Sekunde
+
+!item [work_out[7!]]
+falls Eins, so untersttzt das Ger„t die v_contourfill Funktion.
+
+!item [work_out[8!]]
+(!B)Textrotationsflag(!b)
+!begin_xlist !short
+!item [0 =]
+nicht m”glich
+!item [1 =]
+in 90 Grad Schritten m”glich
+!item [2 =]
+kontinuierliche Drehung m”glich
+!end_xlist
+
+!item [work_out[9!]]
+Anzahl der untersttzten Schreibmodi
+
+!item [work_out[10!]]
+(!B)welche Eingabemodi stehen zur Verfgung(!b)
+!begin_xlist !short
+!item [0 =]
+keine
+!item [1 =]
+Request Modus
+!item [2 =]
+Request und Sample Modus
+!end_xlist
+
+!item [work_out[11!]]
+(!B)(!nolink [Textausrichtung]) wird(!b)
+!begin_xlist !short
+!item [0 =]
+nicht untersttzt
+!item [1 =]
+untersttzt
+!end_xlist
+
+!item [work_out[12!]]
+(!B)Farbstiftwechsel wird(!b)
+!begin_xlist !short
+!item [0 =]
+nicht untersttzt
+!item [1 =]
+untersttzt
+!end_xlist
+
+!item [work_out[13!]]
+(!B)Wechsel des Farbbandes wird am Ausgabeger„t(!b)
+!begin_xlist !short
+!item [0 =]
+nicht untersttzt
+!item [1 =]
+zeilenweise untersttzt
+!item [2 =]
+zeilen- und spaltenweise untersttzt
+!end_xlist
+
+!item [work_out[14!]]
+H”chstzahl von Koordinatenpaare fr v_pline, v_pmarker, v_fillarea. Ein Wert
+von -1 steht fr unbegrenzt.
+
+!item [work_out[15!]]
+maximale Gr”e des int_in Feldes (-1 unbegenzt)
+
+!item [work_out[16!]]
+Zahl der verfgbaren Maustasten
+
+!item [work_out[17!]]
+(!B)versch. Linientypen werden fr breite Linien(!b)
+!begin_xlist !short
+!item [0 =]
+nicht untersttzt
+!item [1 =]
+untersttzt
+!end_xlist
+
+!item [work_out[18!]]
+Anzahl der verfgbaren Schreibmodi fr breite Linien
+
+!item [work_out[19!]]
+Clipping aus (0) oder an (1). Nur auf PC-(!nolink [GEM]) ab Version 2.0 und NVDI.
+
+!item [work_out[20!]]
+!begin_xlist !short
+!item [0 =]
+keine genaueren Pixelgr”en in den folgenden Feldern
+!item [1 =]
+Pixelausmae in 1/10 Mikrometer
+!item [2 =]
+Pixelausmae in 1/100 Mikrometer
+!item [3 =]
+Pixelausmae in 1/1000 Mikrometer
+!end_xlist
+
+!item [work_out[21!]]
+Pixelbreite in Einheiten aus work_out[20]
+
+!item [work_out[22!]]
+Pixelh”he in Einheiten aus work_out[20]
+
+!item [work_out[23!]]
+horizontale Aufl”sung in dpi
+
+!item [work_out[24!]]
+vertikale Aufl”sung in dpi
+
+!item [work_out[25!]]
+Flag um anzuzeigen, ob Bit-Image-Dateien auf Druckern vom Treiber gedreht
+werden k”nnen (nur ab PC-(!nolink [GEM])/3):
+!begin_xlist
+!item [0 =]
+nein
+!item [1 =]
+Drehung in 0,90,180,270 Grad m”glich.
+!end_xlist
+
+!item [work_out[26!]]
++
+!item [work_out[27!]]
+Adresse des Bildschirmpuffers (1/4 des Bildschirmbereichs) der bei
+AES-Funktionen benutzt wird (nur ab PC-GEM/3).
+
+!item [work_out[28!]]
+(!B)Bezier-Flag(!b)
+!begin_xlist !short
+!item [Bit-1 =]
+keine Beziers (0) bzw. Beziers (1)
+!end_xlist
+Diese Information steht nur ab PC-(!nolink [GEM])/3 sowie unter NVDI zur Verfgung.
+
+!item [work_out[30!]]
+(!B)Rasterflags(!b)
+!begin_xlist !short
+!item [Bit-0 = 1]
+Bei vro_cpyfm und vrt_cpyfm k”nnen Raster skaliert werden.
+!item [Bit-1 = 1]
+Neue Rasterfunktionen vorhanden, (!I)ab (!nolink [NVDI]) 5.00(!i)
+!item [Bit-2 = 1]
+Neue vr_clip_rects_xxx-Clipfunktionen vorhanden, (!I)ab (!nolink [NVDI]) 5.02(!i)
+!end_xlist
+
+!item [work_out[40!]]
+nicht bedruckbarer linker Rand in Pixeln.
+
+!item [work_out[41!]]
+nicht bedruckbarer oberer Rand in Pixeln.
+
+!item [work_out[42!]]
+nicht bedruckbarer rechter Rand in Pixeln.
+
+!item [work_out[43!]]
+nicht bedruckbarer unterer Rand in Pixeln.
+
+!item [work_out[44!]]
+(!B)Papier- bzw. Seitenformat(!b)
+!begin_xlist [00 =]
+!item [0 =]
+Voreinstellung benutzen
+!item [1 =]
+DIN A3
+!item [2 =]
+DIN A4
+!item [3 =]
+DIN A5
+!item [4 =]
+DIN B5
+!item [16 =]
+Letter Size
+!item [17 =]
+Half Size
+!item [18 =]
+Legal Size
+!item [19 =]
+Double Size
+!item [20 =]
+Broad Sheet Size
+!end_xlist
+
+!item [work_out[45!]]
+obere, linke x-Koordinate
+
+!item [work_out[46!]]
+obere, linke y-Koordinate des Clip-Rechtecks
+
+!item [work_out[47!]]
+untere, linke x-Koordinate
+
+!item [work_out[48!]]
+untere, linke y-Koordinate des Clipping-Rechtecks
+
+!item [work_out[49!]]
+~
+
+!item [:]
+~
+
+!item [:]
+~
+
+!item [work_out[56!]]
+reserviert, enth„lt 0
+
+!end_xlist
+
+(!B)Hinweis:(!b) Die hier angegebene Belegung des (!I)work_out(!i) Arrays
+gilt fr den Fall, da die erweiterten Informationen ((!I)owflag(!i) = 1)
+ermittelt werden sollen. Die Informationen in den Feldern 21-24 und 40-43
+sind nur dann gltig, wenn (!I)work_out[20](!i) einen Wert ungleich 0
+enth„lt.
+
+Die nicht bedruckbaren R„nder werden normalerweise nur bei Druckertreibern
+zurckgeliefert. Sie erm”glichen es einer Applikation, Dokumente zu
+zentrieren oder dem Benutzer ein zutreffendes Bild der ausgedruckten Seite
+zu liefern, indem die R„nder im Dokument angezeigt werden. (der bei
+v_opnwk in work_out[0/1] zurckgelieferte Bereich ist der
+(!I)bedruckbare(!i) Bereich).
+
+Wenn genauere Pixelgr”en zurckgeliefert werden, sollte man diese besonders
+beim Drucken zur Positionsberechnung der einzelnen Grafikobjekte benutzen,
+denn die Benutzung der Werte von (!nolink [v_opnwk]) in (!I)work_out(!i)[3..4] kann im
+schlimmsten Fall auf einem DIN-A4 Blatt zu einer Ungenauigkeit von insgesamt
+2 bis 3 mm fhren.
+
+!item [Ergebnis:]
+Die Funktion liefert kein direktes Funktionsergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_extnd])   ~  v_contourfill ~  vswr_mode ~  v_pline ~
+v_pmarker ~  v_fillarea  ~    v_opnwk
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_extnd
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vq_extnd ( WORD handle, WORD owflag, WORD *work_out );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vq_extnd (WORD handle, WORD owflag, WORD *work_out)
+{
+   intin[0] = owflag;
+
+   contrl[0] = 102;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   work_out[0..44]  = intout[0..44];
+   work_out[45..56] = ptsout[0..11];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 102   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 6     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 45    # Eintr„ge in intout
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0]      !! owflag
+intout    !! intout[0..44] !! work_out[0..44]
+ptsout    !! ptsout[0..11] !! work_out[45..56]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vq_scrninfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Screen Information® - liefert genauere Angaben ber das
+Bildschirmformat
+
+!item [VDI-Nummer:]
+102 (Unterfunktion 1, Opcode 2)
+
+!item [Binding:]
+(!link [Bindings fr vq_scrninfo] [Bindings fr vq_scrninfo])
+
+!item [Beschreibung:]
+Die Funktion vq_scrninfo liefert genauere Angaben ber das vorhandene
+Bildschirmformat. Diese Informationen sind in erster Linie interessant fr
+Programme, die
+
+!begin_itemize !short
+!item schnell Raster aufbauen (auch in TrueColor) und diese mit vro_cpyfm()
+      auf den Schirm kopieren m”chten.
+!item Raster speichern (z.B. XIMGs).
+!item Raster anzeigen.
+!end_itemize
+
+Die Funktion steht ab EdDI-Version 1.00 zur Verfgung.
+
+!item [Ergebnis:]
+Alle Informationen werden ber das (!I)work_out(!i) Array nach auen
+gereicht:
+
+!begin_xlist !short [work_out+00+]
+!item [work_out[0!]:]
+(!B)Formatangabe:(!b)
+!begin_xlist !short [-1:]
+!item [0:]
+Interleaved Planes, wortweise
+!item [1:]
+Standardformat (komplette Planes)
+!item [2:]
+Packed Pixels
+!item [-1:]
+unbekanntes Format; nicht direkt beschreibbar
+!end_xlist
+!item [work_out[1!]:]
+(!B)Verfgbarkeit einer CLUT:(!b)
+!begin_xlist !short
+!item [0:]
+keine CLUT (z.B. TTM 194)
+!item [1:]
+Hardware-CLUT
+!item [2:]
+Software-CLUT (HiColor oder TrueColor)
+!end_xlist
+!item [work_out[2!]:]
+Anzahl der Ebenen (Bits) pro Pixel
+!item [work_out[3!]:]
+~
+!item [work_out[4!]:]
+Farbanzahl oder 0L (mehr als 2*10^31 Farben)
+!item [work_out[5!]:]
+Breite einer Zeile in Bytes (ab (!nolink [EdDI]) 1.1)
+!item [work_out[6!]:]
++
+!item [work_out[7!]:]
+Adresse der Bitmap (erst ab (!nolink [EdDI]) Version 1.1 verfgbar).
+!item [work_out[8!]:]
+Anzahl der Bits fr die Rot-Intensit„t
+!item [work_out[9!]:]
+Anzahl der Bits fr die Grn-Intensit„t
+!item [work_out[10!]:]
+Anzahl der Bits fr die Blau-Intensit„t
+!item [work_out[11!]:]
+Anzahl der Bits fr den Alpha-Channel oder „hnliches
+!item [work_out[12!]:]
+Anzahl der Bits fr Genlock
+!item [work_out[13!]:]
+Anzahl der nicht benutzen Bits
+!item [work_out[14!]:]
+(!B)Bitorganisation(!b) (erst ab EdDI 1.1)
+(!nl)
+(!B)Bei 2-256 Farben:(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge
+!end_xlist
+(!B)Bei 32768 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 1 Overlay-Bit, 5 Rot-Bits, 5 Grn-Bits,
+5 Blau-Bits
+!item [Bit-1 =]
+Falcon-Format, d.h. 5 Rot-Bits, 5 Grn-Bits, 1 Overlay-Bit, 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 65536 Farben (16 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 5 Rot-Bits, 6 Grn-Bits und 5 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (24 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Rot-Bits, 8 Grn-Bits und 8 Blau-Bits
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+(!B)Bei 16,7 Mio. Farben (32 Planes):(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+normale Bitreihenfolge, d.h. 8 Overlay-Bits, 8 Rot-Bits, 8 Grn-Bits und
+8 Blau-Bits.
+!item [Bit-7 =]
+Intel-Modell (Bytes vertauscht)
+!end_xlist
+!end_xlist
+
+(!B)Falls eine Hardware-CLUT (work_out[1] == 1) vorhanden ist:(!b)
+!begin_xlist !short [work_out+00..000+:]
+!item [work_out[16..271!]:]
+Pixelwert des zugeh”rigen VDI-Farbindexes
+!end_xlist
+(!B)Falls HiColor, TrueColor oder „hnliches vorhanden ist:(!b)
+!begin_xlist !short [work_out+000..000+]
+!item [work_out[16..31!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Rotintensit„t
+!item [work_out[32..47!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Grnintensit„t
+!item [work_out[48..63!]:]
+Zuordnung von Bitnummer im Pixel zum Bit der Blauintensit„t
+!item [work_out[64..79!]:]
+Zuordnung der Bitnummer fr Alpha-Channel
+!item [work_out[80..95!]:]
+Zuordnung der Bitnummer fr Genlock
+!item [work_out[96..127!]:]
+unbenutzte Bits
+!item [work_out[128..271!]:]
+reserviert (0)               
+!end_xlist
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vq_scrninfo]) ~
+(!link [Beispiel-Belegung] [Beispiele zu vq_scrninfo]) ~
+(!link [XIMG-Format][Das XIMG-Format fr Pixelbilder]) ~
+Rasterformate ~
+NVDI  ~    (!link [Bitmapformat bei Druckertreibern][Bitmapformat bei Druckertreibern])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vq_scrninfo
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vq_scrninfo ( WORD handle, WORD *work_out );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vq_scrninfo (WORD handle, WORD *work_out)
+{
+   intin[0] = 2;
+
+   contrl[0] = 102;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   work_out[0..272] = intout[0..272];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 102   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! 272   # Eintr„ge in intout
+contrl+10 !! contrl[5]      !! 1
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0]       !! 2
+intout    !! intout[0..272] !! work_out[0..272]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Beispiele zu vq_scrninfo
+
+Die folgende Liste enth„lt Beispiele fr das von vq_scrninfo belegte
+work_out-Array fr verschiedene Bildschirmaufl”sungen:
+
+(!B)In 256 Farben auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   0    | Interleaved Planes, wortweise
+   1     |   1    | Hardware-CLUT vorhanden
+   2     |   8    | 8 Bit pro Pixel
+   3/4   | 256    | 256 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   6    | 6 Bits fr die Rot-Intensit„t
+   9     |   6    | 6 Bits fr die Grn-Intensit„t
+  10     |   6    | 6 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   1    | normale Bitreihenfolge (erst ab EdDI 1.1)
+         |        |
+  16     |   0    | Pixelwert fr VDI-Farbindex 0
+  17     | 255    | Pixelwert fr VDI-Farbindex 1
+  18     |   2    | Pixelwert fr VDI-Farbindex 2
+  ...    | ...    |
+ 271     |  15    | Pixelwert fr VDI-Farbindex 255
+!end_verbatim
+
+(!B)In HiColor auf dem Falcon wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab "EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   1    | ein Bit fr Genlock
+  13     |   0    | kein unbenutzes Bit
+  14     |   2    | Falcon 15-Bit-Format mit 1 Overlay-Bit (EdDI 1.1)
+         |        |
+  16     |  11    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 11 des Pixels
+  17     |  12    | Bit 1 befindet sich in Bit 12 des Pixels
+  18     |  13    | ...
+  19     |  14    | ...
+  20     |  15    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 15 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |   6    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  33     |   7    | Bit 1 befindet sich in Bit 7 des Pixels
+  34     |   8    | ...
+  35     |   9    | ...
+  36     |  10    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 10 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   0    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 0 des Pixels
+  49     |   1    | Bit 1 befindet sich in Bit 1 des Pixels
+  50     |   2    | ...
+  51     |   3    | ...
+  52     |   4    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 4 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80     |   5    | Bit fr Genlock
+  81..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+(!B)In HiColor auf einer VGA-Grafikkarte wrden folgende Ausgaben erfolgen:(!b)
+
+!begin_verbatim
+work_out | Wert   | Bedeutung
+---------|--------|-------------------------------------------------
+   0     |   2    | Packed Pixels
+   1     |   2    | HiColor bzw. TrueColor
+   2     |  16    | 16 Bit pro Pixel
+   3/4   | 32768  | 32768 verschiedene Farben gleichzeitig m”glich
+   5     | xxxx   | Bitmapbreite in Bytes (erst ab EdDI 1.1)
+   6/7   | xxxxL  | Bitmapadresse (erst ab EdDI 1.1)
+   8     |   5    | 5 Bits fr die Rot-Intensit„t
+   9     |   5    | 5 Bits fr die Grn-Intensit„t
+  10     |   5    | 5 Bits fr die Blau-Intensit„t
+  11     |   0    | kein Bit fr Alpha-Channel
+  12     |   0    | kein Bit fr Genlock
+  13     |   1    | ein unbenutzes Bit
+  14     |  129   | 15 Bit in Intel-Darstellung
+         |        | (gggbbbbb-xrrrrrgg;erst ab EdDI 1.1)
+         |        |
+  16     |   2    | Bit 0 der Rot-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 2 des Pixels
+  17     |   3    | Bit 1 befindet sich in Bit 3 des Pixels
+  18     |   4    | ...
+  19     |   5    | ...
+  20     |   6    | Bit 4 der Rot-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 6 des Pixels
+  21..31 |  -1    | Bits werden nicht fr Rot-Intensit„t benutzt
+         |        |
+         |        |
+  32     |  13    | Bit 0 der Grn-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 13 des Pixels
+  33     |  14    | Bit 1 befindet sich in Bit 14 des Pixels
+  34     |  15    | ...
+  35     |   0    | ...
+  36     |   1    | Bit 4 der Grn-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 1 des Pixels
+  37..37 |  -1    | Bits werden nicht fr Grn-Intensit„t benutzt
+         |        |
+         |        |
+  48     |   8    | Bit 0 der Blau-Intensit„t (niederwertigstes Bit)
+         |        | befindet sich in Bit 8 des Pixels
+  49     |   9    | Bit 1 befindet sich in Bit 9 des Pixels
+  50     |  10    | ...
+  51     |  11    | ...
+  52     |  12    | Bit 4 der Blau-Intensit„t (h”chstwertigstes Bit)
+         |        | befindet sich in Bit 12 des Pixels
+  53..63 |  -1    | Bits werden nicht fr Blau-Intensit„t benutzt
+         |        |
+         |        |
+  64..79 |  -1    | kein Alpha-Channel
+         |        |
+         |        |
+  80..95 |  -1    | nicht fr Genlock benutzt
+         |        |
+         |        |
+  96     |   7    | unbenutztes Bit
+  97..127|  -1    | keine unbenutzten Bits
+!end_verbatim
+
+Querverweis: vq_scrninfo ~  Rasterformate ~  NVDI
+!end_node
+
+
+
+!begin_node vqf_attributes
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Current Fill Area Attributes® - ermittelt die Attribute zum
+Ausfllen von Fl„chen.
+
+!item [VDI-Nummer:]
+37
+
+!item [Binding:]
+(!link [Bindings fr vqf_attributes] [Bindings fr vqf_attributes])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die aktuellen Fll-Attribute. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [attrib[0!]]
+Fllmuster
+!item [attrib[1!]]
+Index der Fllfarbe
+!item [attrib[2!]]
+Index des Fllmusters
+!item [attrib[3!]]
+Schreibmodus
+!item [attrib[4!]]
+Status fr Umrahmung
+!begin_xlist !short [<> 0 =]
+!item [~~ 0 =]
+unsichtbar
+!item [<> 0 =]
+sichtbar
+!end_xlist
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqf_attributes])  ~   vswr_mode ~   vs_color  ~  vsf_interior ~
+vsf_style ~  vsf_color  ~  vsf_perimeter
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqf_attributes
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqf_attributes ( WORD handle, WORD *attrib );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqf_attributes (WORD handle, WORD *attrib)
+{
+   contrl[0] = 37;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   attrib[0..4] = intout[0..4];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 37    Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 5     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intout    !! intout[0..4] !! attrib[0..4]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqf_bg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Background Color® - Objekt Hintergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+203 (Unterfunktion 1)
+
+!item [Binding:]
+(!link [Bindings fr vqf_bg_color] [Bindings fr vqf_bg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Hintergrundfarbe fr Objekte.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Hintergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqf_bg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqf_bg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqf_bg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqf_bg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 203;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 203   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 1
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqf_fg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Foreground Color® - Objekt Vordergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+202 (Unterfunktion 1)
+
+!item [Binding:]
+(!link [Bindings fr vqf_fg_color] [Bindings fr vqf_fg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Vordergrundfarbe fr Objekte.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Vordergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqf_fg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqf_fg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqf_fg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqf_fg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 202;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 202   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 1
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqin_mode
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Input Mode® - ermittelt den Eingabemodus.
+
+!item [VDI-Nummer:]
+115
+
+!item [Binding:]
+(!link [Bindings fr vqin_mode] [Bindings fr vqin_mode])
+
+!item [Beschreibung:]
+Die Funktion ermittelt den Eingabemodus fr ein bestimmtes Ger„t. Es gilt:
+
+!begin_xlist !short [input_mode]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation 
+!item [dev_type]
+Art des Eingabeger„ts
+!begin_xlist !short
+!item [1 =]
+Positionseingabe (Maus)
+!item [2 =]
+wert„ndernde Einheiten (Cursor)
+!item [3 =]
+ausw„hlende Einheiten (Funktionstasten)
+!item [4 =]
+alphanumerische Ger„te (Tastatur)
+!end_xlist
+!item [input_mode]
+Eingabe-Modus
+!begin_xlist !short
+!item [1 =]
+Request
+!item [2 =]
+Sample
+!end_xlist
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqin_mode])   ~     vsin_mode  ~   vrq_locator ~  vsm_locator ~
+vrq_valuator ~  vsm_valuator ~  vrq_choice ~  vsm_choice ~
+vrq_string  ~   vsm_string
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqin_mode
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqin_mode ( WORD handle, WORD dev_type, WORD *input_mode );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqin_mode (WORD handle, WORD dev_type, WORD *input_mode)
+{
+   intin[0] = dev_type;
+
+   contrl[0] = 115;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *input_mode = intout[0];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 115   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 1     # Eintr„ge in intout
+contrl+12 !! contrl[6] !! handle
+intin     !! intin[0]  !! dev_type
+intout    !! intout[0] !! input_mode
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vql_attributes
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Current Polyline Attributes® - ermittelt die Attribute fr das
+Zeichnen von Linien.
+
+!item [VDI-Nummer:]
+35
+
+!item [Binding:]
+(!link [Bindings fr vql_attributes] [Bindings fr vql_attributes])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die aktuellen Linien-Attribute. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [attrib[0!]]
+Linientyp
+!item [attrib[1!]]
+Index der Linienfarbe
+!item [attrib[2!]]
+Schreibmodus
+!item [attrib[3!]]
+Linienbreite bzgl. der x-Achse
+!item [attrib[4!]]
+Anfangsform der Linie
+!item [attrib[5!]]
+Endform der Linie
+!end_xlist
+
+(!B)Hinweis:(!b) Die hier gemachten Angaben (insbesondere
+(!I)attrib[4,5](!i)) gelten fr die NVDI-Implementation.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vql_attributes])  ~   vswr_mode  ~ vs_color  ~ vsl_type ~
+vsl_width  ~ vsl_color ~  vsl_ends
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vql_attributes
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vql_attributes ( WORD handle, WORD *attrib );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vql_attributes (WORD handle, WORD *attrib)
+{
+   contrl[0] = 35;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   attrib[0..2] = intout[0..2];
+   attrib[3]    = ptsout[0];  
+   attrib[4..5] = intout[3..4];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 35    Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 1     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 5     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intout    !! intout[0..4] !! attrib[0..2, 4..5]
+ptsout    !! ptsout[0]    !! attrib[3]
+ptsout+2  !! ptsout[1]    !! 0
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vql_bg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Background Color® - Linien Hintergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+203 (Unterfunktion 2)
+
+!item [Binding:]
+(!link [Bindings fr vql_bg_color] [Bindings fr vql_bg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Hintergrundfarbe fr Linien.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Hintergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vql_bg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vql_bg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vql_bg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vql_bg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 203;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 2;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 203   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 2
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vql_fg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Foreground Color® - Linien Vordergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+202 (Unterfunktion 2)
+
+!item [Binding:]
+(!link [Bindings fr vql_fg_color] [Bindings fr vql_fg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Vordergrundfarbe fr Linien.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Vordergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vql_fg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vql_fg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vql_fg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vql_fg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 202;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 2;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 202   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 2
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqm_attributes
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Current Polymarker Attributes® - ermittelt die Attribute fr das
+Zeichnen von Markierungen.
+
+!item [VDI-Nummer:]
+36
+
+!item [Binding:]
+(!link [Bindings fr vqm_attributes] [Bindings fr vqm_attributes])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die aktuellen Marker-Attribute. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [attrib[0!]]
+aktueller Markertyp
+!item [attrib[1!]]
+Index der Markerfarbe
+!item [attrib[2!]]
+Schreibmodus
+!item [attrib[3!]]
+H”he des Markers
+!item [attrib[4!]]
+Breite des Markers
+!end_xlist
+
+(!B)Hinweis:(!b) Die hier gemachten Angaben gelten fr die Implementation in
+NVDI.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqm_attributes]) ~  vswr_mode ~ vs_color ~  vsm_type ~ vsm_height ~
+vsm_color
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqm_attributes
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqm_attributes ( WORD handle, WORD *attrib );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqm_attributes (WORD handle, WORD *attrib)
+{
+   contrl[0] = 36;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   attrib[0..2] = intout[0..2];
+   attrib[3]    = ptsout[1];  
+   attrib[4]    = ptsout[0];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 36    Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 1     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 3     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intout    !! intout[0..2] !! attrib[0..2]
+ptsout    !! ptsout[0]    !! attrib[4]
+ptsout+2  !! ptsout[1]    !! attrib[3]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqm_bg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Background Color® - Marker Hintergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+203 (Unterfunktion 3)
+
+!item [Binding:]
+(!link [Bindings fr vqm_bg_color] [Bindings fr vqm_bg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Hintergrundfarbe fr Marker.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Hintergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqm_bg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqm_bg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqm_bg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqm_bg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 203;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 3;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 203   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 3
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqm_fg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Foreground Color® - Marker Vordergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+202 (Unterfunktion 3)
+
+!item [Binding:]
+(!link [Bindings fr vqm_fg_color] [Bindings fr vqm_fg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Vordergrundfarbe fr Marker.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Vordergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqm_fg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqm_fg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqm_fg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqm_fg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 202;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 3;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 202   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 3
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqr_bg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Background Color® - Bitmap Hintergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+203 (Unterfunktion 3)
+
+!item [Binding:]
+(!link [Bindings fr vqr_bg_color] [Bindings fr vqr_bg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Hintergrundfarbe fr Bitmaps.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Hintergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqr_bg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqr_bg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqr_bg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqr_bg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 203;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 4;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 203   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 4
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqr_fg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Foreground Color® - Bitmap Vordergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+202 (Unterfunktion 4)
+
+!item [Binding:]
+(!link [Bindings fr vqr_fg_color] [Bindings fr vqr_fg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Vordergrundfarbe fr Marker.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Vordergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqr_fg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqr_fg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqr_fg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqr_fg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 202;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 4;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 202   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 4
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqt_advance
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Outline text advance placement vector® - Position fr n„chstes
+Vektor-Zeichen ermitteln.
+
+!item [VDI-Nummer:]
+247
+
+!item [Binding:]
+(!link [Bindings fr vqt_advance] [Bindings fr vqt_advance])
+
+!item [Beschreibung:]
+Die Funktion berechnet Offsets, um das n„chste Zeichen eines Strings an die
+richtige Position schreiben zu k”nnen. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [ch]
+interessierendes Zeichen
+!item [x_advance]
+x-Abstand in Pixeln
+!item [y_advance]
+y-Abstand in Pixeln
+!item [remx]
+x-Nachkommarest (mod 16384)
+!item [y_advance]
+y-Nachkommarest (mod 16384)
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion wird inbesondere dann ben”tigt, wenn der
+Winkel fr Textrotationen ein anderer als 0, 90, 180 oder 270 Grad ist.
+
+Bei den gelieferten Werten handelt es sich nur um den Abstand, der fr die
+Positionierung des n„chsten Zeichens benutzt wird, d.h. (!I)x_advance(!i)
+beinhaltet (!I)keine(!i) Zeichenberh„nge.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00 und ab NVDI 3.00. 
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_advance]) ~  vqt_advance ~ vst_rotation ~  SpeedoGDOS ~  NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_advance
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_advance ( WORD handle, WORD ch, WORD *x_advance,
+                   WORD *y_advance, WORD *remx, WORD *remy );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_advance ( WORD handle, WORD ch, WORD *x_advance,
+                   WORD *y_advance, WORD *remx, WORD *remy );
+{
+   intin[0] = ch;
+
+   contrl[0] = 247;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   x_advance = ptsout[0];
+   y_advance = ptsout[1];
+   remx      = ptsout[2];
+   remy      = ptsout[3];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 247   Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 4     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 0     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intin     !! intin[0]     !! ch
+ptsout    !! ptsout[0]    !! x_advance
+ptsout+2  !! ptsout[1]    !! y_advance
+ptsout+4  !! ptsout[2]    !! remx
+ptsout+6  !! ptsout[3]    !! remy
+!end_table
+
+Es handelt sich bei x_advance und y_advance nur um den Abstand, der fr die
+Positionierung des n„chsten Zeichens benutzt wird, d.h. x_advance beinhaltet
+(!I)keine(!i) Zeichenberh„nge.
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_advance32
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Outline text advance placement vector® - Position fr n„chstes
+Vektor-Zeichen ermitteln.
+
+!item [VDI-Nummer:]
+247
+
+!item [Binding:]
+(!link [Bindings fr vqt_advance32] [Bindings fr vqt_advance32])
+
+!item [Beschreibung:]
+Die Funktion berechnet Offsets, um das n„chste Zeichen eines Strings an die
+richtige Position schreiben zu k”nnen. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [ch]
+interessierendes Zeichen
+!item [x_advance]
+x-Abstand in 1/65536 Pixeln
+!item [y_advance]
+y-Abstand in 1/65536 Pixeln
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion wird inbesondere dann ben”tigt, wenn der
+Winkel fr Textrotationen ein anderer als 0, 90, 180 oder 270 Grad ist.
+
+Bei den gelieferten Werten handelt es sich nur um den Abstand, der fr die
+Positionierung des n„chsten Zeichens benutzt wird, d.h. (!I)x_advance(!i)
+beinhaltet (!I)keine(!i) Zeichenberh„nge.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00 und ab NVDI 3.00. In der Doku zu (!nolink [NVDI]) 3.00 wird die Funktion
+f„lschlicherweise vqt_advance genannt.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_advance32]) ~  vst_rotation ~  SpeedoGDOS ~  NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_advance32
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_advance32 ( WORD handle, WORD ch, fix31 *x_advance,
+                   fix31 *y_advance );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_advance32 (WORD handle, WORD ch, fix31 *x_advance,
+                  fix31 *y_advance)
+{
+   intin[0] = ch;
+
+   contrl[0] = 247;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *x_advance = ptsout[4..5];
+   *y_advance = ptsout[6..7];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 247   Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 4     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 0     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intin     !! intin[0]     !! ch
+ptsout+8  !! ptsout[4..5] !! x_advance
+ptsout+12 !! ptsout[6..7] !! y_advance
+!end_table
+
+
+Es handelt sich bei x_advance und y_advance nur um den Abstand, der fr die
+Positionierung des n„chsten Zeichens benutzt wird, d.h. x_advance beinhaltet
+(!I)keine(!i) Zeichenberh„nge.
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqt_attributes
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Current Graphic Text Attributes® - ermittelt die Attribute fr das
+Schreiben von Texten.
+
+!item [VDI-Nummer:]
+38
+
+!item [Binding:]
+(!link [Bindings fr vqt_attributes] [Bindings fr vqt_attributes])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die aktuellen Text-Attribute. Es gilt:
+
+!begin_xlist !short [Paraeter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [attrib[0!]]
+Zeichensatznummer
+!item [attrib[1!]]
+Textfarbe
+!item [attrib[2!]]
+Drehwinkel des Texts (in 1/10 Grad)
+!item [attrib[3!]]
+horizontale Ausrichtung
+!begin_xlist !short
+!item [0 =]
+linksbndig
+!item [1 =]
+zentriert
+!item [2 =]
+rechtsbndig
+!end_xlist
+!item [attrib[4!]]
+vertikale (!nolink [Ausrichtung])
+!begin_xlist !short
+!item [0 =]
+Baseline
+!item [1 =]
+Half line
+!item [2 =]
+Ascent line
+!item [3 =]
+Bottom line
+!item [4 =]
+Descent line
+!item [5 =]
+Top line
+!end_xlist
+!item [attrib[5!]]
+Schreibmodus
+!item [attrib[6!]]
+Breite eines Zeichens
+!item [attrib[7!]]
+H”he eines Zeichens
+!item [attrib[8!]]
+Zeichenzellenbreite
+!item [attrib[9!]]
+Zeichenzellenh”he
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_attributes])   ~    vswr_mode  ~   vs_color ~  vst_height ~
+vst_point   ~  vst_rotation ~ vst_font ~  vst_color  ~
+vst_effects ~  vst_alignment
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_attributes
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_attributes ( WORD handle, WORD *attrib );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_attributes (WORD handle, WORD *attrib)
+{
+   contrl[0] = 38;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   attrib[0..5] = intout[0..5];
+   attrib[6..9] = ptsout[0..3];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 38    Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 2     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 6     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intout    !! intout[0..5] !! attrib[0..5]
+ptsout    !! ptsout[0..3] !! attrib[6..9]
+!end_table
+
+(!B)Hinweis:(!b) Das Atari-(!nolink [VDI]) gibt f„lschlicherweise in (!nolink [intout])[5] den
+Schreibmodus-1 zurck; mit NVDI geschieht das nur mit eingeschalteter
+Fehlerkompatibilit„t.
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_cachesize
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Get Outline chache size® - Ermitteln der Gr”e des Vektorzeichen-Caches.
+
+!item [VDI-Nummer:] 255
+
+!item [Binding:]
+(!link [Bindings fr vqt_cachesize] [Bindings fr vqt_cachesize])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die Gr”e des Vektorzeichen-Caches. Es gilt:
+
+!begin_xlist !short [which_cache]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [which_cache]
+Cache
+!begin_xlist !short
+!item [0 =]
+Bitmap-Cache
+!item [1 =]
+Cache fr Datenstruktur
+!end_xlist
+!item [size]
+Gr”e des jeweiligen Caches
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_cachesize]) ~ v_loadcache ~ v_savecache ~ v_flushcache
+               
+(!ende_liste)
+!end_node
+
+!begin_node Bindings fr vqt_cachesize
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_cachesize ( WORD handle, WORD which_cache, LONG *size );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_cachesize ( WORD handle, WORD which_cache, LONG *size );
+{
+   intin[0] = which_cache;
+   
+   contrl[0] = 255;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+   
+   *size = intout[0..1];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 255   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 2     # Eintr„ge in intout
+contrl+12 !! contrl[6] !! handle
+intout    !! intout[0] !! Returnwert
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+!begin_node vqt_char_index
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Character Index® - Konvertiert einen Index bzgl. eines bestimmten
+Mappings.
+
+!item [VDI-Nummer:]
+190 (Opcode 0)
+
+!item [Binding:]
+(!link [Bindings fr vqt_char_index] [Bindings fr vqt_char_index])
+
+!item [Beschreibung:]
+Die Funktion konvertiert einen bergebenen Index anhand eines gewnschen
+Mappings. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [src_index]
+zu konvertierender Index
+!item [src_mode]
+(!B)Art des Quell-Mappings(!b)
+!begin_xlist !short
+!item [0 =]
+scr_index als direkter Index
+!item [1 =]
+scr_index als ASCII-Index
+!item [2 =]
+scr_index als Unicode-Index
+!end_xlist
+!item [dst_mode]
+(!B)Art des Ziel-Mappings(!b)
+!begin_xlist
+!item [0 =]
+direkter Index
+!item [1 =]
+ASCII-Index
+!item [2 =]
+Unicode-Index
+!end_xlist
+!end_xlist
+
+(!B)Hinweis:(!b) Soll ein Index vom ASCII-Format ausgehend oder ins
+ASCII-Format gewandelt werden, dann wird nur der Bereich von Index 32 bis
+255 beachtet. Die Steuerzeichen von 0 bis 31 werden (!I)nicht(!i) gewandelt,
+d.h. der Aufruf von vqt_char_index (handle, 10, 1, 0) liefert als Ergebnis
+den Wert 0xffff.
+
+Um z.B. zu berprfen, ob der eingestellte Font ein Zeichen mit Unicode
+0x201e (quotedblbase, 99er Anfhrungszeichen unten) enth„lt, sollte die
+folgende Funktion aufgerufen werden:
+
+!begin_verbatim
+WORD is_char_available (WORD handle, UWORD unicode)
+{
+   UWORD dindex;
+
+   /* Unicode <unicode> in direkten Index wandeln */
+   dindex = vqt_char_index (handle, unicode, 2, 0);
+
+   if (dindex == 0xffff)
+      return (FALSE);
+   else
+      return (TRUE);         
+}
+!end_verbatim
+
+Die Funktion steht unter NVDI ab Version 4.00 zur Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert den konvertierten Index zurck, bzw. den Wert 0xffff,
+falls eine Konvertierung nicht m”glich war.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_char_index]) ~  vst_charmap
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_char_index
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+UWORD vqt_char_index ( WORD handle, UWORD scr_index,
+                       WORD src_mode, WORD dst_mode );
+
+!item [Implementierung:]
+!begin_verbatim
+UWORD vqt_char_index ( WORD handle, UWORD scr_index, WORD scr_mode,
+                       WORD dst_mode )
+{
+   intin[0] = scr_index;
+   intin[1] = src_mode;
+   intin[2] = dst_mode;
+
+   contrl[0] = 190;
+   contrl[1] = 0;
+   contrl[3] = 3;
+   contrl[5] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 190   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 3     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 1     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 0
+contrl+12 !! contrl[6] !! handle
+intin     !! intin[0]  !! scr_index
+intin+2   !! intin[1]  !! scr_mode
+intin+4   !! intin[2]  !! dst_mode
+intout    !! intout[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_ext_name
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Face Name and Index® - Informationen ber einen Zeichensatz
+ermitteln.
+
+!item [VDI-Nummer:]
+130 (Unterfunktion 1)
+
+!item [Binding:]
+(!link [Bindings fr vqt_ext_name] [Bindings fr vqt_ext_name])
+
+!item [Beschreibung:]
+Die Funktion ermittelt Informationen ber einen Zeichensatz. Es gilt:
+
+!begin_xlist !short [font_format]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [index]
+Nummer des Zeichensatzes
+!item [name[0..31!]]
+Name des Zeichensatzes
+!item [name[32!]]
+Flag
+!begin_xlist !short
+!item [0 =]
+Bitmap-Font
+!item [1 =]
+Vektorfont
+!end_xlist
+!item [font_format]
+(!B)Format des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+Bitmap
+!item [Bit-1 =]
+Speedo
+!item [Bit-2 =]
+TrueType
+!item [Bit-3 =]
+Type-1
+!end_xlist
+!item [flags]
+(!B)Art des Zeichensatzes(!b)
+!begin_xlist !short
+!item [Bit-0]
+!begin_xlist !short
+!item [= 0]
+(Font ist proportional)
+!item [= 1]
+(Font ist monospaced)
+!end_xlist
+!item [Bit-4]
+!begin_xlist !short
+!item [= 0]
+(Font ist kein Symbolfont)
+!item [= 1]
+(Font ist ein Symbolfont)
+!end_xlist
+!end_xlist
+!end_xlist
+
+(!B)Hinweis:(!b)
+Ein Font wird als (!I)Symbolfont(!i) eingestuft, wenn er im
+Bereich 'A'-'Z' und 'a'-'z' nicht vollst„ndig ist, oder wenn er laut der
+PANOSE Klassifizierung (!I)pictorial(!i) ist. Das entsprechende Flag ist
+daher nur als Anhaltspunkt zu betrachten (bei einem kyrillischen
+TrueType-Font w„re es z.B. auch gesetzt), und signalisiert, da die
+Zeichenbelegung im ASCII-Mapping (vst_charmap) nicht der normalen
+Atari-Belegung entspricht.
+
+!item [Ergebnis:]
+Die Funktion liefert den Index des Zeichensatzes zurck.
+
+!item [Verfgbar:]
+ab NVDI 3.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_ext_name]) ~  vst_load_fonts ~ vst_font ~  vqt_xfntinfo
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_ext_name
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vqt_ext_name ( WORD handle, WORD index, BYTE *name,
+                    UWORD *font_format, UWORD *flags );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vqt_ext_name (WORD handle, WORD index, BYTE *name,
+                   UWORD *font_format, UWORD *flags)
+{
+   intin[0] = index;
+   intin[1] = 0;         /* reserviert */
+
+   contrl[0] = 130;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[5] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   name[0..31]  = intout[1..32];
+   name[32]     = intout[33];
+   *flags       = (intout[34] >> 8) & 0xff;
+   *font_format = intout[34] & 0xff;
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 130   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 35    # Eintr„ge in intout
+contrl+10 !! contrl[5]     !! 1
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0]      !! index
+intin+2   !! intin[1]      !! 0
+intout    !! intout[0]     !! Return-Wert
+intout+2  !! intout[1..16] !! name[0..31]
+intout+64 !! intout[33]    !! name[32]
+intout+66 !! intout[34]    !! flags/font_format
+!end_table
+
+(!B)Hinweis:(!b) Im High-Byte von (!nolink [intout])[34] wird (!I)flags(!i)
+zurckgeliefert; im Low-Byte von (!nolink [intout])[34] (!I)font_format(!i).
+
+Um festzustellen, was fr einen Font man vor sich hat, mu man die Anzahl
+der Eintr„ge in (!nolink [intout]) ((!nolink [contrl])[4]) beachten. Ist
+(!nolink [contrl])[4] 33, so sind keine
+zus„tzlichen Informationen vorhanden und demzufolge mu es sich um einen
+(!B)Bitmapfont(!b) handeln. Ist (!nolink [contrl])[4] == 34, wird nur zus„tzlich in
+(!nolink [intout])[33] (name[32]) mitgeteilt, ob es sich um einen (!B)Vektorfont(!b)
+handelt. Nur wenn (!nolink [contrl])[4] == 35 ist, kann
+man mit (!nolink [intout])[34] (flags) den
+Fonttyp genauer feststellen und sofort erkennen, ob der Font „quidistant
+(monospaced) ist.
+
+(!nolink [intout])[34] wird nur zurckgeliefert, wenn (!nolink [contrl])[3] > 1
+und (!nolink [contrl])[5] = 1!
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_extent
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Text Extent® - ermittelt die L„nge eines Strings.
+
+!item [VDI-Nummer:]
+116
+
+!item [Binding:]
+(!link [Bindings fr vqt_extent] [Bindings fr vqt_extent])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die Ausmae eines minimalen Rechteckes, das einen
+Text unter Beachtung der Textattribute voll umgibt.
+
+(!U)Beispiel:(!u)
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image extent
+!else
+!image (!picture_path)\extent
+!endif
+!else
+!image (!picture_path)\extent
+!endif
+
+(!B)Der Funktion werden folgende Parameter bergeben:(!b)
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [string]
+Adresse der Zeichenkette
+!item [extent[0!]]
+x-Koordinate
+!item [extent[1!]]
+y-Koordinate der unteren linken Ecke
+!item [extent[2!]]
+x-Koordinate
+!item [extent[3!]]
+y-Koordinate der unteren rechten Ecke
+!item [extent[4!]]
+x-Koordinate
+!item [extent[5!]]
+y-Koordinate der oberen rechten Ecke
+!item [extent[6!]]
+x-Koordinate
+!item [extent[7!]]
+y-Koordinate der oberen linken Ecke               
+!end_xlist
+
+(!B)Hinweis:(!b) Bei Vektorfonts addiert diese Funktion nur die
+Schrittweiten, ohne Pair- oder Track-Kerning und Zeichenberh„nge zu
+beachten. Aus diesem Grund sollte ggfs. auf die Funktion vqt_real_extent
+zurckgegriffen werden.
+
+In alten GEM-Versionen arbeitet die Funktion brigens nicht korrekt, falls
+die Zeichenkette (!I)Umlaute(!i) enth„lt, da alte (!nolink [GEM])-Versionen mit diesen
+noch nicht umgehen konnten.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_extent])  ~  vst_height ~  vst_point  ~    vst_rotation ~
+vst_font  ~ vst_effects ~ vqt_f_extent ~  vqt_real_extent
+               
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_extent
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_extent ( WORD handle, BYTE *string, WORD *extent );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_extent (WORD handle, BYTE *string, WORD *extent)
+{
+   WORD *tmp;
+
+   tmp = intin;
+   while (*tmp++ = *string++)
+      ;
+
+   contrl[0] = 116;
+   contrl[1] = 0;
+   contrl[3] = (WORD) ((tmp-intin)-1);
+   contrl[6] = handle;
+
+   vdi ();
+
+   extent[0..7] = ptsout[0..7];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 116   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 4     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! n     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 0     # Eintr„ge in intout
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0..n-1] !! string[0..n-1]
+ptsout    !! ptsout[0..7]  !! extent[0..7]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_f_extent
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Outline-Font Text Extent® - ermittelt die L„nge eines Strings im
+Vektor-Zeichensatz.
+
+!item [VDI-Nummer:]
+240
+
+!item [Binding:]
+(!link [Bindings fr vqt_f_extent] [Bindings fr vqt_f_extent])
+
+!item [Beschreibung:]
+Die Funktion addiert die Zeichenweiten eines Strings. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [string]
+Adresse der Zeichenkette
+!item [extent[0!]]
+x-Koordinate
+!item [extent[1!]]
+y-Koordinate der unteren linken Ecke
+!item [extent[2!]]
+x-Koordinate
+!item [extent[3!]]
+y-Koordinate der unteren rechten Ecke
+!item [extent[4!]]
+x-Koordinate
+!item [extent[5!]]
+y-Koordinate der oberen rechten Ecke
+!item [extent[6!]]
+x-Koordinate
+!item [extent[7!]]
+y-Koordinate der oberen linken Ecke 
+!end_xlist
+
+(!B)Hinweis:(!b) Im Gegensatz zu vqt_extent beachtet die Funktion auch
+etwaige Kerning-Werte.
+
+(!B)Achtung:(!b) Diese Funktion liefert (!I)nicht(!i) das den Text umgebende
+Rechteck. Sie addiert nur die Schrittweiten und beachtet auch nicht linke
+oder rechte Zeichenberh„nge. Sie ist im Prinzip nur zur
+Cursor-Positionierung gedacht. Wer aber mit dieser Funktion die Gr”e eines
+neuzuzeichnenden Bildbereiches ermitteln m”chte, mu links und rechts
+sicherheitshalber die Breite des gr”ten Zeichens hinzuaddieren (und die
+Neigung beachten).
+
+(!B)Vorsicht:(!b) Aus Kompatibilit„tsgrnden verh„lt sich diese Funktion bei
+90, 180 und 270 Grad genauso unsinnig wie das alte (!nolink [vqt_extent]) - der
+Bezugspunkt wird ge„ndert!
+
+Ab (!nolink [NVDI])-3 empfiehlt sich stattdessen die Verwendung von vqt_real_extent.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00 und ab NVDI 3.00
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_f_extent]) ~ vqt_extent ~ SpeedoGDOS ~ NVDI
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_f_extent
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_f_extent ( WORD handle, BYTE *string, WORD *extent );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_f_extent (WORD handle, BYTE *string, WORD *extent)
+{
+   intin[0..n-1] = string[0..n-1];
+
+   contrl[0] = 240;
+   contrl[1] = 0;
+   contrl[3] = n;
+   contrl[6] = handle;
+
+   vdi ();
+
+   extent[0..7] = ptsout[0..7];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 240   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 4     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! n     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 0     # Eintr„ge in intout
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0..n-1] !! string[0..n-1]
+ptsout    !! ptsout[0..7]  !! extent[0..7]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_bg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Background Color® - Text Hintergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+203 (Unterfunktion 0)
+
+!item [Binding:]
+(!link [Bindings fr vqt_bg_color] [Bindings fr vqt_bg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Hintergrundfarbe fr Text.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Hintergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_bg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_bg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqt_bg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqt_bg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 203;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 203   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 0
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_fg_color
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Foreground Color® - Text Vordergrundfarbe ermitteln
+
+!item [VDI-Nummer:]
+202 (Unterfunktion 0)
+
+!item [Binding:]
+(!link [Bindings fr vqt_fg_color] [Bindings fr vqt_fg_color])
+
+!item [Beschreibung:]
+Diese Funktionen ermittelt die Vordergrundfarbe fr Text.
+
+!begin_xlist !short [fg_color]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+
+!item [fg_color]
+COLOR_ENTRY der Vordergrundfarbe
+!end_xlist
+
+
+!item [Ergebnis:]
+Eingestellter Farbraum (z.Zt. nur CSPACE_RGB)
+oder -1 (falsche Unterfunktionsnummer).
+
+!item [Verfgbar:]
+ab NVDI 5.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_fg_color])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_fg_color
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+LONG vqt_fg_color( WORD handle, COLOR_ENTRY *fg_color );
+
+!item [Implementierung:]
+!begin_verbatim
+LONG vqt_fg_color( WORD handle, COLOR_ENTRY *fg_color )
+{
+   contrl[0] = 202;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[5] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   fg_color = intout [2..5];
+   return ( LONG intout [0]  );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 202   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 6     # Eintr„ge in intout
+contrl+10 !! contrl[5] !! 0
+contrl+12 !! contrl[6] !! handle
+intout    !! intin[0..1]  !! color_space
+intout+4  !! intin[2..5]  !! fg_color
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqt_fontheader
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Speedo header information® - Informationen ber einen Zeichensatz
+ermitteln
+
+!item [VDI-Nummer:]
+232
+
+!item [Binding:]
+(!link [Bindings fr vqt_fontheader] [Bindings fr vqt_fontheader])
+
+!item [Beschreibung:]
+Die Funktion kopiert den Header des eingestellten Speedo-Fonts in einen
+Puffer, und liefert wenn m”glich einen Zeiger auf die zugeh”rige TDF-Datei.
+Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [buffer]
+aufnehmender Puffer
+!item [tdf_name]
+aufnehmender Zugriffspfad auf die entsprechende TDF-Datei
+!end_xlist
+
+(!B)Hinweis:(!b) Der aufnehmende Puffer sollte eine Gr”e von ca. 1 Kbyte
+besitzen, da die L„nge des Speedo-Fontheaders vom jeweiligen Zeichensatz und
+m”glichen Formaterweiterungen abh„ngt.
+
+Fr andere Zeichensatzformate (Beispiel: TrueType) wird versucht, den Header
+nachzubilden.
+
+Es sollte beachtet werden, da fr jeden Aufruf dieser Funktion mehrfach auf
+die Festplatte zugegriffen werden mu; - bei vielen installierten
+Zeichens„tzen kann dies einige Sekunden dauern. Daher sollte man den
+h„ufigen Aufruf der Funktion vermeiden, oder wichtige Angaben selbst
+speichern, und beim Programmstart laden.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00 und ab NVDI 3.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_fontheader]) ~  vqt_fontinfo ~ Aufbau des Fontheaders
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_fontheader
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_fontheader ( WORD handle, BYTE *buffer, BYTE *tdf_name );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_fontheader (WORD handle, BYTE *buffer, BYTE *tdf_name)
+{
+   intin[0..1] = buffer;
+
+   contrl[0] = 232;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[6] = handle;
+
+   vdi ();
+
+   tdf_name[0..n-1] = intout[0..n-1];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]      !! 232   Opcode der Funktion
+contrl+2  !! contrl[1]      !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]      !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]      !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]      !! n     # Eintr„ge in intout
+contrl+12 !! contrl[6]      !! handle
+intin     !! intin[0..1]    !! buffer
+intout    !! intout[0..n-1] !! tdf_name[0..n-1]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_fontinfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Current Face Information® - ermittelt Informationen ber
+Zeichens„tze.
+
+!item [VDI-Nummer:]
+131
+
+!item [Binding:]
+(!link [Bindings fr vqt_fontinfo] [Bindings fr vqt_fontinfo])
+
+!item [Beschreibung:]
+Die Funktion informiert ber den aktuellen Zeichensatz.
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image fontinfo
+!else
+!image (!picture_path)\fontinfo
+!endif
+!else
+!image (!picture_path)\fontinfo
+!endif
+
+(!B)Der Funktion werden folgende Parameter bergeben:(!b)
+
+!begin_xlist !short [distances+0+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [minADE]
+niedrigster ASCII-Wert
+!item [maxADE]
+h”chster ASCII-Wert
+!item [distances[0!]]
+Abstand der untere Kante der Zeichenzelle zur Basislinie (y-Achse)
+!item [distances[1!]]
+Abstand der unteren Zeichengrenze zur Basislinie (y-Achse)
+!item [distances[2!]]
+Abstand der Halblinie zur Basislinie
+!item [distances[3!]]
+Abstand der oberen Zeichengrenze zur Basislinie (y-Achse)
+!item [distances[4!]]
+Abstand der oberen Zeichenzelle zur Basislinie (y-Achse)
+!item [max_width]
+maximale Zeichenzellenbreite ohne Texteffekte
+!item [effects[0!]]
+Betrag, um den die Zeichenbreite bei den aktuellen Texteffekten zunimmt
+!item [effects[1!]]
+linker  Offsetwert (bzgl. x-Achse)
+!item [effects[2!]]
+rechter Offsetwert (bzgl. x-Achse)
+!end_xlist
+
+(!B)Hinweis:(!b) Die aktuellen Text-Effekte werden beachtet. Bei kursiver
+Schrift wird die Neigung als rechter und linker Offset-Wert bedacht. Der
+rechte Offsetwert ist der horizontale Abstand der Zeichenposition (linkes
+Basislinienende) zum Lotfupunkt des Lotes auf die Basislinie durch die
+obere rechte Ecke; analog ist der linke Offsetwert der Abstand der
+Zeichenposition zum Lotfupunkt des Lotes auf die Basislinie durch die
+untere linke Ecke.
+
+Die Komponenten (!I)minADE(!i) und (!I)maxADE(!i) stehen fr das erste bzw.
+letzte Zeichen des Zeichensatzes.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_fontinfo]) ~  vst_effects ~  ASCII-Tabelle
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_fontinfo
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_fontinfo ( WORD handle, WORD *minADE, WORD *maxADE,
+                    WORD *distances, WORD *maxwidth, WORD *effects );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_fontinfo (WORD handle, WORD *minADE, WORD *maxADE,
+                   WORD *distances, WORD *maxwidth, WORD *effects)
+{
+   contrl[0] = 131;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *minADE    = intout[0];
+   *maxADE    = intout[1];
+   *max_width = ptsout[0];
+
+   distances[0] = ptsout[1];
+   distances[1] = ptsout[3];
+   distances[2] = ptsout[5];
+   distances[3] = ptsout[7];
+   distances[4] = ptsout[9];
+
+   effects[0] = ptsout[2];
+   effects[1] = ptsout[4];
+   effects[2] = ptsout[6];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 131   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 5     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 2     # Eintr„ge in intout
+contrl+12 !! contrl[6] !! handle
+intout    !! intout[0] !! minADE
+intout+2  !! intout[1] !! maxADE
+ptsout    !! ptsout[0] !! maxwidth
+ptsout+2  !! ptsout[1] !! distances[0]
+ptsout+4  !! ptsout[2] !! effects[0]
+ptsout+6  !! ptsout[3] !! distances[1]
+ptsout+8  !! ptsout[4] !! effects[1]
+ptsout+10 !! ptsout[5] !! distances[2]
+ptsout+12 !! ptsout[6] !! effects[2]
+ptsout+14 !! ptsout[7] !! distances[3]
+ptsout+16 !! ptsout[8] !! 0
+ptsout+18 !! ptsout[9] !! distances[4]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_get_table
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Get Character (!nolink [Mapping]) Table® - Adresse der Zeichentransformationstabellen
+erfragen.
+
+!item [VDI-Nummer:]
+254
+
+!item [Binding:]
+(!link [Bindings fr vqt_get_table] [Bindings fr vqt_get_table])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die Adresse der Zeichentransformationstabellen. Es
+gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [map]
+Adresse der Zeichenbelegungstabelle
+!end_xlist
+
+(!B)Hinweis:(!b) Diese Informationen sind ntzlich, da Vektorfonts auch
+Zeichen enthalten k”nnen, die im normalen Atari-Zeichensatz nicht enthalten
+sind.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_get_table]) ~  (!link [GDOS][Das GDOS])  ~
+Speedo-GDOS ~  v_gtext
+
+(!ende_liste)
+
+!end_node
+
+
+!begin_node Bindings fr vqt_get_table
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_get_tables ( WORD handle, LONG *map );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_get_tables ( WORD handle, LONG *map )
+{
+   contrl[0] = 254;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   map = intout[0..1];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]   !! 254   Opcode der Funktion
+contrl+2  !! contrl[1]   !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]   !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]   !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]   !! 2     # Eintr„ge in intout
+contrl+12 !! contrl[6]   !! handle
+intout    !! intout[0..1] !! map
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+
+!begin_node vqt_justified
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire justified graphics text® - Offsets von einem Ausrichtungspunkt
+erfragen.
+
+!item [VDI-Nummer:]
+132
+
+!item [Binding:]
+(!link [Bindings fr vqt_justified] [Bindings fr vqt_justified])
+
+!item [Beschreibung:]
+Die Funktion ermittelt fr jedes Zeichen eines Strings die x- und y-Offsets
+von einem gegebenen Ausrichtungspunkt. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [x]
+x-Koordinate
+!item [y]
+y-Koordinate des Punktes fr die Textausrichtung
+!item [string]
+Zeiger auf die Zeichenkette
+!item [length]
+Textl„nge in Pixeln (bzgl. x-Achse)
+!item [word_space]
+Wortzwischenr„ume
+!begin_xlist !short [<> 0 =]
+!item [~~ 0 =]
+nicht dehnen
+!item [<> 0 =]
+dehnen
+!end_xlist
+!item [char_space]
+Zeichenzwischenr„ume
+!begin_xlist !short [<> 0 =]
+!item [~~ 0 =]
+nicht dehnen
+!item [<> 0 =]
+dehnen
+!end_xlist
+!item [offsets]
+enth„lt fr jedes Zeichen im String den x- und y-Offset
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion steht nur in PC-(!nolink [GEM]) ab Version 2.0 zur
+Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_justified])
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_justified
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_justified ( WORD handle, WORD x, WORD y, BYTE *string, WORD length,
+                     WORD word_space, WORD char_space, WORD *offsets );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_justified (WORD handle, WORD x, WORD y, BYTE *string,
+                    WORD length, WORD word_space, WORD char_space,
+                    WORD *offsets)
+{
+   WORD i;
+
+   intin[0] = word_space;
+   intin[1] = char_space;
+
+   ptsin[0] = x;
+   ptsin[1] = y;
+   ptsin[2] = length;
+   ptsin[3] = 0;
+   
+   i = 0;
+   while (string[i++])
+      ;
+
+   contrl[0] = 132;
+   contrl[1] = 2;
+   contrl[3] = i;
+   contrl[6] = handle;
+   pooff = offsets;
+
+   vdi ();
+
+   pooff = ptsout;
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]   !! 132   Opcode der Funktion
+contrl+2  !! contrl[1]   !! 2     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]   !! n     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]   !! 2+n   # Eintr„ge in intin
+contrl+8  !! contrl[4]   !! 0     # Eintr„ge in intout
+contrl+12 !! contrl[6]   !! handle
+intin     !! intin[0]    !! word_space
+intin+2   !! intin[1]    !! char_space
+intin+4   !! intin[2]    !! string[0..n+1]
+ptsin     !! ptsin[0]    !! x
+ptsin+2   !! ptsin[1]    !! y
+ptsin+4   !! ptsin[2]    !! length
+ptsin+6   !! ptsin[3]    !! 0
+ptsout    !! ptsout[...] !! offsets[...]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_name
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Face Name and Index® - ermittelt den Namen und Kurzbeschreibung
+eines Zeichensatzes.
+
+!item [VDI-Nummer:]
+130
+
+!item [Binding:]
+(!link [Bindings fr vqt_name] [Bindings fr vqt_name])
+
+!item [Beschreibung:]
+Die Funktion ermittelt den Namen und Index eines Zeichensatzes. Es gilt:
+
+!begin_xlist !short [element_num]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [element_num]
+Nummer des Zeichensatzes
+!item [name]
+Name des Zeichensatzes als maximal 32 Zeichen lange Zeichenkette
+!end_xlist
+
+(!B)Hinweis:(!b) Das Element (!I)name[32](!i) enth„lt den Wert 0, falls es
+sich um einen Pixelfont handelt, und den Wert 1, falls es sich um einen
+Vektorfont handelt. (ab SpeedoGDOS 4.0)
+
+
+Ab NVDI-3 gibt es eine (!link [erweiterte Form][vqt_ext_name]) dieser Funktion.
+
+!item [Ergebnis:]
+Die Funktion liefert den Index des Zeichensatzes zurck.
+
+!item [Verfgbar:]
+in allen TOS Version, ab SpeedoGDOS 4.0 in erweiterte Version
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_name]) ~  vst_load_fonts ~ vst_font ~ vqt_xfntinfo
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_name
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vqt_name ( WORD handle, WORD element_num, BYTE *name );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vqt_name (WORD handle, WORD element_num, BYTE *name)
+{
+   WORD tmp;
+
+   intin[0] = element_num;
+
+   contrl[0] = 130;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   for (tmp = 0; tmp < 32; tmp++)
+      name[tmp] = intout[tmp+1];
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 130   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 33    # Eintr„ge in intout
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0]      !! element_num
+intout    !! intout[0]     !! Return-Wert
+intout+2  !! intout[1..32] !! name[0..31]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_name_and_id
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire face name and ID by name® - Font ID und Namen suchen
+
+!item [VDI-Nummer:]
+230 (Unterfunktion 100)
+
+!item [Binding:]
+(!link [Bindings fr vqt_name_and_id] [Bindings fr vqt_name_and_id])
+
+!item [Beschreibung:]
+Die Funktion sucht einen Zeichensatz mit einem bestimmten Namen und Format.
+Es gilt:
+
+!begin_xlist !short [font_format]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [font_format]
+gewnschtes Zeichensatz-Format
+!begin_xlist Short
+!item [1 =]
+Bitmap-Font
+!item [2 =]
+Speedo
+!item [4 =]
+TrueType
+!item [8 =]
+Type-1
+!end_xlist
+!item [font_name]
+gewnschter Zeichensatz-Name
+!item [ret_name]
+Name des gefundenen Zeichensatzes
+!end_xlist
+
+(!B)Hinweis:(!b) Fehlende oder berschssige Leerzeichen werden bei der
+Suche ignoriert. Die Funktion steht unter NVDI ab Version 3.02 zur
+Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert die ID des Zeichensatzes, bzw. den Wert 0, wenn kein
+entsprechender Font auffindbar ist.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_name_and_id]) ~  vst_name
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_name_and_id
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vqt_name_and_id ( WORD handle, WORD font_format,
+                       BYTE *font_name, BYTE *ret_name );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vqt_name_and_id (WORD handle, WORD font_format, BYTE *font_name,
+                      BYTE *ret_name)
+{
+   intin[0] = font_format;
+   intin[1..n] = font_name[0..n-1];
+
+   contrl[0] = 230;
+   contrl[1] = 0;
+   contrl[3] = n;
+   contrl[5] = 100;
+   contrl[6] = handle;
+
+   vdi ();
+
+   ret_name[0..m-1] = intout[1..m];
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 230   Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! n     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! m     # Eintr„ge in intout
+contrl+10 !! contrl[5]    !! 100
+contrl+12 !! contrl[6]    !! handle
+intin     !! intin[0]     !! font_format
+intin+2   !! intin[1..n]  !! font_name[0..n-1]
+intout    !! intout[0]    !! Return-Wert
+intout+2  !! intout[1..m] !! ret_name[0..m-1]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_pairkern
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire pair kerning information® - Korrekturfaktor fr Zeichen mit
+Pair-Kerning ermitteln 
+
+!item [VDI-Nummer:]
+235
+
+!item [Binding:]
+(!link [Bindings fr vqt_pairkern] [Bindings fr vqt_pairkern])
+
+!item [Beschreibung:]
+Die Funktion ermittelt den Korrekturfaktor fr zwei Zeichen im Falle des
+Pair-Kernings. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [ch1]
+erstes Zeichen
+!item [ch2]
+zweites Zeichen
+!item [x]
+x-Korrekturfaktor
+!item [y]
+y-Korrekturfaktor
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.0 und ab NVDI 3.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_pairkern]) ~  vqt_trackkern ~ SpeedoGDOS ~  NVDI ~
+Kerning ~ Track-Kerning ~ Pair-Kerning
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_pairkern
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_pairkern ( WORD handle, WORD ch1, WORD ch2, fix31 *x, fix31 *y );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_pairkern (WORD handle, WORD ch1, WORD ch2, fix31 *x, fix31 *y)
+{
+   intin[0] = ch1;
+   intin[1] = ch2;
+
+   contrl[0] = 235;
+   contrl[1] = 0;
+   contrl[3] = 2;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *x = intout[0..1];
+   *y = intout[2..3];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 235   Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 2     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 4     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intin     !! intin[0]     !! ch1
+intin+2   !! intin[1]     !! ch2
+intout    !! intout[0..1] !! x
+intout+4  !! intout[2..3] !! y
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_real_extent
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire real outline font text extent® - Ermitteln des einen Text
+umgebenden Rechteckes.
+
+!item [VDI-Nummer:]
+240 (Unterfunktion 4200)
+
+!item [Binding:]
+(!link [Bindings fr vqt_real_extent] [Bindings fr vqt_real_extent])
+
+!item [Beschreibung:]
+Die Funktion ermittelt ein minimales Rechteck, da einen Text unter
+Beachtung der Textattribute voll umgibt.
+
+(!U)Beispiel:(!u)
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image extent
+!else
+!image (!picture_path)\extent
+!endif
+!else
+!image (!picture_path)\extent
+!endif
+
+(!B)Der Funktion werden folgende Parameter bergeben:(!b)
+
+!begin_xlist !short [extent+0+]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [x]
+x-Koordinate
+!item [y]
+y-Koordinate
+!item [string]
+gewnschte Zeichenkette
+!item [extent[0!]]
+x-Koordinate
+!item [extent[1!]]
+y-Koordinate der linken, unteren Ecke
+!item [extent[2!]]
+x-Koordinate
+!item [extent[3!]]
+y-Koordinate der rechten, unteren Ecke
+!item [extent[4!]]
+x-Koordinate
+!item [extent[5!]]
+y-Koordinate der rechten, oberen Ecke
+!item [extent[6!]]
+x-Koordinate
+!item [extent[7!]]
+y-Koordinate der linken, oberen Ecke
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion beachtet s„mtliche Texteffekte, Rotation,
+Schr„gstellung, Pair-Kerning, Track-Kerning, Zeichenberh„nge, horizontale
+und vertikale Ausrichtung, und steht unter NVDI ab Version 3.00 zur
+Verfgung.
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_real_extent]) ~  vqt_extent  ~ vqt_f_extent
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_real_extent
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_real_extent ( WORD handle, WORD x, WORD y,
+                       BYTE *string, WORD *extent );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_real_extent (WORD handle, WORD x, WORD y, BYTE *string,
+                      WORD *extent)
+{
+   intin[0..n-1] = string[0..n-1];
+   ptsin[0] = x;
+   ptsin[1] = y;
+
+   contrl[0] = 240;
+   contrl[1] = 1;
+   contrl[3] = n;
+   contrl[5] = 4200;
+   contrl[6] = handle;
+
+   vdi ();
+
+   extent[0..7] = ptsout[0..7];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]     !! 240   Opcode der Funktion
+contrl+2  !! contrl[1]     !! 1     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]     !! 4     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]     !! n     # Eintr„ge in intin
+contrl+8  !! contrl[4]     !! 0     # Eintr„ge in intout
+contrl+10 !! contrl[5]     !! 4200
+contrl+12 !! contrl[6]     !! handle
+intin     !! intin[0..n-1] !! string[0..n-1]
+ptsin     !! ptsin[0]      !! x
+ptsin+2   !! ptsin[1]      !! y
+ptsout    !! ptsout[0..7]  !! extent[0..7]
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_trackkern
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire track kerning information® - Korrekturfaktor fr Zeichens„tze mit
+Track-Kerning ermitteln
+
+!item [VDI-Nummer:]
+234
+
+!item [Binding:]
+(!link [Bindings fr vqt_trackkern] [Bindings fr vqt_trackkern])
+
+!item [Beschreibung:]
+Die Funktion liefert den Korrekturfaktor fr Zeichens„tze mit Track-Kerning.
+Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [x]
+x-Korrekturfaktor
+!item [y]
+y-Korrekturfaktor
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion liefert kein Ergebnis zurck.
+
+!item [Verfgbar:]
+ab SpeedoGDOS 4.0 und ab NVDI 3.00
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_trackkern]) ~ (!link [GDOS][Das GDOS]) ~
+SpeedoGDOS ~  vqt_pairkern
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_trackkern
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+VOID vqt_trackkern ( WORD handle, fix31 *x, fix31 *y );
+
+!item [Implementierung:]
+!begin_verbatim
+VOID vqt_trackkern (WORD handle, fix31 *x, fix31 *y)
+{
+   contrl[0] = 234;
+   contrl[1] = 0;
+   contrl[3] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *x = intout[0..1];
+   *y = intout[2..3];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]    !! 234   Opcode der Funktion
+contrl+2  !! contrl[1]    !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]    !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]    !! 0     # Eintr„ge in intin
+contrl+8  !! contrl[4]    !! 4     # Eintr„ge in intout
+contrl+12 !! contrl[6]    !! handle
+intout    !! intout[0..1] !! x
+intout+4  !! intout[2..3] !! y
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_width
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire Character Cell Width® - ermittelt die Breite einer Zeichenzelle.
+
+!item [VDI-Nummer:]
+117
+
+!item [Binding:]
+(!link [Bindings fr vqt_width] [Bindings fr vqt_width])
+
+!item [Beschreibung:]
+Die Funktion ermittelt die horizontalen Ausmae eines Zeichens des akuellen
+Zeichensatzes sowie der Zeichenzelle. Es gilt:
+
+!begin_xlist !short [right_delta]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [character]
+Zeichennummer
+!item [cell_width]
+Zeichenzellenbreite (bzgl. x-Achse)
+!item [left_delta]
+Abstand des linken Zeichenzellenrands zum linken Zeichenrand bzgl. der
+x-Achse
+!item [right_delta]
+Abstand des rechten Zeichenzellenrands zum rechten Zeichenrand bzgl. der
+y-Achse
+!end_xlist
+
+(!B)Hinweis:(!b) Texteffekte und Drehungen werden von der Funktion
+(!I)nicht(!i) beachtet.
+
+Wendet man die Funktion auf einen Vektorfont an, wird fr das Zeichen
+(!I)character(!i) die gerundete Schrittweite zurckgegeben. Diese
+Schrittweite kann (!I)nur(!i) im Zusammenhang mit v_gtext benutzt werden.
+Versucht man diese Schrittweiten auf v_ftext anzuwenden, wird man falsche
+Zeichenpositionen berechnen.
+
+!ifdest [html]
+!ifset [No_Bilder_Pfad]
+!image cl_width
+!else
+!image (!picture_path)\cl_width
+!endif
+!else
+!image (!picture_path)\cl_width
+!endif
+
+Um festzustellen, ob ein Font „quidistant (monospaced) oder proportional
+ist, sollten nicht alle Zeichenpaare ber vqt_width verglichen, sondern
+zuerst berprft werden, ob vqt_name() hierber Informationen zurckgibt.
+
+Die Werte in (!I)left_delta(!i) und (!I)right_delta(!i) entsprechen exakt
+den Positionen in der Horizontal-Offset-Table. Fehlt diese Angabe im
+Zeichensatzkopf (was bei den meisten Bitmap-Fonts der Fall ist), so erh„lt
+man als Ergebnis eine Null.
+
+!item [Ergebnis:]
+Die Funktion liefert den Wert -1, falls die Ausmae aus irgendeinem Grund
+nicht berechnet werden konnten.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_width]) ~  vst_effects
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_width
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vqt_width ( WORD handle, BYTE character, WORD *cell_width,
+                 WORD *left_delta, WORD *right_delta );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vqt_width (WORD handle, BYTE character, WORD *cell_width,
+                WORD *left_delta, WORD *right_delta)
+{
+   intin[0] = character;
+
+   contrl[0] = 117;
+   contrl[1] = 0;
+   contrl[3] = 1;
+   contrl[6] = handle;
+
+   vdi ();
+
+   *cell_width  = ptsout[0];
+   *left_delta  = ptsout[2];
+   *right_delta = ptsout[4];
+
+   return ( intout[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0] !! 117   Opcode der Funktion
+contrl+2  !! contrl[1] !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2] !! 3     # Eintr„ge in ptsout
+contrl+6  !! contrl[3] !! 1     # Eintr„ge in intin
+contrl+8  !! contrl[4] !! 1     # Eintr„ge in intout
+contrl+12 !! contrl[6] !! handle
+intin     !! intin[0]  !! character
+intout    !! intout[0] !! Return-Wert
+ptsout    !! ptsout[0] !! cell_width
+ptsout+2  !! ptsout[1] !! 0
+ptsout+4  !! pstout[2] !! left_delta
+ptsout+6  !! ptsout[3] !! 0
+ptsout+8  !! ptsout[4] !! right_delta
+ptsout+10 !! ptsout[5] !! 0
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node vqt_xfntinfo
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Inquire extended font information® - Informationen ber einen Zeichensatz
+ermitteln.
+
+!item [VDI-Nummer:]
+229 (Opcode 0)
+
+!item [Binding:]
+(!link [Bindings fr vqt_xfntinfo] [Bindings fr vqt_xfntinfo])
+
+!item [Beschreibung:]
+Die Funktion ermittelt bestimmte Informationen ber einen Zeichensatz. Es
+gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [handle]
+Kennung der Workstation
+!item [flags]
+(!B)gewnschte Information als Bitvektor(!b)
+!begin_xlist !short
+!item [Bit-0 =]
+vollst„ndiger Zeichensatzname
+!item [Bit-1 =]
+Name der Zeichensatzfamilie
+!item [Bit-2 =]
+Stil des Zeichensatzes
+!item [Bit-3 =]
+Dateiname des Zeichensates
+!item [Bit-4 =]
+zweiter optionaler Dateiname
+!item [Bit-5 =]
+dritter optionaler Dateiname
+!item [Bit-8 =]
+H”hen ohne Vergr”erung in pt
+!item [Bit-9 =]
+H”hen fr doppelte Vergr”erung in pt
+!end_xlist
+!item [id]
+ID des Zeichensatzes, oder 0 fr den eingestellten Zeichensatz
+!item [index]
+Index des Zeichensatzes oder 0, wenn die ID bereits benutzt wird
+!item [info]
+Adresse der Informations-Struktur
+!end_xlist
+
+(!B)Hinweis:(!b) Wenn ein von 0 verschiedener Index bergeben wird, sucht
+die Funktion den entsprechenden Zeichensatz, und liefert die gewnschten
+Informationen. Ist (!I)index(!i) = 0 wird der Zeichensatz mit der ID
+(!I)id(!i) gesucht; sollte (!I)id(!i) ebenfalls 0 sein, so werden
+Informationen ber den z.Zt. eingestellten Font zurckgegeben.
+
+Bit 8 und 9 von (!I)flags(!i) unterscheiden sich in der Funktion nur bei
+Bitmap-Fonts. Ist Bit 8 gesetzt, werden die H”hen geliefert, die ohne
+Vergr”erung vorhanden sind. Wenn Bit 9 gesetzt ist, werden die H”hen
+geliefert, bei denen vergr”ert wird.
+
+Damit die gewnschten Informationen abgelegt werden k”nnen, mu die Gr”e
+der aufnehmenden Struktur in der Komponente (!I)size(!i) eingetragen werden.
+Die Funktion steht unter NVDI ab Version 3.02 zur Verfgung.
+
+!item [Ergebnis:]
+Das Funktionsergebnis ist z.Zt. unbekannt.
+
+!item [Gruppe:]
+Auskunftsfunktionen
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr vqt_xfntinfo])  ~ vqt_name
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Bindings fr vqt_xfntinfo
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD vqt_xfntinfo ( WORD handle, WORD flags, WORD id,
+                    WORD index, XFNT_INFO *info );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD vqt_xfntinfo (WORD handle, WORD flags, WORD id, WORD index,
+                   XFNT_INFO *info)
+{
+   intin[0] = flags;
+   intin[1] = id;
+   intin[2] = index;
+   intin[3..4] = info;
+
+   contrl[0] = 229;
+   contrl[1] = 0;
+   contrl[3] = 5;
+   contrl[5] = 0;
+   contrl[6] = handle;
+
+   vdi ();
+
+   return ( intout[1] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+contrl    !! contrl[0]   !! 229   Opcode der Funktion
+contrl+2  !! contrl[1]   !! 0     # Eintr„ge in ptsin
+contrl+4  !! contrl[2]   !! 0     # Eintr„ge in ptsout
+contrl+6  !! contrl[3]   !! 5     # Eintr„ge in intin
+contrl+8  !! contrl[4]   !! 3     # Eintr„ge in intout
+contrl+10 !! contrl[5]   !! 0
+contrl+12 !! contrl[6]   !! handle
+intin     !! intin[0]    !! flags
+intin+2   !! intin[1]    !! id
+intin+4   !! intin[2]    !! index
+intin+6   !! intin[3..4] !! info
+intout    !! intout[0]   !! font_format
+intout+2  !! intout[1]   !! font_id
+intout+4  !! intout[2]   !! index
+!end_table
+
+(!ende_liste)
+!end_node
+
+
+
+!begin_node Aufbau des Fontheaders
+
+Der von vqt_fontheader gelieferte Zeichensatz-Kopf ist folgendermaen
+aufgebaut:
+
+!begin_verbatim
+FH_FMVER    0      /* U   D4.0 CR LF NULL NULL  8 bytes            */
+FH_FNTSZ    8      /* U   Font size (bytes) 4 bytes                */
+FH_FBFSZ   12      /* U   Min font buffer size (bytes) 4 bytes     */
+FH_CBFSZ   16      /* U   Min char buffer size (bytes) 2 bytes     */
+FH_HEDSZ   18      /* U   Header size (bytes) 2 bytes              */
+FH_FNTID   20      /* U   Source Font ID  2 bytes                  */
+FH_SFVNR   22      /* U   Source Font Version Number  2 bytes      */
+FH_FNTNM   24      /* U   Source Font Name  70 bytes               */
+FH_MDATE   94      /* U   Manufacturing Date  10 bytes             */
+FH_LAYNM  104      /* U   Layout Name  70 bytes                    */
+FH_CPYRT  174      /* U   Copyright Notice  78 bytes               */
+FH_NCHRL  252      /* U   Number of Chars in Layout  2 bytes       */
+FH_NCHRF  254      /* U   Total Number of Chars in Font  2 bytes   */
+FH_FCHRF  256      /* U   Index of first char in Font  2 bytes     */
+FH_NKTKS  258      /* U   Number of kerning tracks in font 2 bytes */
+FH_NKPRS  260      /* U   Number of kerning pairs in font 2 bytes  */
+FH_FLAGS  262      /* U   Font flags 1 byte:                       */
+                   /*       Bit 0: Extended font                   */
+                   /*       Bit 1: not used                        */
+                   /*       Bit 2: not used                        */
+                   /*       Bit 3: not used                        */
+                   /*       Bit 4: not used                        */
+                   /*       Bit 5: not used                        */
+                   /*       Bit 6: not used                        */
+                   /*       Bit 7: not used                        */
+                   
+FH_CLFGS  263      /* U   Classification flags 1 byte:             */
+                   /*       Bit 0: Italic                          */
+                   /*       Bit 1: Monospace                       */
+                   /*       Bit 2: Serif                           */
+                   /*       Bit 3: Display                         */
+                   /*       Bit 4: not used                        */
+                   /*       Bit 5: not used                        */
+                   /*       Bit 6: not used                        */
+                   /*       Bit 7: not used                        */
+                   
+FH_FAMCL  264      /* U   Family Classification 1 byte:            */
+                   /*       0:  Don't care                         */
+                   /*       1:  Serif                              */
+                   /*       2:  Sans serif                         */
+                   /*       3:  Monospace                          */
+                   /*       4:  Script or calligraphic             */
+                   /*       5:  Decorative                         */
+                   /*       6-255: not used                        */
+                   
+FH_FRMCL  265      /* U   Font form Classification 1 byte:         */
+                   /*       Bits 0-3 (width type):                 */
+                   /*         0-3:   not used                      */
+                   /*         4:     Condensed                     */
+                   /*         5:     not used                      */
+                   /*         6:     Semi-condensed                */
+                   /*         7:     not used                      */
+                   /*         8:     Normal                        */
+                   /*         9:     not used                      */
+                   /*        10:     Semi-expanded                 */
+                   /*        11:     not used                      */
+                   /*        12:     Expanded                      */
+                   /*        13-15:  not used                      */
+                   /*       Bits 4-7 (Weight):                     */
+                   /*         0:   not used                        */
+                   /*         1:   Thin                            */
+                   /*         2:   Ultralight                      */
+                   /*         3:   Extralight                      */
+                   /*         4:   Light                           */
+                   /*         5:   Book                            */
+                   /*         6:   Normal                          */
+                   /*         7:   Medium                          */
+                   /*         8:   Semibold                        */
+                   /*         9:   Demibold                        */
+                   /*         10:  Bold                            */
+                   /*         11:  Extrabold                       */
+                   /*         12:  Ultrabold                       */
+                   /*         13:  Heavy                           */
+                   /*         14:  Black                           */
+                   /*         15-16: not used                      */
+                   
+FH_SFNTN  266      /* U   Short Font Name  32 bytes                */
+FH_SFACN  298      /* U   Short Face Name  16 bytes                */
+FH_FNTFM  314      /* U   Font form 14 bytes                       */
+FH_ITANG  328      /* U   Italic angle 2 bytes (1/256th deg)       */
+FH_ORUPM  330      /* U   Number of ORUs per em  2 bytes           */
+FH_WDWTH  332      /* U   Width of Wordspace  2 bytes              */
+FH_EMWTH  334      /* U   Width of Emspace  2 bytes                */
+FH_ENWTH  336      /* U   Width of Enspace  2 bytes                */
+FH_TNWTH  338      /* U   Width of Thinspace  2 bytes              */
+FH_FGWTH  340      /* U   Width of Figspace  2 bytes               */
+FH_FXMIN  342      /* U   Font-wide min X value  2 bytes           */
+FH_FYMIN  344      /* U   Font-wide min Y value  2 bytes           */
+FH_FXMAX  346      /* U   Font-wide max X value  2 bytes           */
+FH_FYMAX  348      /* U   Font-wide max Y value  2 bytes           */
+FH_ULPOS  350      /* U   Underline position 2 bytes               */
+FH_ULTHK  352      /* U   Underline thickness 2 bytes              */
+FH_SMCTR  354      /* U   Small caps transformation 6 bytes        */
+FH_DPSTR  360      /* U   Display sups transformation 6 bytes      */
+FH_FNSTR  366      /* U   Footnote sups transformation 6 bytes     */
+FH_ALSTR  372      /* U   Alpha sups transformation 6 bytes        */
+FH_CMITR  378      /* U   Chemical infs transformation 6 bytes     */
+FH_SNMTR  384      /* U   Small nums transformation 6 bytes        */
+FH_SDNTR  390      /* U   Small denoms transformation 6 bytes      */
+FH_MNMTR  396      /* U   Medium nums transformation 6 bytes       */
+FH_MDNTR  402      /* U   Medium denoms transformation 6 bytes     */
+FH_LNMTR  408      /* U   Large nums transformation 6 bytes        */
+FH_LDNTR  414      /* U   Large denoms transformation 6 bytes      */
+                   /*     Transformation data format:              */
+                   /*       Y position 2 bytes                     */
+                   /*       X scale 2 bytes (1/4096ths)            */
+                   /*       Y scale 2 bytes (1/4096ths)            */
+                   
+SIZE_FW FH_LDNTR + 6   /* size of nominal font header              */
+EXP_FH_METRES SIZE_FW  /* offset to expansion field metric 
+                         resolution (optional)                     */
+!end_verbatim
+
+Querverweis:
+vqt_fontheader ~  (!link [Header bei Bitmap GDOS-Fonts][FONT_HDR]) ~
+(!link [Vektorfonts][Details zu Vektorschriften])
+!end_node

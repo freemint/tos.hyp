@@ -1,0 +1,308 @@
+!begin_node VDI-Strukturen
+
+!subtoc [stg, html]
+
+!begin_node COLOR_ENTRY
+Die Union COLOR_ENTRY enthÑlt den
+Farbtabelleneintrag. ZukÅnftig sind auch andere FarbrÑume
+als RGB mîglich:
+!begin_verbatim
+typedef union
+{
+   COLOR_RGB   rgb;
+   COLOR_CMYK  cmyk;
+} COLOR_ENTRY;
+!end_verbatim
+!end_node
+
+
+
+
+!begin_node COLOR_RGB
+!begin_verbatim
+typedef struct
+{
+   uint16   reserved;     /* auf 0 oder den Index des Eintrags setzen */
+   uint16   red;          /* Rot:  0<->65535 */
+   uint16   green;        /* GrÅn: 0<->65535 */
+   uint16   blue;         /* Blau: 0<->65535 */
+} COLOR_RGB;
+!end_verbatim
+Falls in einem Programm die Farbdaten bereits in einem
+vernÅnftigen Format (z.B. 8 Bit pro Kanal) vorliegen, kann man
+sich eine Umwandlung mit Multiplikation und Division ersparen. Die
+Shift- und OR-Funktion des Prozessors erledigt das dann schneller und
+eleganter.
+
+Beispiel: Der Farbwert sei durch die Byte-Variablen r,
+g, b beschrieben. Die korrekte Umsetzung auf das
+16-Bit-Format der COLOR_RGB-Struktur erfolgt dann so:
+
+!begin_verbatim
+COLOR_RGB color; 
+
+color.reserved = 0;
+
+color.red = r;
+color.red |= (color.red << 8);
+
+color.green = g;
+color.green |= (color.green << 8);
+
+color.blue = b;
+color.blue |= (color.blue << 8);
+!end_verbatim
+Das Strukturelement reserved sollte auf 0 gesetzt werden
+oder (beim Aufbau einer Farbtabelle) den Index des Eintrags enthalten.
+In jedem Fall mÅssen aber die oberen 8 Bits von reserved
+auf 0 gesetzt werden, da sie von den Farbroutinen ggf. fÅr Flags
+verwendet werden.
+!end_node
+
+!begin_node COLOR_TAB
+
+!begin_verbatim
+typedef struct                    /* Farbtabelle                     */
+{
+   int32 magic;                   /* 'ctab'                          */
+   int32 length;
+   int32 format;                  /* Format (0)                      */
+   int32 reserved;                /* reserviert, auf 0 setzen        */
+   int32 map_id;                  /* Kennung der Farbtabelle         */
+   int32 color_space;             /* Farbraum (z.Zt. nur CSPACE_RGB) */
+   int32 flags;                   /* VDI-interne Flags, auf 0 setzen */
+   int32 no_colors;               /* Anzahl der Farbeintr&auml;ge    */
+   int32 reserved1;               /* reserviert, auf 0 setzen        */
+   int32 reserved2;               /* reserviert, auf 0 setzen        */
+   int32 reserved3;               /* reserviert, auf 0 setzen        */
+   int32 reserved4;               /* reserviert, auf 0 setzen        */
+   COLOR_ENTRY colors[];
+} COLOR_TAB;
+!end_verbatim
+!end_node
+
+
+
+!begin_node fix31
+
+Der Datentyp fix31 entspricht dem Typ LONG, und wird in Zusammenhang mit
+Vektorfonts benîtigt, wo mit Positonen und Schrittweiten in 1/65536
+gerechnet wird. Dabei entspricht die Weite eines Pixels dem Wert 65536. Die
+oberen 16 Bit reprÑsentieren den (!B)Vorkommaanteil(!b) und die unteren 16
+Bit die (!B)Nachkommastellen(!b).
+
+Beispiele:
+
+!begin_table [l r r]
+hex.      !! dez. !! ~
+$00010000 !! 65536 !!  1.0 Pixel
+$0001c000 !! 114688 !!  1.75 Pixel
+$fffec000 !! -81920 !! -1.25 Pixel
+$fffe4000 !! -114688 !! -1.75 Pixel
+!end_table
+
+(!B)Wichtig:(!b) Der Nachkommateil darf (!I)niemals(!i) abgeschnitten
+werden!
+
+Um Schrittweiten aufzusummieren (z.B. von vqt_advance) und dann die
+Pixelposition fÅr die korrekte Positionierung des Cursors zu berechnen,
+sollte man wie folgt vorgehen:
+
+!begin_verbatim
+WORD fix31_to_pixel( fix31 a )
+{
+   WORD b;
+
+   b = (WORD) (( a + 32768L ) >> 16 ); /* runden !! */
+   return( b );                        /* Pixelwert zurÅckgeben */
+}
+!end_verbatim
+
+Querverweis: (!link [GDOS][Das GDOS]) ~ NVDI ~  Speedo-GDOS
+!end_node
+
+!begin_node GCBITMAP
+!begin_verbatim
+typedef struct _gcbitmap  /* îffentliche Bitmapbeschreibung (Struktur      */
+                          /* mit Versionsheader)                           */
+{
+   LONG       magic;      /* Strukturkennung 'cbtm'                        */
+   LONG       length;     /* StrukturlÑnge                                 */
+   LONG       format;     /* Strukturformat (0)                            */
+   LONG       reserved;   /* reserviert (0)                                */
+   BYTE       *addr;      /* Adresse der Bitmap                            */
+   LONG       width;      /* Breite einer Zeile in Bytes                   */
+   LONG       bits;       /* Bittiefe                                      */
+   ULONG      px_format;  /* Pixelformat                                   */
+   LONG       xmin;       /* minimale diskrete x-Koordinate der Bitmap     */
+   LONG       ymin;       /* minimale diskrete y-Koordinate der Bitmap     */
+   LONG       xmax;       /* maximale diskrete x-Koordinate der Bitmap + 1 */
+   LONG       ymax;       /* maximale diskrete y-Koordinate der Bitmap + 1 */
+   CTAB_REF   ctab;       /* Verweis auf die Farbtabelle oder 0L           */
+   ITAB_REF   itab;       /* Verweis auf die inverse Farbtabelle oder 0L   */
+   LONG       reserved0;  /* reserviert (muû auf 0 gesetzt werden)         */
+   LONG       reserved1;  /* reserviert (muû auf 0 gesetzt werden)         */
+} GCBITMAP;
+!end_verbatim
+
+Querverweis: NVDI ~ v_open_bm ~ vr_transfer_bits
+!end_node
+
+!begin_node MFDB
+
+Der Memory Form Definition Block ist eine Datenstruktur, die vom VDI fÅr die
+Rasteroperationen benutzt wird, um die Ziel- und Quellspeicherbereiche zu
+beschreiben.
+
+C-Deklaration:
+
+!begin_verbatim
+typedef struct mfdb
+{
+   VOID *fd_addr;                /* Zeiger auf den Beginn des   */
+                                 /* Speicherbereichs, z. B.     */
+                                 /* Bildspeicherbasisadresse    */
+   WORD  fd_w;                   /* Blockbreite in Pixeln       */
+   WORD  fd_h;                   /* Hîhe des Blocks in Pixeln   */
+   WORD  fd_wdwidth;             /* Blockbreite in Integern     */
+   WORD  fd_stand;               /* 0 = gerÑteabhÑngiges Format */
+                                 /* 1 = Standardformat          */
+   WORD  fd_nplanes;             /* Anzahl der Farbebenen       */
+   WORD  fd_r1, fd_r2, fd_r3;    /* reserviert                  */
+} MFDB;
+!end_verbatim
+
+(!B)Hinweis:(!b) Wenn die Komponente (!I)fd_addr(!i) eine 0 enthÑlt, muû der
+Rest des MFDBs nicht ausgefÅllt werden. Die Rasteroperationen vrt_cpyfm und
+vro_cpyfm beziehen sich dann automatisch auf den Bildschirm (oder im Fall
+eines Druckertreibers auf die Druckerbitmap). Die reservierten Worte
+(!I)fd_r1(!i), (!I)fd_r2(!i) und (!I)fd_r3(!i) sollten hinsichtlich
+zukÅnftiger Erweiterungen auf 0 gesetzt werden!
+
+Querverweis: Rasterformate ~ Rasterfunktionen
+!end_node
+
+!begin_node POINT16
+!begin_verbatim
+typedef struct                         /* Punkt fÅr 16-Bit-Koordinaten */
+{
+   int16 x;
+   int16 y;
+} POINT16;
+!end_verbatim
+!end_node
+
+
+!begin_node POINT32
+!begin_verbatim
+typedef struct                         /* Punkt fÅr 32-Bit-Koordinaten */
+{
+   int32 x;
+   int32 y;
+} POINT32;
+!end_verbatim
+!end_node
+
+
+!begin_node pxyarray
+
+wird im VDI benutzt um verschiedene grafische Objekte anhand von mehreren
+Koordinatenpaaren (x,y) darzustellen. Beispiele fÅr die Anwendung des
+pxyarrays sind die Darstellung von Rechtecken.
+
+!begin_table [l l]
+pxyarray[0] !! x-Koordinate des oberen linken Eckpunktes
+pxyarray[1] !! y-Koordinate des oberen linken Eckpunktes
+pxyarray[2] !! x-Koordinate des unteren rechten Eckpunktes
+pxyarray[3] !! y-Koordinate des unteren rechten Eckpunktes
+!end_table
+
+oder allgemein von n Punktepaaren
+
+!begin_table [l l]
+pxyarray[0]       !! x-Koordinate des ersten Punktepaares
+pxyarray[1]       !! y-Koordinate des ersten Punktepaares
+pxyarray[2]       !! x-Koordinate des zweiten Punktepaares
+pxyarray[3]       !! y-Koordinate des zweiten Punktepaares
+:                 !! ~
+:                 !! ~
+:                 !! ~
+pxyarray[2*n - 2] !! x-Koordinate des n-ten Punktepaares
+pxyarray[2*n - 1] !! y-Koordinate des n-ten Punktepaares
+!end_table
+
+Querverweis: VDI ~  VDI-Bindings
+!end_node
+
+
+!begin_node RECT16
+!begin_verbatim
+typedef struct                         /* Rechteck fÅr 16-Bit-Koordinaten */
+{
+   int16 x1;
+   int16 y1;
+   int16 x2;
+   int16 y2;
+} RECT16;
+!end_verbatim
+!end_node
+
+
+!begin_node RECT32
+!begin_verbatim
+typedef struct                         /* Rechteck fÅr 32-Bit-Koordinaten */
+{
+   int32 x1;
+   int32 y1;
+   int32 x2;
+   int32 y2;
+} RECT32;
+!end_verbatim
+!end_node
+
+
+!begin_node XFNT_INFO
+
+Diese Struktur ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+   LONG  size;             /* LÑnge der Struktur (vor Aufruf setzen !) */
+   WORD  format;           /* Fontformat                               */
+   WORD  id;               /* Font-ID                                  */
+   WORD  index;            /* Index                                    */
+   BYTE  font_name[50];    /* vollstÑndiger Fontname                   */
+   BYTE  family_name[50];  /* Name der Fontfamilie                     */
+   BYTE  style_name[50];   /* Name des Fontstils                       */
+   BYTE  file_name1[200];  /* Name der 1. Fontdatei                    */
+   BYTE  file_name2[200];  /* Name der optionalen 2. Fontdatei         */
+   BYTE  file_name3[200];  /* Name der optionalen 3. Fontdatei         */
+   WORD  pt_cnt;           /* Anzahl der Punkthîhen fÅr vst_point      */
+   WORD  pt_sizes[64];     /* verfÅgbare Punkthîhen                    */
+} XFNT_INFO;
+!end_verbatim
+
+(!B)Hinweis:(!b) Damit die Informationen in die Struktur eingetragen werden,
+muû die Grîûe der Struktur in die Komponente (!I)size(!i) eingetragen
+werden.
+
+FÅr die Komponente (!I)format(!i) gilt:
+
+!begin_table [l l l]
+1 !! = !! Bitmap-Font
+2 !! = !! Speedo-Font
+4 !! = !! TrueType-Font
+8 !! = !! Type 1-Font
+!end_table
+
+Alle Zeichenketten sind null-terminierte Strings im C-Format.
+Strukturelemente die nicht angefordert wurden, haben (!I)keinen(!i)
+definierten Inhalt.
+
+Querverweis: GEM ~ NVDI ~ vqt_xfntinfo
+!end_node
+
+
+!end_node
+

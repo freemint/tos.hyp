@@ -1,0 +1,650 @@
+!begin_node Cookie-Jar
+
+Der Cookie-Jar wurde mit TOS 1.06 eingefÅhrt und stellt eine
+Verallgemeinerung der (!link [Systemvariablen][Die Systemvariablen]) dar. Es handelt sich dabei um eine
+Tabelle von einzelnen Cookies die wie folgt definiert sind:
+
+!begin_verbatim
+typedef struct
+{
+    BYTE cookie_id[4];   /* Identifikations-Code */
+    LONG cookie_value;   /* Wert des Cookies     */
+} COOKIE;
+!end_verbatim
+
+Um mit Cookies arbeiten bzw. diese nutzen zu kînnen, inspiziert man
+zunÑchst den Inhalt der Systemvariablen (!I)(!nolink [_p_cookies])(!i) (0x5a0L).
+Befindet sich hier ein Nullzeiger, so bedeutet dies, daû noch kein
+Cookie-Jar im Speicher installiert ist. Bei Einsatz der Mint-Libs des
+GCC sollten die dort zur VerfÅgung gestellten Funktionen benutzt
+werden!
+
+Jeder andere Wert ist ein Zeiger auf eine Tabelle von Paaren von
+32-Bit Werten (den sogenannten Cookie-Jar) der benutzt werden kann,
+um den Jar gezielt nach bestimmten Cookies abzusuchen.
+!label Cookie-Namens, Wahl des
+
+(!B)Bei der Wahl eines Cookie-Namens sollte man unbedingt die folgenden
+Punkte beachten:(!b)
+
+!begin_itemize !short
+!item Kennungen die mit '_' beginnen sind fÅr Atari reserviert
+!item die Cookie-ID sollte aus vier (!link [ASCII-Zeichen][ASCII-Tabelle]) bestehen
+!item man sollte aus der Cookie-ID auf das zugehîrige Programm
+      schlieûen kînnen
+!end_itemize
+
+!label Cookie-Jar, Ende des
+!label Cookie-Jar, Grîûe des
+!label Cookie, Null-
+!label Null-Cookie
+Das Ende des Cookie-Jars wird durch den (!I)Null-Cookie(!i)
+(Hex: 0x00000000) gekennzeichnet, der als Wert die maximale Anzahl von
+EintrÑgen im Jar enthÑlt.
+
+!label Cookie, Eintragen eines
+(!B)Um einen Cookie einzutragen(!b), sucht man Åber _p_cookies nach dem
+Null-Cookie und ÅberprÅft, ob der Jar noch Platz fÅr einen Eintrag bietet.
+Wenn dies der Fall ist, wird der neue Cookie an der Position des
+Null-Cookies eingefÅgt, welcher wiederum um eine Position nach unten
+geschoben wird. Anderenfalls muû Speicher fÅr eine grîûere Tabelle
+angefordert werden, der alte Cookie-Jar kopiert, und die Systemvariable
+(!I)(!nolink [_p_cookies])(!i) angepaût werden.
+
+!label Cookie, Lîschen eines
+(!B)Um einen Cookie zu lîschen(!b) muss man diesen zunÑchst suchen, und dann
+alle folgenden Cookies (einschlieûlich des Null-Cookies) um eine Position
+nach vorne kopieren.
+
+!label Cookie-Liste
+Um Doppelbelegungen bei den Cookie-Kennungen zu vermeiden, wird von
+Julian Reschke eine Liste gefÅhrt, in der alle offiziell gemeldeten
+Kennungen eingetragen werden.
+
+(!B)Tip:(!b) Quelltexte fÅr die wichtigsten Funktionen im Umgang mit dem
+Cookie-Jar finden sich in verschiedenen Mailboxen, und kînnen auch der
+Zeitschrift (!I)ST-Computer(!i) (Ausgaben 12/1990, 01/1991) entnommen
+werden.
+
+Querverweis: (!link [Liste der System-Cookies][Die Liste der wichtigsten Cookies]) ~ BIOS ~ Beispiel-Code
+
+!begin_node Beispiel-Code
+
+!begin_verbatim
+/* 'get_cookie':  fragt den Wert eines Cookies ab. 
+                  Als Parameter werden dabei die ID des zu suchenden
+                  Cookies, sowie ein Zeiger auf den gefundenen Wert
+                  Åbergeben. 
+ 
+                  Die Routine liefert den Wert FALSE falls der
+                  angegebene Cookie nicht existiert... */
+
+typedef struct
+{
+    LONG id;             /* Identifikations-Code */
+    LONG value;          /* Wert des Cookies     */
+} COOKJAR;
+
+
+WORD get_cookie( LONG cookie, void *value )
+{
+  static WORD use_ssystem = -1;
+  COOKJAR *cookiejar;
+  LONG    val = -1l;
+  WORD    i=0;
+  
+  if( use_ssystem < 0 )
+    use_ssystem = (Ssystem(S_INQUIRE, 0l, 0)==E_OK);
+  
+  if(use_ssystem)
+  {
+    if( Ssystem(S_GETCOOKIE, cookie, (LONG)&val)==E_OK )
+    {
+      if( value!=NULL )
+        *(LONG *)value = val;
+      return TRUE;
+    }
+  }
+  else
+  {
+    /* Zeiger auf Cookie Jar holen */
+    cookiejar = (COOKJAR *)(Setexc(0x05A0/4,(const void (*)(void))-1));
+    if( cookiejar )
+    {
+      for( i=0 ; cookiejar[i].id ; i++ )
+        if( cookiejar[i].id==cookie )
+        {
+          if( value )
+            *(LONG *)value = cookiejar[i].value;
+          return TRUE;
+        }
+    }
+  }
+  
+  return FALSE;
+}
+!end_verbatim
+!end_node
+
+
+!begin_node Die Liste der wichtigsten Cookies
+!label Cookies, Liste der
+
+Ab TOS-Version 1.06 wird der Cookie-Jar automatisch vom BIOS angelegt,
+und enthÑlt wichtige Informationen Åber Spezifika des Rechners. Die
+folgende Tabelle enthÑlt eine Beschreibung der wichtigsten Cookies.
+
+!begin_xlist [____]
+!item [Cookie]
+Beschreibung
+
+!label _AKP
+!label Cookie, _APK
+!item [_AKP]
+(!B)Tastatur-Layout und Landessprache(!b)
+
+Der Cookie informiert Åber die Landessprache und das Tastatur-Layout des
+Systems. Die Bits 0-7 informieren Åber die Landessprache. Es gilt:
+!begin_table [r c l]
+0 !! = !! USA
+1 !! = !! Deutschland
+2 !! = !! Frankreich
+3 !! = !! England
+4 !! = !! Spanien
+5 !! = !! Italien
+6 !! = !! Schweden
+7 !! = !! (franzîsische) Schweiz
+8 !! = !! (deutsche) Schweiz
+9 !! = !! TÅrkei
+10 !! = !! Finnland
+11 !! = !! Norwegen
+12 !! = !! DÑnemark
+13 !! = !! Saudi-Arabien
+14 !! = !! Holland
+15 !! = !! CSSR
+16 !! = !! Ungarn
+!end_table
+
+Die Bits 8-15 identifizieren das Layout der Tastatur. Es gilt:
+!begin_table
+0 !! = !! USA
+1 !! = !! Deutschland
+2 !! = !! Frankreich
+3 !! = !! England
+4 !! = !! Spanien
+5 !! = !! Italien
+6 !! = !! Schweden
+7 !! = !! (franzîsische) Schweiz
+8 !! = !! (deutsche) Schweiz
+9 !! = !! TÅrkei
+10 !! = !! Finnland
+11 !! = !! Norwegen
+12 !! = !! DÑnemark
+13 !! = !! Saudi-Arabien
+14 !! = !! Holland
+15 !! = !! CSSR
+16 !! = !! Ungarn
+!end_table
+ 
+Das obere Wort ist fÅr zukÅnftige Zwecke reserviert.
+
+!label _CPU
+!label Cookie, _CPU
+!label Prozessortyp
+!label CPU, Typ der
+!label Central-Processing-Unit, Typ der
+!item [_CPU]
+(!B)Prozessortyp(!b)
+!begin_table [r c l]
+0 !! = !! MC-68000
+10 !! = !! MC-68010
+20 !! = !! MC-68020
+30 !! = !! MC-68030
+40 !! = !! MC-68040
+60 !! = !! MC-68060
+!end_table
+
+!label _FDC
+!label Cookie, _FDC
+!label Floppy-Disk Controler
+!label Schreibdichte des FDC
+!label FDC, Schreibdichte des
+!item [_FDC]
+(!B)Floppy-Disk-Controller(!b)
+
+Der Cookie wird normalerweise von Treibersoftware fÅr Floppycontroller
+hîherer Schreibdichte installiert. Das oberste Byte gibt Åber die Art der
+hîchsten Schreibdichte im System Auskunft. Es gilt:
+
+!begin_table [r c l l]
+0 !! = !! normales Floppy-Interface !! (z.B. 720KByte Disk)
+1 !! = !! High-Density !! (HD - 1,44 MByte)
+2 !! = !! Extra-High-Density !! (ED - 2,88 MByte)
+>2 !! = !! reserviert !! ~
+!end_table
+
+# Quelle: ST-Magazin 2/1992 S. 105
+Die restlichen drei Bytes geben darÅber Auskunft, wer den Cookie gesetzt hat.
+Definiert sind bislang $000000 (keine Information), $415443 (ØATCÆ, Atari Corporation)
+und $445031 (ØDP1Æ, Dreampark Development, offensichtlich ein amerikanischer Hersteller
+von HD-Erweiterungen).
+
+!label _FLK
+!label Cookie, _FLK
+!label File-Locking mîglich?
+!item [_FLK]
+(!B)File-Locking(!b)
+
+Der Cookie ist gesetzt, wenn das installierte (!nolink [GEMDOS]) Åber
+File-Locking-Erweiterungen verfÅgt. Der Wert des Cookies ist die
+Versionsnummer der Erweiterung.
+
+!label _FPU
+!label Cookie, _FPU
+!label FPU, Typ der
+!label Floating-Point-Unit, Typ der
+!label Koprozessor, mathematischer
+!label mathematischer Koprozessor
+!item [_FPU]
+(!B)Typ der FPU(!b)
+
+Das obere Wort beschreibt den Typ der benutzten FPU. Es gilt:
+
+!begin_xlist [Bit-1..2:] 
+!item [Bit-0:]
+SFP-004 oder kompatible FPU-Karte (68881 als Peripheriebaustein), falls
+gesetzt
+!item [Bit-1..2:]
+68881 oder 68882 als Koprozessor. Es gilt:
+!begin_table [r c l]
+0 !! = !! weder - noch
+1 !! = !! genauer Typ unbekannt
+2 !! = !! 68881
+3 !! = !! 68882
+!end_table
+!item [Bit-3:]
+FPU im MC-68040 
+!end_xlist
+
+Das untere Wort ist fÅr Informationen Åber SoftwareunterstÅtzung via
+Line-F-Trap reserviert und ist z.Zt. noch nicht benutzt. Laut Atari
+bedeutet ein Wert ungleich Null, daû Line-F-UnterstÅtzung vorhanden ist.
+
+!label _FRB
+!label Cookie, _FRB
+!label Fast-RAM-Buffer
+!item [_FRB]
+(!B)Fast-RAM-Buffer(!b)
+
+Der Cookie zeigt auf einen 64 Kbyte groûen Puffer im ST-RAM der vom
+Atari-TT fÅr ACSI-DMA-Transfer benutzt werden kann (das Fast-RAM des TT
+kann hierfÅr (!I)nicht(!i) benutzt werden).
+
+GerÑtetreiber fÅr die ACSI-Schnittstelle dÅrfen diesen Puffer als
+temporÑren Zwischenspeicher fÅr Transfers in das Fast-RAM nutzen; der
+Zugriff wird Åber die Systemvariable flock koordiniert.
+
+Wenn dieser Cookie nicht vorhanden ist, verfÅgt die Maschine entweder Åber
+kein Fast-RAM, oder Åber keine ACSI-Schnittstelle.
+
+!label _IDT
+!label Cookie, _IDT
+!item [_IDT]
+(!B)Formatierung von Datum und Zeit(!b)
+
+Der Cookie gibt Aufschluû Åber die Formatierung von Datum und Zeit
+innerhalb des Systems. Die Bits 0-7 enthalten den (!link [ASCII-Wert][ASCII-Tabelle]) des Zeichens,
+das als Trenner fÅr die Datumsangaben dienen soll. 
+
+Die Bits 8-11 beschreiben die Formatierung des Datums. Es gilt:
+
+0 = Format "MM-DD-YY" ~(Monat, Tag, Jahr) (!nl)
+1 = Format "DD-MM-YY" ~(Tag, Monat, Jahr) (!nl)
+2 = Format "YY-MM-DD" ~(Jahr, Monat, Tag) (!nl)
+3 = Format "YY-DD-MM" ~(Jahr, Tag, Monat)
+
+In den Bits 12-15 ist das Zeitformat codiert. Es gilt:
+
+0 = 12-Stunden Darstellung (!nl)
+1 = 24-Stunden Darstellung
+
+Das obere Wort ist fÅr zukÅnftige Zwecke reserviert.
+ 
+!label _INF
+!label Cookie, _INF
+!label STEFIX-Patch
+!label Patch, STEFIX
+!item [_INF]
+(!B)STEFIX-Patchprogramm(!b)
+
+Der Cookie wird vom Patchprogramm STEFIX angelegt, welches einige Fehler
+im Desktop von TOS 1.06 behebt.
+
+!label _JPD
+!label Cookie, _JPD
+!item [_JPD]
+(!B)JPEG-Dekodierer mit DSP-UnterstÅtzung(!b)
+
+Der Cookie zeigt die VerfÅgbarkeit eines JPEG-Dekodierers der Firmen
+Brainstorm/Atari an, der sich die Mîglichkeiten des Digitalen
+Signalprozessors (DSP) zunutze macht.
+
+!label _MCH
+!label Cookie, _MCH
+!label Maschinentyp
+!label Hardware, nicht-ST-kompatible
+!label Rechnerfamilie
+!item [_MCH]
+(!B)Maschinentyp(!b)
+
+Das obere Wort beschreibt die Rechnerfamilie. Es gilt:
+
+!begin_xlist !short
+!item [-1 =]
+nicht-ST-kompatible Hardware. In diesem Fall haben alle Hardware-Zugriffe
+zu unterbleiben.
+!item [~0 =]
+ Atari-ST  (260-ST,520-ST,1040-ST,Mega-ST,...)
+!item [~1 =]
+Atari-STE (1040-STE, Mega-STE, ST-Book)
+!item [~2 =]
+Atari-TT
+!item [~3 =]
+Atari-Falcon030
+!item [~4 =]
+Milan
+!end_xlist
+
+Das untere Wort dient fÅr feinere Unterscheidungen, und ist z.Zt. nur fÅr
+die STE-Modelle definiert. Es gilt:
+
+0x001 = ST-Book (!nl)
+0x008 = STE mit IDE-Hardware (!nl)
+0x010 = Mega-STE (!nl)
+0x100 = Sparrow (Falcon-VorseriengerÑt) 
+
+!label _MET
+!label Cookie, _MET
+!item [_MET]
+(!B)(!nolink [MetaDOS])(!b)
+
+Der Cookie ist genau dann vorhanden, wenn die Betriebssystemerweiterung
+MetaDOS installiert ist.
+
+!label _NET
+!label Cookie, _NET
+!label Netzwerkerweiterung vorhanden?
+!item [_NET]
+(!B)Netzwerkerweiterungen fÅr (!nolink [GEMDOS])(!b)
+
+Der Cookie dient als Flag fÅr etwaige Netzwerkerweiterungen. Der Wert ist
+ein Zeiger auf zwei LONG-Werte. Der erste enthÑlt eine Herstellerkennung
+fÅr das Netzwerk, der zweite die vom Hersteller vergebene Versionsnummer.
+
+Als Herstellerkennung gibt es bis jetzt: (!nl)
+Application Design Software = "A&D\0" (!nl)
+Pams Software~~~~~~~~~~~~~~ = "PAMS" (!nl)
+Itos Software~~~~~~~~~~~~~~ = "ITOS"
+
+!label _OOL
+!label Cookie, _OOL
+!label POOLFIX3-Patch
+!label Patch, POOLFIX3
+!item [_OOL]
+(!B)POOLFIX3-Patchprogramm(!b)
+
+Der Cookie wird vom Patchprogramm POOLFIX3 angelegt, welches einige Fehler
+in GEMDOS-Version 0.15 behebt.
+
+!label _SLM
+!label Cookie, _SLM
+!label Diablo-Treiber
+!item [_SLM]
+(!B)Diablo-Treiber fÅr SLM-Laserdrucker(!b)
+
+Der Cookie wird vom Diablo-Treiber (ab Version 1.4) der SLM-Laserdrucker gesetzt.
+Der Wert des Cookies zeigt auf eine (!I)nicht(!i) dokumentierte Struktur.
+
+!label _SND
+!label Cookie, _SND
+!label Soundhardware
+!label Soundmîglichkeiten
+!item [_SND]
+(!B)Soundhardware(!b)
+
+Bittabelle, die die vorhandenen Soundmîglichkeiten beschreibt. Es gilt:
+!begin_table [r c l]
+Bit-0 !! = !! GI/Yamaha Sound-Chip 
+Bit-1 !! = !! Stereo-DMA-Sound (wie bei STE und TT)
+Bit-2 !! = !! CODEC
+Bit-3 !! = !! Digitaler Signalprozessor (DSP)
+Bit-4 !! = !! Multiplexer
+Bit-5 !! = !! erweiterte XBiosroutinen (Milan, GSXB)
+!end_table
+
+Alle anderen Bits sind fÅr zukÅnftige Zwecke reserviert.
+
+Das MilanBlaster Xbios setzt die Bit Nr. 2 und Nr. 5 (0x00000024l).
+
+!label _SWI
+!label Cookie, _SWI
+!label DIP-Switches
+!item [_SWI]
+(!B)DIP-Switches(!b)
+
+Die oberen 24 Bit sind z.Zt. unbelegt. FÅr die unteren 8 Bit gilt folgende
+Belegung:
+
+Bit-6 = 720 Kbyte bzw. 1,44 Mbyte Diskettenlaufwerk (!nl)
+Bit-7 = Stereo bzw. Mono System
+
+Die restlichen der unteren 8 Bits sind z.Zt. ebenfalls nicht belegt.
+
+!label _VDO
+!label Cookie, _VDO
+!label Videohardware
+!label Videohardware, nicht kompatible
+!item [_VDO]
+(!B)Videohardware(!b)
+
+Das obere Wort wird fÅr die grobe Klassifizierung benutzt. Es gilt:
+
+!begin_xlist !short
+!item [-1 =]
+nicht-ST-kompatible Hardware. In diesem Fall haben alle Hardware-Zugriffe
+zu unterbleiben.
+!item [~0 =]
+Atari-ST  (260-ST,520-ST,1040-ST,Mega-ST,...)
+!item [~1 =]
+Atari-STE (1040-STE, Mega-STE, ST-Book)
+!item [~2 =]
+Atari-TT
+!item [~3 =]
+Atari-Falcon030 
+!item [~4 =] Milan
+!end_xlist
+
+Das untere Wort ist fÅr feinere Unterscheidungen reserviert.
+
+!label Cookie, FSMC
+!item [FSMC]
+(!B)Vektorfont-GDOS(!b)
+
+Der Cookie wird von einem Vektorfont-fÑhigen GDOS (z.B. (!I)(!nolink [SpeedoGDOS])(!i)
+oder (!I)(!nolink [NVDI])(!i)) angelegt, und zeigt auf die folgende Struktur:
+
+!begin_verbatim
+typedef struct
+{
+   BYTE magic[4];  /* ist '_SPD' */
+   WORD version;   /* Versionsnummer (0x400 fÅr 4.00) */
+} SPEEDO;
+!end_verbatim
+
+(!B)Hinweis:(!b) Beim offiziell nie erhÑltlichen (!I)(!nolink [FSM-GDOS])(!i) besitzt
+die Komponente magic den Wert '_FSM'. '_FNT' steht fÅr (!I)FONTGDOS(!i), '_SPD'
+fÅr (!I)SpeedoGDOS(!i) und 'TTFG' fÅr (!I)ttf-gdos(!i) von Trevor Blight.
+# Quelle: ttf-gdos aus Archiv ttf-gdos.lzh auf meine Festplatte ;-) [GS]
+
+!label Cookie, MagX
+!label MagiC, Cookie von
+!label MAGX_COOKIE
+!item [MagX]
+(!B)(!nolink [MagiC])-Betriebssystem(!b)
+
+Der Cookie wird vom alternativen Betriebssystem MagiC installiert, und
+zeigt auf folgende Struktur:
+
+!begin_verbatim
+typedef struct
+{
+   LONG    config_status;
+   DOSVARS *dosvars;
+   AESVARS *aesvars;
+   VOID    *res1;
+   VOID    *hddrv_functions;
+   LONG    status_bits;
+} MAGX_COOKIE;
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Komponenten (!I)res1(!i) und (!I)hddrv_functions(!i)
+stehen erst ab (!nolink [MagiC])-3, (!I)(!link [status_bits][MAGX_COOKIE, status_bits])(!i) erst ab der Version vom
+24.05.1995 zur VerfÅgung. (!B)Achtung:(!b) Die Versionsnummer von (!nolink [MagiC]),
+die das Vorhandensein dieses erweiterten Cookies enthÑlt, lÑût sich
+dummerweise nicht Åber (!nolink [AESVARS]) abfragen, weil dieser Zeiger auf die
+Variablen des (!nolink [AES]) zur Bootzeit noch NULL ist. GlÅcklicherweise gelangt man
+an den Zeiger auch Åber den Systemheader des TOS (denn dieser Zeiger ist
+immer gÅltig); dies geht per DOMagixAESVars.
+
+!label Cookie, McSn
+!item [McSn]
+(!B)Falcon-kompatible (!nolink [Soundroutinen])(!b)
+
+Der Cookie zeigt die VerfÅgbarkeit von Falcon-kompatiblen (!nolink [XBIOS])
+(!nolink [Soundroutinen]) an.
+
+!label Cookie, MgMc
+!label MagiCMac, Cookie von
+!item [MgMc]
+(!B)MagiCMac-Betriebssystem(!b)
+
+Der Cookie wird vom alternativen Betriebssystem (!link [MagiCMac][MagiCMac-Spezifika]) [einer Portierung
+von (!nolink [MagiC]) auf die Hardware des Apple (Power) Macintosh] angelegt, und zeigt
+auf eine (!link [MgMcCookie][Der Cookie von MagiCMac])-Struktur.
+
+!label Cookie, MiNT
+!label MiNT, Cookie von
+!item [MiNT]
+(!B)MiNT (MiNT is now TOS)(!b)
+
+Der Cookie wird von der (!nolink [GEMDOS])-Erweiterung MiNT angelegt, einem
+leistungsfÑhigen Kernel, der auch unter Multi-TOS eingesetzt wird. Der
+Wert des Cookies besteht aus einer Haupt-/Nebenversionsnummer im High/Low
+Byte des Low-Words. Ein Wert von 0x00000102L steht demnach fÅr Version 1.02.
+
+!label Cookie, MNAM
+!label Maschinen-Name
+!label Hardware, Typ der
+!item [MNAM]
+(!B)Maschinen-Name(!b)
+
+Der Cookie zeigt auf einen nullterminierten ASCII-String (maximal 24
+Zeichen plus Null-Byte), der den Typ der Rechner-Hardware beschreibt
+(z.B. "ATARI TT030").
+
+!label Cookie, NVDI
+!label NVDI, Cookie von
+!item [(!nolink [NVDI])]
+(!B)Schneller Ersatz des (!nolink [VDI])(!b)
+
+Der Cookie wird vom 'Bildschirmbeschleuniger' NVDI installiert, und zeigt
+auf folgende Struktur:
+
+!begin_verbatim
+typedef struct
+{
+   UWORD nvdi_version;          /* Version im BCD-Format       */
+   ULONG nvdi_datum;            /* Datum im BCD-Format         */
+   struct
+   {
+      unsigend            : 9;  /* reserviert                  */
+      unsigend alert      : 1;  /* Fehlermeldungen ein/aus     */
+      unsigend            : 1;  /* reserviert                  */
+      unsigend linea      : 1;  /* LINE-A                      */
+      unsigend mouse      : 1;  /* Dynamische Maus             */
+      unsigend gemdos     : 1;  /* GEMDOS-Zeichenausgabe       */
+      unsigend fehler     : 1;  /* FehlerkompatibilitÑt        */
+      unsigend gdos       : 1;  /* GDOS                        */
+
+   } nvdi_config;
+} NVDI_STRUC;
+!end_verbatim
+
+# Quelle fÅr nvdi_config aus dem Handbuch zu NVDI 2.10
+
+!label Cookie, nAES
+!label nAES, Cookie von 
+!item [nAES]
+Der Cookie wird vom (!nolink [AES])-Ersatz N.AES angelegt und zeigt auf die Struktur N_AESINFO.
+
+!label Cookie, OVER
+!label OverScan, Cookie von
+!item [OVER]
+(!B)OverScan-Treiber(!b)
+
+Der Cookie enthÑlt als Wert die (hexadezimale) Versionsnummer des
+OverScan-Treibers. Ein Wert von 0x300 steht z.B. fÅr die Version 3.0.
+
+!label Cookie, PMMU
+!item [PMMU]
+(!B)Paged-Memory-Management-Unit(!b)
+
+Der Cookie wird von Programmen wie (!I)Outside(!i) oder (!I)VRAM(!i)
+angelegt, die von der im System vorhandenen PMMU gebrauch machen. Der Wert
+des Cookies ist entweder ein Null-Zeiger oder stellt die Einsprungadresse
+eines Funktionshandlers dar, der einige MMU-bezogene Manipulationen
+ermîglicht. Ein Null-Zeiger signalisiert lediglich die Benutzung der PMMU,
+was fÅr andere Programme ein Zeichen sein kann, sich (!I)nicht(!i) zu
+installieren.
+
+!label Cookie, VSCR
+!label Bildschirm, virtueller
+!label virtueller Bildschirm
+!item [(!nolink [VSCR])]
+(!B)Virtueller-Bildschirm(!b)
+
+Der Cookie enthÑlt einen Zeiger auf eine Struktur, die Informationen Åber
+den (!link [sichtbaren Bildschirmausschnitt][Virtual-Screen-Protokoll]) zur VerfÅgung stellt.
+
+!label Cookie, XFRB
+!label Fast-RAM-Buffer, Extended
+!label Extended-Fast-RAM-Buffer
+!item [XFRB]
+(!B)Extended-Fast-RAM-Buffer(!b)
+
+Der Cookie wird u.a. vom Festplatten-Treiber HDDRIVER angelegt, und zeigt
+auf die folgende Struktur:
+
+!begin_verbatim
+typedef struct xfrb
+{
+   WORD version;   /* Versionsnummer im BCD-Format */
+   BYTE *xflock;   /* Semaphore     */
+   BYTE *buffer;   /* Pufferadresse */
+   LONG size;      /* Puffergrîûe   */
+   xfrb *next;     /* Zeiger auf nÑchsten XFRB */
+} XFRB;
+!end_verbatim
+
+!label Cookie, XHDI
+!item [(!nolink [XHDI])]
+(!B)eXtended HardDisk Interface(!b)
+
+Der Cookie zeigt auf die Adresse einer Funktion, die massenspeicherbezogene
+Funktionen zur VerfÅgung stellt. Siehe auch: XHDI-Cookie
+!end_xlist
+
+Querverweis: Cookie-Jar ~ Beispiel-Code ~ BIOS ~ (!link [XHDI-Spezifikation][XHDI])
+
+!end_node
+!end_node

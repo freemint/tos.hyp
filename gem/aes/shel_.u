@@ -1,0 +1,1185 @@
+## Hypertext zum TOS-Betriebssystem
+## entwickelt fr den ST-Guide
+##
+## Last Edit: 25.07.96
+##
+## Kapitel 4: AES-Shellfunktionen
+
+
+
+!begin_node shel_envrn
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell environment® - ermittelt den Wert von Environmentvariablen.
+
+!item [AES-Nummer:]
+125
+
+!item [Binding:]
+(!link [Bindings fr shel_envrn] [Bindings fr shel_envrn])
+
+!item [Beschreibung:]
+Die Funktion ermittelt den Wert einer beliebigen Environmentvariablen des
+AES. Es gilt:
+
+!begin_xlist !short [sh_epvalue]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [sh_epvalue]
+Name der Environment-Variablen
+!item [sh_eparm]
+enth„lt nach dem Aufruf den Wert der entsprechenen Variablen
+!end_xlist
+
+(!B)Hinweis:(!b) Um das (!nolink [AES])-Environment zu „ndern sollte man sich in den
+exec_os-Vektor einklinken, ber den auch das GEM gestartet wird. In der
+aufgerufenen Routine liegt (analog zu einem Programm) der Basepage-Zeiger
+auf dem Stack. In diese Basepage kann dann einfach ein Zeiger auf das neue
+Environment eingetragen werden. Aber Achtung: In (!nolink [AES])-Versionen kleiner als
+1.4 werden nur die ersten 50 Bytes bernommen.
+
+(!B)Noch ein Tip:(!b) Wenn der fr 'PATH=' zurckgelieferte Zeiger auf ein
+Nullbyte verweist, sollte man ihn um den Wert 1 erh”hen, um an das richtige
+Ergebnis zu gelangen.
+
+!item [Ergebnis:]
+Die Funktion liefert als Ergebnis immer 1.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_envrn])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_envrn
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_envrn ( BYTE **sh_epvalue, BYTE *sh_eparm );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_envrn (BYTE **sh_epvalue, BYTE *sh_eparm)
+{
+   addr_in[0] = sh_epvalue;
+   addr_in[1] = sh_eparm;
+
+   return ( crys_if(125) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 125   Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! sh_epvalue
+addr_in   !! addr_in[1] !! sh_eparm
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node shel_find
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell find® - sucht Dateien.
+
+!item [AES-Nummer:]
+124
+
+!item [Binding:]
+(!link [Bindings fr shel_find] [Bindings fr shel_find])
+
+!item [Beschreibung:]
+Die Funktion sucht eine Datei in bestimmten Verzeichnissen. Der Parameter
+(!I)sh_fpbuff(!i) enth„lt den Namen der gesuchten Datei. Nach dem Aufruf der
+Funktion wird hier der Zugriffspfad auf die Datei abgelegt.
+
+(!B)Hinweis:(!b) Die Datei wird in den folgenden Verzeichnissen gesucht:
+
+!begin_itemize !short
+!item im aktuellen Verzeichnis
+!item im Wurzelverzeichnis
+!item in allen Verzeichnissen, die in der Variable PATH des AES-Environments
+      angegeben sind
+!item in dem Pfad, in welchem sich das Programm z.Zt. befindet (ab
+      TOS-Version 1.04)
+!end_itemize
+
+Die Funktion wird auch von rsrc_load benutzt, um die Resource-Datei zu
+lokalisieren.
+
+!item [Ergebnis:]
+Ein Rckgabewert von Null signalisiert, da die angegebene Datei nicht
+gefunden wurde.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_find]) ~  shel_envrn
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_find
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_find ( BYTE *sh_fpbuff );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_find (BYTE *sh_fpbuff)
+{
+   addr_in[0] = sh_fpbuff;
+   return ( crys_if(124) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 124   Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! sh_fpbuff
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_get
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell get® - liest den GEM-Environment-Puffer.
+
+!item [AES-Nummer:]
+122
+
+!item [Binding:]
+(!link [Bindings fr shel_get] [Bindings fr shel_get])
+
+!item [Beschreibung:]
+Die Funktion dient zum Lesen von Zeichen aus dem internen
+Environment-Speicher des AES. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [sh_gaddr]
+Adresse des Zielspeichers
+!item [sh_glen]
+Anzahl der zu lesenden Bytes oder Wert -1, um die L„nge des Speichers zu
+ermitteln.
+!end_xlist
+
+(!B)Hinweis:(!b) Das Desktop nutzt diesen Speicher zur Aufbewahrung der
+DESKTOP.INF bzw. NEWDESK.INF Datei. Das Format dieser Dateien ist allerdings
+(!I)nicht(!i) offiziell dokumentiert. Eine aktuelle Beschreibung findet sich
+jedoch in newdesk.hyp.
+
+Unter MagiC werden beim Start des (!nolink [AES]) alle Daten in den Puffer kopiert, die
+nach der Zeile #_CTR in MAGX.INF liegen. Die zul„ssige L„nge des Puffers
+liegt seit (!nolink [MagiC])-3 zwischen 4192 und 65534 Bytes. Das Vorhandensein der
+zus„tzlichen Features kann per (!link [appl_getinfo][%apgi_6]) (Opcode 6) abgefragt werden.
+
+!item [Ergebnis:]
+Ein Rckgabewert von Null signalisiert einen Fehler.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_get]) ~ shel_put
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_get
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_get ( BYTE *sh_gaddr, UWORD sh_glen );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_get (BYTE *sh_gaddr, UWORD sh_glen)
+{
+   int_in[0]  = sh_glen;
+   addr_in[0] = sh_gaddr;
+
+   return ( crys_if(122) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 122   Opcode der Funktion
+control+2 !! control[1] !! 1     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in    !! int_in[0]  !! sh_glen
+addr_in   !! addr_in[0] !! sh_gaddr
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_help
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+Ausgabe von Hilfetexten.
+
+!item [AES-Nummer:]
+128
+
+!item [Binding:]
+(!link [Bindings fr shel_help] [Bindings fr shel_help])
+
+!item [Beschreibung:]
+Die Funktion dient zur Ausgabe von Hilfetexten (Onlie-Hilfe) ber einen Help-Server.
+
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Bedeutung
+
+!label SHP_HELP
+!item [sh_hmode]  Hierfr ist im Moment immer SHP_HELP(=0) zu bergeben.
+
+!item [sh_hfile]  Name der Hilfedatei.
+
+            Wird sie inklusive einer Extension bergeben, so wird anhand dieser 
+            Extension der entsprechende Server in der Liste der Helpserver 
+            aufgesucht.
+
+            Hat die bergebene Datei keine Extension, so wird automatisch die 
+            des ersten in der CNF-Datei definierten Helpservers angeh„ngt.
+
+!item [sh_hkey]   Schlsselwort, zu welchem ein Hilfetext ausgegeben werden soll, oder
+            NULL.
+
+!end_xlist
+
+Bei einem Aufruf von shel_help mit einer Datei, welche eine Extension hat, prft
+N.AES, ob ein Helpserver fr diese Extension (mittels 'helpserver') definiert 
+wurde. Wird ein passender Server gefunden, so wird geprft, ob dieser bereits 
+aktiv ist (als Accessory oder auch als nebenl„ufig gestartete Anwendung). Ist 
+dies der Fall, so wird dem Server die Mitteilung VA_START mit den bei (!I)sh_hfile(!i) 
+und (!I)sh_hkey(!i) angegebenen Argumenten als Kommandozeile zugesendet.
+
+Ist der Server nicht aktiv, so wird er automatisch gestartet, wenn bei seiner 
+Definition mit Hilfe von 'helpserver' ein Pfad fr ihn angegeben wurde. Als 
+Kommandozeile wird ihm dabei die bei (!I)sh_hfile(!i) und (!I)sh_hkey(!i) angegebenen Argumente 
+bergeben.
+
+
+(!B)Hinweis:(!b) Das Vorhandensein dieser Funktion kann per (!link [appl_getinfo][%apgi_65])
+(Opcode 65) festgestellt werden.
+
+Neben N.AES gibt es eine TSR welches diese Funktion auf anderen Systemen zur Verfgung stellt.
+!item [Ergebnis:]
+Ein Rckgabewert von Null signalisiert einen Fehler.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_help])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_help
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_help ( WORD sh_hmode, BYTE *sh_hfile, BYTE *sh_hkey);
+
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_help ( WORD sh_hmode, BYTE *sh_hfile, BYTE *sh_hkey)
+{
+   int_in[0] = sh_hmode;
+   addr_in[0] = sh_hfile;
+   addr_in[1] = sh_hkey;
+
+   crys_if(128);
+
+   return = int_out[0];
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 128   Opcode der Funktion
+control+2 !! control[1] !! 1     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in    !! int_in[0]  !! sh_hmode
+addr_in   !! addr_in[0] !! sh_hfile
+addr_1n+4 !! addr_in[1] !! sh_hkey
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+!begin_node shel_put
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell put® - schreibt in den GEM-Environment-Puffer.
+
+!item [AES-Nummer:]
+123
+
+!item [Binding:]
+(!link [Bindings fr shel_put] [Bindings fr shel_put])
+
+!item [Beschreibung:]
+Die Funktion schreibt in den Environment-Speicher des AES. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [sh_paddr]
+Adresse des Quellpuffers
+!item [sh_plen]
+Anzahl der zu schreibenden Zeichen
+!end_xlist
+
+(!B)Hinweis:(!b) Das Desktop nutzt diesen Speicher zur Aufbewahrung der
+DESKTOP.INF bzw. NEWDESK.INF Datei. Das Format dieser Dateien ist allerdings
+(!I)nicht(!i) offiziell dokumentiert. Eine aktuelle Beschreibung findet sich
+jedoch in newdesk.hyp.   
+
+Die zul„ssige L„nge des Puffers liegt seit MagiC-3 zwischen 4192 und 65534
+Bytes, w„hrend sie in ganz alten TOS-Versionen noch bei 1024 Bytes lag.
+
+!item [Ergebnis:]
+Ein Rckgabewert von Null signalisiert einen Fehler.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_put]) ~ shel_get ~ shel_envrn ~ shel_find
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_put
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_put ( BYTE *sh_paddr, UWORD sh_plen );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_put (BYTE *sh_paddr, UWORD sh_plen)
+{
+   int_in[0]  = sh_plen;
+   addr_in[0] = sh_paddr;
+
+   return ( crys_if(123) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 123   Opcode der Funktion
+control+2 !! control[1] !! 1     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in    !! int_in[0]  !! sh_plen
+addr_in   !! addr_in[0] !! sh_paddr
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_rdef
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell read default® - Default Programm abfragen
+
+!item [AES-Nummer:]
+126
+
+!item [Binding:]
+(!link [Bindings fr shel_rdef] [Bindings fr shel_rdef])
+
+!item [Beschreibung:]
+Die Funktion erlaubt es, das Programm zu erfragen, welches nach Beendigung
+des aktuellen gestartet wird (i.d.R. der Desktop).
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Bedeutung
+!item [lpcmd]  Zeiger auf einen ausreichend dimensionierten String fr den Namen der 
+         Applikation.
+
+!item [lpdir]  Zeiger auf einen ausreichend dimensionierten String fr den Pfad der 
+         Applikation.
+!end_xlist
+
+(!B)Hinweis:(!b) Das Vorhandensein dieser Funktion kann per (!link [appl_getinfo][%apgi_5])
+(Opcode 5) festgestellt werden. Unter PC-GEM steht die Funktion ab Version
+2.0 zur Verfgung.
+
+!item [Ergebnis:]
+Der Rckgabewert ist z.Zt. nicht bekannt.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_rdef]) ~ shel_wdef ~ appl_getinfo ~ MagiC
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_rdef
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_rdef ( BYTE *lpcmd, BYTE *lpdir );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_rdef (BYTE *lpcmd, BYTE *lpdir)
+{
+   addr_in[0] = lpcmd;
+   addr_in[1] = lpdir;
+
+   return ( crys_if(126) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 126   Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! lpcmd
+addr_in+4 !! addr_in[1] !! lpdir
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_read
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell read® - liest die Kommandozeilen-Parameter der Applikation.
+
+!item [AES-Nummer:]
+120
+
+!item [Binding:]
+(!link [Bindings fr shel_read] [Bindings fr shel_read])
+
+!item [Beschreibung:]
+Die Funktion ermittelt den Namen und die Kommandozeile, mit der eine
+Applikation gestartet wurde. Es gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [sh_rpcmd]
+vollst„ndiger Pfadname mit Programmname
+!item [sh_rptail]
+Kommandozeile (gem„ Pexec, also nullterminiert und mit L„ngenangaben im ersten Byte)
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion arbeitet nur dann korrekt, wenn die
+Applikation per shel_write gestartet worden ist. Daher sollte man im
+Zweifelsfall auf die Werte der Basepage zurckgreifen.
+
+!item [Ergebnis:]
+Ein Fehler ist nur dann aufgetreten, wenn als Ergebnis 0 zurckgegeben wird.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_read]) ~  shel_write ~  Pexec
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_read
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_read ( BYTE *sh_rpcmd, BYTE *sh_rptail );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_read (BYTE *sh_rpcmd, BYTE *sh_rptail)
+{
+   addr_in[0] = sh_rpcmd;
+   addr_in[1] = sh_rptail;
+
+   return ( crys_if(120) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 120   Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! sh_rpcmd
+addr_in+4 !! addr_in[1] !! sh_rptail
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_wdef
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell write default® - Default Programm setzen
+
+!item [AES-Nummer:]
+127
+
+!item [Binding:]
+(!link [Bindings fr shel_wdef] [Bindings fr shel_wdef])
+
+!item [Beschreibung:]
+Die Funktion erlaubt es, die Applikation festzulegen, welche als
+Default-Programm anzusehen ist (normalerweise der Desktop).
+
+(!B)Hinweis zu (!nolink [MagiC]):(!b) Sind die Parameter (!I)lpcmd(!i) und (!I)lpdir(!i)
+Leerstrings, so wird MAGXDESK wieder installiert. Ein alternatives Desktop
+macht zum Programmstart einfach ein shel_write, und beendet sich dann per
+Pterm0 es bekommt von MagiC eine Kommandozeile, die per shel_read ermittelt
+werden kann. Gibt die Shell einen negativen Fehlercode zurck, so wird
+MAGXDESK aktiviert.
+
+(!B)Hinweis zu N.AES:(!b)
+Sind die Parameter (!I)lpcmd(!i) und/oder (!I)lpdir(!i) Leerstrings oder NULL, wird die in 
+N_AES.CNF angegebene 'shell' Applikation gestartet.
+
+Das Vorhandensein dieser Funktion kann per (!link [appl_getinfo][%apgi_5]) (Opcode 5)
+festgestellt werden. Unter PC-GEM steht die Funktion ab Version 2.0 zur
+Verfgung.
+
+!item [Ergebnis:]
+Der Rckgabewert ist z.Zt. nicht bekannt.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_wdef]) ~  shel_rdef ~  appl_getinfo ~ MagiC
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_wdef
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_wdef( BYTE *lpcmd, BYTE *lpdir );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_wdef(BYTE *lpcmd, BYTE *lpdir)
+{
+   addr_in[0] = lpcmd;
+   addr_in[1] = lpdir;
+
+   return ( crys_if(127) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 127   Opcode der Funktion
+control+2 !! control[1] !! 0     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+addr_in   !! addr_in[0] !! lpcmd
+addr_in+4 !! addr_in[1] !! lpdir
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+
+
+!begin_node shel_write
+
+(!begin_liste) [Beschreibung:]
+
+!item [Name:]
+¯Shell write® - startet eine andere Applikation.
+
+!item [AES-Nummer:]
+121
+
+!item [Binding:]
+(!link [Bindings fr shel_write] [Bindings fr shel_write])
+
+!item [Beschreibung:]
+Die Funktion erm”glicht das Starten eines anderen Programms. Ab AES-Version
+4.0 wurde diese Funktion stark erweitert. So lassen sich nun auch Aufgaben
+wie ein Herunterfahren des Systems (Shutdown), ein Aufl”sungswechsel,
+AES-Broadcasting und andere Dinge realisieren.
+
+Der Parameter (!I)sh_wdoex(!i) bestimmt die auszufhrende Aktion, die
+restlichen Parameter sind im wesentlichen von (!I)sh_wdoex(!i) abh„ngig. Es
+gilt:
+
+!begin_xlist !short [sh_wdoex]
+!item [sh_wdoex]
+Bedeutung
+!item [~]
+~
+!item [0]
+(!B)Applikation starten(!b)
+(!nl)
+Der Wert des Parameters (!I)sh_wisgr(!i) (Starten im Grafikmodus, ja oder
+nein) wird automatisch vom (!nolink [AES]) gesetzt, indem die File-Extension mit den
+Inhalten der AES-Environmentvariablen GEMEXT, TOSEXT und ACCEXT verglichen
+wird.
+!item [1]
+(!B)Applikation im GEM/TOS Modus starten(!b)
+(!nl)
+Der Parameter (!I)sh_wisgr(!i) legt dabei den Modus fest, in dem das
+Programm gestartet werden soll. Es gilt:
+!begin_xlist !short [sh_wisgr = 0:]
+!item [sh_wisgr = 0:]
+als TOS-Programm starten
+!item [sh_wisgr = 1:]
+als (!nolink [GEM])-Programm starten
+!end_xlist
+!item [2]
+(!B)reserviert(!b)
+!item [3]
+(!B)Accessorie starten(!b)
+(!nl)
+Ein Programm soll als Accessorie gestartet werden.
+!end_xlist
+
+In den Parametern (!I)sh_wpcmd(!i) und (!I)sh_wptail(!i) sind dabei der Name
+des zu startenden Programms bzw. ein Zeiger auf die Kommandozeile zu
+bergeben. Als Default-Verzeichnis wird dabei das Verzeichnis gew„hlt, in
+dem sich das zu startende Programm befindet (Ausnahme: erweiterter Modus mit
+gesetztem Bit-10, s.u.).
+
+Die Funktion liefert die (!nolink [AES])-ID des gestarteten Prozesses zurck. Ein Wert
+von 0 zeigt in diesem Zusammenhang einen Fehler an. šber den Parameter
+(!I)sh_wiscr(!i) kann spezifiziert werden, ob (!B)Parameter per ARGV(!b) an
+das gestartete Programm bergeben werden sollen. Es gilt:
+
+sh_wiscr = 0: ARGV-Verfahren nicht benutzen (!nl)
+sh_wiscr = 1: (!nolink [ARGV-Verfahren]) benutzen
+
+!label Paralleles Starten von Programmen
+Unter MagiC kann hingegen angegeben werden, ob ein Programm im
+(!B)Single-Modus(!b) (oder parallel) gestartet werden soll. Es gilt:
+
+sh_wiscr = 100  (!B)(Programm parallel ausfhren)(!b)
+(!nl)
+Die neue Applikation erbt alle Standardpfade und -dateien von der aktuellen
+Applikation. Ein Fehlercode wird nur dann zurckgeliefert, falls bereits
+beim Einrichten ein Speicherplatzmangel aufgetreten ist; eine Benachrichtung
+beim Beenden der neuen Applikation (Death-of-Child) existiert nicht (*).
+
+!label Single-Modus
+sh_wiscr = 101  (!B)(Programm im Single-Modus ausfhren)(!b)
+(!nl)
+Dieser Modus entspricht (!I)sh_wiscr(!i) mit dem Wert 1, mit der Ausnahme,
+da vor Aufruf des Programms alle Applikationen auer denjenigen mit ID-0
+und ID-1 (SCRENMGR) eingefroren werden. Die Programme werden nach Beendigung
+des Programms wieder aufgetaut, wenn dieses nicht seinerseits einen neuen
+shel_write-Aufruf mit Singlemode Charakter ausgefhrt hat. (!B)Das genaue
+Kochrezept fr den Single-Modus lautet:(!b)
+
+!begin_itemize !short
+!item sicherstellen, da man die Applikation mit ID-0 ist.
+!item Pfade und Laufwerk fr das neue Programm setzen.
+!item shel_write (TRUE, sh_wisgr, 101, sh_wpcmd, sh_wptail);
+!item wichtige Einstellungen in Datei/Shell-Puffer sichern.
+!item appl_exit, v_clsvwk, Pterm0 ausfhren.
+!end_itemize
+
+Beachtet werden sollte noch, da ab (!nolink [MagiC])-2 im Single-Modus die aktuellen
+Pfade des Aufrufers an den Parent und damit an das neue Programm bergeben
+werden. Die Pfade des Aufrufers sind anschlieend zerst”rt, was aber
+unkritisch ist, da dieser auf den shel_write i.a. ein Pterm folgen l„t (*).
+
+Im (!B)erweiterten Modus(!b), kann ber spezielle Bits des Parameters
+(!I)sh_wdoex(!i) das Starten von Programmen weiter spezifiziert werden. Das
+Low-Byte bleibt dabei unangetastet, und fr das High-Byte gilt:
+
+!begin_table [c|l]
+sh_wdoex Bit !! Bedeutung
+!hline
+ 8 !! Wert von Psetlimit
+ 9 !! Wert von Prenice
+10 !! Default-Verzeichnis
+11 !! Environment-String
+12 !! reserviert
+13 !! reserviert
+14 !! reserviert
+15 !! reserviert
+!end_table
+
+In diesem erweiterten Modus wird der Parameter (!I)sh_wpcmd(!i) als Zeiger
+auf eine Menge von 32bit (Long-)Werten aufgefat. Jedem der o.g. Bits ist
+dabei ein Long-Wert zugewiesen, der gltig ist, wenn das entsprechende Bit
+gesetzt ist. Die Menge der 32bit Werte ist folgendermaen belegt:
+
+!begin_xlist !short [Element]
+!item [Element]
+Bedeutung
+!item [~]
+~
+!item [[0!]]
+Zeiger auf den Namen des Programms
+!item [[1!]]
+Wert von Psetlimit (Bit-8)
+!item [[2!]]
+Wert von Prenice   (Bit-9)
+!item [[3!]]
+Zeiger auf das Default-Verzeichnis.
+(!nl)
+Ein Nullzeiger bedeutet in diesem Zusammenhang, da als Default-Verzeichnis
+dasjenige gew„hlt wird, indem sich das zu startende Programm befindet.
+(Bit-10)
+!item [[4!]]
+Zeiger auf das Environment der Applikation (Bit-11)      
+!end_xlist
+
+(!B)Hinweis:(!b) Die Elemente [1],[2] und [3] werden bis (!nolink [MagiC])-3 ignoriert;
+Element [1] wird jedoch ab MagiC-4 untersttzt. Das Default-Verzeichnis wird
+unter (!nolink [MagiC]) viel einfacher gesetzt, denn das neue Programm erbt alle Pfade
+auf allen Laufwerken vom aufrufenden Programm.
+
+(!B)In neueren (!nolink [AES])-Versionen stehen darber hinaus die folgenden Modi zur
+Verfgung(!b).
+
+!begin_xlist [sh_wdoex]
+!item [sh_wdoex]
+Bedeutung
+!item [~]
+~
+!label Shut-Down Modus
+!item [4]
+(!B)Shutdown-Modus setzen(!b)
+(!nl)
+Dieses Kommando versetzt das System in Abh„ngigkeit des Parameters
+(!I)sh_wiscr(!i) in den Normal bzw. Shut-Down Modus. Es gilt:
+
+!begin_xlist !short [sh_wiscr]
+!item [sh_wiscr]
+Bedeutung
+!item [~]
+~
+!label Shut-Down abbrechen
+!item [0]
+(!B)Shut-Down Sequenz abbrechen(!b)
+(!nl)
+Ein begonnener Shut-Down kann nur von dem Prozess beendet werden, der diese
+Sequenz auch gestartet hat.
+!label Shut-Down, partieller
+!item [1]
+(!B)Partieller Shut-Down(!b)
+(!nl)
+Mit Ausnahme des Aufrufers werden alle Applikationen vom (!nolink [AES]) daraufhin
+berprft, ob sie die Meldung AP_TERM verstehen. Wenn dies der Fall ist,
+schickt das (!nolink [AES]) die Meldungen (!nolink [AP_TERM]) bzw. AC_CLOSE an die
+Programme bzw. Accessories. Der Aufrufer erh„lt keine dieser Meldungen.
+!label Shut-Down, vollst„ndiger
+!item [2]
+(!B)Vollst„ndiger Shut-Down(!b)
+(!nl)
+Mit Ausnahme des Aufrufers werden alle Applikationen und Accessories vom
+AES daraufhin berprft, ob sie die Meldung AP_TERM verstehen. Wenn dies der
+Fall ist, schickt das (!nolink [AES]) die Meldungen (!nolink [AP_TERM]) bzw.
+(!nolink [AC_CLOSE]) an die
+Programme bzw. Accessories. Accessories erhalten die (!nolink [AP_TERM]) Nachricht
+zus„tzlich nach Erhalt der (!nolink [AC_CLOSE]) Message. Der Aufrufer erh„lt keine
+dieser Meldungen.
+!end_xlist
+
+In N.AES gibt es einen erweiterten Aufruf: (!nl)
+shel_write(4, shutart, 0, &ignorant, NULL);
+
+(!I)ignorant(!i) ist hierbei ein Integer, dessen Adresse als vierter Parameter des 
+shel_write-Aufrufs bergeben wird. Im Fehlerfall ist der Rckgabewert der 
+Funktion shel_write wie bisher 0, zus„tzlich wird jedoch in (!I)ignorant(!i) die Applikations-ID 
+(apid) der Applikation hinterlegt, die AP_TERM nicht verstanden hat 
+bzw. -1, wenn bereits ein Shutdown l„uft oder -2, wenn ungltige Parameter 
+bergeben wurden.
+
+!label Aufl”sungswechsel
+!item [5]
+(!B)Aufl”sungswechsel(!b)
+(!nl)
+Die Applikation fordert das (!nolink [AES]) auf, die Aufl”sung zu wechseln. Falls das
+(!nolink [AES]) dem Wechsel zustimmt, versucht es, das System herunterzufahren
+(Shut-Down). Die aktiven Applikationen k”nnen sich nun entweder beenden,
+oder durch eine AP_TFAIL Nachricht dem AES mitteilen, da sie hierzu nicht
+in der Lage sind. Die Parameter (!I)sh_wisgr(!i) und (!I)sh_wiscr(!i) sind
+dabei voneinander abh„ngig. Es gilt:
+
+!begin_xlist !short [sh_wiscr]
+!item [sh_wiscr]
+Bedeutung
+!item [~]
+~
+!item [0]
+Der Parameter (!I)sh_wisgr(!i) ist die ID des physikalischen Ger„tes, auf
+dem der Open-Workstation Aufruf des VDI ausgefhrt wird. Die aktuelle
+physikalische Ger„tenummer kann wie blich per Getrez() + 2 ermittelt
+werden; es stehen folgende Werte zur Verfgung:
+!begin_table [l l l r]
+2 !! = !! ST-Low    !!  (320*200)
+3 !! = !! ST-Medium !!  (640*200)
+4 !! = !! ST-High   !!  (640*400)
+6 !! = !! TT-Medium !!  (640*480)
+8 !! = !! TT-High   !! (1280*960)
+9 !! = !! TT-Low    !!  (320*480)
+!end_table
+!item [1]
+Der Parameter (!I)sh_wisgr(!i) ist das Word fr den Video-Modus des Falcon.
+!item [>2]
+fr zuknftige Zwecke reserviert
+!end_xlist
+
+In N.AES gibt es einen erweiterten Aufruf: (!nl)
+shel_write(5, vmode, falconflag, &ignorant, NULL); (!nl)
+Da ein Aufl”sungswechsel intern zun„chst immer einen vollst„ndigen Shutdown 
+startet, kann es auch hier geschehen, da nicht alle Anwendungen AP_TERM 
+verstehen und der Aufl”sungswechsel somit frhzeitig fehlschl„gt. Analog zur 
+obigen Modus-4-Erweiterung wird auch hier die Applikations-ID eines 
+Verst„ndnislosen in (!I)ignorant(!i) hinterlegt, eine -1, wenn bereits ein (!nolink [Shutdown])
+l„uft oder -2, wenn fehlerhafte Parameter (z.B. unerlaubte Aufl”sungen) 
+bergeben wurden.
+
+!item [6]
+(!B)unbekannt(!b)
+
+!label Broadcasting des AES
+!label AES-Broadcasting
+!item [7]
+(!B)AES-Broadcasting(!b)
+(!nl)
+Die Applikation m”chte eine Nachricht an alle anderen im System vorhandenen
+Applikationen schicken. Als Empf„nger ausgenommen sind nur das AES, der
+Screen-Manager, sowie der Absender der Nachricht selbst.
+
+Der Parameter (!I)sh_wpcmd(!i) ist ein Zeiger auf einen 16 Bytes groen
+Nachrichtenpuffer, der die zu sendenden Daten enth„lt.
+
+!label AES-Environment manipulieren
+!label Environment des AES manipulieren
+!item [8]
+(!B)Manipulation des (!nolink [AES])-Environments(!b)
+(!nl)
+Dieses Kommando erlaubt die Modifikation des AES-Environments. Der Parameter
+(!I)sh_wisgr(!i) beschreibt die gewnschte Aktion. Es gilt:
+
+!begin_xlist !short [sh_wisgr]
+!item [sh_wisgr]
+Bedeutung
+!item [~]
+~
+!item [0]
+(!B)Gr”e des Environment-Puffers erfragen(!b). Diese wird als
+Funktionsergebnis zurckgeliefert.
+!item [1]
+(!B)Einfgen/Entfernen von Strings(!b). Der Parameter (!I)sh_wpcmd(!i) ist
+ein Zeiger auf den Environment-String. Die Syntax zum Einfgen bzw.
+Entfernen lautet 'NEW=STRING\0' bzw. 'NEW=\0'.
+!item [2]
+(!B)Inhalt des Environment-Puffers kopieren(!b). Der Parameter
+(!I)sh_wpcmd(!i) ist ein Zeiger auf den aufnehmenden Puffer, der eine Gr”e
+von (!I)sh_wiscr(!i) Bytes besitzt. Die Funktion liefert die Anzahl der
+Bytes zurck, die nicht kopiert werden konnten.
+!end_xlist
+
+!item [9]
+(!B)Untersttzte Nachrichten anzeigen(!b)
+(!nl)
+Die Applikation teilt dem (!nolink [AES]) mit, welche (neuen) Nachrichten verstanden
+werden. Dies geschieht ber gesetzte Bits des Parameters (!I)sh_wisgr(!i).
+Dabei gilt:
+!begin_xlist !short [Bit 0:]
+!item [Bit 0:]
+AP_TERM
+!end_xlist
+Alle anderen Bits (1-15) sind z.Zt. nicht definiert.
+
+!item [10]
+(!B)Nachricht an (!nolink [AES]) senden(!b)
+(!nl)
+Die Applikation will eine Nachricht an das (!nolink [AES]) schicken. Der Parameter
+(!I)sh_wpcmd(!i) ist ein Zeiger auf den 16 Bytes groen Nachrichtenpuffer.
+
+!label Threads, Erzeugen von
+!item [20]
+(!B)Neuen Thread erzeugen(!b)
+(!nl)
+Mit diesem Opcode kann die Applikation einen neuen Thread erzeugen. Dabei
+gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [sh_wisgr]
+!begin_xlist !short
+!item [0 =]
+Starte Programm im VT52 Fenster der Applikation, falls eines ge”ffnet ist.
+!item [1 =]
+”ffne kein neues Fenster
+!item [2 =]
+”ffne neues VT52-Fenster
+!end_xlist
+!item [sh_wiscr]
+0
+!item [sh_wpcmd]
+Zeiger auf THREADINFO-Struktur.
+!item [sh_wptail]
+Parameter vom Typ (VOID *) fr die Thread-Funktion.
+!end_xlist
+
+Bei einem erfolgreichen Aufruf wird als Ergebnis die Applikations-ID des
+neuen Threads zurckgeliefert (*).
+
+!label Threads, Beenden von
+!item [21]
+(!B)Thread beenden(!b)
+(!nl)
+Mit diesem Opcode kann sich ein Thread selbst beenden. Dazu setzt man die
+Parameter (!I)sh_wisgr(!i) (!I)sh_wiscr(!i) und (!I)sh_wptail(!i) auf die
+Werte 0 bzw. NULL; ber (!I)sh_wpcmd(!i) kann ein zurckzuliefernder
+Fehlercode angegeben werden.
+
+Normalerweise ist ein Ausfhren dieser Funktion nicht notwendig, da sich der
+Thread automatisch mit dem Ende seiner Prozedur (d.h. mit dem CPU-Befehl
+RTS) selbst beendet. (!B)Wichtig:(!b) Wenn der Thread einen Pexec-Aufruf
+durchgefhrt hat, so muss zuerst der laufende Prozess per Pterm beendet
+werden, bevor sich der Thread beenden kann (*).
+
+!item [22]
+(!B)Thread terminieren(!b)
+(!nl)
+Mit diesem Opcode kann ein Thread auch vom Hauptprogramm beendet werden.
+Dazu bergibt man im Parameter (!I)sh_wiscr(!i) die Applikations-ID des
+Thread, und setzt die brigen Parameter auf den Wert 0 bzw. NULL.
+
+Normalerweise ist diese Funktion nicht notwendig, da mit dem Beenden des
+Hauptprogramms automatisch auch alle zugeh”rigen Threads beendet werden. Die
+Funktion wurde erfolgreich ausgefhrt, wenn als Ergebnis der Wert 1
+zurckgeliefert wird. Zu beachten ist jedoch, da fr den Fall, da der
+Thread inzwischen ein Pexec ausgefhrt hat, nur dieses Programm per Pterm
+(EBREAK) beendet wird; der Thread selbst ist erst dann beendet, wenn der
+Aufrufer ein THR_EXIT empfangen hat (*).
+!end_xlist
+
+(!B)Hinweis:(!b) Ab MagiC-3 stehen die folgenden Besonderheiten zur
+Verfgung:
+
+!begin_itemize
+!item Wird in (!I)sh_wptail(!i) eine Zeichenkette bergeben, die mit dem
+      Wert 255 beginnt und mit '\0' abgeschlossen ist, wird die tats„chliche
+      L„nge der Kommandozeile vom AES bestimmt und in ganzer L„nge ans DOS
+      weitergereicht. Das DOS konstruiert hieraus einen ARGV-Parameter im
+      Environment. Ist die Kommandozeile krzer als 127 Bytes, wird sie ber
+      Basepage und per shel_read bergeben, ansonsten besteht sie nur aus
+      dem Byte mit dem Wert 127.
+!item Wird in (!I)sh_wptail(!i) eine Zeichenkette bergeben, die mit dem
+      Wert 254 beginnt, erwartet das AES dahinter die Zeichenkette
+      "ARGV=irgendwas" und eine durch '\0' getrennte und durch "\0\0"
+      abgeschlossene Liste von Parametern. Diese wird vollst„ndig dem DOS
+      bergeben, das daraus einen ARGV-Parameter konstruiert. Ist die
+      Kommandozeile krzer als 127 Bytes, wird sie ber Basepage und per
+      (!nolink [shel_read]) bergeben, wobei die Nullbytes durch Leerstellen ersetzt
+      werden, ansonsten besteht sie nur aus dem Byte mit dem Wert 127.
+!end_itemize
+
+Das Vorhandensein der zus„tzlichen Features kann per (!link [appl_getinfo][%apgi_10]) (Opcode
+10) erfragt werden. Die mit (*) gekennzeichneten Opcodes von shel_write
+stehen z.Zt. nur in (!nolink [MagiC]) zur Verfgung.
+
+
+!label shel_write und Single-TOS
+(!B)Achtung:(!b) Startet man ein neuen AES-Proze unter Singel-TOS mit (!nolink [shel_write])
+wird dieser aber erst nach Beendigung des eigenen Prozesses gestartet.
+
+!item [Ergebnis:]
+Ein Fehler ist nur dann aufgetreten, wenn als Ergebnis 0 zurckgegeben wird.
+
+!item [Gruppe:]
+(!link [Shell-Kommunikation][Shellfunktionen])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fr shel_write]) ~
+(!link [Shut-Down Mechanismus][Allgemeines zum Shut-Down]) ~
+Threads in MagiC
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fr shel_write
+!ignore_index
+
+(!begin_liste) [Implementierung:]
+
+!item [C:]
+WORD shel_write ( WORD sh_wdoex, WORD sh_wisgr, WORD sh_wiscr,
+                  BYTE *sh_wpcmd, BYTE *sh_wptail );
+
+!item [Implementierung:]
+!begin_verbatim
+WORD shel_write (WORD sh_wdoex, WORD sh_wisgr, WORD sh_wiscr,
+                 BYTE *sh_wpcmd, BYTE *sh_wptail)
+{
+   int_in[0]  = sh_wdoex;
+   int_in[1]  = sh_wisgr;
+   int_in[2]  = sh_wiscr;
+   addr_in[0] = sh_wpcmd;
+   addr_in[1] = sh_wptail;
+
+   return ( crys_if(121) );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 121    Opcode der Funktion
+control+2 !! control[1] !! 3     # Eintr„ge in int_in
+control+4 !! control[2] !! 1     # Eintr„ge in int_out
+control+6 !! control[3] !! 2     # Eintr„ge in addr_in
+control+8 !! control[4] !! 0     # Eintr„ge in addr_out
+int_in    !! int_in[0]  !! sh_wdoex
+int_in+2  !! int_in[1]  !! sh_wisgr
+int_in+4  !! int_in[2]  !! sh_wiscr
+addr_in   !! addr_in[0] !! sh_wpcmd
+addr_in+4 !! addr_in[1] !! sh_wptail
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node

@@ -1,0 +1,450 @@
+!begin_node Die Systemvektoren
+
+Da die Systemvariablen und -vektoren die unterste Schicht des
+Betriebssystems darstellen, sollten Anwenderprogramme nur wenn unbedingt
+notwendig auf diese zugreifen. (!B)Konkret:(!b)
+
+!begin_itemize !short
+!item keine Systemvariablen verÑndern, die nicht verÑndert werden dÅrfen.
+!item keine Systemvariablen benutzen, wenn statt dessen auch eine Funktion
+      des Betriebssystems aufgerufen werden kînnte (Beispiel: Mfpint).
+!end_itemize
+
+Die folgende Liste enthÑlt alle Systemvektoren des TOS:
+
+!begin_xlist [LONG $___]
+!item [Vektor]
+Beschreibung
+
+!label Vektor, SSP-
+!item [LONG $000]
+(!B)Reset: SSP(!b)
+(!nl)
+Diese und die folgenden Speicherzellen enthalten eine Spiegelung der ersten
+acht Bytes des ROMs. Bei einem Reset wird der hier liegende Wert in den
+Supervisor-Stack-Pointer geladen (allerdings kein sinnvoller; der
+'richtige' Stack wird erst spÑter vom BIOS installiert).
+
+!label Vektor, PC-
+!item [LONG $004]
+(!B)Reset: PC(!b)
+(!nl)
+Bei einem Reset wird der hier vorgefundene Wert in den Program-Counter (PC)
+geladen. Man findet hier also die Adresse, die bei einem Reset angesprungen
+wird.
+
+!label Vektor, Busfehler-
+!label Busfehler, Vektor fÅr
+!item [LONG $008]
+(!B)Busfehler(!b)
+(!nl)
+Exception-Vektor 2: zwei Bîmbchen
+(!nl)
+Busfehler treten auf, wenn man versucht, auf Speicherbereiche zuzugreifen,
+auf die kein Zugriff erlaubt ist. Das kînnen im Supervisor-Modus eigentlich
+nur nicht-existierende Speicherbereiche sein. Im User-Modus kann es auch
+beim Zugriff auf Hardware-Register oder Bereiche unterhalb von $800
+passieren.
+
+Im Normallfall zeigt dieser Vektor auf die TOS-Routine zur Anzeige von
+Bîmbchen (in diesem Fall genau zwei).
+
+!label Vektor, Adreûfehler-
+!label Adreûfehler, Vektor fÅr
+!item [LONG $00c]
+(!B)Adreûfehler(!b)
+(!nl)
+Exception-Vektor 3: drei Bîmbchen
+(!nl)
+68000 und 68010 kînnen nur byteweise auf ungerade (!nolink [Adressen])
+zugreifen. Diese
+Exception wird ausgelîst, wenn man dennoch einen Wort- oder Langwort-Zugriff
+versucht (auch ProgrammzÑhler oder Stack-Pointer dÅrfen keine ungeraden
+(!nolink [Adressen]) enthalten).
+
+!label Vektor, Illegaler Befehl
+!label Illegaler Befehl, Vektor fÅr
+!item [LONG $010]
+(!B)Illegaler Befehl(!b)
+(!nl)
+Exception-Vektor 4: vier Bîmbchen
+(!nl)
+Es wurde versucht, einen illegalen Befehl auszufÅhren. Dieser Vektor wird
+von vielen Debuggern zur Verwendung fÅr Break-Points geÑndert.
+
+!label Vektor, Division durch Null
+!label Divison durch Null, Vektor fÅr
+!item [LONG $014]
+(!B)Division durch Null(!b)
+(!nl)
+Exception-Vektor 5: kein Bîmbchen
+(!nl)
+Bei einem DIV-Befehl wurde durch 0 geteilt. Dieser Vektor zeigt im
+Normalfall auf einen RTE-Befehl; daher gibt es auch keine Bîmbchen.
+
+!label Vektor, CHK-Befehl
+!label CHK-Befehl, Vektor fÅr
+!item [LONG $018]
+(!B)CHK-Befehl(!b)
+(!nl)
+Exception-Vektor 6: Es wurde eine Exception durch einen CHK-Befehl erzeugt.
+
+!label Vektor, TRAPV-
+!label TRAPV-Befehl, Vektor fÅr
+!item [LONG $01c]
+(!B)Befehl TRAPV(!b)
+(!nl)
+Exception-Vektor 7: Es wurde eine Exception durch einen TRAPV-Befehl
+erzeugt.
+
+!label Vektor, Privilegverletzung
+!label Privilegverletzung, Vektor fÅr
+!item [LONG $020]
+(!B)Privilegverletzung(!b)
+(!nl)
+Exception-Vektor 8:
+(!nl)
+Es wurde versucht, einen Befehl auszufÅhren, der nur im Supervisor-Modus
+erlaubt ist. Beim Atari-TT testet das BIOS, ob es sich bei dem betreffenden
+Befehl um einen 'move sr,...' gehandelt hat: dieser Befehl ist im Gegensatz
+zum 68000er nur im Supervisor-Modus erlaubt. In einem solchen Fall setzt
+das (!nolink [BIOS]) statt dessen den Befehl 'move ccr,...' ein und versucht, das
+Programm weiterlaufen zu lassen.
+
+!label Vektor, Trace
+!label Trace, Vektor fÅr
+!item [LONG $024]
+(!B)Trace(!b)
+(!nl)
+Exception-Vektor 9: Ist das Trace-Bit im Statusregister gesetzt, wird nach
+jeder Instruktion die hier angegebene Adresse angesprungen.
+
+!label Vektor, Line-A
+!label Line-A, Vektor fÅr
+!item [LONG $028]
+(!B)Line-A-Vektor(!b)
+(!nl)
+Exception-Vektor 10: Es wurde versucht eine Instruktion auszufÅhren, die in
+den obersten vier Bits den Wert '$A' enthÑlt. Zur Zeit wird dieser Vektor
+fÅr die sogenannten Line-A-Routinen benutzt.
+
+!label Vektor, Line-F
+!label Line-F, Vektor fÅr
+!item [LONG $02c]
+(!B)Line-F-Vektor(!b)
+(!nl)
+Exception-Vektor 11: Es wurde versucht, eine Instruktion auszufÅhren, die
+in den obersten vier Bits den Wert '$F' enthÑlt. Wird bis TOS 1.04 vom GEM
+benutzt, und ist eigentlich fÅr die Programmierung einer Floating-Point-Unit
+(FPU) gedacht.
+
+!item [LONG $030]
+(!B)reserviert(!b)
+
+!item [~~~~:]
+Exception-Vektoren 12-23
+
+!item [LONG $05C]
+(!B)reserviert(!b)
+
+!label Vektor, Spurious Interrupt
+!label Spurious-Interrupt, Vektor fÅr
+!item [LONG $060]
+(!B)Spurious Interrupt(!b)
+(!nl)
+Exception-Vektor 24: Tritt auf, wenn ein Interrupt ausgelîst wurde, die
+Ursache dafÅr aber nicht feststellbar war.
+
+!label Vektor, Auto (Level-1)
+!label Auto-Interrupt (Level-1), Vektor
+!item [LONG $064]
+(!B)Autovektor-Interrupt, Level 1(!b)
+(!nl)
+Unbenutzt.
+
+!label Vektor, Auto (Level-2)
+!label Auto-Interrupt (Level-2), Vektor
+!item [LONG $068]
+(!B)Autovektor-Interrupt, Level 2(!b)
+(!nl)
+Zeigt auf den Handler fÅr Horizontal-Blanks.
+
+!label Vektor, Auto (Level-3)
+!label Auto-Interrupt (Level-3), Vektor
+!item [LONG $06c]
+(!B)Autovektor-Interrupt, Level 3(!b)
+(!nl)
+Unbenutzt.
+
+!label Vektor, Auto (Level-4)
+!label Auto-Interrupt (Level-4), Vektor
+!item [LONG $070]
+(!B)Autovektor-Interrupt, Level 4(!b)
+(!nl)
+Zeigt auf den Handler fÅr Vertical-Blanks.
+
+!label Vektor, Auto (Level-5)
+!label Auto-Interrupt (Level-5), Vektor
+!item [LONG $074]
+(!B)Autovektor-Interrupt, Level 5(!b)
+(!nl)
+Unbenutzt.
+
+!label Vektor, Auto (Level-6)
+!label Auto-Interrupt (Level-6), Vektor
+!item [LONG $078]
+(!B)Autovektor-Interrupt, Level 6(!b)
+(!nl)
+Zeigt auf Handler fÅr MFP-Interrupts.
+
+!label Vektor, Auto (Level-7)
+!label Auto-Interrupt (Level-7), Vektor
+!item [LONG $07c]
+(!B)Autovektor-Interrupt, Level 7(!b)
+(!nl)
+Unbenutzt.
+
+!label Vektor, TRAP#0
+!label TRAP#0, Vektor fÅr
+!item [LONG $080]
+(!B)TRAP#0(!b)
+(!nl)
+Exception-Vektor 32
+(!nl)
+Vektor fÅr den Befehl 'TRAP #0'. Da vom Betriebssystem nicht benutzt, gibt
+es Bîmbchen.
+
+!label Vektor, TRAP#1
+!label TRAP#1, Vektor fÅr
+!label GEMDOS-Dispatcher
+!label Dispatcher, GEMDOS-
+!item [LONG $084]
+(!B)TRAP#1(!b)
+(!nl)
+Exception-Vektor 33
+(!nl)
+Vektor fÅr den Befehl 'TRAP #1'. Zeigt auf den Dispatcher fÅr die
+GEMDOS-Funktionen.
+
+!label Vektor, TRAP#2
+!label TRAP#2, Vektor fÅr
+!label AES-TRAP
+!label VDI-TRAP
+!item [LONG $088]
+(!B)TRAP#2(!b)
+(!nl)
+Exception-Vektor 34
+(!nl)
+Vektor fÅr den Befehl 'TRAP #2'. Wird von AES und VDI benutzt.
+
+!label Vektor, TRAP#3
+!label TRAP#3, Vektor fÅr
+!item [LONG $08c]
+(!B)TRAP#3(!b)
+
+!item [~~~~:]
+Exception-Vektoren 35-44. Entsprechend viele Bîmbchen, da sie vom
+Betriebssystem z.Zt. nicht benutzt werden.
+
+!item [LONG $0b0]
+(!B)TRAP#12(!b)
+
+!label Vektor, TRAP#13
+!label TRAP#13, Vektor fÅr
+!label BIOS-Dispatcher
+!label Dispatcher, BIOS-
+!item [LONG $0b4]
+(!B)TRAP#13(!b)
+(!nl)
+Exception-Vektor 45: Vektor fÅr den Befehl 'TRAP #13'. Zeigt auf den
+Dispatcher fÅr die BIOS-Funktionen.
+
+!label Vektor, TRAP#14
+!label TRAP#14, Vektor fÅr
+!label XBIOS-Dispatcher
+!label Dispatcher, XBIOS-
+!item [LONG $0b8]
+(!B)TRAP#14(!b)
+(!nl)
+Exception-Vektor 46: Vektor fÅr den Befehl 'TRAP #14'. Zeigt auf den
+Dispatcher fÅr die XBIOS-Funktionen.
+
+!label Vektor, TRAP#15
+!label TRAP#15, Vektor fÅr
+!item [LONG $0bc]
+(!B)TRAP#15(!b)
+(!nl)
+Unbenutzt.
+
+!item [LONG $0c0]
+(!B)reserviert(!b)
+
+!item [~~~~:]
+Exception-Vektoren 48-63.
+
+!item [LONG $0fc]
+(!B)reserviert(!b)
+
+!label Vektor, BUSY-Interrupt
+!label BUSY-Interrupt, Vektor fÅr
+!label Interrupt, BUSY-
+!item [LONG $100]
+(!B)BUSY-Interrupt(!b)
+(!nl)
+ST-MFP-Interrupt 0. Wird durch parallele Schnittstelle ausgelîst.
+Normalerweise nicht benutzt.
+
+!label Vektor, DCD-Interrupt
+!label DCD-Interrupt, Vektor fÅr
+!label Interrupt, DCD-
+!item [LONG $104]
+(!B)DCD-Interrupt(!b)
+(!nl)
+ST-MFP-Interrupt 1. Wird durch die serielle Schnittstelle (Carrier detect)
+ausgelîst. Normalerweise unbenutzt.
+
+!label Vektor, CTS-Interrupt
+!label CTS-Interrupt, Vektor fÅr
+!label Interrupt, CTS-
+!item [LONG $108]
+(!B)CTS-Interrupt(!b)
+(!nl)
+ST-MFP-Interrupt 2. Wird durch die serielle Schnittstelle (Clear to send)
+ausgelîst. Normalerweise unbenutzt.
+
+!label Vektor, GPU-Done
+!label GPU-Done, Vektor fÅr
+!item [LONG $10c]
+(!B)GPU Done(!b)
+(!nl)
+ST-MFP-Interrupt 3. Kann vom Blitter benutzt werden, um den Abschluû einer
+Operation anzuzeigen. Normalerweise unbenutzt.
+
+!label Vektor, Baudratengenerator
+!label Baudratengenerator, Vektor fÅr
+!item [LONG $110]
+(!B)Baudratengenerator(!b)
+(!nl)
+ST-MFP-Interrupt 4. Normalerweise nicht benutzt.
+
+!label Vektor, 200Hz Timer
+!label 200Hz Timer, Vektor fÅr
+!label Timer (200Hz), Vektor fÅr
+!item [LONG $114]
+(!B)200Hz System Timer(!b)
+(!nl)
+ST-MFP-Interrupt 5. Zeigt auf den Systemtimer-Interrupt und darf auf keinen
+Fall verÑndert werden (wird fÅr Timing-Schleifen im TOS benîtigt).
+
+!label Vektor, IKBD
+!label IKBD-Interrupts, Vektor fÅr
+!label Interrupt, IKBD-
+!label Vektor, MIDI
+!label Interrupt, MIDI-
+!label MIDI-Interrupts, Vektor fÅr
+!item [LONG $118]
+(!B)IKBD/MIDI(!b)
+(!nl)
+ST-MFP-Interrupt 6. Zeigt auf den Handler fÅr IKBD- und MIDI-Interrupts.
+
+!label Vektor, FDC
+!label FDC, Vektor fÅr
+!label Vektor, ACSI
+!label ASCI, Vektor fÅr
+!item [LONG $11c]
+(!B)FDC/ACSI(!b)
+(!nl)
+ST-MFP-Interrupt 7. Normalerweise unbelegt.
+
+!label Vektor, Display Enable Signal
+!label Display-Enable-Signal-Vektor
+!item [LONG $120]
+(!B)Display Enable Signal(!b)
+(!nl)
+ST-MFP-Interrupt 8. Normalerweise gesperrt.
+
+!label Vektor, RS232 Sendefehler
+!label RS232 Sendefehler, Vektor
+!item [LONG $124]
+(!B)RS232 Sendefehler(!b)
+(!nl)
+ST-MFP-Interrupt 9. Wird bei öbertragungsfehlern beim Senden von Daten Åber
+die serielle Schnittstelle ausgelîst.
+
+!label Vektor, RS232 Sendepuffer leer
+!label RS232 Sendepuffer leer, Vektor
+!item [LONG $128]
+(!B)RS232 Sendepuffer leer(!b)
+(!nl)
+ST-MFP-Interrupt 10. Wird ausgelîst, wenn der Sendevorgang eines einzelnen
+Bytes abgeschlossen ist.
+
+!label Vektor, RS232 Empfangsfehler
+!label RS232 Empfangsfehler, Vektor
+!item [LONG $12c]
+(!B)RS232 Empfangsfehler(!b)
+(!nl)
+ST-MFP-Interrupt 11. Tritt bei Empfangsfehlern auf.
+
+!label Vektor, RS232 Empfangspuffer voll
+!label RS232 Empfangspuffer voll, Vektor
+!item [LONG $130]
+(!B)RS232 Empfangspuffer voll(!b)
+(!nl)
+ST-MFP-Interrupt 12. Ein komplettes Zeichen ist von der seriellen
+Schnittstelle empfangen worden.
+
+!item [LONG $134]
+(!B)unbenutzt(!b)
+(!nl)
+ST-MFP-Interrupt 13. Unbenutzt
+
+!label Vektor, Ring Indicator
+!label Ring-Indicator, Vektor
+!item [LONG $138]
+(!B)Ring Indicator(!b)
+(!nl)
+ST-MFP-Interrupt 14. Wird ausgelîst, wenn die serielle Schnittstelle einen
+ankommenden Anruf bemerkt (z.B. bei Verwendung von Modems). Da dieser
+Interrupt so leicht auszulîsen ist wird er gerne in Debuggern als
+Break-Signal eingesetzt.
+
+!label Vektor, Monochrom Monitor Detect
+!label Monitor-Detect, Vektor fÅr
+!item [LONG $13c]
+(!B)Monochrom Monitor Detect(!b)
+(!nl)
+ST-MFP-Interrupt 15. Unbenutzt.
+
+!label Vektoren, TT-MFP-Interrupt
+!label MFP-TT-Interrupt-Vektor
+!label Interrupt, MFP-TT
+!item [LONG $140]
+(!B)TT-MFP-Interrupts(!b)
+
+!item [~~~~:]
+16 Interruptvektoren fÅr den zweiten MFP im Atari-TT.
+
+!item [LONG $17c]
+(!B)TT-MFP-Interrupts(!b)
+
+!label Vektoren, TT-SCC-Interrupt
+!label SCC-TT-Interrupt-Vektor
+!label Interrupt, SCC-TT
+!item [LONG $180]
+(!B)TT-SCC-Interrupts(!b)
+
+!item [~~~~:]
+Platz fÅr die Interruptvektoren des SCC-Bausteins im Atari-TT.
+
+!item [LONG $1bc]
+(!B)TT-SCC-Interrupts(!b)
+
+!end_xlist
+
+Querverweis: (!nl)
+(!link [Reset-Vektor][Einklinken in den Reset-Vektor]) ~
+(!link [Systemvariablen][Die Systemvariablen]) ~
+(!link [Exceptions unter MagiCMac][Exceptions unter MagiCMac])
+
+!end_node
