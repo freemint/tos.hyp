@@ -2689,32 +2689,35 @@ der Kernelstruktur im einzelnen:
 !begin_verbatim
 typedef struct
 {
-  WORD version;
-  VOID (*fast_clrmem)      ( void *von, void *bis );
-  BYTE (*toupper)          ( char c );
-  VOID (*_sprintf)         ( char *dest, char *source, LONG *p );
-  VOID *act_pd;
-  APPL *act_appl;
-  APPL *keyb_app;
-  WORD *pe_slice;
-  WORD *pe_timer;
-  VOID (*appl_yield)       ( void );
-  VOID (*appl_suspend)     ( void );
-  VOID (*appl_begcritic)   ( void );
-  VOID (*appl_endcritic)   ( void );
-  LONG (*evnt_IO)          ( LONG ticks_50hz, void *unsel );
-  VOID (*evnt_mIO)         ( LONG ticks_50hz, void *unsel, WORD cnt );
-  VOID (*evnt_emIO)        ( APPL *ap );
-  VOID (*appl_IOcomplete)  ( APPL *ap );
-  LONG (*evnt_sem)         ( WORD mode, void *sem, LONG timeout );
-  VOID (*Pfree)            ( void *pd );
-  WORD int_msize;
-  VOID *int_malloc         ( void );
-  VOID int_mfree           ( void *memblk );
-  VOID resv_intmem         ( void *mem, LONG bytes );
-  LONG diskchange          ( WORD drv );
-  LONG DMD_rdevinit        ( DMD *dmd );
-  LONG proc_info           ( WORD code, PD *pd );
+  WORD mxk_version;
+  VOID (*mxk_fast_clrmem)      ( void *von, void *bis );
+  BYTE (*mxk_toupper)          ( char c );
+  VOID (*mxk__sprintf)         ( char *dest, char *source, LONG *p );
+  VOID *mxk_mxk_act_pd;
+  APPL *mxk_act_appl;
+  APPL *mxk_keyb_app;
+  WORD *mxk_pe_slice;
+  WORD *mxk_pe_timer;
+  VOID (*mxk_appl_yield)       ( void );
+  VOID (*mxk_appl_suspend)     ( void );
+  VOID (*mxk_appl_begcritic)   ( void );
+  VOID (*mxk_appl_endcritic)   ( void );
+  LONG (*mxk_evnt_IO)          ( LONG ticks_50hz, void *unsel );
+  VOID (*mxk_evnt_mIO)         ( LONG ticks_50hz, void *unsel, WORD cnt );
+  VOID (*mxk_evnt_emIO)        ( APPL *ap );
+  VOID (*mxk_appl_IOcomplete)  ( APPL *ap );
+  LONG (*mxk_evnt_sem)         ( WORD mode, void *sem, LONG timeout );
+  VOID (*mxk_Pfree)            ( void *pd );
+  WORD mxk_int_msize;
+  VOID *mxk_int_malloc         ( void );
+  VOID mxk_int_mfree           ( void *memblk );
+  VOID mxk_resv_intmem         ( void *mem, LONG bytes );
+  LONG mxk_diskchange          ( WORD drv );
+  LONG mxk_DMD_rdevinit        ( DMD *dmd );
+  LONG mxk_proc_info           ( WORD code, PD *pd );
+	LONG mxk_mxalloc			 			 ( d0 = LONG amount, d1 = WORD mode, a0 = PD *pd );
+	LONG mxk_mfree							 ( a0 = void *block );
+	LONG mxk_mshrink						 ( d0 = LONG newlen, a0 = void *block );
 } MX_KERNEL;
 !end_verbatim
 
@@ -3074,7 +3077,7 @@ schuld.
 
 
 
-!begin_node evnt_sem_SEM_FREE
+!begin_node SEM_FREE
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3091,7 +3094,7 @@ Semaphore unbenutzt oder von anderer APP benutzt.
 
 
 
-!begin_node evnt_sem_SEM_SET
+!begin_node SEM_SET
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3114,7 +3117,7 @@ Semaphore wurde inzwischen entfernt.
 
 
 
-!begin_node vnt_sem_SEM_TEST
+!begin_node SEM_TEST
 
 (!B)Parameter:(!b)
 !begin_xlist !short [ao =]
@@ -3130,7 +3133,7 @@ nicht benutzt
 !end_node
 
 
-!begin_node evnt_sem_SEM_CSET
+!begin_node SEM_CSET
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3151,7 +3154,7 @@ Semaphore war schon von mir gesetzt.
 
 
 
-!begin_node evnt_sem_SEM_GET
+!begin_node SEM_GET
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3168,7 +3171,7 @@ Semaphore nicht gefunden.
 
 
 
-!begin_node evnt_sem_SEM_CREATE
+!begin_node SEM_CREATE
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3181,7 +3184,7 @@ Name void
 
 
 
-!begin_node evnt_sem_SEM_DEL
+!begin_node SEM_DEL
 
 (!B)Parameter:(!b)
 !begin_xlist !short [a0 =]
@@ -3213,7 +3216,7 @@ a0 !! = !! void *pd
 
 !begin_node mxk_int_msize
 
-Die LÑnge eines Speicherblocks der internen (Kernel-) Speicherverwaltung.
+Die LÑnge eines Speicherblocks der internen (Kernel-) (!nolink [Speicherverwaltung]).
 !end_node
 
 
@@ -3313,6 +3316,33 @@ d0 !! = !! WORD code
 a0 !! = !! PD *pd
 !end_table
 !end_node
+
+!begin_node	mxk_mxalloc
+Ab Kernelversion 4.
+
+Ermîglicht eine schnelle Speicherallozierung, z.B. fÅr ein RAMDisk-XFS,
+ohne Åber den Trap gehen zu mÅssen.
+
+<pd> gibt den Prozeû an, der als Eigner des neuen Blocks eingetragen
+wird, daher sollte normalerweise die Basepage des XFS-Treibers Åbergeben
+werden.
+
+!end_node
+
+!begin_node	mxk_mfree
+Ab Kernelversion 4.
+
+Gibt Speicher wieder frei.
+
+!end_node
+
+!begin_node	mshrink
+Ab Kernelversion 4.
+
+éndert die Grîûe eines Speicherblocks.
+
+!end_node
+
 !end_node
 
 
