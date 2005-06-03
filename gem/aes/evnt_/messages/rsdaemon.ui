@@ -1,0 +1,61 @@
+!begin_node RSDAEMON_MSG
+
+Der RSDAEMON ist eine parallel laufende Applikation, die die Aufgabe des
+Resolvers per AES-Message Åbernimmt. Sinn ist quasi ein nichtblockierendes
+gethostbyname(), allerdings liefert der RSDAEMON nur eine IP, kein ganzes
+hostent-struct.
+
+Der RSDAEMON wird normalerweise automatisch von IConnect gestartet und 
+beendet.
+
+Nutzung:
+
+Per appl_find("RSDAEMON") ist die App-ID zu ermitteln. Im Fehlerfall
+sollte man auf das blockierende gethostbyname() zurÅckgreifen und nur,
+wenn garnicht anders mîglich, stattdessen mit Fehlermeldung abbrechen.
+
+Nun kann dem RSDAEMON eine AES-Message geschickt werden:
+!begin_verbatim
+#include <rsdaemon.h>
+
+pbuf[0]=RSDAEMON_MSG
+pbuf[1]=<eigene App-ID>
+pbuf[2]=0
+pbuf[3]=RSD_REQUEST_IP
+pbuf[4]=<eigene frei wÑhlbare ID, um die Antwort zuordnen zu kînnen>
+pbuf[5/6]=<Zeiger auf den String, der den Namen des Hosts enthÑlt>
+           (Ggf. Speicherschutz beachten!)
+
+Der RSDAEMON liefert eine Antwort folgender Form:
+
+pbuf[0]=RSDAEMON_MSG
+pbuf[1]=<RSDAEMON-ID>
+pbuf[2]=0
+
+pbuf[3]=RSD_IP_UNKNOWN = IP konnte nicht ermittelt werden. Das kann
+                         verschiedene Ursachen haben (User hat keinen
+                         DNS eingetragen, DNS kenn den Host nicht etc.)
+pbuf[4]=<hier wird die ID aus dem Request zurÅckgeliefert>
+
+oder:
+
+pbuf[3]=RSD_IP_FOUND
+pbuf[4]=<hier wird die ID aus dem Request zurÅckgeliefert>
+pbuf[5/6]=<IP des Hosts als ulong>
+!end_verbatim
+
+Und hier noch die RSDAEMON.H:
+!begin_verbatim
+#ifndef __RSDAEMON__
+#define __RSDAEMON__
+
+#define RSDAEMON_MSG	0x995
+
+#define RSD_REQUEST_IP	1
+#define RSD_IP_FOUND		2
+#define RSD_IP_UNKNOWN	3
+
+#endif
+!end_verbatim
+
+!end_node
