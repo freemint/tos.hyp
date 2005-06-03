@@ -124,6 +124,22 @@ sollte per (!link [appl_getinfo][%apgi_11]) (Opcode 11) ermittelt werden.
 setzt die Fenstergrîûe aus (!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
 und (!I)wi_sw4(!i) fest.
 
+XaAES is compatible with all other AES's, except from the following points:
+!begin_enumerate
+!item If x, y, w and h all have a value of -1.
+!item x and y values of -1 are 'legal', i.e, one cannot use -1 to use
+      any old x value. Ofcourse, x and y coordinates are checked to be
+      inside the rootwindow (not X when noleft = false).
+!item When h have a value of 0, the window is infact shaded. This is a thing
+      N.AES does with MiNTSetter, altho I'm not sure this is correct.
+      The application is sent a WM_SHADED. On the next
+      wind_set(handle, WF_CURRXYWH,...) where the h coordinate is not equal
+      to the window's shaded height, the window is unshaded. While the
+      window is shaded via this method, shift-clicks on the window title to 
+      shade a window is ignored.
+!end_enumerate
+XaAES since 2004-09-22, there is an extend (!link [version][WF_CURRXYWH, wind_xset]).
+
 !label WF_DCOLOR, wind_set
 !item [WF_DCOLOR (19)] (!nl)
 setzt die Standard-Farben fÅr die Fensterelemente. Der Parameter
@@ -174,6 +190,15 @@ zu schnell ausgefÅhrt werden (z.B. wegen neuer Hardware).
 (!B)Achtung:(!b) Das Vorhandensein dieses Features sollte per
 (!link [appl_getinfo][%apgi_22360]) (Opcode 22360) ermittelt werden.
 
+!label WF_FULLXYWH, wind_set
+!item [WF_FULLXYWH (7)] (!nl)
+If either (!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
+or (!I)wi_sw4(!i) have a value of -1, that coordinate is not changed.
+If ALL coordinates have a value of -1, the window is actually moved to the
+current FULLXYWH coordinates, making the current window position the new
+PREVXYWH position. (!nl)
+XaAES since 2004-09-22, there is an extend (!link [version][WF_FULLXYWH, wind_xset]).
+
 !label WF_HSLIDE, wind_set
 !item [WF_HSLIDE (8)] (!nl)
 setzt den horizontalen Slider auf die neue Position (!I)wi_sw1(!i) (0 ganz
@@ -196,6 +221,11 @@ den Bildschirm gebracht werden. Ab MagiC-4 and XaAES v0.943 funktioniert dies au
 wenn das
 Fenster bereits geîffnet ist. (!B)Achtung:(!b) Das Vorhandensein dieses
 Features sollte per (!link [appl_getinfo][%apgi_11]) (Opcode 11) erfragt werden.
+
+!label WF_RESVD, wind_set
+!label WF_IGNORE, wind_set
+!item [WF_IGNORE (13)] (!nl)
+Is used in some old AESS version. Function unknown.
 
 !label WF_INFO, wind_set
 !item [WF_INFO (3)] (!nl)
@@ -233,6 +263,71 @@ bei XaAES maximal 200.
 legt den Objektbaum, auf den (!I)wi_sw1(!i) und (!I)wi_sw2(!i) zeigt, mit
 dem Startobjekt (!I)wi_sw3(!i) als neues Desktop fest. Durch öbergabe eines
 Nullzeigers kann wieder der Standardhintergrund gesetzt werden.
+
+!label WF_OPTS, wind_set
+!item [WF_OPTS (41)] (!nl)
+(!I)wi_handle(!i) is a window handle or -1. If handle is a legal window handle,
+              the options will only apply to that window. If 'handle' is
+              -1, the settings will apply to all windows the application
+              creates AFTER this call.
+
+(!I)wi_sw1(!i) is 0 to clear the selected bits or 1 to set the selected bits.
+
+(!I)wi_sw2(!i)  Currently available options are as follows;
+ !begin_xlist !short [~~~~]
+ !label WO0_WHEEL
+   !item [WO0_WHEEL (0x0001)]
+      Setting this bit will enable extended mouse wheel support, and
+      go into WHL_AROWWHEEL mode causing XaAES to send extended
+      WM_ARROWED messages to the application when the mouse wheel turns.
+      Read section "XaAES and wheel mouse handling." for details.
+
+ !label WO0_FULLREDRAW
+   !item [WO0_FULLREDRAW (0x0002)]
+      Setting this bit will make XaAES send WM_REDRAW messages to cover
+      the whole work-area of the window when it is FULLED. Default
+      behaviour is to only send WM_REDRAW messages for the areas that
+      need it, blitting the already visible parts. This can also be
+      configured via xaaes.cnf, see the app_options argument 'naesff'.
+
+ !label WO0_NOBLITW
+   !item [WO0_NOBLITW (0x0004)]
+      Setting this bit will make XaAES send WM_REDRAW messages to cover
+      the whole work-area of the window when its WIDTH changes. This is
+      handy for apps like HighWire, Textprocessors ,etc, that need to
+      reformat when window width changes. Default behaviour is to send
+      WM_REDRAW messages for the areas that need it.
+
+ !label WO0_NOBLITH
+   !item [WO0_NOBLITH (0x0008)]
+      Setting this bit will make XaAES send WM_REDRAW messages to cover
+      the whole work-area of the window when its HEIGHT changes.
+      Default behaviour is to send WM_REDRAW messages for the areas
+      that need it.
+
+ !label WO0_SENDREPOS
+   !item [WO0_SENDREPOS (0x0010)]
+      Setting this bit will make XaAES send a WM_REPOSED(38) message
+      when a windows X/WIDTH and/or Y/HEIGHT coordinate pair changes.
+      Such changes happes when the user resizes the window using
+      upper/left borders. Default behaviour is to first send a WM_MOVED
+      followed by a WM_SIZED message under these conditions, because
+      older apps dont evaluate the WIDTH/HEIGHT in WM_MOVED messages.
+      So, dudes, set this bit and use WM_REPOSED! :)
+ !end_xlist
+
+(!I)wi_sw3(!i) and (!I)wi_sw4(!i) are currently undefined and must be cleared.
+
+The presence should be checked for using (!link [appl_getinfo][%apgi_11]) (Opcode 11).
+
+!label WF_PREVXYWH, wind_set
+!item [WF_PREVXYWH (6)] (!nl)
+If either(!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
+or (!I)wi_sw4(!i)  have a value of -1, that coordinate is not changed.
+If ALL coordinates have a value of -1, the window is actually moved to the
+current PREVXYWH coordinates, making the current window position the new
+PREVXYWH position. (!nl)
+XaAES since 2004-09-22, there is an extend (!link [version][WF_PREVXYWH, wind_xset]).
 
 !label WF_SHADE, wind_set
 !item [WF_SHADE (22365)] (!nl)
@@ -616,6 +711,22 @@ sollte per (!link [appl_getinfo][%apgi_11]) (Opcode 11) ermittelt werden.
 setzt die Fenstergrîûe aus (!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
 und (!I)wi_sw4(!i) fest.
 
+XaAES is compatible with all other AES's, except from the following points:
+!begin_enumerate
+!item If x, y, w and h all have a value of -1.
+!item x and y values of -1 are 'legal', i.e, one cannot use -1 to use
+      any old x value. Ofcourse, x and y coordinates are checked to be
+      inside the rootwindow (not X when noleft = false).
+!item When h have a value of 0, the window is infact shaded. This is a thing
+      N.AES does with MiNTSetter, altho I'm not sure this is correct.
+      The application is sent a WM_SHADED. On the next
+      wind_set(handle, WF_CURRXYWH,...) where the h coordinate is not equal
+      to the window's shaded height, the window is unshaded. While the
+      window is shaded via this method, shift-clicks on the window title to 
+      shade a window is ignored.
+!end_enumerate
+XaAES since 2004-09-22, there is an extend (!link [version][WF_CURRXYWH, wind_xset]).
+
 !label WF_DCOLOR, wind_set
 !item [WF_DCOLOR (19)] (!nl)
 setzt die Standard-Farben fÅr die Fensterelemente. Der Parameter
@@ -666,6 +777,15 @@ zu schnell ausgefÅhrt werden (z.B. wegen neuer Hardware).
 (!B)Achtung:(!b) Das Vorhandensein dieses Features sollte per
 (!link [appl_getinfo][%apgi_22360]) (Opcode 22360) ermittelt werden.
 
+!label WF_FULLXYWH, wind_set
+!item [WF_FULLXYWH (7)] (!nl)
+If either (!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
+or (!I)wi_sw4(!i) have a value of -1, that coordinate is not changed.
+If ALL coordinates have a value of -1, the window is actually moved to the
+current FULLXYWH coordinates, making the current window position the new
+PREVXYWH position. (!nl)
+XaAES since 2004-09-22, there is an extend (!link [version][WF_FULLXYWH, wind_xset]).
+
 !label WF_HSLIDE, wind_set
 !item [WF_HSLIDE (8)] (!nl)
 setzt den horizontalen Slider auf die neue Position (!I)wi_sw1(!i) (0 ganz
@@ -690,6 +810,11 @@ wenn das Fenster bereits geîffnet ist.  (!nl)
 (!B)Achtung:(!b) Das Vorhandensein dieses
 Features sollte per (!link [appl_getinfo][%apgi_11]) (Opcode 11) erfragt werden.
 
+!label WF_RESVD, wind_set
+!label WF_IGNORE, wind_set
+!item [WF_IGNORE (13)] (!nl)
+Ist in alten AES-Version benutzt. Funktion unbekannt.
+
 !label WF_INFO, wind_set
 !item [WF_INFO (3)] (!nl)
 schreibt den String, auf den (!I)wi_sw1(!i) und (!I)wi_sw2(!i) zeigt, in die
@@ -707,7 +832,7 @@ wind_create.
 !label WF_MENU, wind_set
 !item [WF_MENU (33)] (!nl)
 Es kann eine MenÅzeile in ein Fenster eingehÑngt werden. Wurde das Fenster nicht
-mit der Komponente MENUBAR erzeugt, dann wird er Aufruf ignoriert. In
+mit der Komponente MENUBAR erzeugt, dann wird der Aufruf ignoriert. In
 (!I)wi_sw1(!i) und (!I)wi_sw2(!i) wird die Adresse des Baums Åbergeben. (!nl)
 Beim anklicken erhÑlt man eine erweiterte MN_SELECTED Nachricht. (!nl)
 nur XaAES
@@ -726,6 +851,71 @@ bei XaAES maximal 200.
 legt den Objektbaum, auf den (!I)wi_sw1(!i) und (!I)wi_sw2(!i) zeigt, mit
 dem Startobjekt (!I)wi_sw3(!i) als neues Desktop fest. Durch öbergabe eines
 Nullzeigers kann wieder der Standardhintergrund gesetzt werden.
+
+!label WF_OPTS, wind_set
+!item [WF_OPTS (41)] (!nl)
+(!I)wi_handle(!i) is a window handle or -1. If handle is a legal window handle,
+              the options will only apply to that window. If 'handle' is
+              -1, the settings will apply to all windows the application
+              creates AFTER this call.
+
+(!I)wi_sw1(!i) is 0 to clear the selected bits or 1 to set the selected bits.
+
+(!I)wi_sw2(!i)  Currently available options are as follows;
+           !begin_xlist !short [~~~~]
+           !label WO0_WHEEL
+           !item [WO0_WHEEL (0x0001)]
+              Setting this bit will enable extended mouse wheel support, and
+              go into WHL_AROWWHEEL mode causing XaAES to send extended
+              WM_ARROWED messages to the application when the mouse wheel turns.
+              Read section "XaAES and wheel mouse handling." for details.
+
+           !label WO0_FULLREDRAW
+           !item [WO0_FULLREDRAW (0x0002)]
+              Setting this bit will make XaAES send WM_REDRAW messages to cover
+              the whole work-area of the window when it is FULLED. Default
+              behaviour is to only send WM_REDRAW messages for the areas that
+              need it, blitting the already visible parts. This can also be
+              configured via xaaes.cnf, see the app_options argument 'naesff'.
+
+           !label WO0_NOBLITW
+           !item [WO0_NOBLITW (0x0004)]
+              Setting this bit will make XaAES send WM_REDRAW messages to cover
+              the whole work-area of the window when its WIDTH changes. This is
+              handy for apps like HighWire, Textprocessors ,etc, that need to
+              reformat when window width changes. Default behaviour is to send
+              WM_REDRAW messages for the areas that need it.
+
+           !label WO0_NOBLITH
+           !item [WO0_NOBLITH (0x0008)]
+              Setting this bit will make XaAES send WM_REDRAW messages to cover
+              the whole work-area of the window when its HEIGHT changes.
+              Default behaviour is to send WM_REDRAW messages for the areas
+              that need it.
+
+           !label WO0_SENDREPOS
+           !item [WO0_SENDREPOS (0x0010)]
+              Setting this bit will make XaAES send a WM_REPOSED(38) message
+              when a windows X/WIDTH and/or Y/HEIGHT coordinate pair changes.
+              Such changes happes when the user resizes the window using
+              upper/left borders. Default behaviour is to first send a WM_MOVED
+              followed by a WM_SIZED message under these conditions, because
+              older apps dont evaluate the WIDTH/HEIGHT in WM_MOVED messages.
+              So, dudes, set this bit and use WM_REPOSED! :)
+           !end_xlist
+
+(!I)wi_sw3(!i) and (!I)wi_sw4(!i) are currently undefined and must be cleared.
+
+Features sollte per (!link [appl_getinfo][%apgi_11]) (Opcode 11) erfragt werden.
+
+!label WF_PREVXYWH, wind_set
+!item [WF_PREVXYWH (6)] (!nl)
+If either(!I)wi_sw1(!i), (!I)wi_sw2(!i), (!I)wi_sw3(!i)
+or (!I)wi_sw4(!i)  have a value of -1, that coordinate is not changed.
+If ALL coordinates have a value of -1, the window is actually moved to the
+current PREVXYWH coordinates, making the current window position the new
+PREVXYWH position. (!nl)
+XaAES since 2004-09-22, there is an extend (!link [version][WF_PREVXYWH, wind_xset]).
 
 !label WF_SHADE, wind_set
 !item [WF_SHADE (22365)] (!nl)
