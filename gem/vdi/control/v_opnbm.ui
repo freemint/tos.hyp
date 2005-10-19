@@ -28,34 +28,34 @@ Bedeutung
 !item [handle]
 graf_handle()
 !item [work_in[0..10!]]
-wie bei v_opnwk()/v_opnvwk() definiert
+seei v_opnwk()/v_opnvwk()
 !item [work_in[11!]]
-Breite -1 (z.B. 1279)
+Width -1 (e.g. 1279)
 !item [work_in[12!]]
-Hîhe -1 (z.B. 959)
+Height -1 (e.g. 959)
 !item [work_in[13!]]
-Breite eines Pixels in Mikrometern
+Width of a pixel in 1/1000 mm
 !item [work_in[14!]]
-Hîhe eines Pixels in Mikrometern
+Height of a pixel in 1/1000 mm
 !item [work_in[15..19!]]
-reserviert, sollte 0 enthalten
+reserved, should contain 0
 !end_xlist
 
-Die Funktion steht ab EdDI-Version 1.00 zur VerfÅgung. Ab (!nolink [EdDI]) 1.1 kann
-v_opnbm() mit zusÑtzlichen Parametern in (!I)work_in[15..19](!i) aufgerufen
-werden. Es wird dann versucht, eine Bitmap in dem durch diese Parameter
+If the EdDI cookie has version number 1.1 or newer, v_opnbm() takes additional
+arguments in work_in[15..19] into account:
+Es wird dann versucht, eine Bitmap in dem durch diese Parameter
 beschriebenen Format zu îffnen. Sollte fÅr das angegebene Format kein
 Treiber vorhanden sein, kann die Bitmap nicht erzeugt werden. Es gilt:
 
 !begin_xlist !short [work_in+15..16+]
 !item [work_in[15..16!]]
-Anzahl der darstellbaren Farben
+number of simultaneously displayable colors
 !item [work_in[17!]]
-Anzahl der Planes
+number of planes
 !item [work_in[18!]]
-Pixelformat
+pixel format
 !item [work_in[19!]]
-Bitreihenfolge
+bit order
 !end_xlist
 
 Pixelformat und Bitreihenfolge werden bei vq_scrninfo genauer beschrieben.
@@ -63,19 +63,20 @@ Mit den folgenden Parametern kann z.B. eine Offscreen-Bitmap mit 256 Farben
 und Interleaved Planes erzeugt werden:
 
 !begin_verbatim
-work_in[15..16] = 256;  /* 256 Farben             */
-work_in[17] = 8;        /* 8 Farbebenen           */
+work_in[15..16] = 256;  /* 256 colors             */
+work_in[17] = 8;        /* 8 Planes               */
 work_in[18] = 0;        /* Interleaved Planes     */
 work_in[19] = 1;        /* normale Bitreihenfolge */
 !end_verbatim
 
-(!B)Achtung:(!b) Der Eintrag (!I)work_in[11](!i) sollte bei Addition von 1
-ohne Rest durch 16 teilbar sein. Andernfalls rundet der VDI Treiber auf den
-nÑchsthîheren ohne Rest teilbaren Wert.
 
-Wird fÅr Pixelbreite und -Hîhe 0 angegeben, so werden die Werte des
-Bildschirms benutzt. Nach erfolgreichem Aufruf enthÑlt der Parameter
-(!I)handle(!i) die Kennung der erzeugten Bitmap.
+(!B)Attention:(!b)  Work_in[11]  +  1  should  be  divisible  by  16  without 
+remainder.  Otherwise  the  VDI  driver  will  round  up  
+(work_in[11] + 1) to the next number which can be divided 
+by 16 without remainder.
+
+If  pixel  width  and  height are 0 the pixel size of the 
+screen workstation is used.
 
 (!B)Hinweis:(!b) Die Benutzung von Offscreen-Bitmaps bietet sich auch dann
 an, wenn man Effekte wie starkes Flackern vermeiden mîchte. In diesem Fall
@@ -92,39 +93,36 @@ Bedeutung
 !item [~]
 ~
 !item [work_out[0..1!]]
-wie bei v_opnwk()/v_opnvwk() definiert
+see v_opnwk()/v_opnvwk()
 !item [work_out[2!]]
 0
 !item [work_out[3..38!]]
-wie bei (!nolink [v_opnwk])()/(!nolink [v_opnvwk])() definiert
+see (!nolink [v_opnwk])()/(!nolink [v_opnvwk])()
 !item [work_out[39!]]
-0 (keine Hardw.-Palette vorh., da Bitmap)
+0 (no hardware clut)
 !item [work_out[39..56!]]
-wie bei (!nolink [v_opnwk(!nolink [()/(!nolink [v_opnvwk])() definiert
+see (!nolink [v_opnwk(!nolink [()/(!nolink [v_opnvwk])()
 !item [bitmap]
-Zeiger auf einen MFDB
+Pointer to MFDB
 !end_xlist
 
-Falls bitmap->fd_addr gleich NULL ist, so wird anhand der Grîûenangaben in
-(!I)work_in(!i) Speicher fÅr die Bitmap angefordert (die Bitmap wird im
-Gegensatz zu (!nolink [v_opnvwk])() gelîscht).
+If  bitmap->fd_addr  is  zero,  the  VDI will allocate memory for the 
+bitmap and will clear it (in contrast to v_opnvwk() ). 
 
-Um eine Bitmap im gerÑtespezifischen Format zu îffnen, muû
-(!I)bitmap->fd_nplanes(!i) eine Null oder die Ebenenanzahl des Schirms
-enthalten (work_out[4] bei vq_extnd()). Ist bitmap->fd_nplanes 1, wird eine
-monochrome Bitmap angelegt.
+To  open a bitmap in device-specific format bitmap->fd_nplanes should 
+be  zero  or  the  number  of  planes of the screen (work_out[4] from 
+vq_extnd).  If bitmap->fd_nplanes is 1, a monochrome bitmap will be 
+created.
 
-Die EintrÑge des (!nolink [MFDB]) (fd_addr, fd_w, fd_h, fd_wdwidth, fd_stand,
-fd_nplanes) werden vom (!nolink [VDI])-Treiber gesetzt und an die aufrufende Applikation
-zurÅckgegeben. Wenn nicht nicht genÅgend Speicher vorhanden ist, wird der
-Inhalt des MFDBs nicht verÑndert; ein Null-Handle wird zurÅckgegeben.
+The   elements   of  the  MFDB  (fd_addr,  fd_w,  fd_h,  fd_wdwidth,  
+fd_stand,fd_nplanes)  are  set  by  the  VDI  before  returning  from 
+v_opnbm().  If  there  is  not  enough  memory to create a bitmap the 
+handle will be zero and the MFDB will not be changed.
 
-Wenn (!I)bitmap->fd_addr(!i) ungleich NULL ist, wird dieser Eintrag als
-Zeiger auf eine Bitmap interpretiert. Wenn die Bitmap im Standardformat
-vorliegt, wird sie ins gerÑtespezifische Format umgewandelt. Liegt sie schon
-im gerÑtespezifischen Format vor, so wird sie nicht umgewandelt. Falls die
-Auflîsung der Bitmap (d.h. die Anzahl der Farben und Planes) nicht
-unterstÅtzt wird, gibt v_opnbm() ein Null-Handle zurÅck.
+If  bitmap->fd_addr  is  not  zero,  it  will be used as pointer to a 
+bitmap.  If  the bitmap is in standard format, it will be transformed 
+into device-specific format. If the number of planes of the bitmap is 
+not supported by the VDI, a zero handle will be returned.
 
 !item [Availability:]
 Die Funktion steht ab EdDI-Version 1.00 zur VerfÅgung. Ab (!nolink [EdDI]) 1.1 kann
