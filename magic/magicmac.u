@@ -272,7 +272,7 @@ Querverweis: GEMDOS  ~ BIOS ~  XBIOS ~  GEM
 
 !begin_node Exceptions unter MagiCMac
 
-Ein Atari-Programm kann, wie auf einem echten Atari, die 
+Ein Atari-Programm kann, wie auf einem echten Atari, die
 (!link [Exceptionvektoren][Die Systemvektoren])
 benutzen, sprich: umlenken. Allerdings darf das Programm dabei nur die
 Exception-Vektoren im Adreûbereich zw. $0 und $400 benutzen, nicht etwa die,
@@ -360,6 +360,7 @@ beschrieben sind:
         bne     ok1
         moveq   #8,D0        ;   EnterSupervisorMode
         dc.w    $A08D        ;   _DebugUtil
+  ok1:
         move    d0,-(a7)     ; Sichern des alten Modus
 
         ; hier nun modeAtari ... modeMac usw. aufrufen.
@@ -428,7 +429,7 @@ oder auch so:
 !item [68040/60]
 !begin_verbatim
       NOP
-      CPUSHA DC/IC 
+      CPUSHA DC/IC
 !end_verbatim
 oder:
 !begin_verbatim
@@ -437,7 +438,7 @@ oder:
 !end_xlist
 
       Der Prozessor-Typ sollte dabei durch Inspektion des _CPU-Cookies
-      ermittelt werden.                      
+      ermittelt werden.
 !item (!B)Interrupts sperren(!b)
 (!nl)
       Falls kurzzeitig die Interrupts gesperrt werden mÅssen, dann danach
@@ -615,85 +616,88 @@ Apple (Power) Macintosh] legt einen Cookie (!link [MgMc][Cookie, MgMc]) an, der 
 folgende Struktur zeigt:
 
 !label %mmcookie_flgs1
+!label MgMcCookie
 !begin_verbatim
 typedef struct
 {
-   SHORT   vers;                 /* Versionskennung im BCD-Format       */
-   SHORT   size;                 /* Grîûe der Struktur in Bytes         */
-   LONG    flags1;               /* verschiedene Flags:                 */
-                                 /*                                     */
-                                 /* Bit-0: 640*400-Emulation aktiv      */
-                                 /* Bit-1: Rechts-Shift mîglich         */
-                                 /* Bit-2: 2-Tasten-Maus                */
-                                 /* Bit-3: 68K-Emulation auf Power-PC   */
-                                 /* Bit-4: u. I/O-Bereich nicht vorh.   */
-                                 /* Bit-5: o. I/O-Bereich nicht vorh.   */
-                                 /*                                     */
-                                 /* Hinweis: Bit-2 steht erst ab        */
-                                 /* der Version 1.01, Bit-3 ab Version  */
-                                 /* 1.05 und die folgenden erst ab Ver- */
-                                 /* sion 1.10 zur VerfÅgung.            */
-   PixMap  *scrnPMPtr;           /* Zeiger auf Screen-Beschreibung      */
-   BOOLEAN *updatePalette;       /* Ist zu setzen, um Farbtabellen      */
-                                 /* zu restaurieren                     */
-   ProcPtr modeMac;              /* MMU-Umschaltung auf Mac-Modus       */
-   ProcPtr modeAtari;            /* MMU-Umschaltung auf Atari-Modus     */
-   ProcPtr getBaseMode;          /* Liefert in D0.W den MMU-Modus.      */
-                                 /* Es gilt:                            */
-                                 /*                                     */
-                                 /*    0 = Macintosh                    */
-                                 /* <> 0 = Atari                        */
-   ProcPtr getIntrCount;         /* Liefert in D0.L Intr-Semaphore-     */
-                                 /* ZÑhler (0 = frei)                   */
-   ProcPtr intrLock;             /* Erhîht Interrupt-Semaphore-ZÑhler   */
-   ProcPtr intrUnlock;           /* Erniedrigt Inter.-Semaphore-ZÑhler  */
-   ProcPtr callMacContext;       /* FÅhrt Routine im Mac-Kontext aus;   */
-                                 /* Proc-Adr auf Stack.                 */
-                                 /*                                     */
-                                 /* Achtung: Die RegisterD0-D2/A0/A1    */
-                                 /* A5 und A7 werden zerstîrt.          */
-   Ptr     atariZeroPage;        /* Zeiger auf Atari-Speicherbereich    */
-                                 /* $0-$800 im Macintosh-Adreûraum      */
-   Ptr     macA5;                /* Wert des A5-Regist. im Mac-Kontext  */
-   ProcPtr macAppSwitch;         /* Aufruf durch MagiC-Kernel (D0/4(A7).*/
-                                 /* Es gilt:                            */
-                                 /*                                     */   
-                                 /*   0 = Suspend                       */
-                                 /*   1 = Resume                        */
-                                 /*   2 = Quit                          */
-                                 /* 3/4 = atariModePossbile wechselt    */
-   ProcPtr controlSwitch;        /* Aufruf durch MagiC-Kernel (D0/4(A7) */
-                                 /* Es gilt:                            */
-                                 /*                                     */    
-                                 /* 0 = Atari-Screen verstecken         */
-                                 /* 1 = Atari-Screen zeigen             */
-   LONG    hardwareAttr1;        /* z.Zt. undefiniert.                  */
-   LONG    hardwareAttr2;        /* z.Zt. undefiniert.                  */
-   Ptr     magiC_BP;             /* BASEPAGE des MagiC OS.              */
-   Ptr     auxOutName;           /* Pascal-String fÅr AUX-Ausg.-Device  */
-   Ptr     auxInName;            /* Pascal-String fÅr AUX-Eing.-Device  */
-   ProcPtr auxControl;           /* Aufruf durch MagiC-Kernel (D0/4(A7) */
-                                 /* Es gilt:                            */
-                                 /*                                     */   
-                                 /* 0 = Suspend                         */
-                                 /* 1 = Resume                          */
-                                 /* 2 = Quit                            */
-   PrintDesc *printDescPtr;
-   GenProc   configKernel;       /* Aufruf (C-Konvention) Atari-Modus   */
-   BOOLEAN   *atariModePossible; /* Zeiger auf ein Flag das anzeigt, ob */
-                                 /* der Aufruf von modeAtari z.Zt. er-  */
-                                 /* laubt ist.                          */
-   MacVersion *versionOfMacAppl; /* Version der MagiCMac-Applikation    */
-                                 /* (ab Version 1.06)                   */
-   VOID       *hwEmulSupport;    /* interner Gebrauch (ab Version 1.07) */
-   FlpDrvInfo *floppyDrvInfoPtr; /* zeigt auf Infos fÅr Laufwerke A und */
-                                 /* B (ab Version 1.07)                 */
-   XCMDgrRec *xcmdMgrPtr;        /* XCMD-Interface (ab Version 1.08)    */
-   ProcPtr   giveTimeToMac;      /* Aufrufen im Mac-Kontext falls idle  */
-   LONG      minStackSize;       /* Mindest-Supervisor-Stackgrîûe       */
-   GenProc   ext;                /* Hilfsroutinen, Aufr. aus Atari-Mode */
-   GenProc   extMac;             /* analog 'ext'; Aufruf aus Mac-Modus  */
-   LONG      reserved[5];        /* z.Zt. undefiniert                   */
+  SHORT   vers;                 /* Versionskennung im BCD-Format       */
+  SHORT   size;                 /* Grîûe der Struktur in Bytes         */
+  LONG    flags1;               /* verschiedene Flags:                 */
+                                /*                                     */
+                                /* Bit-0: 640*400-Emulation aktiv      */
+                                /* Bit-1: Rechts-Shift mîglich         */
+                                /* Bit-2: 2-Tasten-Maus                */
+                                /* Bit-3: 68K-Emulation auf Power-PC   */
+                                /* Bit-4: u. I/O-Bereich nicht vorh.   */
+                                /* Bit-5: o. I/O-Bereich nicht vorh.   */
+                                /*                                     */
+                                /* Hinweis: Bit-2 steht erst ab        */
+                                /* der Version 1.01, Bit-3 ab Version  */
+                                /* 1.05 und die folgenden erst ab Ver- */
+                                /* sion 1.10 zur VerfÅgung.            */
+  PixMap  *scrnPMPtr;           /* Zeiger auf Screen-Beschreibung      */
+  BOOLEAN *updatePalette;       /* Ist zu setzen, um Farbtabellen      */
+                                /* zu restaurieren                     */
+  ProcPtr modeMac;              /* MMU-Umschaltung auf Mac-Modus       */
+  ProcPtr modeAtari;            /* MMU-Umschaltung auf Atari-Modus     */
+  ProcPtr getBaseMode;          /* Liefert in D0.W den MMU-Modus.      */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /*    0 = Macintosh                    */
+                                /* <> 0 = Atari                        */
+  ProcPtr getIntrCount;         /* Liefert in D0.L Intr-Semaphore-     */
+                                /* ZÑhler (0 = frei)                   */
+  ProcPtr intrLock;             /* Erhîht Interrupt-Semaphore-ZÑhler   */
+  ProcPtr intrUnlock;           /* Erniedrigt Inter.-Semaphore-ZÑhler  */
+  ProcPtr callMacContext;       /* FÅhrt Routine im Mac-Kontext aus;   */
+                                /* Proc-Adr auf Stack.                 */
+                                /*                                     */
+                                /* Achtung: Die RegisterD0-D2/A0/A1    */
+                                /* A5 und A7 werden zerstîrt.          */
+  Ptr     atariZeroPage;        /* Zeiger auf Atari-Speicherbereich    */
+                                /* $0-$800 im Macintosh-Adreûraum      */
+  Ptr     macA5;                /* Wert des A5-Regist. im Mac-Kontext  */
+  ProcPtr macAppSwitch;         /* Aufruf durch MagiC-Kernel (D0/4(A7).*/
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /*   0 = Suspend                       */
+                                /*   1 = Resume                        */
+                                /*   2 = Quit                          */
+                                /* 3/4 = atariModePossbile wechselt    */
+  ProcPtr controlSwitch;        /* Aufruf durch MagiC-Kernel (D0/4(A7) */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /* 0 = Atari-Screen verstecken         */
+                                /* 1 = Atari-Screen zeigen             */
+  LONG    hardwareAttr1;        /* z.Zt. undefiniert.                  */
+  LONG    hardwareAttr2;        /* z.Zt. undefiniert.                  */
+  Ptr     magiC_BP;             /* BASEPAGE des MagiC OS.              */
+  Ptr     auxOutName;           /* Pascal-String fÅr AUX-Ausg.-Device  */
+  Ptr     auxInName;            /* Pascal-String fÅr AUX-Eing.-Device  */
+  ProcPtr auxControl;           /* Aufruf durch MagiC-Kernel (D0/4(A7) */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /* 0 = Suspend                         */
+                                /* 1 = Resume                          */
+                                /* 2 = Quit                            */
+  PrintDesc *printDescPtr;
+  GenProc   configKernel;       /* Aufruf (C-Konvention) Atari-Modus   */
+  BOOLEAN   *atariModePossible; /* Zeiger auf ein Flag das anzeigt, ob */
+                                /* der Aufruf von modeAtari z.Zt. er-  */
+                                /* laubt ist.                          */
+  MacVersion *versionOfMacAppl; /* Version der MagiCMac-Applikation    */
+                                /* (ab Version 1.06)                   */
+  VOID       *hwEmulSupport;    /* interner Gebrauch (ab Version 1.07) */
+  FlpDrvInfo *floppyDrvInfoPtr; /* zeigt auf Infos fÅr Laufwerke A und */
+                                /* B (ab Version 1.07)                 */
+  XCMDgrRec *xcmdMgrPtr;        /* XCMD-Interface (ab Version 1.08)    */
+  ProcPtr   giveTimeToMac;      /* Aufrufen im Mac-Kontext falls idle  */
+  LONG      minStackSize;       /* Mindest-Supervisor-Stackgrîûe       */
+  GenProc   ext;                /* Hilfsroutinen, Aufr. aus Atari-Mode */
+  GenProc   extMac;             /* analog 'ext'; Aufruf aus Mac-Modus  */
+  ProcPtr   stackLoad;          /* (ab 1.11 / MagiCMac 2.0)            */
+  ProcPtr   stackUnload;        /* (ab 1.11 / MagiCMac 2.0)            */
+  LONG      reserved[3];        /* z.Zt. undefiniert                   */
 } MgMcCookie;
 !end_verbatim
 
@@ -999,7 +1003,7 @@ Umschaltung in den Atari-Modus erst neu berechnet werden. Dies wird jedoch
 nicht automatisch getan, sondern erst, wenn zurÅck zum Atari-Bildschirm
 gewechselt wird. Aus diesem Grund dÅrfen Interrupt- und andere asynchrone
 Routinen, die unter MagiCMac mittels MacOS-Funktionen installiert sind,
-unter den beschriebenen UmstÑnden (!I)keine(!i) Atari-Modusumschaltung vornehmen. 
+unter den beschriebenen UmstÑnden (!I)keine(!i) Atari-Modusumschaltung vornehmen.
 
 Atari-Programme, die sich in die Atari-Vektoren einhÑngen (z.B. den
 VBL-Vektor bei $70), mÅssen dies alles nicht beachten, weil im Fall, daû die
@@ -1194,6 +1198,45 @@ Entspricht 'ext', jedoch muû Aufruf aus dem Mac-Kontext (siehe
 Aufruf anderer Mac-Funktionen bereits im Mac-Modus befindet. Aufrufe aus
 Interrupts sind i.d.R. nicht erlaubt.
 !end_node
+
+
+!begin_node stackLoad
+
+(!I)stackLoad(!i) aktiviert einen neuen CPU-Stack (A7).
+
+Dies ist dann nîtig, wenn aus einem Mac-Kontext, bei dem ein beliebiger CPU-Stack
+aktiv ist, eine Routine im ATARI-Kontext aufgerufen werden soll, also, bevor ein
+Modus-Wechsel mit "modeAtari" erfolgt. Das Wechseln auf einen anderen Stack ist
+dann nîtig, weil evtl. der Bereich, den A7  gerade benutzt, durch den Wechsel zum
+Atari-Modus ausgeblendet wird und es dann zu einem CPU-Stillstand kÑme (siehe
+auch Kap. "Interrupt-Handler unter MagiCMac").
+
+Anstatt einfach selbst den A7 azf den neuen Stack zu setzen, sollte 'stackLoad'
+benutzt werden. Diese Funktion tut im Grunde das selbe, jedoch informiert sie
+zusaetzlich das MacOS davon (durch Setzen weniger globaler Variablen). Damit
+wird erreicht, dass das MacOS waehrenddessen nicht den A7 periodisch ÅberprÅft.
+Denn sonst kînnte es auf bestimmten MacOS-Versionen (vor 7.5 und wieder ab 7.5.3)
+zur Meldung eines Stack-öberlaufs durch das MacOS kommen, obwohl dies gar nicht
+der Fall ist.
+
+Falls Virtual Memory aktiviert ist, wird hiermit auûerdem erreicht, daû dieser
+Stack-Bereich nicht ausgelagert werden kann, was sonst u.U. einen Rechnerstillstand
+zur Folge haben kann.
+
+Benutzung: In A0 ist ein Zeiger auf ein MemArea-Struktur (s.o.) zu Åbergeben.
+Darin muû der Zeiger auf den Beginn (niedrigste Adresse) des Stacks sowie
+seine LÑnge (beachte 'minStackSize'!) enthalten sein. Die Routine zerstîrt die
+Register A0 und A1 und setzt A7 auf den Wert von <MemArea.start+MemArea.length>.
+!end_node
+
+!begin_node stackUnload
+Dioe Umkehrung zu 'stackLoad'. Aufzurufen, wenn der zuvor aktiv gewesene Stack
+wieder benutzt werden soll.
+
+Die Routine zerstîrt das Register A0 (A7 erhÑlt wieder den Wert von vor dem
+stackLoad-Aufruf).
+!end_node
+
 !end_node
 
 !end_node
