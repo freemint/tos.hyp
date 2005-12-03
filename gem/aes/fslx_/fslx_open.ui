@@ -22,73 +22,95 @@ Die Funktion initialisiert und îffnet die Dateiauswahlbox. Es gilt:
 !begin_xlist !short [Parameter]
 
 !item [Parameter]
-Bedeutung
+Meaning
 
 !item [~]
 ~
 
 !item [title]
-Fenstertitel der Auswahl oder NULL
+Window title of file selector, may be NULL
 
 !item [x]
-x-Koordinate
+x-coordinate
 
 !item [y]
-y-Koordinate der linken oberen Ecke des Fensters. Falls diese den Wert -1
-besitzen, so wird das Fenster zentriert dargestellt.
+y-coordinate of the upper left corner of the window.
+For x=y=-1 the window will be centred.
 
 !item [whdl]
-Fensterkennung nach erfolgreichem ôffnen.
+Window handle after successful opening
 
 !item [path]
-vollstÑndiger Pfad, welcher mit dem Laufwerk beginnt, und mit '\' endet.
+Complete path, starts with drive and ends with '\'. (!nl)
+From MagiC 6.10 onwards the path may be initialised incompletely,
+as with fsel_xxx(), e.g. as an empty string. MagiC then
+completes the path in a sensible way.
+
 
 !item [pathlen]
-LÑnge des aufnehmenden Pfad-Puffers.
+Length of path buffer, i.e. maximum pathlength + 1 (for EOS)
 
 !item [fname]
-Puffer fÅr den Dateinamen.
+Buffer for the filename
 
 !item [fnamelen]
-LÑnge des aufnehmenden Dateinamen-Puffers.
+Length of filename buffer, i.e. maximum length of filename + 1 (for EOS)
 
 !item [patterns]
-Dateinamensmuster wie "*.TXT", "*.PRG" oder "*.IMG". Diese alternativ
-anwÑhlbaren Muster sind durch EOS getrennt und durch EOS,EOS abgeschlossen.
+Filemask, e.g. "*.TXT" or "*.PRG,*.APP". The alternatively selectable masks
+are separated by EOS and terminated by EOS,EOS. (!nl)
+From MagiC 6.10 onwards a null-pointer may be passed here, In which case MagiC
+then uses "*\0".
 
 !item [filter]
-(!B)Filterfunktion(!b), die vor dem Mustervergleich aufgerufen wird (oder
-NULL). Gibt diese den Wert 0 zurÅck, so ist die Datei ungÅltig; bei einem
-Wert von 1 wird der Dateiname angezeigt.
+May be NULL. The filter function is called before the mask comparison.
+If it returns 0 then the file is invalid, if 1 is returned then the filename
+will be displayed.
 
 !item [paths]
-Pfad-(!nolink [History]). Die alternativ anwÑhlbaren Pfade sind durch EOS getrennt, und
-durch EOS,EOS abgeschlossen.
+Path "history" e.g. "C:\\BIN\\" etc. The alternatively selectable paths are
+separated by EOS and terminated by EOS,EOS. A null-pointer may be passed here.
 
 !item [sort_mode]
 (!B)Sortiermodus fÅr die Anzeige(!b)
+!label SORTBYNAME
+!label SORTBYDATE
+!label SORTBYSIZE
+!label SORTBYTYPE
+!label SORTBYNONE
+!label SORTDEFAULT
 !begin_table [l l l]
-0 !! = !! nach Namen
-1 !! = !! nach Datum
-2 !! = !! nach Grîûe
-3 !! = !! nach Typ
-4 !! = !! unsortiert (physik. Reihenfolge)
+SORTBYNAME (0) !! = !! by Namen
+SORTBYDATE (1) !! = !! by Datum
+SORTBYSIZE (2) !! = !! by Grîûe
+SORTBYTYPE (3) !! = !! by Typ
+SORTBYNONE (4) !! = !! unsort (physical order)
+SORTDEFAULT (-1) !! = !! default
 !end_table
+SORTDEFAULT exists from Magic 6.10 onwards and means that the sort
+mode saved in the system will be used.
 
+!label DOSMODE
+!label NFOLLOWSLKS
+!label GETMULTI
 !item [flags]
 (!B)verschiedene Einstellungen(!b)
 !begin_xlist [1 =]
 !item [1 =]
-DOSMODE. Dies ist der KompatibilitÑtsmodus, der auch von fsel_(ex)input
-verwendet wird, und Dateinamen grundsÑtzlich im Format 8+3 liefert. Dazu
-werden alle Unterverzeichnissse per Dopendir (name, 1) aufgerufen.
+(DOSMODE) 
+This is the compatibility mode that	 is also used by fsel_(ex)input and 
+basically returns filenames in the 8+3 format. For this all directories 
+are called with Dopendir(DOPEN_COMPAT).
+
 !item [2 =]
-symbolische Links (!I)nicht(!i) verfolgen. In diesem Fall gehîren also
-Datum, Uhrzeit sowie die XATTR-Struktur, die (!I)filter(!i) Åbergeben wird,
-zum Link selbst.
+(NFOLLOWSLKS)
+symbolic links will not be followed, i.e. date and time etc., as well as the XATTR-
+structure that is passed to (!I)filter(!i), belong to the link itself.
+
 !item [8 =]
-Mehrfachauswahl. In diesem Fall kînnen mehrere Dateien auf einmal ausgewÑhlt
-und Åbergeben werden.
+If GETMULTI is set, one can select and pass several files at the same time.
+For this fslx_getnxtfile is used if fslx_evnt or fslx_do in the parameter 
+(!I)nfiles(!i) signals that there are still further files selected.
 !end_xlist
 
 !end_xlist
@@ -98,8 +120,8 @@ Die Funktion liefert einen Deskriptor fÅr die weiteren Aktionen, bzw. den
 Wert NULL, wenn ein Fehler aufgetreten ist.
 
 !item [Availability:]
-Das Vorhandensein dieser Funktion kann per (!link [appl_getinfo][%apgi_7]) (Opcode 7)
-festgestellt werden.
+The presence of this call should be checked for using
+(!link [appl_getinfo][%apgi_7]) (Opcode 7).
 
 !item [Group:]
 Fileselektoren
@@ -223,7 +245,10 @@ besitzen, so wird das Fenster zentriert dargestellt.
 Fensterkennung nach erfolgreichem ôffnen.
 
 !item [path]
-vollstÑndiger Pfad, welcher mit dem Laufwerk beginnt, und mit '\' endet.
+vollstÑndiger Pfad, welcher mit dem Laufwerk beginnt, und mit '\' endet. (!nl)
+Seit MagiC 6.10 darf der Pfad, wie beifsel_xxx(), unvollstÑndig initialisiert
+werden, z.B. als Leer-String. MagiC komplettiert dann den Pfad sinnvoll.
+
 
 !item [pathlen]
 LÑnge des aufnehmenden Pfad-Puffers.
@@ -236,7 +261,9 @@ LÑnge des aufnehmenden Dateinamen-Puffers.
 
 !item [patterns]
 Dateinamensmuster wie "*.TXT", "*.PRG" oder "*.IMG". Diese alternativ
-anwÑhlbaren Muster sind durch EOS getrennt und durch EOS,EOS abgeschlossen.
+anwÑhlbaren Muster sind durch EOS getrennt und durch EOS,EOS abgeschlossen. (!nl)
+Seit MagiC 6.10 darf hier ein NullzeigerÅbergeben werden, MagiC verwendet
+dann "*\0".
 
 !item [filter]
 (!B)Filterfunktion(!b), die vor dem Mustervergleich aufgerufen wird (oder
@@ -249,28 +276,41 @@ durch EOS,EOS abgeschlossen.
 
 !item [sort_mode]
 (!B)Sortiermodus fÅr die Anzeige(!b)
+!label SORTBYNAME
+!label SORTBYDATE
+!label SORTBYSIZE
+!label SORTBYTYPE
+!label SORTBYNONE
+!label SORTDEFAULT
 !begin_table [l l l]
-0 !! = !! nach Namen
-1 !! = !! nach Datum
-2 !! = !! nach Grîûe
-3 !! = !! nach Typ
-4 !! = !! unsortiert (physik. Reihenfolge)
+SORTBYNAME (0) !! = !! nach Namen
+SORTBYDATE (1) !! = !! nach Datum
+SORTBYSIZE (2) !! = !! nach Grîûe
+SORTBYTYPE (3) !! = !! nach Typ
+SORTBYNONE (4) !! = !! unsortiert (physik. Reihenfolge)
+SORTDEFAULT (-1) !! = !! default
 !end_table
+SORTDEFAULT existiert seit MagiC 6.10 und bedeutet, daû der im
+System gespeicherte Sortiermodus verwendet wird.
 
+!label DOSMODE
+!label NFOLLOWSLKS
+!label GETMULTI
 !item [flags]
 (!B)verschiedene Einstellungen(!b)
 !begin_xlist [1 =]
 !item [1 =]
-DOSMODE. Dies ist der KompatibilitÑtsmodus, der auch von fsel_(ex)input
+(DOSMODE) Dies ist der KompatibilitÑtsmodus, der auch von fsel_(ex)input
 verwendet wird, und Dateinamen grundsÑtzlich im Format 8+3 liefert. Dazu
-werden alle Unterverzeichnissse per Dopendir (name, 1) aufgerufen.
+werden alle Unterverzeichnissse per Dopendir (DOPEN_COMPAT) aufgerufen.
 !item [2 =]
-symbolische Links (!I)nicht(!i) verfolgen. In diesem Fall gehîren also
+(NFOLLOWSLKS) symbolische Links (!I)nicht(!i) verfolgen. In diesem Fall gehîren also
 Datum, Uhrzeit sowie die XATTR-Struktur, die (!I)filter(!i) Åbergeben wird,
 zum Link selbst.
 !item [8 =]
-Mehrfachauswahl. In diesem Fall kînnen mehrere Dateien auf einmal ausgewÑhlt
-und Åbergeben werden.
+Ist GETMULTI gesetzt, kînnen mehrere Dateien auf einmal ausgewÑhlt und Åbergeben
+werden. Dazu wird fslx_getnxtfile	verwendet, wenn fslx_evnt bzw. fslx_do
+im Parameter (!I)nfiles(!i) signalisieren, daû noch weitere Dateien selektiert sind.
 !end_xlist
 
 !end_xlist

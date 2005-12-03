@@ -1,0 +1,317 @@
+!iflang [english]
+
+!begin_node TEDINFO
+
+Die TEDINFO-Struktur wird benutzt um ein Textobjekt nÑher zu beschreiben,
+und ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    int8_t    *te_ptext;          /* Zeiger auf einen String          */
+    int8_t    *te_ptmplt;         /* Zeiger auf die Stringmaske       */
+    int8_t    *te_pvalid;         /* Zeiger auf den GÅltigkeitsstring */
+    int16_t    te_font;           /* Zeichensatz                      */
+    int16_t    te_fontid;         /* GDOS Font-ID                     */
+    int16_t    te_just;           /* Justierung des Textes:
+                                     0 = linksbÅndig
+                                     1 = rechtsbÅndig
+                                     2 = zentriert                    */
+    int16_t    te_color;          /* Farbe                            */
+    int16_t    te_fontsize;       /* GDOS Font-Grîûe in Punkten       */
+    int16_t    te_thickness;      /* Rahmenbreite                     */
+    int16_t    te_txtlen;         /* Maximale LÑnge des Textes        */
+    int16_t    te_tmplen;         /* LÑnge der Stringmaske            */
+} TEDINFO;
+!end_verbatim
+
+Dabei gilt es, die folgenden Einzelheiten zu beachten:
+
+!begin_itemize
+!item (!B)te_ptext:(!b) Wenn das erste Zeichen ein Klammeraffe (!) ist,
+      werden alle folgenden Zeichen als Platzhalter angesehen, und der
+      zunÑchst ausgegebene String besteht aus Leerzeichen. Folge: Der
+      Klammeraffe kann niemals am Anfang eines Edit-Feldes stehen!
+!item (!B)te_ptmplt:(!b) Schablone (template). Sie wird nur bei G_FTEXT und
+      G_FBOXTEXT verwendet, d.h. bei G_TEXT und G_BOXTEXT kann hier ein
+      Null-Zeiger stehen. Bei der Ausgabe werden alle '_' Zeichen in der
+      Schablone sukzessive durch die Zeichen in (!I)te_ptext(!i) ersetzt,
+      d.h. es wird eine Misch-Zeichenkette gebildet. I.A. wird die Schablone
+      also soviele '_' Zeichen enthalten, wie der Puffer fÅr
+      (!I)te_ptext(!i) lang ist (ohne abschlieûendes Nullbyte).
+!item (!B)te_pvalid:(!b) String, der fÅr jedes Zeichen in (!I)te_ptext(!i)
+      eine Zeichenkette enthÑlt, die Åber die GÅltigkeit verschiedener
+      Zeichen an dieser Stringposition Auskunft gibt. Es gilt:
+!begin_xlist !short [Zeichen]
+!item [Zeichen]
+Bedeutung
+!item [~]
+~
+!item [9]
+nur Ziffern
+!item [A]
+nur Groûbuchstaben/Leerzeichen
+!item [a]
+nur Buchstaben/Leerzeichen
+!item [N]
+Groûbuchstaben, Ziffern, Leerzeichen
+!item [n]
+Buchstaben, Ziffern, Leerzeichen
+!item [F]
+alle Zeichen, die zu einem Dateinamen gehîren und '*', '?' und ':'.
+!item [f]
+alle Zeichen, die zu einem Dateinamen, ohne '*', '?' und ':'.
+!item [P]
+alle Zeichen, die zu einem Pfadnamen gehîren
+!item [p]
+analog 'P', aber ohne die Zeichen '?' und '*'
+!item [m]
+alle Zeichen, die fÅr einen langen Dateinamen gÅltig sind; d.h. alle Zeichen
+auûer Steuerzeichen (ASCII < 32), sowie auûer ':' und '\'. Dieser Code wird
+z.Zt. nur von MagiC unterstÅtzt.
+!item [X]
+alle Zeichen
+!item [x]
+alle Zeichen, Kleinbuchstaben werden automatisch in Groûbuchstaben umgewandelt.
+!end_xlist
+
+!item (!B)te_font:(!b) (!nl)
+3 = normal (!nl)
+5 = kleiner Zeichensatz
+
+FÅr weiters siehe unten.
+
+!item (!B)te_fontid:(!b) (!nl)
+FÅr weiters siehe unten.
+
+!item (!B)te_color:(!b) FÅr die Farbe des begrenzenden Rechteckes gilt die
+      folgende Belegung:
+!begin_xlist !short [0..23]
+!item [Bit]
+Bedeutung
+!item [~]
+~
+!item [12..15]
+Rahmenfarbe (0..15)
+!item [08..11]
+Textfarbe (0..15)
+!item [~7]
+Text (0 = transparent, 1 = deckend)
+!item [~4..~6]
+IntensitÑt
+!begin_xlist !short [1..6 =]
+!item [0~~~ =]
+hohl
+!item [1..6 =]
+ansteigende IntensitÑt
+!item [7~~~ =]
+solide FlÑche
+!end_xlist
+!item [~0..~3]
+Innenfarbe (0..15)
+!end_xlist
+!item (!B)te_thickness:(!b) FÅr den Rahmen sind folgende Werte gÅltig:
+!begin_xlist !short [-1..-127]
+!item [Wert]
+Bedeutung
+!item [~]
+~
+!item [~0]
+kein Rahmen
+!item [~1..~128]
+Rand liegt 1 bis 128 Pixel im Inneren
+!item [-1..-127]
+Rand liegt 1 bis 127 Pixel auûerhalb des Objektes
+!end_xlist
+!end_itemize
+
+!label GDOS-Fonts in Dialogen
+!label Dialogen, GDOS-Fonts in
+!label ZeichensÑtze in Dialogen
+(!B)Hinweis:(!b) Die Komponenten (!I)te_fontid(!i) und (!I)te_fontsize(!i)
+waren bisher reserviert. Ab AES-Version 4.1 ist es mîglich, beliebige
+GDOS-Fonts fÅr TEDINFO-Objekte zu benutzen.
+
+Dazu ist Åber die Komponente (!I)te_font(!i) die Art des Zeichensatzes zu
+spezifizieren:
+
+!begin_table [c l]
+te_font !! Bedeutung
+!hline
+0 !! (!nolink [SpeedoGDOS]) Font
+1 !! (!nolink [SpeedoGDOS]) Font (monospaced)
+2 !! GDOS Bitmap-Font
+3 !! System-Zeichensatz
+5 !! kleiner System-Zeichensatz
+!end_table
+
+FÅr Werte im Bereich 0..2 von (!I)te_font(!i) kann dann Åber die Komponenten
+(!I)te_fontid(!i) bzw. (!I)te_fontsize(!i) der gewÅnschte Zeichensatz und
+die gewÅnschte Punktgrîûe eingestellt werden.
+
+Das Vorhandensein der neuen Mîglichkeiten kann am einfachsten per
+(!link [appl_getinfo][%apgi_13]) (Opcode 13) ermittelt werden.
+
+See Also: AES ~ GEM  ~ OBJECT ~ XTED ~
+(!link [Scrollende Eingabefelder][scrollende Eingabefelder])
+!end_node
+
+!else
+
+!begin_node TEDINFO
+
+Die TEDINFO-Struktur wird benutzt um ein Textobjekt nÑher zu beschreiben,
+und ist wie folgt definiert:
+
+!begin_verbatim
+typedef struct
+{
+    int8_t    *te_ptext;          /* Zeiger auf einen String          */
+    int8_t    *te_ptmplt;         /* Zeiger auf die Stringmaske       */
+    int8_t    *te_pvalid;         /* Zeiger auf den GÅltigkeitsstring */
+    int16_t    te_font;           /* Zeichensatz                      */
+    int16_t    te_fontid;         /* GDOS Font-ID                     */
+    int16_t    te_just;           /* Justierung des Textes:
+                                     0 = linksbÅndig
+                                     1 = rechtsbÅndig
+                                     2 = zentriert                    */
+    int16_t    te_color;          /* Farbe                            */
+    int16_t    te_fontsize;       /* GDOS Font-Grîûe in Punkten       */
+    int16_t    te_thickness;      /* Rahmenbreite                     */
+    int16_t    te_txtlen;         /* Maximale LÑnge des Textes        */
+    int16_t    te_tmplen;         /* LÑnge der Stringmaske            */
+} TEDINFO;
+!end_verbatim
+
+Dabei gilt es, die folgenden Einzelheiten zu beachten:
+
+!begin_itemize
+!item (!B)te_ptext:(!b) Wenn das erste Zeichen ein Klammeraffe (!) ist,
+      werden alle folgenden Zeichen als Platzhalter angesehen, und der
+      zunÑchst ausgegebene String besteht aus Leerzeichen. Folge: Der
+      Klammeraffe kann niemals am Anfang eines Edit-Feldes stehen!
+!item (!B)te_ptmplt:(!b) Schablone (template). Sie wird nur bei G_FTEXT und
+      G_FBOXTEXT verwendet, d.h. bei G_TEXT und G_BOXTEXT kann hier ein
+      Null-Zeiger stehen. Bei der Ausgabe werden alle '_' Zeichen in der
+      Schablone sukzessive durch die Zeichen in (!I)te_ptext(!i) ersetzt,
+      d.h. es wird eine Misch-Zeichenkette gebildet. I.A. wird die Schablone
+      also soviele '_' Zeichen enthalten, wie der Puffer fÅr
+      (!I)te_ptext(!i) lang ist (ohne abschlieûendes Nullbyte).
+!item (!B)te_pvalid:(!b) String, der fÅr jedes Zeichen in (!I)te_ptext(!i)
+      eine Zeichenkette enthÑlt, die Åber die GÅltigkeit verschiedener
+      Zeichen an dieser Stringposition Auskunft gibt. Es gilt:
+!begin_xlist !short [Zeichen]
+!item [Zeichen]
+Bedeutung
+!item [~]
+~
+!item [9]
+nur Ziffern
+!item [A]
+nur Groûbuchstaben/Leerzeichen
+!item [a]
+nur Buchstaben/Leerzeichen
+!item [N]
+Groûbuchstaben, Ziffern, Leerzeichen
+!item [n]
+Buchstaben, Ziffern, Leerzeichen
+!item [F]
+alle Zeichen, die zu einem Dateinamen gehîren und '*', '?' und ':'.
+!item [f]
+alle Zeichen, die zu einem Dateinamen, ohne '*', '?' und ':'.
+!item [P]
+alle Zeichen, die zu einem Pfadnamen gehîren
+!item [p]
+analog 'P', aber ohne die Zeichen '?' und '*'
+!item [m]
+alle Zeichen, die fÅr einen langen Dateinamen gÅltig sind; d.h. alle Zeichen
+auûer Steuerzeichen (ASCII < 32), sowie auûer ':' und '\'. Dieser Code wird
+z.Zt. nur von MagiC unterstÅtzt.
+!item [X]
+alle Zeichen
+!item [x]
+alle Zeichen, Kleinbuchstaben werden automatisch in Groûbuchstaben umgewandelt.
+!end_xlist
+
+!item (!B)te_font:(!b) (!nl)
+3 = normal (!nl)
+5 = kleiner Zeichensatz
+
+FÅr weiters siehe unten.
+
+!item (!B)te_fontid:(!b) (!nl)
+FÅr weiters siehe unten.
+
+!item (!B)te_color:(!b) FÅr die Farbe des begrenzenden Rechteckes gilt die
+      folgende Belegung:
+!begin_xlist !short [0..23]
+!item [Bit]
+Bedeutung
+!item [~]
+~
+!item [12..15]
+Rahmenfarbe (0..15)
+!item [08..11]
+Textfarbe (0..15)
+!item [~7]
+Text (0 = transparent, 1 = deckend)
+!item [~4..~6]
+IntensitÑt
+!begin_xlist !short [1..6 =]
+!item [0~~~ =]
+hohl
+!item [1..6 =]
+ansteigende IntensitÑt
+!item [7~~~ =]
+solide FlÑche
+!end_xlist
+!item [~0..~3]
+Innenfarbe (0..15)
+!end_xlist
+!item (!B)te_thickness:(!b) FÅr den Rahmen sind folgende Werte gÅltig:
+!begin_xlist !short [-1..-127]
+!item [Wert]
+Bedeutung
+!item [~]
+~
+!item [~0]
+kein Rahmen
+!item [~1..~128]
+Rand liegt 1 bis 128 Pixel im Inneren
+!item [-1..-127]
+Rand liegt 1 bis 127 Pixel auûerhalb des Objektes
+!end_xlist
+!end_itemize
+
+!label GDOS-Fonts in Dialogen
+!label Dialogen, GDOS-Fonts in
+!label ZeichensÑtze in Dialogen
+(!B)Hinweis:(!b) Die Komponenten (!I)te_fontid(!i) und (!I)te_fontsize(!i)
+waren bisher reserviert. Ab AES-Version 4.1 ist es mîglich, beliebige
+GDOS-Fonts fÅr TEDINFO-Objekte zu benutzen.
+
+Dazu ist Åber die Komponente (!I)te_font(!i) die Art des Zeichensatzes zu
+spezifizieren:
+
+!begin_table [c l]
+te_font !! Bedeutung
+!hline
+0 !! (!nolink [SpeedoGDOS]) Font
+1 !! (!nolink [SpeedoGDOS]) Font (monospaced)
+2 !! GDOS Bitmap-Font
+3 !! System-Zeichensatz
+5 !! kleiner System-Zeichensatz
+!end_table
+
+FÅr Werte im Bereich 0..2 von (!I)te_font(!i) kann dann Åber die Komponenten
+(!I)te_fontid(!i) bzw. (!I)te_fontsize(!i) der gewÅnschte Zeichensatz und
+die gewÅnschte Punktgrîûe eingestellt werden.
+
+Das Vorhandensein der neuen Mîglichkeiten kann am einfachsten per
+(!link [appl_getinfo][%apgi_13]) (Opcode 13) ermittelt werden.
+
+Querverweis: AES ~ GEM  ~ OBJECT ~ XTED ~
+(!link [Scrollende Eingabefelder][scrollende Eingabefelder])
+!end_node
+
+!endif

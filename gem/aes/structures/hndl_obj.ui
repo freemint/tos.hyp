@@ -1,0 +1,463 @@
+!iflang [english]
+
+!begin_node HNDL_OBJ
+
+!begin_verbatim
+typedef int16_t (cdecl *HNDL_OBJ) ( void *dialog, EVNT *events, int16_t obj,
+                                 int16_t clicks, void *data );
+!end_verbatim
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Meaning
+!item [~]
+~
+!item [dialog]
+Pointer to a dialog structure. One should not access the
+structure directly. The wdlg_xx functions should be used!
+
+!item [events]
+If (!I)obj(!i) is an object number (>= 0), then (!I)events(!i)
+points to the EVNT structure that was passed by wdlg_evnt.
+Otherwise (!I)events(!i) is basically 0L and can  not be used for
+addressing.
+
+!item [obj]
+!begin_xlist !short
+!item [>=0:]
+Object number
+!item [<0:]
+Function number.
+!begin_verbatim
+ -1 = HNDL_INIT    // Dialog initialisieren
+ -2 = HNDL_MESG    //
+ -3 = HNDL_CLSD    // Dialogfenster wurde geschlossen
+ -5 = HNDL_OPEN    // Dialog-Initialisierung abschliežen
+ -6 = HNDL_EDIT    // Zeichen fr ein Editfeld prfen
+ -7 = HNDL_EDDN    // Zeichen wurde ins Editfeld gesetzt
+ -8 = HNDL_EDCH    // Editfeld wurde gewechselt
+ -9 = HNDL_MOVE    // Dialog wurde verschoben
+-10 = HNDL_TOPW    // Dialogfenster kam nach oben
+-11 = HNDL_UNTP    // Dialogfenster ist nicht aktiv
+!end_verbatim
+!end_xlist
+Of these function numbers one only has to react to HNDL_CLSD. All other
+events need only be paid attention to when needed.
+!item [clicks]
+Number of mouse clicks (if (!I)obj(!i) is an object number).
+
+!item [data]
+Falls der Parameter (!I)obj(!i) eine positive Objektnummer ist, wird hier
+die Variable (!I)user_data(!i) aus der Funktion wdlg_create bergeben.
+Anderenfalls ist der Wert von der entsprechenden Funktionsnummer abh„ngig.
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion wird aufgerufen, wenn auf ein EXIT- oder
+TOUCHEXIT Objekt geklickt wurde (in diesem Fall ist (!I)obj(!i) eine
+positive Objektnummer) oder wenn ein den Dialog betreffendes Ereignis
+eingetreten ist (dann ist (!I)obj(!i) negativ und enth„lt eine entsprechende
+Funktionsnummer (s.o.)).
+
+The parameters are passed via the stack and the routine may alter
+registers d0-d2/a0-a2.
+Falls die Funktion mit einer unbekannten Funktionsnummer in (!I)obj(!i)
+aufgerufen wird oder eine der obigen Funktionsnummern ignoriert werden
+soll, muž der Wert 1 zurckgeliefert werden.
+
+See Also: (!link [Beispiel-Implementation] [Beispiel zu HNDL_OBJ]) ~ wdlg_create
+
+
+
+!begin_node Beispiel zu HNDL_OBJ
+
+!begin_verbatim
+/* Der folgende Code ist ein Beispiel fr eine Implementation
+   der handle_exit Funktion, wie sie z.B. als Parameter bei
+   wdlg_create vorkommt. */
+
+int16_t cdecl handle_exit ( void *dialog, EVNT *events, int16_t obj,
+                         int16_t clicks, void *data )
+{
+    /*
+     * Event or object number?
+     * All events except HNDL_CLSD are ignored in this example
+     */
+
+    if ( obj < 0 )
+    {
+        if ( obj == HNDL_CLSD )     /* Closer activated? */
+            return( 0 );            /* Finish */
+        if ( obj == HNDL_EDIT )
+        {
+	        /* In window dialogs it may be useful to ignore key combinations
+  	         with Control in input fields, so that keyboard shortcuts such
+    	       as Ctrl-U, Ctrl-W or Ctrl-Q for instance may be evaluated in
+      	     the event loops of a program. In that case a 0 should be
+        	   returned after HNDL_EDIT so that the key is not evaluated
+          	 by objc_edit.
+        	*/
+        }
+    }
+    else
+    {                         /* An object has been selected  */
+        switch ( obj )        /* Initiate action (if needed) */
+        {
+            case ...
+              .
+              .
+              .
+            case MY_EXIT_OBJECT:    ..... return( 0 );  /* Finish */
+        }
+    }
+    return( 1 ); /* Continue */
+}
+!end_verbatim
+!end_node
+
+!begin_node HNDL_INIT
+(!I)data(!i) is the variable passed by wdlg_create.
+If handle_exit returns 0, wdlg_create does not Create a dialog structure (error).
+The variable <code> is passed in (!I)clicks(!i).
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+!begin_node HNDL_MESG
+(!I)data(!i) is user_data. If handle_exit returns 0,
+the dialog will be closed -- wdlg_evnt returns 0.
+(!I)events(!i) points to the EVNT structure passed by
+wdlg_evnt.
+
+HNDL_MESG is only passed if a message code between
+20 and 39 was received that is not handled by other
+opcodes. Is required for iconification, for instance.
+
+(!B)Warning:(!b) This opcode is only present from MagiC 4.5
+of 18.4.96
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_OPEN
+
+(!I)data(!i) is the variable passed by wdlg_open.
+The variable (!I)code(!i) is passed in (!I)clicks(!i).
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_CLSD
+
+(!I)data(!i) is user_data. If handle_exit returns 0,
+the dialog will be closed -- wdlg_evnt returns 0.
+(!I)events(!i) points to the EVNT structure passed by
+wdlg_evnt.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_MOVE
+(!I)data(!i) is <user_data>. If handle_exit returns 0,
+the dialog will be closed -- wdlg_evnt returns 0.
+
+(!I)events(!i) points to the EVNT structure passed by wdlg_evnt.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_TOPW
+(!I)data(!i) is user_data. If handle_exit returns 0,
+the dialog will be closed -- wdlg_evnt returns 0.
+
+(!I)events(!i) points to the EVNT structure passed by wdlg_evnt.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_UNTP
+
+(!I)data(!i) is user_data. If handle_exit returns 0,
+the dialog will be closed -- wdlg_evnt returns 0.
+
+(!I)events(!i) points to the EVNT structure passed by wdlg_evnt().
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDIT
+(!I)data(!i) points to a word with the key code.
+If handle_exit() returns 1, the key press will be evaluated, if 0 ignored.
+
+(!I)events(!i) points to the EVNT structure passed by wdlg_evnt.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDDN
+
+(!I)data(!i) points to a word with the key code.
+(!I)events(!i) points to the EVNT structure passed by wdlg_evnt.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDCH
+
+(!I)data(!i) points to a word with the object number of the new editable
+field.
+
+See Also: HNDL_OBJ ~ wdlg_create
+!end_node
+
+!end_node
+
+!else
+
+!begin_node HNDL_OBJ
+
+!begin_verbatim
+typedef int16_t (cdecl *HNDL_OBJ) ( void *dialog, EVNT *events, int16_t obj,
+                                 int16_t clicks, void *data );
+!end_verbatim
+
+Dabei gilt:
+
+!begin_xlist !short [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [dialog]
+Zeiger auf eine Dialogstruktur. Auf diese sollte nicht direkt, sondern nur
+mit Hilfe der wdlg_xxx Funktionen zugegriffen werden.
+!item [events]
+Zeiger auf die EVNT-Strukur, die bei wdlg_evnt bergeben wurde (falls der
+Parameter (!I)obj(!i) >= 0 ist), oder NULL.
+!item [obj]
+!begin_xlist !short
+!item [>=0:]
+Objektnummer
+!item [<0:]
+Funktionsnummer. Definiert sind z.Zt:
+!begin_verbatim
+ -1 = HNDL_INIT    // Dialog initialisieren
+ -2 = HNDL_MESG    //
+ -3 = HNDL_CLSD    // Dialogfenster wurde geschlossen
+ -5 = HNDL_OPEN    // Dialog-Initialisierung abschliežen
+ -6 = HNDL_EDIT    // Zeichen fr ein Editfeld prfen
+ -7 = HNDL_EDDN    // Zeichen wurde ins Editfeld gesetzt
+ -8 = HNDL_EDCH    // Editfeld wurde gewechselt
+ -9 = HNDL_MOVE    // Dialog wurde verschoben
+-10 = HNDL_TOPW    // Dialogfenster kam nach oben
+-11 = HNDL_UNTP    // Dialogfenster ist nicht aktiv
+!end_verbatim
+!end_xlist
+Von diesen Funktionsnummern muž nur auf HNDL_CLSD reagiert werden; alle
+anderen Ereignisse k”nnen je nach Bedarf beachtet werden.
+!item [clicks]
+Anzahl der Mausklicks, falls es sich bei (!I)obj(!i) um eine Objektnummer
+handelt.
+!item [data]
+Falls der Parameter (!I)obj(!i) eine positive Objektnummer ist, wird hier
+die Variable (!I)user_data(!i) aus der Funktion wdlg_create bergeben.
+Anderenfalls ist der Wert von der entsprechenden Funktionsnummer abh„ngig.
+!end_xlist
+
+(!B)Hinweis:(!b) Die Funktion wird aufgerufen, wenn auf ein EXIT- oder
+TOUCHEXIT Objekt geklickt wurde (in diesem Fall ist (!I)obj(!i) eine
+positive Objektnummer) oder wenn ein den Dialog betreffendes Ereignis
+eingetreten ist (dann ist (!I)obj(!i) negativ und enth„lt eine entsprechende
+Funktionsnummer (s.o.)).
+
+Die Parameter werden ber den Stack bergeben und die Routine darf die
+Register d0-d2/a0-a2 ver„ndern. Falls die Funktion mit einer unbekannten
+Funktionsnummer in (!I)obj(!i) aufgerufen wird oder eine der obigen
+Funktionsnummern ignoriert werden soll, muž der Wert 1 zurckgeliefert
+werden.
+
+Querverweis: (!link [Beispiel-Implementation] [Beispiel zu HNDL_OBJ]) ~ wdlg_create
+
+
+
+!begin_node Beispiel zu HNDL_OBJ
+
+!begin_verbatim
+/* Der folgende Code ist ein Beispiel fr eine Implementation
+   der handle_exit Funktion, wie sie z.B. als Parameter bei
+   wdlg_create vorkommt. */
+
+int16_t cdecl handle_exit ( void *dialog, EVNT *events, int16_t obj,
+                         int16_t clicks, void *data )
+{
+    /*
+     * Ereignis oder Objektnummer?
+     * Alle Ereignisse aužer HNDL_CLSD werden bei diesem Beispiel
+     * ignoriert
+     */
+
+    if ( obj < 0 )
+    {
+        if ( obj == HNDL_CLSD )     /* Closer bet„tigt? */
+            return( 0 );            /* beenden */
+        if ( obj == HNDL_EDIT )
+        {
+            /*  In Fensterdialogen kann es ntzlich sein, Tasten-
+                kombinationen mit Control in Eingabefeldern zu igno-
+                rieren, damit Shortcuts wie z.B. Ctrl-U, Ctrl-W oder
+                Ctrl-Q in der Eventschleife des Programms abgearbei-
+                tet werden k”nnen. In diesem Fall sollte nach HNDL_EDIT
+                eine 0 zurckgeliefert werden, damit die Taste nicht
+                von objc_edit bearbeitet wird.
+            */
+        }
+    }
+    else
+    {                         /* ein Objekt ist angew„hlt worden  */
+        switch ( obj )        /* Aktionen einleiten (falls n”tig) */
+        {
+            case ...
+              .
+              .
+              .
+            case MY_EXIT_OBJECT:    ..... return( 0 );  /* beenden */
+        }
+    }
+    return( 1 ); /* weitermachen */
+}
+!end_verbatim
+!end_node
+
+!begin_node HNDL_INIT
+
+(!I)data(!i) ist die bei (!B)wdlg_init(!b) bergebene Variable. Falls
+handle_exit den Wert 0 zurckliefert, legt (!B)wdlg_create(!b) keine
+Dialog-Struktur an (Fehler). Die Variable code wird in (!I)clicks(!i)
+bergeben.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+!begin_node HNDL_MESG
+
+(!I)data(!i) ist user_data. Falls handle_exit den Wert 0 zurckliefert, wird
+der Dialog geschlossen - (!B)wdlg_evnt(!b) liefert den Wert 0 zurck.
+(!I)events(!i) zeigt auf die bei wdlg_evnt bergebene EVNT-Struktur.
+
+(!B)Hinweis:(!b) Dieser Code wird nur dann bergeben, wenn ein
+Nachrichtencode zwischen 20 und 39 empfangen wurde, der nicht mit den
+anderen Opcodes bearbeitet wird. Er wird z.B. fr die Ikonifizierung
+ben”tigt.
+
+(!B)Achtung:(!b) Dieser Opcode wird erst seit der MagiC-Version
+4.50 vom 18.04.96 untersttzt.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_OPEN
+
+(!I)data(!i) ist die bei (!B)wdlg_open(!b) bergebene Variable. Die Variable
+code wird in (!I)clicks(!i) bergeben.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_CLSD
+
+(!I)data(!i) ist user_data. Falls handle_exit den Wert 0 zurckliefert, wird
+der Dialog geschlossen - (!B)wdlg_evnt(!b) liefert den Wert 0 zurck.
+
+(!I)events(!i) zeigt auf die bei wdlg_evnt berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_MOVE
+
+(!I)data(!i) ist user_data. Falls handle_exit den Wert 0 zurckliefert, wird
+der Dialog geschlossen - (!B)wdlg_evnt(!b) liefert den Wert 0 zurck.
+
+(!I)events(!i) zeigt auf die bei wdlg_evnt berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_TOPW
+
+(!I)data(!i) ist user_data. Falls handle_exit den Wert 0 zurckliefert, wird
+der Dialog geschlossen - (!B)wdlg_evnt(!b) liefert den Wert 0 zurck.
+
+(!I)events(!i) zeigt auf die bei wdlg_evnt berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_UNTP
+
+(!I)data(!i) ist user_data. Falls handle_exit den Wert 0 zurckliefert, wird
+der Dialog geschlossen - (!B)wdlg_evnt(!b) liefert den Wert 0 zurck.
+
+(!I)events(!i) zeigt auf die bei wdlg_evnt berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDIT
+
+(!I)data(!i) zeigt auf ein Wort mit dem Tastencode. Falls handle_exit den
+Wert 1 zurckliefert, wird der Tastendruck verarbeitet, bei 0 ignoriert.
+
+(!I)events(!i) zeigt auf die bei (!B)wdlg_evnt(!b) berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDDN
+
+(!I)data(!i) zeigt auf ein Wort mit dem Tastencode. (!I)events(!i) zeigt auf
+die bei (!B)wdlg_evnt(!b) berg. EVNT-Struktur.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+
+
+
+!begin_node HNDL_EDCH
+
+(!I)data(!i) zeigt auf ein Wort mit der Objektnummer des neuen Edit-Felds.
+
+Querweise: HNDL_OBJ ~ wdlg_create
+!end_node
+!end_node
+
+!endif
