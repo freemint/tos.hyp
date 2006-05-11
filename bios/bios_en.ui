@@ -1,0 +1,229 @@
+!begin_node The BIOS
+!label BIOS, The
+
+Die BIOS-Funktionen stellen die unterste Schnittstelle des Betriebssystems
+zur Hardware des Atari dar, und werden Åber den 680X0-Trap#13 aufgerufen.
+Diese Funktionen sollten mîglichst nicht von Applikationsprogrammen
+verwendet werden, da wesentlich leistungsfÑhigere Funktionen auf hîherer
+Ebene als bessere Alternative verfÅgbar sind. Insgesamt sind die folgenden
+Funktionen verfÅgbar:
+
+!begin_xlist [˘ Bconstat  ] !short
+!item [˘ Bconin]
+Read a character from a device
+!item [˘ Bconout]
+Send a character to a peripheral unit
+!item [˘ Bconstat]
+Get input status of a peripheral unit
+!item [˘ Bcostat]
+Get status of a standard output device
+!item [˘ Drvmap]
+Get information about attached devices
+!item [˘ Getbpb]
+Get address to the bios parameter block of a unit
+!item [˘ Getmpb]
+Speicherparameterblock ermitteln.
+!item [˘ Kbshift]
+Fetch/set status of the shift keys
+!item [˘ Mediach]
+Ask if the media has been changed
+!item [˘ Rwabs]
+Direct read/write operation on a unit
+!item [˘ Setexc]
+Set an get interrupt vector
+!item [˘ Tickcal]
+Get time difference between two timer calls
+!end_xlist
+
+Das (!nolink [BIOS]) ist in MagiC reentrant. Das heiût, diese Funktionen kînnen
+(solange der jeweilge Supervisorstack nicht ÅberlÑuft...) auch aus
+Interrupts mehrfach aufgerufen werden.
+
+(!B)Note:(!b)
+!begin_itemize
+!item Die <saveptr_area> des (!nolink [BIOS]) ist (aus KompatiblitÑtsgrÅnden) noch
+      vorhanden, wird jedoch vom System nicht benutzt.
+!item Die StackÅberprÅfung von Turbo C/Pure-C wird bei Routinen versagen,
+      die im Supervisor-Modus ausgefÅhrt werden (unter TOS konnte das bisher
+      nur bei USERDEF-Routinen im AES, die ebenfalls im Supervisor-Modus
+      ausgefÅhrt werden, passieren).
+!end_itemize
+
+Falls Sie eigene Routinen ins (!nolink [BIOS]) hÑngen, dann achten Sie darauf, diese
+voll reentrant zu gestalten. Machen Sie keine Annahmen Åber den Inhalt der
+<saveptr_area> !
+
+!label BIOS, ParameterÅbergabe im
+!label ParameterÅbergabe im BIOS
+Das (!nolink [BIOS]) nimmt seine Parameter auf dem Stack entgegen; dabei wird das
+letzte Argument aus der Parameterliste als erstes auf dem Stack abgelegt.
+Funktionsergebnisse werden im Prozessorregister d0 zurÅckgeliefert. Nur
+die Register d3-d7 und a3-a7 werden gerettet, alle anderen kînnen durch
+den Aufruf verÑndert werden.
+
+See Also: GEMDOS ~ XBIOS ~ (!link [Reset-Vektor][Einklinken in den Reset-Vektor]) ~ VT-52-Terminal
+
+
+!include bios/bios_trap.ui
+
+!include bios/function/bconin.u
+!include bios/function/bconout.u
+!include bios/function/bconstat.u
+!include bios/function/bcostat.u
+!include bios/function/drvmap.u
+!include bios/function/getbpb.u
+!include bios/function/getmpb.u
+!include bios/function/kbshift.u
+!include bios/function/mediach.u
+!include bios/function/rwabs.u
+!include bios/function/setexc.u
+!include bios/function/tickcal.u
+
+
+!end_node
+
+
+
+
+!begin_node Die Ein-/AusgabekanÑle des BIOS
+
+Die folgende Tabelle ist eine Zusammenfassung der KanÑle, welche dem BIOS
+bekannt sind. Zu beachten ist, daû per Bconmap weitere KanÑle installiert
+werden kînnen.
+
+!begin_table [c|l|l]
+Kanal !! Name !! Meaning
+!hline
+0 !! PRT !! parallele Schnittstelle
+1 !! AUX !! serielle Schnittstelle
+2 !! CON !! Console (mit (!link [VT-52-Sequenzen][VT-52-Terminal]))
+3 !! MIDI !! MIDI-Schnittstelle
+4 !! IKBD !! Intelligent-Keyboard-Prozessor
+5 !! RAWCON !! Console (ohne Steuerzeichen)
+6 !! ------ !! ST-komp. seriell (Modem-1)
+7 !! ------ !! SCC Kanal-B      (Modem-2)
+8 !! ------ !! TT-MFP      (Seriell-1)
+9 !! ------ !! SCC Kanal-A (Seriell-2)
+!end_table
+
+(!B)Hinweis:(!b) Ausgaben Åber Kanal-5 (RAWCON) kînnen in einer
+(!I)deutlich(!i) hîheren Geschwindigkeit erfolgen als Åber Kanal-2 (CON),
+da die Steuersequenzen entfallen. Ein weiterer Vorteil ist der daraus
+resultierende grîûere Zeichenvorrat.
+
+See Also: (!nl)
+Bconin ~ Bconout ~ Bconstat ~ Bcostat ~ (!link [Verzeichnis U:\DEV][Das Verzeichnis U:\DEV])
+
+!end_node
+
+
+!begin_node Einklinken in den Reset-Vektor
+!label Reset-Vektor, Einklinken in
+
+Das Kochrezept, um eigene Funktionen in den Reset-Vektor einklinken zu
+kînnen, lautet wie folgt:
+
+!begin_itemize
+!item Die Systemvariable resvalid auf den Wert 0x31415926 setzen, denn
+      anderenfalls wird (!I)(!nolink [resvector])(!i) vom BIOS gar nicht beachtet.
+!item Adresse der eigenen Funktion in den resvector-Vektor schreiben.
+!item Per jmp(a6) aus der Funktion zurÅckspringen.
+!end_itemize
+
+(!B)Wichtig:(!b) Ein RÅcksprung per rts aus der installierten Funktion ist
+(!I)nicht(!i) mîglich, da zu diesem Zeitpunkt noch kein Stack initialisiert
+ist. In der Praxis kînnte man z.B. so vorgehen:
+
+!begin_verbatim
+RESMAGIC    equ       $31415926
+_resvalid   equ       $426
+_resvector  equ       $42a
+
+            .text
+install:    move.l    _resvalid,oldvalid
+            move.l    #RESMAGIC,resvalid
+            move.l    _resvector,oldreset
+            move.l    #newreset,_resvector
+            rts
+
+            dc.b      "XBRARESV"
+oldreset:   dc.l      0
+
+newreset:   move.l    oldreset,_resvector
+            move.l    oldvalid,_resvalid
+            jmp       (a6)
+
+            .bss
+oldvalid:   .ds.l     1
+!end_verbatim
+
+(!B)Achtung:(!b) Damit sich mehrere Programme installieren kînnen, muû nach
+Abarbeitung der Funktion eine saubere De-Installation erfolgen.
+
+See Also: (!link [Systemvariablen][Die Systemvariablen]) ~ (!link [Systemvektoren][Die Systemvektoren]) ~ XBRA-Verfahren
+!end_node
+
+
+!include bios\sys_var.u
+!include bios\sys_vec_en.ui
+
+!begin_node BIOS und XBIOS-Fehlermeldungen
+
+Fehler werden von BIOS und XBIOS als negative Werte gemeldet. Die folgende
+Liste enthÑlt alle bekannten Fehlermeldungen:
+
+!begin_xlist !short [Nr. Bezeichnung]
+!item [Nr. Bezeichnung]
+Meaning
+!item [~]
+~
+!item [~~0 E_OK]
+OK (no error)
+!item [~-1 ERROR]
+Fundamental error
+!item [~-2 EDRVNR]
+Drive not ready
+!item [~-3 EUNCMD]
+Unknown command
+!item [~-4 E_CRC]
+CRC error
+!item [~-5 EBADRQ]
+Bad request
+!item [~-6 E_SEEK]
+Seek error
+!item [~-7 EMEDIA]
+Lesefehler (Medium hat unkorrekten Bootsektor).
+!item [~-8 ESECNF]
+Sector not found
+!item [~-9 EPAPER]
+Drucker ist nicht betriebsbereit.
+!item [-10 EWRITF]
+Fehler bei einer Schreiboperation.
+!item [-11 EREADF]
+Fehler bei einer Leseoperation.
+!item [-12 EGENRL]
+General error
+!item [-13 EWRPRO]
+Write protect
+!item [-14 E_CHNG]
+Medium wurde nach Schreiboperation gewechselt.
+!item [-15 EUNDEV]
+Unknown device
+!item [-16 EBADSF]
+Defekte Sektoren beim Formatieren entdeckt.
+!item [-17 EOTHER]
+Insert other disk. Dieser Fehler tritt nur auf, wenn Laufwerk B: angesprochen wird, ohne angeschlossen zu sein. In diesem Fall wird der Benutzer aufgefordert, die Diskette in das erste Laufwerk einzufÅgen.
+!item [-18 EINSERT]
+MetaDOS Error: Medium einlegen
+!item [-19 EDVNRSP]
+(!nolink [MetaDOS]) Error: GerÑt antwortet nicht.
+!item [-128 SNDNOTLOCK]
+Falcon XBIOS: Sound system is not loocked.
+!item [-129 SNDLOCKED]
+Falcon XBIOS: Sound system is loocked.
+!end_xlist
+
+See Also: (!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~ GEMDOS-Fehlermeldungen
+
+
+!end_node
