@@ -1,0 +1,57 @@
+!begin_node Beispiel-Code
+
+!begin_verbatim
+/* 'get_cookie':  fragt den Wert eines Cookies ab. 
+                  Als Parameter werden dabei die ID des zu suchenden
+                  Cookies, sowie ein Zeiger auf den gefundenen Wert
+                  Åbergeben. 
+ 
+                  Die Routine liefert den Wert FALSE falls der
+                  angegebene Cookie nicht existiert... */
+
+typedef struct
+{
+    LONG id;             /* Identifikations-Code */
+    LONG value;          /* Wert des Cookies     */
+} COOKJAR;
+
+
+WORD get_cookie( LONG cookie, void *value )
+{
+  static WORD use_ssystem = -1;
+  COOKJAR *cookiejar;
+  LONG    val = -1l;
+  WORD    i=0;
+  
+  if( use_ssystem < 0 )
+    use_ssystem = (Ssystem(S_INQUIRE, 0l, 0)==E_OK);
+  
+  if(use_ssystem)
+  {
+    if( Ssystem(S_GETCOOKIE, cookie, (LONG)&val)==E_OK )
+    {
+      if( value!=NULL )
+        *(LONG *)value = val;
+      return TRUE;
+    }
+  }
+  else
+  {
+    /* Zeiger auf Cookie Jar holen */
+    cookiejar = (COOKJAR *)(Setexc(0x05A0/4,(const void (*)(void))-1));
+    if( cookiejar )
+    {
+      for( i=0 ; cookiejar[i].id ; i++ )
+        if( cookiejar[i].id==cookie )
+        {
+          if( value )
+            *(LONG *)value = cookiejar[i].value;
+          return TRUE;
+        }
+    }
+  }
+  
+  return FALSE;
+}
+!end_verbatim
+!end_node
