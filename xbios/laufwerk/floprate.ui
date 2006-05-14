@@ -1,6 +1,5 @@
 !iflang [english]
 
-
 !begin_node Floprate
 (!begin_liste) [Availability]
 
@@ -37,10 +36,21 @@ Laufwerksnummer
 !label Floppy, Timeout der
 !label Timeout der Floppy
 
-(!B)Hinweis:(!b) Die Funktion steht erst ab TOS 1.04 zur Verfgung. Ab
-MagiC-3 kann darberhinaus per Floprate (-1, newrate) der (!B)Timeout(!b)
+(!B)Hinweis:(!b) 
+Ab MagiC-3 kann darberhinaus per Floprate (-1, newrate) der (!B)Timeout(!b)
 fr die Floppy eingestellt werden; ein Wert von 300 bedeutet 1,5 Sekunden
 (dies ist der Wert, der beim Booten per Default eingestellt ist).
+
+Bei „lteren ROM-TOS-Versionen mu man die vorher undokumentierten Systemvariablen
+verwenden:
+!begin_table [c|c|c]
+TOS-Version !! Drive A !! Drive B
+!hline
+1.00 !! 0x0a08 !! 0xa0c
+1.02 !! 0x0a4e !! 0xa52
+!end_table
+Zum portablen Setzen kann man die folgende
+(!link [Beispielroutine][Seekrate fr alle TOS-Versionen]) nutzen.
 
 !item [(!nolink [Return]) Value:]
 Die Funktion liefert die vorherige Seekrate als Ergebnis.
@@ -81,11 +91,58 @@ addq.l    #6,sp         ; Stack korrigieren
 !endif
 (!ende_liste)
 !end_node
+
+!begin_node Seekrate fr alle TOS-Versionen
+!ignore_index
+
+!begin_verbatim
+/* Portables Setzen der Floppy-Seekrate fr alle TOS-Versionen
+   (auer RAM-TOS 1.00).
+   Parameter: genau wie bei XBIOS-Funktion "Floprate()" */
+
+int16_t SeekRate ( int16_t devno, int16_t newrate )
+{
+  int32_t stack;
+  int16_t version;
+  OSHEADER *sys;
+
+  /* Zeiger auf OS-Header holen */
+  stack = Super (0L);
+  sys = *((OSHEADER **) 0x4f2);
+  version = sys->os_version;
+  Super ((void *)stack);
+
+  /* bei neuem TOS einfach "Floprate()" aufrufen */
+  if ( version >= 0x0104 )
+    return Floprate ( devno, newrate );
+  else
+  {
+    /* sonst Zeiger auf interne GEMDOS-Variablen
+       berechnen */
+    int16_t *sk, merk;
+
+    if ( version == 0x0102 )
+      sk = (int16_t *) 0x0a4e;
+    else
+      sk = (int16_t *) 0x0a08;
+
+    /* Laufwerk B: 2 int16_t dahinter */
+    if ( devno ) sk = &(sk[2]);
+
+    merk = *sk;
+    /* Wert nur bei ungleich -1 eintragen */
+    if ( newrate != -1 ) *sk = newrate;
+
+    /* alten Wert immer zurckliefern */
+    return merk;
+  }
+}
+!end_verbatim
 !end_node
 
+!end_node
 
 !else
-
 
 !begin_node Floprate
 (!begin_liste) [Beschreibung]
@@ -123,10 +180,21 @@ Laufwerksnummer
 !label Floppy, Timeout der
 !label Timeout der Floppy
 
-(!B)Hinweis:(!b) Die Funktion steht erst ab TOS 1.04 zur Verfgung. Ab
-MagiC-3 kann darberhinaus per Floprate (-1, newrate) der (!B)Timeout(!b)
+(!B)Hinweis:(!b)
+Ab MagiC-3 kann darberhinaus per Floprate (-1, newrate) der (!B)Timeout(!b)
 fr die Floppy eingestellt werden; ein Wert von 300 bedeutet 1,5 Sekunden
 (dies ist der Wert, der beim Booten per Default eingestellt ist).
+
+Bei „lteren ROM-TOS-Versionen mu man die vorher undokumentierten Systemvariablen
+verwenden:
+!begin_table [c|c|c]
+TOS-Version !! Laufwerk A !! Laufwerk B
+!hline
+1.00 !! 0x0a08 !! 0xa0c
+1.02 !! 0x0a4e !! 0xa52
+!end_table
+Zum portablen Setzen kann man die folgende
+(!link [Beispielroutine][Seekrate fr alle TOS-Versionen]) nutzen.
 
 !item [Ergebnis:]
 Die Funktion liefert die vorherige Seekrate als Ergebnis.
@@ -167,7 +235,55 @@ addq.l    #6,sp         ; Stack korrigieren
 !endif
 (!ende_liste)
 !end_node
+
+!begin_node Seekrate fr alle TOS-Versionen
+!ignore_index
+
+!begin_verbatim
+/* Portables Setzen der Floppy-Seekrate fr alle TOS-Versionen
+   (auer RAM-TOS 1.00).
+   Parameter: genau wie bei XBIOS-Funktion "Floprate()" */
+
+int16_t SeekRate ( int16_t devno, int16_t newrate )
+{
+  int32_t stack;
+  int16_t version;
+  OSHEADER *sys;
+
+  /* Zeiger auf OS-Header holen */
+  stack = Super (0L);
+  sys = *((OSHEADER **) 0x4f2);
+  version = sys->os_version;
+  Super ((void *)stack);
+
+  /* bei neuem TOS einfach "Floprate()" aufrufen */
+  if ( version >= 0x0104 )
+    return Floprate ( devno, newrate );
+  else
+  {
+    /* sonst Zeiger auf interne GEMDOS-Variablen
+       berechnen */
+    int16_t *sk, merk;
+
+    if ( version == 0x0102 )
+      sk = (int16_t *) 0x0a4e;
+    else
+      sk = (int16_t *) 0x0a08;
+
+    /* Laufwerk B: 2 int16_t dahinter */
+    if ( devno ) sk = &(sk[2]);
+
+    merk = *sk;
+    /* Wert nur bei ungleich -1 eintragen */
+    if ( newrate != -1 ) *sk = newrate;
+
+    /* alten Wert immer zurckliefern */
+    return merk;
+  }
+}
+!end_verbatim
 !end_node
 
+!end_node
 
 !endif
