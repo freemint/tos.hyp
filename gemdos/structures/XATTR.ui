@@ -1,0 +1,302 @@
+!iflang [english]
+
+!begin_node XATTR
+
+!begin_verbatim
+typedef struct xattr
+{
+   uint16_t   mode;              /* Dateimodus, Angaben zu     */
+                                 /* - mîglichen Filetypen      */
+                                 /* - speziellen Bits          */
+                                 /* - Zugriffsrechten          */
+   int32_t    index;             /* Dateinummer                */
+   uint16_t   dev;               /* GerÑtenummer               */
+   uint16_t   rdev;              /* tatsÑchliches GerÑt        */
+                                 /* (z.B. bei BIOS-Files)      */
+                                 /* in MagiC jedoch reserviert */
+   uint16_t   nlink;             /* Anzahl der Links           */
+   uint16_t   uid;               /* Benutzernummer             */
+   uint16_t   gid;               /* Gruppennummer              */
+   int32_t    size;              /* DateilÑnge                 */
+   int32_t    blksize, nblocks;  /* Blockgrîûe/belegte Blocks  */
+   uint16_t   mtime, mdate;      /* Datum der letzten énderung */
+   uint16_t   atime, adate;      /* Datum des letzten Zugriffs */
+   uint16_t   ctime, cdate;      /* Erstellungsdatum           */
+   uint16_t   attr;              /* TOS-Dateiattribute         */
+   uint16_t   reserved2;         /* reserviert                 */
+   int32_t    reserved3[2];      /* reserviert                 */
+} XATTR;
+!end_verbatim
+
+(!B)Hinweis:(!b) MagiC liefert fÅr FAT-Dateisysteme folgende Index-Daten:
+
+!begin_xlist !short [˘ sonstige Dateien:]
+!item [˘ Verzeichnisse:]
+Startcluster im Motorola-Format
+!item [˘ sonstige Dateien:]
+!begin_xlist !short
+!item [Hiword =]
+Startcluster des Verzeichnisses
+!item [Loword =]
+Position innerhalb des Verzeichnisses >> 5
+!end_xlist
+!end_xlist
+
+Dieses Verfahren ist Ñhnlich wie das, welches Linux und Solaris verwenden.
+Nachteil ist, daû Dateien beim Verschieben ihren Index Ñndern.
+
+Die Komponente (!I)index(!i) ist also ein Langwort zur eindeutigen
+Identifizierung einer Datei bzw. eines Ordners. Der Index muû innerhalb
+eines Dateisystems eindeutig sein; zusammen mit dem folgenden Feld
+((!I)dev(!i)) ist damit eine Datei oder ein Ordner systemglobal vollstÑndig
+festgelegt.
+
+Unter UNIX-Ñhnlichen Dateisystemen ist (!I)index(!i) die Nummer des Inode.
+
+Auf Macintosh-Partitionen wird die hard file ID bzw. die hard dir ID
+verwendet, die vom MacOS zur VerfÅgung gestellt wird. Das MacOS verwendet
+als Standard-Deskriptoren aber das FSSpec. FÅr Verzeichnisse, d.h. fÅr
+Directory IDs, gibt es Funktionen des MacOS, um einen FSSpec zu berechnen.
+Leider lassen sich die hard file IDs fÅr normale Dateien (d.h. nicht
+Unterverzeichnisse) (!I)nicht(!i) weiter verwenden, da sie von keiner
+Funktion des MacOS verarbeitet werden.
+
+See Also: (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~
+Fxattr ~ Dxreaddir
+
+
+!begin_node XATTR, dev-Komponente
+
+Legt das Dateisystem fest. Auf dem Atari sind 0..25 die BIOS-Laufwerke A:
+bis Z:, Laufwerk U: oder andere Dateisysteme verwenden hîhere Nummern. Auf
+dem Macintosh wird die 'volume ID' eingesetzt, die vom MacOS vergeben wird.
+
+
+
+!begin_node XATTR, mîgliche Filetypen
+!label mîgliche Filetypen
+(!B)Mîgliche Filetypen, die Åber die XATTR-Struktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_IFMT  0170000  /* zur Isolierung des Filetyps */
+#define S_IFCHR 0020000  /* spezielles BIOS-File        */
+#define S_IFDIR 0040000  /* Verzeichnis                 */
+#define S_IFREG 0100000  /* normale Datei               */
+#define S_IFIFO 0120000  /* FIFO (Pipe mit Namen)       */
+#define S_IMEM  0140000  /* Speicherblock/Prozeûfile    */
+#define S_IFLNK 0160000  /* symbolischer Link           */
+!end_verbatim
+!end_node
+
+!begin_node Sticky-Bit
+
+(!B)Spezielle Bits, die Åber die XATTR-STruktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_ISUID 04000  /* User-ID des EigentÅmers setzen */
+#define S_ISGID 02000  /* Gruppen-ID bei Aufruf setzen   */
+#define S_ISVTX 01000  /* Sticky bit                     */
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Bedeutung des (!I)Sticky-Bits(!i) ist dabei vom Filetyp
+abhÑngig.
+!end_node
+
+!begin_node XATTR, size-Komponente
+
+Auf (!B)DOS-Partitionen(!b) wird fÅr Ordner der Wert 0 als LÑnge geliefert.
+Die tatsÑchliche LÑnge kann leider aufgrund der EinschrÑnkungen von MSDOS
+nicht ermittelt werden. Die LÑnge des Wurzelverzeichnisses kann allerdings
+ermittelt werden.
+
+Auf (!B)Macintosh-Partitionen(!b) haben Ordner immer die LÑnge 0, die
+tatsÑchliche LÑnge lÑût sich (zumindest unter System 7) nicht ermitteln.
+!end_node
+
+!begin_node XATTR, spezielle Bits
+
+(!B)Spezielle Bits, die Åber die XATTR-STruktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_ISUID 04000  /* User-ID des EigentÅmers setzen */
+#define S_ISGID 02000  /* Gruppen-ID bei Aufruf setzen   */
+#define S_ISVTX 01000  /* Sticky bit                     */
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Bedeutung des (!I)Sticky-Bits(!i) ist dabei vom
+Filetyp abhÑngig.
+!end_node
+
+!begin_node XATTR, Zugriffsrechte
+
+(!B)Mîgliche Zugriffsrechte, die Åber die XATTR-Struktur gesetzt bzw.
+ermittelt werden kînnen:(!b)
+
+!begin_verbatim
+#define S_IRUSR 0400   /* EigentÅmer darf Datei lesen    */
+#define S_IWUSR 0200   /* dto. darf beschreiben          */
+#define S_IXUSR 0100   /* dto. darf ausfÅhren            */
+#define S_IRGRP 0040   /* Gruppenmitglieder dÅrfen lesen */
+#define S_IWGRP 0020   /* dto. dÅrfen beschreiben        */
+#define S_IXGRP 0010   /* dto. dÅrfen ausfÅhren          */
+#define S_IROTH 0004   /* Andere dÅrfen Datei lesen      */
+#define S_IWOTH 0002   /* dto. dÅrfen beschreiben        */
+#define S_IXOTH 0001   /* dto. dÅrfen ausfÅhren          */
+!end_verbatim
+!end_node
+!end_node
+!else
+
+!begin_node XATTR
+
+!begin_verbatim
+typedef struct xattr
+{
+   uint16_t   mode;              /* Dateimodus, Angaben zu     */
+                                 /* - mîglichen Filetypen      */
+                                 /* - speziellen Bits          */
+                                 /* - Zugriffsrechten          */
+   int32_t    index;             /* Dateinummer                */
+   uint16_t   dev;               /* GerÑtenummer               */
+   uint16_t   rdev;              /* tatsÑchliches GerÑt        */
+                                 /* (z.B. bei BIOS-Files)      */
+                                 /* in MagiC jedoch reserviert */
+   uint16_t   nlink;             /* Anzahl der Links           */
+   uint16_t   uid;               /* Benutzernummer             */
+   uint16_t   gid;               /* Gruppennummer              */
+   int32_t    size;              /* DateilÑnge                 */
+   int32_t    blksize, nblocks;  /* Blockgrîûe/belegte Blocks  */
+   uint16_t   mtime, mdate;      /* Datum der letzten énderung */
+   uint16_t   atime, adate;      /* Datum des letzten Zugriffs */
+   uint16_t   ctime, cdate;      /* Erstellungsdatum           */
+   uint16_t   attr;              /* TOS-Dateiattribute         */
+   uint16_t   reserved2;         /* reserviert                 */
+   int32_t    reserved3[2];      /* reserviert                 */
+} XATTR;
+!end_verbatim
+
+(!B)Hinweis:(!b) MagiC liefert fÅr FAT-Dateisysteme folgende Index-Daten:
+
+!begin_xlist !short [˘ sonstige Dateien:]
+!item [˘ Verzeichnisse:]
+Startcluster im Motorola-Format
+!item [˘ sonstige Dateien:]
+!begin_xlist !short
+!item [Hiword =]
+Startcluster des Verzeichnisses
+!item [Loword =]
+Position innerhalb des Verzeichnisses >> 5
+!end_xlist
+!end_xlist
+
+Dieses Verfahren ist Ñhnlich wie das, welches Linux und Solaris verwenden.
+Nachteil ist, daû Dateien beim Verschieben ihren Index Ñndern.
+
+Die Komponente (!I)index(!i) ist also ein Langwort zur eindeutigen
+Identifizierung einer Datei bzw. eines Ordners. Der Index muû innerhalb
+eines Dateisystems eindeutig sein; zusammen mit dem folgenden Feld
+((!I)dev(!i)) ist damit eine Datei oder ein Ordner systemglobal vollstÑndig
+festgelegt.
+
+Unter UNIX-Ñhnlichen Dateisystemen ist (!I)index(!i) die Nummer des Inode.
+
+Auf Macintosh-Partitionen wird die hard file ID bzw. die hard dir ID
+verwendet, die vom MacOS zur VerfÅgung gestellt wird. Das MacOS verwendet
+als Standard-Deskriptoren aber das FSSpec. FÅr Verzeichnisse, d.h. fÅr
+Directory IDs, gibt es Funktionen des MacOS, um einen FSSpec zu berechnen.
+Leider lassen sich die hard file IDs fÅr normale Dateien (d.h. nicht
+Unterverzeichnisse) (!I)nicht(!i) weiter verwenden, da sie von keiner
+Funktion des MacOS verarbeitet werden.
+
+Querverweis: (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~
+Fxattr ~ Dxreaddir
+
+
+!begin_node XATTR, dev-Komponente
+
+Legt das Dateisystem fest. Auf dem Atari sind 0..25 die BIOS-Laufwerke A:
+bis Z:, Laufwerk U: oder andere Dateisysteme verwenden hîhere Nummern. Auf
+dem Macintosh wird die 'volume ID' eingesetzt, die vom MacOS vergeben wird.
+
+
+
+!begin_node XATTR, mîgliche Filetypen
+!label mîgliche Filetypen
+(!B)Mîgliche Filetypen, die Åber die XATTR-Struktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_IFMT  0170000  /* zur Isolierung des Filetyps */
+#define S_IFCHR 0020000  /* spezielles BIOS-File        */
+#define S_IFDIR 0040000  /* Verzeichnis                 */
+#define S_IFREG 0100000  /* normale Datei               */
+#define S_IFIFO 0120000  /* FIFO (Pipe mit Namen)       */
+#define S_IMEM  0140000  /* Speicherblock/Prozeûfile    */
+#define S_IFLNK 0160000  /* symbolischer Link           */
+!end_verbatim
+!end_node
+
+!begin_node Sticky-Bit
+
+(!B)Spezielle Bits, die Åber die XATTR-STruktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_ISUID 04000  /* User-ID des EigentÅmers setzen */
+#define S_ISGID 02000  /* Gruppen-ID bei Aufruf setzen   */
+#define S_ISVTX 01000  /* Sticky bit                     */
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Bedeutung des (!I)Sticky-Bits(!i) ist dabei vom Filetyp
+abhÑngig.
+!end_node
+
+!begin_node XATTR, size-Komponente
+
+Auf (!B)DOS-Partitionen(!b) wird fÅr Ordner der Wert 0 als LÑnge geliefert.
+Die tatsÑchliche LÑnge kann leider aufgrund der EinschrÑnkungen von MSDOS
+nicht ermittelt werden. Die LÑnge des Wurzelverzeichnisses kann allerdings
+ermittelt werden.
+
+Auf (!B)Macintosh-Partitionen(!b) haben Ordner immer die LÑnge 0, die
+tatsÑchliche LÑnge lÑût sich (zumindest unter System 7) nicht ermitteln.
+!end_node
+
+!begin_node XATTR, spezielle Bits
+
+(!B)Spezielle Bits, die Åber die XATTR-STruktur gesetzt bzw. ermittelt
+werden kînnen:(!b)
+
+!begin_verbatim
+#define S_ISUID 04000  /* User-ID des EigentÅmers setzen */
+#define S_ISGID 02000  /* Gruppen-ID bei Aufruf setzen   */
+#define S_ISVTX 01000  /* Sticky bit                     */
+!end_verbatim
+
+(!B)Hinweis:(!b) Die Bedeutung des (!I)Sticky-Bits(!i) ist dabei vom
+Filetyp abhÑngig.
+!end_node
+
+!begin_node XATTR, Zugriffsrechte
+
+(!B)Mîgliche Zugriffsrechte, die Åber die XATTR-Struktur gesetzt bzw.
+ermittelt werden kînnen:(!b)
+
+!begin_verbatim
+#define S_IRUSR 0400   /* EigentÅmer darf Datei lesen    */
+#define S_IWUSR 0200   /* dto. darf beschreiben          */
+#define S_IXUSR 0100   /* dto. darf ausfÅhren            */
+#define S_IRGRP 0040   /* Gruppenmitglieder dÅrfen lesen */
+#define S_IWGRP 0020   /* dto. dÅrfen beschreiben        */
+#define S_IXGRP 0010   /* dto. dÅrfen ausfÅhren          */
+#define S_IROTH 0004   /* Andere dÅrfen Datei lesen      */
+#define S_IWOTH 0002   /* dto. dÅrfen beschreiben        */
+#define S_IXOTH 0001   /* dto. dÅrfen ausfÅhren          */
+!end_verbatim
+!end_node
+!end_node
+
+!endif
