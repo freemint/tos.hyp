@@ -1,0 +1,167 @@
+!begin_node Messages from Geneva
+!ignore_index
+
+
+!begin_description
+!label X_MN_SELECTED
+!item [X_MN_SELECTED (0xE000)] (!nl)
+     This message is either accompanied by the MU_MESAG bit of an
+     evnt_multi() return, or is returned by the evnt_mesag() call. When
+     this message occurs, the message buffer contains:
+!begin_table [ll]
+     Portion   !! Contents
+     Word 0    !! 0xE000
+     Word 3    !! The object index of the menu title selected
+     Word 4    !! The object index of the selected menu item
+     Word 5, 6 !! The object tree of the menu item selected
+     Word 7    !! The handle of the window containing the menu
+!end_table
+
+     This feature is used in conjunction with the wind_set() option X_WF_MENU,
+     described in detail, below.
+
+!label X_WM_SELECTED
+!item [X_WM_SELECTED (0xE100)] (!nl)
+     This message is received when the user clicks on a window gadget in a
+     window whose flags were modified with the wind_tree() function. It
+     only occurs when the X_WTFL_CLICKS attribute is off. If the user
+     clicks on one of the normal scroll gadgets or arrows, a standard
+     WM_ARROWED message is sent to the application. However, when the user
+     clicks on any other gadget, an X_WM_SELECTED message is sent:
+!begin_table [ll]
+     Portion !! Contents
+     Word 0  !!  0xE100
+     Word 3  !!  The handle of the window containing the gadget
+     Word 4  !!  The object index of the window tree object the user clicked on
+!end_table
+
+     This feature is used by the Task Manager's "Keyboard..." dialog.
+
+!label X_GET_HELP
+!item [X_GET_HELP (0xE200)] (!nl)
+     This message is sent to the Help display program when the user
+     requests help on a certain topic. The message is actually comprised
+     of two parts. When the application sees the X_GET_HELP message, it
+     must then use the appl_read() function to get the entire remainder of
+     the message, whether it intends to use the whole thing or not. The
+     first part of the message is comprised of the following values:
+!begin_table [ll]
+     Portion  !! Contents
+     Word 0   !! 0xE200
+     Word 1   !! Application ID
+     Word 2   !! Length of the second part ofthe message
+     Word 3   !! Length of the topic portion of the message, including
+     ~        !! the NUL terminator
+     Word 4   !! Length of the filename portion of the message, including
+     ~        !! the NUL terminator
+     Word 5   !! Upper/lowercase sensitivity. If non-zero, the topic is
+     ~        !! case-sensitive.
+!end_table
+
+    The second part of the message contains the actual text of the topic and
+    filename fields. This can be read with one or more calls to appl_read().
+
+    Example:
+!begin_verbatim
+        void read_string( char *s, int max, int size )
+        {
+          char dummy;
+
+          if( size0; size-- )
+               appl_read( my_application_id, 1, d
+          }
+        }
+        main()
+        {
+          int msgbuf[8], caps_sens;
+          char topic[20], filename[100];
+
+          evnt_mesag( msgbuf );
+          switch( msgbuf[0] )
+          {
+            case X_GET_HELP:
+               caps_sens = msgbuf[5];
+              /* Read the topic portion */
+               read_string( topic, sizeof(topic), msgbuf[3] );
+               /* Read the filename portion */
+               read_string( filename, sizeof(filename). msgbuf[4] );
+               /* Do whatever with it... */
+!end_verbatim
+
+!label X_WM_HSPLIT
+!item [X_WM_HSPLIT (0xE400)] (!nl)
+     This message is sent to an application when the position of the
+     horizontal split bar has changed:
+!begin_table [ll]
+      Portion    !! Contents
+      Word 0     !! 0xE400
+      Word 1     !! Application ID
+      Word 2     !! 0
+      Word 3     !! Handle of the window being affected
+      Word 4     !! The new offset (in pixels) of the split bar
+!end_table
+
+      The application is then free to either act upon this message and change
+      the split bar position with wind_set( X_WF_HSPLIT, or to ignore the
+      message completely.
+
+      See the x_wind_create() function for more information.
+
+!label X_WM_ARROWED2
+!item [X_WM_ARROWED2 (0xE600)] (!nl)
+     This message is sent to an application when the user has licked on
+     one of the arrow or scroll bar gadgets which are not reported by the
+     normal WM_ARROWED message. X_WM_ARROWED2 reports changes in gadgets
+     which are below a vertical split bar and/or to the right of a
+     horizontal split bar. The format of a X_WM_ARROWED2 message is
+     identical to that of WM_ARROWED.
+
+      See the x_wind_create() function for more information.
+
+!label X_WM_HSLID2
+!item [X_WM_HSLID2 (0xE700)] (!nl)
+     This message is sent to an application when the user has dragged the
+     second horizontal scroll gadget, which appears to the right of a
+     horizontal split bar. The format of this message is identical to that
+     of WM_HSLID.
+
+     See the x_wind_create() function for more information.
+
+!label X_WM_VSLID2
+!item [X_WM_VSLID2 (0xE800)] (!nl)
+     This message is sent to an application when the user has dragged the
+     second vertical scroll gadget, which appears below a vertical split
+     bar. The format of this message is identical to that of WM_VSLID.
+
+     See the x_wind_create() function for more information.
+
+!label X_WM_OBJECT
+!item [X_WM_OBJECT (0xE900) (since Update 003)] (!nl)
+
+     This message type is returned to an application when it uses wind_set()
+     mode X_WF_OBJHAND to affect the manner in which window gadgets are
+     handled.
+
+     If an application receives this message, it is because the object tree
+     handler routine instructed Geneva not to process the mouse click on a
+     window gadget as a normal event. Instead, a special message is returned
+     to the application:
+!begin_table [ll]
+       Portion   !! Contents
+       Word 0 !! 0xE900
+       Word 1 !!Application ID
+       Word 2 !! 0
+       Word 3 !! Handle of the window containing the object
+       Word 4 !! Object tree index of the object which was clicked
+!end_table
+
+     Note that in order for Geneva to determine that the mouse has been
+     clicked on an object in a window's tree structure, it must be of type
+     EXIT or TOUCHEXIT.  Geneva's default window gadgets already have these
+     attributes set correctly.
+
+     See also: wind_set() mode X_WF_OBJHAND.
+
+!end_description
+
+!end_node
