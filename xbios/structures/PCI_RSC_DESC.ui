@@ -1,0 +1,270 @@
+!iflang [english]
+
+!begin_node PCI_RSC_DESC
+
+!begin_verbatim
+typedef struct
+{
+  uint16_t next;        /* length of this structure in bytes        */
+                        /* Use this to get next descriptor          */
+  uint16_t flags;       /* type of resource and misc flags          */
+  uint32_t start;       /* start address of resource in PCI address space */
+  uint32_t length;      /* length of resource                       */
+  uint32_t offset;      /* offset from PCI to physical CPU address  */
+  uint32_t dmaoffset;   /* offset for DMA-Memory transfers          */
+} PCI_RSC_DESC;
+!end_verbatim
+
+The flags field is bit-coded as follows:
+!label RSC_ROM
+!label RSC_IO
+!label RSC_LAST
+!label FLG_8BIT
+!label FLG_16BIT
+!label FLG_32BIT
+!label FLG_ENDMASK
+!begin_table [lll]
+RSC_ROM   !! 0x2000 !! This is an expansion ROM (must be Memory, not IO)
+RSC_IO    !! 0x4000 !! This is an IO area (Memory area if bit is clear)
+RSC_LAST  !! 0x8000 !! last resource for this device
+FLG_8BIT  !! 0x0100 !! 8-bit accesses are supported
+FLG_16BIT !! 0x0200 !! 16-bit accesses are supported
+FLG_32BIT !! 0x0400 !! 32-bit accesses are supported
+FLG_ENDMASK !! 0x000F !! Bit 0..3 specify which byte ordering is used:
+~         !! ~        !! 0: Motorola (big endian)
+~         !! ~        !! 1: Intel (little endian), address swapped
+~         !! ~        !! 2: Intel (little endian), lane swapped
+~         !! ~        !! 3..14: reserved
+~         !! ~        !! 15: unknown. Access card only via BIOS functions
+!end_table
+
+The start field contains the start address on the PCI bus of the
+resource. If the resource is not directly accessible, the start address is
+0.
+
+The length field contains its length.
+
+The offset field contains the offset from physical CPU to PCI address
+for the resource - ie. the value that must be added to the PCI address to
+get the physical address in CPU address space.
+
+The dmaoffset gives the offset that a PCI bus master must add to a CPU
+memory address to access that address in main memory over the PCI BUS.
+
+(!U)What are all these byte orders?(!u)
+
+The PCI-bus is defined as a little endian byte ordering bus. The most
+significant byte of a multi-byte number is located at the lowest address
+occupied by this number.
+
+The 68xxx-series CPUs are big endian. PCI-bus and CPU are connected
+together by a host bridge which does some kind of format conversion. The
+PCI-BIOS knows about the format conversion performed by the host bridge.
+The PCI-BIOS does not know about any format conversion done (internally)
+by PCI devices. The driver has to know its device's properties and
+capabilities.
+
+The table shows what 68xxx data byte (top row) is connected to what
+PCI-bus data byte (lower right) by what 68xxx-access and format conversion
+(left column):
+
+!begin_verbatim
+                  68xxx-CPU data bus bits
+                  D31..24  D23..16  D15..8   D7..0
+----------------------------------------------------
+big endian                                          
+32-bit-access +0  D31..24  D23..16  D15..8   D7..0  
+16-bit-access +0  D15..8   D7..0  
+16-bit-access +2                    D31..24  D23..16
+ 8-bit-access +0  D7..0                             
+ 8-bit-access +1           D15..8                   
+ 8-bit-access +2                    D23..16         
+ 8-bit-access +3                             D31..24
+----------------------------------------------------
+little endian, lane swapped
+32-bit-access +0  D0..7    D15..8   D23..16  D31..24
+16-bit-access +0  D0..7    D15..8                   
+16-bit-access +2                    D23..16  D31..24
+ 8-bit-access +0  D0..7                             
+ 8-bit-access +1           D15..8                   
+ 8-bit-access +2                    D23..16         
+ 8-bit-access +3                             D31..24
+----------------------------------------------------
+little endian, address swapped
+32-bit-access +0  D31..24  D23..16  D15..8   D7..0  
+16-bit-access +0  D31..24  D23..16                  
+16-bit-access +2                    D15..8   D7..0  
+ 8-bit-access +0  D31..24                           
+ 8-bit-access +1           D23..16                  
+ 8-bit-access +2                    D15..8          
+ 8-bit-access +3                             D7..0  
+!end_verbatim
+
+!begin_itemize
+
+!item "Big endian" makes the PCI-bus appear as a big endian resource from
+the viewpoint of the 68xxx processor. It requires dynamic route changes in
+the host bridge and seems not to be implemented by any host bridge.
+
+!item "Little endian, lane swapped" is the easy way to make 8 bit per pixel
+modes work in the frame buffer of a PCI-device (VGA controller) which does
+not have its own format conversion. This mode is used in PCI-Macintoshs and
+for memory and IO accesses in the Milan.  In this mode, the address needs no
+modifications.  8-bit accesses work normal, on 16 and 32 bit accesses
+endian conversion must be performed on the the read or written data (ror.w
+ #8,d0 for 16 bit, ror.w #8,d0:swap d0:ror.w #8,d0 for 32 bit).
+
+!item "Little endian, address swapped" is the way to go if accesses to 32
+bit registers or 32 bit per pixel frame buffers have top priority. In this
+mode, 32 bit accesses work without modifications. On 16 bit accesses, the
+address needs to be XOR'd with a value of 2, on 8-bit accesses the address
+is XOR'd with a value of 3. The data read or written is in correct format.
+!end_itemize
+
+See Also: get_resource
+!end_node
+
+!else
+
+!begin_node PCI_RSC_DESC
+!begin_verbatim
+typedef struct
+{
+  uint16_t next;        /* LÑnge dieser Struktur in Bytes, dient zur    */
+                        /* Ermittlung des nÑchsten Deskiptors           */
+  uint16_t flags;       /* Resourcen-Typ und verschiedene andere Flags  */
+  uint32_t start;       /* Startadresse der Resource im PCI Adreûbereich, */
+                        /* ist die Resource nicht direkt ansprechbar,   */
+                        /* so ist die Adresse 0                         */
+  uint32_t length;      /* LÑnge der Resource                           */
+  uint32_t offset;      /* Offset von der physikalischen CPU-Adresse    */
+                        /* zur PCI-Adresse                              */
+  uint32_t dmaoffset;   /* Offset fÅr DMA-Transfers vom/zum Hauptspeicher */
+} PCI_RSC_DESC;
+!end_verbatim
+
+Um den Deskriptor der nÑchsten Resource des PCI-GerÑtes zu ermitteln,
+muû man zur Startadresse des aktuellen Deskriptors das Feld next
+addieren. Das Feld start gibt den Beginn der entsprechenden Resource
+im PCI-Adreûbereich an. Falls diese Resource nicht direkt ansprechbar
+sein sollte, so steht in diesem Feld die Adresse 0. öber length
+kann man schlieûlich die LÑnge dieser Resource bestimmen. Der
+PCI-Adreûbereich ist im allgemeinen nicht mit der von der CPU aus
+gesehenen Adresse gleichzusetzen. Der Adreû-Offset, der zur PCI-Adresse
+zu addieren ist, um die physikalische Adresse fÅr die CPU zu ermitteln,
+ist im Feld offset abgelegt.Der Eintrag dmaoffset gibt schlieûlich
+den Offset an, der zur PCI-Adresse addiert werden muû, wenn es sich
+um DMA-Transfers handelt.
+
+Die Flags im Resource-Deskriptor
+!label RSC_ROM
+!label RSC_IO
+!label RSC_LAST
+!label FLG_8BIT
+!label FLG_16BIT
+!label FLG_32BIT
+!label FLG_ENDMASK
+!begin_table [lll]
+RSC_ROM   !! 0x2000 !! This is an expansion ROM (must be Memory, not IO)
+RSC_IO    !! 0x4000 !! kennzeichnet einen I/O-Bereich, bei
+~         !! ~      !! gelîschten Bit handelt es sich um
+~         !! ~      !! einen memory-Bereich
+RSC_LAST  !! 0x8000 !! letzte Resource fÅr dieses PCI-GerÑt
+FLG_8BIT  !! 0x0100 !! 8 Bit Zugriffe werden unterstÅtzt
+FLG_16BIT !! 0x0200 !! 16 Bit Zugriffe werden unterstÅtzt
+FLG_32BIT !! 0x0400 !! 32 Bit Zugriffe werden unterstÅtzt
+FLG_ENDMASK !! 0x000F !!  kennzeichnet das Byte Ordering:
+~         !! ~        !! 0: Motorola (big endian)
+~         !! ~        !! 1: Intel (little endian), address swapped
+~         !! ~        !! 2: Intel (little endian), lane swapped
+~         !! ~        !! 3..14: reserviert
+~         !! ~        !! 15: unbekannt, Zugriff nur Åber BIOS mîglich
+!end_table
+
+The start field contains the start address on the PCI bus of the
+resource. If the resource is not directly accessible, the start address is
+0.
+
+The length field contains its length.
+
+The offset field contains the offset from physical CPU to PCI address
+for the resource - ie. the value that must be added to the PCI address to
+get the physical address in CPU address space.
+
+The dmaoffset gives the offset that a PCI bus master must add to a CPU
+memory address to access that address in main memory over the PCI BUS.
+
+(!U)What are all these byte orders?(!u)
+
+The PCI-bus is defined as a little endian byte ordering bus. The most
+significant byte of a multi-byte number is located at the lowest address
+occupied by this number.
+
+The 68xxx-series CPUs are big endian. PCI-bus and CPU are connected
+together by a host bridge which does some kind of format conversion. The
+PCI-BIOS knows about the format conversion performed by the host bridge.
+The PCI-BIOS does not know about any format conversion done (internally)
+by PCI devices. The driver has to know its device's properties and
+capabilities.
+
+The table shows what 68xxx data byte (top row) is connected to what
+PCI-bus data byte (lower right) by what 68xxx-access and format conversion
+(left column):
+
+!begin_verbatim
+                  68xxx-CPU data bus bits
+                  D31..24  D23..16  D15..8   D7..0
+----------------------------------------------------
+big endian                                          
+32-bit-access +0  D31..24  D23..16  D15..8   D7..0  
+16-bit-access +0  D15..8   D7..0  
+16-bit-access +2                    D31..24  D23..16
+ 8-bit-access +0  D7..0                             
+ 8-bit-access +1           D15..8                   
+ 8-bit-access +2                    D23..16         
+ 8-bit-access +3                             D31..24
+----------------------------------------------------
+little endian, lane swapped
+32-bit-access +0  D0..7    D15..8   D23..16  D31..24
+16-bit-access +0  D0..7    D15..8                   
+16-bit-access +2                    D23..16  D31..24
+ 8-bit-access +0  D0..7                             
+ 8-bit-access +1           D15..8                   
+ 8-bit-access +2                    D23..16         
+ 8-bit-access +3                             D31..24
+----------------------------------------------------
+little endian, address swapped
+32-bit-access +0  D31..24  D23..16  D15..8   D7..0  
+16-bit-access +0  D31..24  D23..16                  
+16-bit-access +2                    D15..8   D7..0  
+ 8-bit-access +0  D31..24                           
+ 8-bit-access +1           D23..16                  
+ 8-bit-access +2                    D15..8          
+ 8-bit-access +3                             D7..0  
+!end_verbatim
+
+!begin_itemize
+
+!item "Big endian" makes the PCI-bus appear as a big endian resource from
+the viewpoint of the 68xxx processor. It requires dynamic route changes in
+the host bridge and seems not to be implemented by any host bridge.
+
+!item "Little endian, lane swapped" is the easy way to make 8 bit per pixel
+modes work in the frame buffer of a PCI-device (VGA controller) which does
+not have its own format conversion. This mode is used in PCI-Macintoshs and
+for memory and IO accesses in the Milan.  In this mode, the address needs no
+modifications.  8-bit accesses work normal, on 16 and 32 bit accesses
+endian conversion must be performed on the the read or written data (ror.w
+ #8,d0 for 16 bit, ror.w #8,d0:swap d0:ror.w #8,d0 for 32 bit).
+
+!item "Little endian, address swapped" is the way to go if accesses to 32
+bit registers or 32 bit per pixel frame buffers have top priority. In this
+mode, 32 bit accesses work without modifications. On 16 bit accesses, the
+address needs to be XOR'd with a value of 2, on 8-bit accesses the address
+is XOR'd with a value of 3. The data read or written is in correct format.
+!end_itemize
+
+Querverweis: get_resource
+!end_node
+
+!endif
