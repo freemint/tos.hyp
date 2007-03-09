@@ -1,0 +1,1657 @@
+# Gemini      <> AV-Server
+# Venus       <> server
+# accessory   <> client
+# application
+
+!begin_node AV Protocol
+!label Arotocol, AV-
+!label VA Protocol
+
+Das AV-Protokoll (Accessory-Venus) wurde von (!I)Stefan Eissing(!i)
+entwickelt und zuerst im alternativen Desktop (!I)Gemini(!i) eingesetzt.
+Mittlerweile wird dieses Protokoll jedoch von vielen weiteren Shells (Ease,
+MagXDesk, Thing, ...) unterstÅtzt. Dieser Abschnitt beschreibt die Version
+des Protokolls aus der Gemini-Distribution vom 29. Januar 1995 (Gemini 1.a).
+
+Die Kommunikation zwischen zwei Prozessen erfolgt beim AV-Protokoll Åber
+den Austausch von (erweiterten) (!nolink [AES-Nachrichten]), die sich einer der
+folgenden Kategorien zuteilen lassen:
+
+!begin_itemize !short
+!item AV Function  (Client --> Server)
+!item VA Function  (Server --> Client)
+!end_itemize
+
+(!B)Achtung:(!b) An dieser Stelle sei darauf hingewiesen, daû im Hinblick
+auf zukÅnftige Betriebssystem-Versionen zur Kommunikation zwischen
+verschiedenen Programmen benutzte oder Åber Zeiger zugewiesene
+Speicherbereiche (!nolink [global]) sein mÅssen (Mxalloc-Funktion mit Global-Flag).
+Andernfalls wird es beim Einsatz auf Rechnern mit PMMU (z.B. Atari-TT oder
+Falcon) zu Speicherschutzverletzungen kommen.
+
+Sollten in (!nolink [Nachrichten]) Pfade oder Dateinamen vorkommen, so muû immer der
+(!I)absolute(!i) Pfad angegeben werden (also mit Laufwerk) und die
+Laufwerksbuchstaben (!I)mÅssen(!i) Groûbuchstaben sein. Pfade sollten immer
+mit einem Backslash enden!
+
+Mit AV_PROTOKOLL kann jede Applikation nachfragen, welche (!nolink [Nachrichten])
+verstanden werden (nicht alle Shells unterstÅtzen das vollstÑndige
+Protokoll). Es wÑre schîn, wenn auch andere Programme auf dieses Protokoll
+reagieren wÅrden. Zumindest (!nolink [AV_SENDKEY]) ist sicher leicht zu implementieren
+und ist die einzige Methode, wie Åber (!nolink [Nachrichten]) TastaturdrÅcke simuliert
+werden kînnen.
+
+Unter normalem TOS fragt dazu ein Accessorie, wenn es eine
+AC_CLOSE-Nachricht vom (!nolink [AES]) erhalten hat, die Applikation (mit ID) 0 per
+(!nolink [AV_PROTOKOLL]) ob sie etwas davon versteht. In einer Multitasking-Umgebung
+(MultiTOS, MiNT/(!nolink [N.AES]) oder MagiC) muû aber das Programm
+nicht mehr die ID 0
+haben, zudem kommt es (fast) nicht mehr zu (!nolink [AC_CLOSE])-(!nolink [Nachrichten]).
+Auûerdem kînnen nicht nur Accessories, sondern auch normale Programme mit dem
+AV-Server kommunizieren wollen. Was tun?
+
+Wenn es mehr als eine Hauptapplikation geben kann, dann sollte das Programm
+bzw. Accessory versuchen, mit GEMINI Kontakt aufzunehmen. Die ID kann ja
+mit appl_find ermittelt werden. Scheitert dies, so kann noch nach AVSERVER
+oder dem Inhalt der (AES)-Environmentvariable AVSERVER gesucht werden.
+Besonders die letzte Mîglichkeit erlaubt eine leichte Konfiguration von
+auûen. Die neuen Versionen der Library VAFUNC von (!I)Stephan Gerle(!i)
+(in gutsortierten Mailboxen erhÑltlich) verfahren fast genauso.
+
+See Also: Nachrichten   Drag&Drop-Protokoll   OLGA-Protokoll
+
+
+!begin_node AV Protocol, Quoting im
+!label Quoting im AV Protocol
+
+Mit Quoting ist im AV-Protkoll gemeint, daû Dateinamen optional mit
+einfachen AnfÅhrungszeichen 'name' versehen werden kînnen. Dies ist aber
+nur erlaubt, wenn beide Parteien (Server und Client) sich darÅber einig
+sind, d.h. es verstehen kînnen.
+
+Wie geht das also vor sich? Angenommen der Server schickt an eine
+Applikation einen Dateinamen, der ein Leerzeichen enthÑlt. Eine Applikation,
+die Quoting (!I)nicht(!i) kann, wird statt einem (!I)zwei(!i) Dateinamen
+erkennen, da normalerweise Leerzeichen Dateinamen trennen. Versteht die
+Applikation aber Quoting (Bit 4 in seinem Protokollstatus), so wird der
+Server den Dateinamen mit '' umgeben und die Applikation erkennt, daû das
+Leerzeichen zum Dateinamen gehîrt. Gleiches gilt natÅrlich auch fÅr
+Dateinamen, die von einer Applikation an einen Server geschickt werden.
+
+Die Frage bleibt, wie man denn nun einfache AnfÅhrungszeichen ÅbertrÑgt.
+Nun, solche Zeichen, die zum Dateinamen gehîren, werden einfach verdoppelt.
+Aus Zorro's Hypertext wird fÅr die öbertragung 'Zorro''s Hypertext'. In
+diesen FÑllen wird also die gleiche Methode wie beim (!nolink [Drag&Drop-Protokoll])
+eingesetzt.
+
+See Also: (!nl)
+AV_PROTOKOLL  ~   VA_ACC_QUOTING(a) ~   VA_SERVER_QUOTING(a) ~
+VA_PROTOSTATUS ~  Drag&Drop-Protokoll
+!end_node
+
+
+!begin_node AV Function
+
+Diese (!nolink [Nachrichten]) werden von einer Applikation an (!I)Gemini(!i) bzw. einen
+vorhandenen AV-Server geschickt.
+
+!begin_xlist [˘ AV_DRAG_ON_WINDOW] !short
+!item [˘ AV_ACCWINDCLOSED]     Applikation hat ein Fenster geschlossen.
+!item [˘ AV_ACCWINDOPEN]       Applikation hat ein Fenster geîffnet.
+!item [˘ AV_ASKCONFONT]        Ermitteln des Zeichensatzes der Console.
+!item [˘ AV_ASKFILEFONT]       Ermitteln des Zeichensatzes fÅr Dateien.
+!item [˘ AV_ASKOBJECT]         Ermitteln des derzeit selektierten Objektes.
+!item [˘ AV_COPY_DRAGGED]      Informieren Åber eine Kopier-Aktion.
+!item [˘ AV_COPYFILE]          Dateien bzw. Ordner kopieren.
+!item [˘ AV_DELFILE]           Dateien bzw. Ordner lîschen.
+!item [˘ AV_DRAG_ON_WINDOW]    Informieren Åber verschobene Objekte.
+!item [˘ AV_EXIT]              Aus dem (!nolink [AV Protocol]) ausklinken.
+!item [˘ AV_FILEINFO]          Datei- bzw. Ordnerinformation anzeigen.
+!item [˘ AV_GETSTATUS]         Aktuellen Status ermitteln.
+!item [˘ AV_OPENCONSOLE]       ôffnet das Console-Fenster.
+!item [˘ AV_OPENWIND]          ôffnet ein Datei-Fenster.
+!item [˘ AV_PATH_UPDATE]       Inhalt eines Verzeichnisses wurde geÑndert.
+!item [˘ AV_PROTOKOLL]         Informieren Åber unterstÅtzte (!nolink [Nachrichten]).
+!item [˘ AV_SENDCLICK]         Maus-Ereignis senden.
+!item [˘ AV_SENDKEY]           Tastatur-Ereignis senden.
+!item [˘ AV_SETWINDPOS]        Position fÅr Verzeichnisfenster festlegen.
+!item [˘ AV_STARTED]           Antwort auf eine VA_START-Nachricht.
+!item [˘ AV_STARTPROG]         Starten einer Applikation bzw. Datei.
+!item [˘ AV_STATUS]            Aktuellen Status setzen.
+!item [˘ AV_VIEW]              Viewer fÅr einen bestimmten Dateityp laden.
+!item [˘ AV_WHAT_IZIT]         Information Åber Position auf dem Bildschirm.
+!item [˘ AV_XWIND]             ôffnet ein Datei-Fenster.
+!end_xlist
+
+See Also: VA Function ~  Nachrichten
+
+
+
+!begin_node AV_ACCWINDCLOSED
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_ACCWINDCLOSEDÆ
+!item [Number:]
+0x4726
+!item [Description:]
+The accessory informs Venus that a window has been
+closed. This is only necessary, if it closed the window itself. If
+the window is closed due to an AC_CLOSE message, Venus knows the all
+windows are closed.
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+(!nolink [AES]) handle of the window
+!end_xlist
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_ACCWINDOPEN  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_ACCWINDOPEN
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_ACCWINDOPENÆ
+!item [Number:]
+0x4724
+!item [Description:]
+This message can be used by an accessory, to inform
+Venus about own (opened) window.
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+(!nolink [AES]) handle of the opened window
+!end_xlist
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_ACCWINDCLOSED ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_ASKCONFONT
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_ASKCONFONTÆ
+!item [Number:]
+0x4714
+!item [Description:]
+Ask about the selected font for the console window.
+
+Mit dieser Nachricht fragt eine Applikation den AV-Server nach dem
+eingestellten Zeichensatz fÅr das Console-Fenster.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_ASKFILEFONT ~  VA_CONFONT  ~ VA_FILEFONT  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_ASKFILEFONT
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_ASKFILEFONTÆ
+!item [Number:]
+0x4712
+!item [Description:]
+Using this message the client can request the current font used for
+filenames in directory windows.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_ASKCONFONT ~  VA_CONFONT ~  VA_FILEFONT ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_ASKOBJECT
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_ASKOBJECTÆ
+!item [Number:]
+0x4716
+!item [Description:]
+Ask about the currently selected object(s).
+The name(s) of the selected object(s) is (are) returned.
+If no object is selected, the string is empty.
+
+If several objects are selected, their names are separated by
+spaces.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_OBJECT ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_COPY_DRAGGED
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_COPY_DRAGGEDÆ
+!item [Number:]
+0x4728
+!item [Description:]
+An accessory tells Venus, that the objects that have
+been dragged to its window should be copied.
+This may be the case, e.g. if objects are dragged to the TreeView-window.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+The keyboard state (alternate, control, shift)
+!item [Word 4+5]
+pointer to a string which must contain the name of the
+destination object.
+
+This HAS to be a pathname!
+!end_xlist
+
+This message may only be used as reply to a (!nolink [VA_DRAGACCWIND]).
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_DRAGACCWIND ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_COPYFILE
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_COPYFILEÆ
+!item [Number:]
+0x4755
+!item [Description:]
+Copy/move files/folders.
+
+Dieser Befehl weist den AV-Server an, bestimmte Dateien oder Ordner zu
+kopieren bzw. zu verschieben.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the source file/s and folder/s
+!item [Word 5+6]
+Pointer to the destination folder
+!item [Word 7]
+Verschiedene Flags
+!begin_table [l l l]
+Bit-0 !! = !! Delete original (move)
+Bit-1 !! = !! Rename copy
+Bit-2 !! = !! Overwrite destination without comment
+Bit-3 !! = !! Nur symbolische Links der Quellen erzeugen
+~     !! = !! (Bit 0 ist dann bedeutungslos)
+Bit 4-15 !! = !! Reserved, always 0
+!end_table
+!end_xlist
+
+Several files must separated by using space characters.
+Folders must include a trailing backslash '\' character.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_FILECOPIED ~  AV Protocol
+!end_blist
+
+# Quelle: Bit 3 wurde in der Maus-Gruppe Maus.Computer.Atari.Programmieren
+#         bekannt gebenen. <199706242220.a43991@hd.maus.de>
+!end_node
+
+
+
+!begin_node AV_DELFILE
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_DELFILEÆ
+!item [Number:]
+0x4757
+!item [Description:]
+Delete files/folders
+
+Dieser Befehl weist den AV-Server an, bestimmte Dateien bzw. Ordner zu
+lîschen.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the files/folders to be deleted
+!item [Word 5-7]
+reserved, always 0
+!end_xlist
+
+Several files must separated by using space characters.
+Folders must include a trailing backslash '\' character.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_FILEDELETED ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_DRAG_ON_WINDOW
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_DRAG_ON_WINDOWÆ
+!item [Number:]
+0x4734
+!item [Description:]
+Eine Applikation teilt dem AV-Server mit, daû Objekte auf eines seiner
+mittels AV_WHATIZIT erfragten Fenster gezogen worden sind.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+x-Position, wohin die Maus gezogen wurde
+!item [Word 4]
+y-Position, wohin die Maus gezogen wurde
+!item [Word 5]
+Status der Tastatur (Alt,Control,Shift)
+!item [Word 6+7]
+Zeiger auf einen String, der die Namen der Objekte enthÑlt.
+!end_xlist
+
+Die Namen sind Namen von Dateien, Ordnern oder Laufwerken,
+jeweils durch ein Leerzeichen getrennt. Namen von Ordnern oder Laufwerken
+enden mit einem Backslash.
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_DRAG_COMPLETE ~  VA_DRAGACCWIND ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_EXIT
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_EXITÆ
+!item [Number:]
+0x4736
+!item [Description:]
+A application tells Gemini that it doesn't join the
+protocol any longer.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+(!nolink [AES]) id of the application
+!end_xlist
+
+This message must be used, before terminating a program if the program did
+use AV_PROTOKOLL!
+!item [Group:]
+AV Function
+!item [See Also:]
+appl_init ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_FILEINFO
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_FILEINFOÆ
+!item [Number:]
+0x4753
+!item [Description:]
+Display file/folder info.
+
+Mit diesem Befehl wird der AV-Server aufgefordert, einen Informations-Dialog
+fÅr eine bestimmte Datei bzw. einen Ordner anzuzeigen.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to file or folder name.
+!item [Word 5-7]
+Reserved, always 0
+!end_xlist
+
+Several files/folders
+may be separated using space characters. Folders must
+include a trailing backslash '\' character!
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_FILECHANGED ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_GETSTATUS
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_GETSTATUSÆ
+!item [Number:]
+0x4703
+!item [Description:]
+An accessory asks Venus for the current state, that
+it has given to Venus via (!nolink [AV_STATUS]).
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_STATUS ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_OPENCONSOLE
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_OPENCONSOLEÆ
+!item [Number:]
+0x4718
+!item [Description:]
+Venus should open the console window.
+If it is already open, it will be topped. This action can be used, if
+a accessory is about to start a TOS-program using the (!I)system(!i) function.
+
+(!B)Note:(!b) No (!nolink [GEM])-programs should be started by an accessory via the
+system function! The message should only be used, if the user wants to, otherwise he
+will be confused.
+
+
+Eine Applikation fordert den AV-Server auf, das Console-Fenster zu îffnen.
+Ist dieses bereits offen, so wird es nach vorne gebracht.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_OPENWIND ~ AV_XWIND ~ VA_CONSOLEOPEN ~ VA_XOPEN ~ VA_WINDOPEN ~ AV_STARTPROG
+!end_blist
+!end_node
+
+
+!begin_node AV_OPENWIND
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_OPENWINDÆ
+!item [Number:]
+0x4720
+!item [Description:]
+Venus should open a file window.
+
+Eine Applikation fordert den AV-Server auf, ein Datei-Fenster zu îffnen.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the path for the window
+!item [Word 5+6]
+Pointer to a string containing the wildcards for the files which should be displayed
+!end_xlist
+
+This message should only happen if there's a obvious reason for the user.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_OPENCONSOLE ~  AV_XWIND  ~ VA_CONSOLEOPEN ~  VA_WINDOPEN ~  VA_XOPEN
+!end_blist
+!end_node
+
+
+!begin_node AV_PATH_UPDATE
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_PATH_UPDATEÆ
+!item [Number:]
+0x4730
+!item [Description:]
+A program/accessory tells Gemini that the contents of a
+folder has been changed. Gemini redraws this folder if it is shown in a
+window, even if subdirectories are shown.
+
+Eine Applikation teilt dem AV-Server mit, daû sich der Inhalt eines
+Verzeichnisses geÑndert hat. Dieses kann dann neu eingelesen bzw.
+dargestellt werden.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the complete (!) pathname
+!end_xlist
+
+The update of "C:\" for example results in redisplaying everything on
+drive C:.
+
+In Gemini wirkt dies auch auf die Unterverzeichnisse. Ein
+Update von 'C:\' sorgt also dafÅr, daû alles, was mit Laufwerk C:\ zu tun
+hat, aktualisiert wird.
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_OPENWIND  ~ AV_XWIND ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_PROTOKOLL
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_PROTOKOLLÆ
+!item [Number:]
+0x4700
+!item [Description:]
+This message should be used to ask an application or the AV server
+which messages are supported.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [l l l]
+Bit-0 !! = !! (!nolink [VA_SETSTATUS])
+Bit-1 !! = !! (!nolink [VA_START])
+Bit-2 !! = !! (!nolink [AV_STARTED])
+Bit-3 !! = !! (!nolink [VA_FONTCHANGED])
+Bit-4 !! = !! Provides and uses file name (!link [quoting][AV Protocol, Quoting im])
+Bit-5 !! = !! VA_PATH_UPDATE
+Bit 6-15 !! = !! Reserved, always 0
+!end_table
+!item [Word 4+5]
+Reserved, always 0
+!item [Word 6+7]
+A pointer to the name of the accessory/application for
+the use with appl_find (aligned to 8 characters and terminated
+by a '\0' byte).
+!end_xlist
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_STARTED  ~ VA_FONTCHANGED ~  VA_SETSTATUS ~  VA_START
+!end_blist
+!end_node
+
+
+!begin_node AV_SENDCLICK
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_SENDCLICKÆ
+!item [Number:]
+0x4709
+!item [Description:]
+Eine Applikation schickt dem AV-Server einen Maus-Event.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+
+!item [Word 3]
+ev_mmox
+
+!item [Word 4]
+ev_mmoy
+!item [Word 5]
+ev_mmobutton
+
+!item [Word 6]
+ev_mmokstate
+
+!item [Word 7]
+ev_mbreturn
+
+!end_xlist
+
+
+!item [Group:]
+AV Function
+!item [See Also:]
+evnt_button ~  evnt_multi
+!end_blist
+!end_node
+
+# Quelle: BubbleGEM und News in der Gruppe
+#         Maus.Computer.Atari.Programmieren
+#         <199708021249.a59641@of2.maus.de>
+
+
+!begin_node AV_SENDKEY
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_SENDKEYÆ
+!item [Number:]
+0x4710
+!item [Description:]
+Using this message a client can send Thing any keys it doesn't use for
+itself.
+
+Eine Applikation schickt dem AV-Server einen Tastatur-Event, den sie
+mîglicherweise selbst nicht versteht.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+Keyboard state (ev_mmokstate)
+!item [Word 4]
+Scan code of the pressed key (ev_mkreturn)
+!end_xlist
+
+Als inoffizielle Erweiterung ("CodeAlpha") existiert ein Konzept, mit dem
+auch ASCII Zeichen Åbertragen werden kînnen, zu denen kein Scancode
+existiert. Hierzu wird als Scancode 0, als ASCII Wert der gewÅnschte und
+in msg[5] der Wert $5048 Åbergeben, letzteres um anzuzeigen, daû msg[4]
+tatsÑchlich gÅltig ist und keine Umrechnung Åber Scancode-Tabellen
+erforderlich ist.
+
+
+Diese Nachricht sollte nach Mîglichkeit immer unterstÅtzt
+werden, da mit ihrer Hilfe u.a. ein applikationsÅbergreifendes Wechseln der
+Fenster realisiert werden kann.
+!item [Group:]
+AV Function
+!item [See Also:]
+evnt_keybd  ~ evnt_multi ~  (!link [Scan-Code Tabelle][Der Scan-Code])
+!end_blist
+!end_node
+
+# Quelle: AV-Beschreibung von Holger Weets und News in der Gruppe
+#         Maus.Computer.Atari.Programmieren von Peter Hellinger
+#         <199607200222.a21905@n.maus.de>
+
+!begin_node AV_SETWINDPOS
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_SETWINDPOSÆ
+!item [Number:]
+0x4759
+!item [Description:]
+With this the client can be informed of the position and size of the next
+directory window (with AV_XWIND or AV_OPENWIND) to be opened.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+Position X
+!item [Word 4]
+Position Y
+!item [Word 5]
+Width
+!item [Word 6]
+Height
+!item [Word 7]
+Reserved, always 0
+!end_xlist
+
+The coordinates are given in (!I)absolute(!i) coordinates.
+Because via AV_XWIND an existing window is topped instead of a new window
+being opened this message has no affect!
+
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_OPENWIND ~  AV_XWIND
+!end_blist
+!end_node
+
+
+!begin_node AV_STARTED
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_STARTEDÆ
+!item [Number:]
+0x4738
+!item [Description:]
+A client informs AV server it has received and understood the VA_START message
+and the reserved memory for the command line can be released.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the command line, received by VA_START
+!end_xlist
+
+Um zu erkennen, um welche (!nolink [VA_START])-Nachricht es sich
+handelt, werden die Werte von (!nolink [VA_START]) zurÅckgeliefert.
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_START ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_STARTPROG
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_STARTPROGÆ
+!item [Number:]
+0x4722
+!item [Description:]
+Venus should start a program.
+
+Eine Applikation fordert den AV-Server auf, ein Programm zu starten.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the program's name (with complete path!)
+!item [Word 5+6]
+pointer to the command line for the program (may be NULL)
+!item [Word 7]
+any 16-bit-word, which will be returned by (!nolink [VA_PROGSTART]).
+beliebiges 16-Bit Wort, welches in (!nolink [VA_PROGSTART]) wieder zurÅckgeliefert wird.
+!end_xlist
+
+In Gemini werden auch die angemeldeten Applikationen mit
+berÅcksichtigt. Dadurch ist es mîglich eine Datei anzugeben, fÅr die dann
+ein Programm gesucht wird.
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_PROGSTART ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_STATUS
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_STATUSÆ
+!item [Number:]
+0x4704
+!item [Description:]
+An accessory can give its current state to Venus, which
+will store it in the INF-file and can be restored using AV_GETSTATUS.
+Before sending AV_STAUS it MUST send AV_PROTOKOLL to Venus!
+
+Eine Applikation teilt dem AV-Server seinen Status mit, der von diesem
+gespeichert und spÑter per (!nolink [AV_GETSTATUS]) wieder abgefragt werden kann.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+A pointer to a string, which must not contain any control
+characters and must not be longer than 256 characters.
+The pointer may be NULL.
+!end_xlist
+
+Die Applikation muss sich vorher beim Server per
+(!nolink [AV_PROTOKOL])L angemeldet haben.
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_GETSTATUS ~  AV_PROTOKOLL ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_VIEW
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_VIEWÆ
+!item [Number:]
+0x4751
+!item [Description:]
+The server calls the viewer for a specific file.
+
+Mit diesem Befehl wird der AV-Server angewiesen, den Viewer fÅr eine
+bestimmte Datei aufzurufen.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the names of the file to be displayed (only a single file is
+allowed!)
+!item [Word 5-7]
+Reserved, always 0
+!end_xlist
+
+Es darf nur eine (!I)einzelne(!i) Datei angegeben werden.
+If no viewer is available an error message is returned to the user.
+
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_VIEWED ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_WHAT_IZIT
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_WHAT_IZITÆ
+!item [Number:]
+0x4732
+!item [Description:]
+A client requests details about what is located at a certain part of
+the screen.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+X coordinate
+!item [Word 4]
+Y coordinate
+!end_xlist
+
+The  coordinates are the normal VDI coordinates (the
+origin is the left upper corner of the screen).
+!item [Group:]
+AV Function
+!item [See Also:]
+VA_THAT_IZIT ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node AV_XWIND
+
+!begin_blist [Description:]
+!item [Name:]
+ØAV_XWINDÆ
+!item [Number:]
+0x4740
+!item [Description:]
+Thing opens a directory window, similar to AV_OPENWIND except additional
+options are available:
+
+Eine Applikation fordert den AV-Server auf, ein Datei-Fenster zu îffnen. Es
+gilt:
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the path for opening directories
+!item [Word 5+6]
+Pointer to the mask (Wildcard) for the available files
+!item [Word 7]
+Bitmaske
+!begin_table [l l l]
+0x0001 !! = !! Use current top window, if available
+0x0002 !! = !! Use wildcard for object selection
+!end_table
+All other bit must be set to zero.
+!end_xlist
+
+Diese Nachricht sollte nur dann eingesetzt werden, wenn
+die Ursache fÅr den Benutzer klar ersichtlich ist.
+!item [Group:]
+AV Function
+!item [See Also:]
+AV_OPENCONSOLE ~  AV_OPENWIND ~  VA_CONSOLEOPEN ~  VA_WINDOPEN   ~   VA_XOPEN ~
+AV Protocol
+!end_blist
+!end_node
+!end_node
+
+
+!begin_node VA Function
+
+Diese (!nolink [Nachrichten]) werden von einem vorhandenen AV-Server
+an eine Applikation geschickt.
+
+!begin_xlist [˘ VA_SERVER_QUOTING(a)] !short
+!item [˘ VA_ACC_QUOTING(a)]      Protokoll-Status auf Quoting testen.
+!item [˘ VA_CONFONT]             Zeichensatz der Console Åbermitteln.
+!item [˘ VA_CONSOLEOPEN]         Ermitteln, ob Console-Fenster geîffnet ist.
+!item [˘ VA_COPY_COMPLETE]       Antwort auf AV_COPY.
+!item [˘ VA_DRAGACCWIND]         Objekte wurden auf Appl.-Fenster gezogen.
+!item [˘ VA_DRAG_COMPLETE]       AV_DRAG_ON_WINDOW-Aktion ist beendet.
+!item [˘ VA_FILECHANGED]         Antwort auf AV_FILEINFO.
+!item [˘ VA_FILECOPIED]          Antwort auf AV_COPYFILE.
+!item [˘ VA_FILEDELETED]         Antwort auf AV_DELFILE.
+!item [˘ VA_FILEFONT]            Zeichensatz fÅr Dateien Åbermitteln.
+!item [˘ VA_FONTCHANGED]         Ein eingestellter Zeichensatz wurde verÑndert.
+!item [˘ VA_OBJECT]              Liefert die Namen der selektierten Objekte.
+!item [˘ VA_PATH_UPDATE]         Inhalt eines Verzeichnisses wurde geÑndert.
+!item [˘ VA_PROGSTART]           Information, ob Programm gestartet werden konnte.
+!item [˘ VA_PROTOSTATUS]         Antwort auf AV_PROTOKOLL.
+!item [˘ VA_SERVER_QUOTING(a)]   Protokoll-Status auf Quoting testen.
+!item [˘ VA_SETSTATUS]           Status einer Applikation Åbermitteln.
+!item [˘ VA_START]               Eine Applikation wurde aktiviert.
+!item [˘ VA_THAT_IZIT]           Informiert Åber Objekt an Bildschirmposition.
+!item [˘ VA_VIEWED]              Antwort auf AV_VIEW.
+!item [˘ VA_WINDOPEN]            Gibt an, ob das Console-Fenster geîffnet ist.
+!item [˘ VA_XOPEN]               Gibt an, ob ein Fenster geîffnet werden konnte.
+!end_xlist
+
+See Also: AV Function   Nachrichten
+
+
+!begin_node VA_ACC_QUOTING(a)
+
+Dies ist ein Test des Protokollstatus auf Quoting. In C lÑût sich der
+Test als Makro wie folgt realisieren:
+
+!begin_verbatim
+#define VA_ACC_QUOTING(a)   ((a) & 0x10)
+!end_verbatim
+!end_node
+
+
+!begin_node VA_CONFONT
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_CONFONTÆ
+!item [Number:]
+0x4715
+!item [Description:]
+Gives the currently selected font for the console window.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+console font (ID)
+!item [Word 4]
+console font size (Points)
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_ASKCONFONT  ~ AV_ASKFILEFONT  ~ VA_FILEFONT
+!end_blist
+!end_node
+
+
+!begin_node VA_CONSOLEOPEN
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_CONSOLEOPENÆ
+!item [Number:]
+0x4719
+!item [Description:]
+Returns the state of the console window.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [c l l]
+0 !! = !! not topped/opened
+<> 0 !! = !! is topped
+!end_table
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_OPENCONSOLE ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_COPY_COMPLETE
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_COPY_COMPLETEÆ
+!item [Number:]
+0x4729
+!item [Description:]
+Diese Nachricht ist eine direkte Antwort auf AV_COPY.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+State of the copying process
+!end_xlist
+
+!= 0 means that s.th. has really
+be copied of moved. This may be useful, if a window has to be
+redrawed.
+
+Ein Wert <> 0 gibt an, daû wirklich etwas kopiert oder
+verschoben worden ist. Dies kann die Applikation evtl. zum Neuaufbau eines
+Fensters nutzen.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_COPY ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_DRAGACCWIND
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_DRAGACCWINDÆ
+!item [Number:]
+0x4725
+!item [Description:]
+Thing sends an AV_ACCWINDOPEN message to the client sharing the
+information that one or more object/s have been dragged to its window.
+
+Der AV-Server teilt einer Applikation mit, daû Objekte auf eines seiner
+mittels AV_ACCWINDOPEN angemeldeten Fenster gezogen worden sind.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+(!nolink [AES]) handle of the window
+!item [Word 4]
+x position of the mouse
+!item [Word 5]
+y position of the mouse
+!item [Word 6+7]
+Pointer to a string containing the names of the objects.
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_ACCWINDOPEN  ~ AV_ACCWINDCLOSED  ~ AV_DRAG_ON_WINDOW
+!end_blist
+!end_node
+
+
+!begin_node VA_DRAG_COMPLETE
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_DRAG_COMPLETEÆ
+!item [Number:]
+0x4735
+!item [Description:]
+Reply to AV_DRAG_ON_WINDOW message.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+Status der Aktion
+
+Ein Wert <> 0 bedeutet, daû wirklich etwas kopiert oder verschoben wurde.
+Dies kann die Applikation evtl. zum Neuaufbau eines Fensters nutzen.
+!end_xlist
+
+Der zurÅckgelieferte Wert entspricht dem, der auch bei
+AV_COPY_COMPLETE zurÅck gegeben wird.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_DRAG_ON_WINDOW  ~ VA_DRAGACCWIND ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_FILECHANGED
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_FILECHANGEDÆ
+!item [Number:]
+0x4754
+!item [Description:]
+Reply to AV_FILEINFO.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the name of a file/folder, passed via
+(!nolink [AV_FILEINFO]), which can naturally contain a new file/folder
+name.
+
+!item [Word 5-7]
+Reserved, always 0
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_FILEINFO ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_FILECOPIED
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_FILECOPIEDÆ
+!item [Number:]
+0x4756
+!item [Description:]
+Reply to AV_COPYFILE.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [l l l]
+0 !! = !! Error
+1 !! = !! All OK
+!end_table
+!item [Word 4-7]
+Reserved, always 0
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_COPYFILE ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_FILEDELETED
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_FILEDELETEDÆ
+!item [Number:]
+0x4758
+!item [Description:]
+Reply to AV_DELFILE.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [l l l]
+0 !! = !! Error
+1 !! = !! All OK
+!end_table
+!item [Word 4-7]
+Reserved, always 0
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_DELFILE  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_FILEFONT
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_FILEFONTÆ
+!item [Number:]
+0x4713
+!item [Description:]
+The server returns the ID and size (in points) of
+the current font used for filenames in directory windows.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+ID of font (vst_font)
+!item [Word 4]
+Size in points (vst_point)
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_ASKCONFONT ~  AV_ASKFILEFONT ~  VA_CONFONT
+!end_blist
+!end_node
+
+
+!begin_node VA_FONTCHANGED
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_FONTCHANGEDÆ
+!item [Number:]
+0x4739
+!item [Description:]
+Der AV-Server informiert eine Applikation darÅber, daû sich einer der
+eingestellten ZeichensÑtze verÑndert hat.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+ID of the font used for directories (vst_font)
+!item [Word 4]
+Size in points for font used in directories (vst_point)
+!item [Word 5]
+ID of the font used in the console window (vst_font)
+!item [Word 6]
+Size in points for font used in the console window (vst_point)
+!end_xlist
+
+Die Nachricht wird an alle Applikationen geschickt, die
+vorher schon einmal einen Zeichensatz beim AV-Server erfragt haben.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_ASKCONFONT ~  AV_ASKFILEFONT ~  VA_FILEFONT
+!end_blist
+!end_node
+
+
+!begin_node VA_OBJECT
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_OBJECTÆ
+!item [Number:]
+0x4717
+!item [Description:]
+Return the currently selected object(s).
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Zeiger auf eine Kommandozeile mit den Namen der selektierten Objekte.
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_ASKOBJECT  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_PATH_UPDATE
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_PATH_UPDATEÆ
+!item [Number:]
+0x4760
+!item [Description:]
+Mit dieser Nachricht teilt der AV-Server einem Client mit, daû sich der
+Inhalt eines Verzeichnisses geÑndert hat.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the directory
+!item [Word 5-7]
+Reserved, always 0
+!end_xlist
+
+The directory always include a trailing 'backslash' character.
+If the client has established via the AV_PROTOKOLL the Server supports
+this message it informs the server whenever it changes the contents of a
+directory or sub directory. The client should then re-read all affected
+directories and sub directories, if necessary closing any sub directories
+which no longer exist.
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_PROTOKOLL ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_PROGSTART
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_PROGSTARTÆ
+!item [Number:]
+0x4723
+!item [Description:]
+Der AV-Server informiert eine Applikation, ob ein angegebenes Programm
+gestartet wurde.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [c l l]
+0 !! = !! Error
+<>0 !! = !! Program started
+!end_table
+!item [Word 4]
+Return code of the program (where available)
+!item [Word 7]
+16 Bit word from AV_STARTPROG
+!end_xlist
+
+Im allgemeinen wird die Applikation im Fehlerfall sofort
+eine Nachricht bekommen; falls das Programm aber gestartet wird, erhÑlt die
+Applikation diese Nachricht erst nach dem Start des Programms, da die
+Routine, welche den Pexec ausfÅhrt, nicht mehr wissen kann, das eine
+Applikation noch schnell eine Nachricht bekommen muss. Bei einem
+(!nolink [GEM])-Programm kann man den Erfolg auch an dem AC_CLOSE erkennen.
+
+Die Fehlererkennung ist leider nicht optimal; ferner weist der RÅckgabewert
+nicht aus, ob das Programm fehlerfrei gelaufen ist.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_STARTPROG ~  VA_START ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_PROTOSTATUS
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_PROTOSTATUSÆ
+!item [Number:]
+0x4701
+!item [Description:]
+Tell the sender of AV_PROTOKOLL, that the application
+knows something about the VA-Protocol. The words 3-7 of the message
+buffer contain informations which messages are understood.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [l l l]
+Bit-0  !! = !! AV_SENDKEY
+Bit-1  !! = !! AV_ASKFILEFONT
+Bit-2  !! = !! AV_ASKCONFONT, AV_OPENCONSOLE
+Bit-3  !! = !! AV_ASKOBJECT
+Bit-4  !! = !! AV_OPENWIND
+Bit-5  !! = !! AV_STARTPROG
+Bit-6  !! = !! AV_ACCWINDOPEN, AV_ACCWINDCLOSED
+Bit-7  !! = !! AV_STATUS, AV_GETSTATUS
+Bit-8  !! = !! AV_COPY_DRAGGED
+Bit-9  !! = !! AV_PATH_UPDATE, AV_WHAT_IZIT, AV_DRAG_ON_WINDOW
+Bit-10 !! = !! AV_EXIT
+Bit-11 !! = !! AV_XWIND
+Bit-12 !! = !! VA_FONTCHANGED
+Bit-13 !! = !! AV_STARTED
+Bit-14 !! = !! (!link [Quoting von Dateinamen][AV Protocol, Quoting im]) wird
+                verstanden und benutzt.
+Bit-15 !! = !! AV_FILEINFO
+!end_table
+!item [Word 4]
+!begin_table [l l l]
+Bit-0 !! = !! AV_COPYFILE
+Bit-1 !! = !! AV_DELFILE
+Bit-2 !! = !! AV_VIEW
+Bit-3 !! = !! AV_SETWINDPOS
+Bit-4 !! = !! erlaubt Anlegen symbolischer Links mit AV_COPYFILE
+!end_table
+!item [Word 5]
+Reserved, always 0
+!item [Word 6+7]
+Pointer to the program names of the servers, prepared for
+appl_find (8 characters long and null terminated).
+!end_xlist
+
+If a bit is set, the message(group) is supported.
+All other bits are reserved for future use and should be set to
+zero (all bits of words 4 and 5 too).
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_PROTOKOLL ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_SERVER_QUOTING(a)
+
+Dies ist ein Test des Protokollstatus auf Quoting. In C lÑût sich der
+Test als Makro wie folgt realisieren:
+
+!begin_verbatim
+#define VA_SERVER_QUOTING(a)  ((a) & 0x40)
+!end_verbatim
+!end_node
+
+
+!begin_node VA_SETSTATUS
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_SETSTATUSÆ
+!item [Number:]
+0x4705
+!item [Description:]
+Venus tells an accessory about its stored state as a
+reply to AV_GETSTATUS. The state can be set by the
+accessory.
+
+Der AV-Server teilt einer Applikation den abgespeicherten Status bei
+Nachfrage durch (!nolink [AV_GETSTATUS]) mit.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+Pointer to the saved string or NULL if no information is
+available.
+!end_xlist
+
+Der gelieferte Status kann anschlieûend von der Applikation
+gesetzt werden.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_GETSTATUS  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_START
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_STARTÆ
+!item [Number:]
+0x4711
+!item [Description:]
+Using this message a AV server pass parameters to desktop accessories or
+parallel running applications.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3+4]
+A pointer to the command line, which may be NULL.
+The command line contains paths or filenames.
+!end_xlist
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_STARTPROG ~  AV_STARTED ~  VA_PROGSTART
+!end_blist
+!end_node
+
+
+!begin_node VA_THAT_IZIT
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_THAT_IZITÆ
+!item [Number:]
+0x4733
+!item [Description:]
+Der AV-Server teilt einer Applikation auf Nachfrage mit, was sich an einer
+bestimmten Position auf dem Bildschirm befindet.
+!label VA_OB_UNKNOWN
+!label VA_OB_TRASHCAN
+!label VA_OB_SHREDDER
+!label VA_OB_CLIPBOARD
+!label VA_OB_FILE
+!label VA_OB_FOLDER
+!label VA_OB_DRIVE
+!label VA_OB_WINDOW
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+ID der zustÑndigen Applikation
+!item [Word 4]
+Typ des Objektes
+!begin_table [l l l]
+VA_OB_UNKNOWN~~~(0) !! = !! Unknown
+VA_OB_TRASHCAN~~(1) !! = !! Trash Can
+VA_OB_SHREDDER~~(2) !! = !! Shredder
+VA_OB_CLIPBOARD~(3) !! = !! Clipboard
+VA_OB_FILE~~~~~~(4) !! = !! File
+VA_OB_FOLDER~~~~(5) !! = !! Folder
+VA_OB_DRIVE~~~~~(6) !! = !! Drive
+VA_OB_WINDOW~~~~(7) !! = !! Window
+!end_table
+
+!item [Word 5+6]
+pointer to the name of the object(s) or NULL if there was nothing.
+!end_xlist
+
+Alle anderen Werte sind fÅr zukÅnftige Zwecke reserviert.
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_WHAT_IZIT ~  AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_VIEWED
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_VIEWEDÆ
+!item [Number:]
+0x4752
+!item [Description:]
+Reply to AV_VIEW.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [l l l]
+0 !! = !! Error
+1 !! = !! All OK
+!end_table
+!item [Word 4-7]
+Reserved, always 0
+!end_xlist
+
+The server informs the client whether the file will be
+displayed or not. The answer is immediate and always sent out if an error
+occured. Otherwise, in a multitasking background, the answer is received
+as soon as the viewer is topped (made active), Under single TOS the answer
+is received after exiting the viewer, in the case that the server had not
+already been ended.
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_VIEW  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_WINDOPEN
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_WINDOPENÆ
+!item [Number:]
+0x4721
+!item [Description:]
+Returns the state of the file window (see VA_CONSOLEOPEN).
+
+!item [Group:]
+VA Function
+
+!item [See Also:]
+AV_OPENCONSOLE  ~ VA_CONSOLEOPEN  ~ AV Protocol
+!end_blist
+!end_node
+
+
+!begin_node VA_XOPEN
+
+!begin_blist [Description:]
+!item [Name:]
+ØVA_XOPENÆ
+!item [Number:]
+0x4741
+!item [Description:]
+Reply to AV_XWIND, similar to VA_WINDOPEN.
+
+Der AV-Server informiert eine Applikation darÅber, ob ein angegebenes
+Fenster geîffnet werden konnte.
+
+!begin_xlist [Parameter]
+!item [Parameter]
+Meaning
+!item [Word 3]
+!begin_table [c l l]
+0 !! = !! no
+<> 0  !! = !! Window opened and the directory
+~     !!   !! completely read i.e. a available
+~     !!   !! window could be topped.
+!end_table
+!end_xlist
+
+!item [Group:]
+VA Function
+!item [See Also:]
+AV_OPENWIND  ~ AV_XWIND ~  VA_WINDOPEN
+!end_blist
+!end_node
+!end_node
+
+!end_node
