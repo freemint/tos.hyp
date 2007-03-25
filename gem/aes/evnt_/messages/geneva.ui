@@ -6,15 +6,15 @@
 !label X_MN_SELECTED
 !item [X_MN_SELECTED (0xE000)] (!nl)
      This message is either accompanied by the MU_MESAG bit of an
-     evnt_multi() return, or is returned by the evnt_mesag() call. When
+     evnt_multi return, or is returned by the evnt_mesag call. When
      this message occurs, the message buffer contains:
 !begin_table [ll]
      Portion   !! Contents
-     Word 0    !! 0xE000
-     Word 3    !! The object index of the menu title selected
-     Word 4    !! The object index of the selected menu item
-     Word 5, 6 !! The object tree of the menu item selected
-     Word 7    !! The handle of the window containing the menu
+     msg[0]    !! 0xE000
+     msg[3]    !! The object index of the menu title selected
+     msg[4]    !! The object index of the selected menu item
+     msg[5], [6] !! The object tree of the menu item selected
+     msg[7]    !! The handle of the window containing the menu
 !end_table
 
      This feature is used in conjunction with the wind_set() option X_WF_MENU,
@@ -30,9 +30,9 @@
      clicks on any other gadget, an X_WM_SELECTED message is sent:
 !begin_table [ll]
      Portion !! Contents
-     Word 0  !!  0xE100
-     Word 3  !!  The handle of the window containing the gadget
-     Word 4  !!  The object index of the window tree object the user clicked on
+     msg[0]  !!  0xE100
+     msg[3]  !!  The handle of the window containing the gadget
+     msg[4]  !!  The object index of the window tree object the user clicked on
 !end_table
 
      This feature is used by the Task Manager's "Keyboard..." dialog.
@@ -47,45 +47,54 @@
      first part of the message is comprised of the following values:
 !begin_table [ll]
      Portion  !! Contents
-     Word 0   !! 0xE200
-     Word 1   !! Application ID
-     Word 2   !! Length of the second part ofthe message
-     Word 3   !! Length of the topic portion of the message, including
+     msg[0]   !! 0xE200
+     msg[1]   !! Application ID
+     msg[2]   !! Length of the second part ofthe message
+     msg[3]   !! Length of the topic portion of the message, including
      ~        !! the NUL terminator
-     Word 4   !! Length of the filename portion of the message, including
+     msg[4]   !! Length of the filename portion of the message, including
      ~        !! the NUL terminator
-     Word 5   !! Upper/lowercase sensitivity. If non-zero, the topic is
+     msg[5]   !! Upper/lowercase sensitivity. If non-zero, the topic is
      ~        !! case-sensitive.
 !end_table
 
     The second part of the message contains the actual text of the topic and
-    filename fields. This can be read with one or more calls to appl_read().
+    filename fields. This can be read with one or more calls to appl_read.
 
     Example:
 !begin_verbatim
-        void read_string( char *s, int max, int size )
-        {
-          char dummy;
+    void read_string( char *s, int max, int size )
+    {
+      char dummy;
 
-          if( size0; size-- )
-               appl_read( my_application_id, 1, d
-          }
-        }
-        main()
-        {
-          int msgbuf[8], caps_sens;
-          char topic[20], filename[100];
+			if( size<=max )								/* the whole strinf fits */
+				appl_read( my_application_id, size, s );
+			else
+			{
+				/* read what we can */
+    		appl_read( my_application_id, max-1, s);
+				s[max-1] = '\0';						/* terminate the string		*/
+				/* now, get the remaining bytes of the string					*/
+	      for( size=size-(max-1); size>0; size-- )
+           appl_read( my_application_id, 1, &dummy );
+      }
+    }
 
-          evnt_mesag( msgbuf );
-          switch( msgbuf[0] )
-          {
-            case X_GET_HELP:
-               caps_sens = msgbuf[5];
-              /* Read the topic portion */
-               read_string( topic, sizeof(topic), msgbuf[3] );
-               /* Read the filename portion */
-               read_string( filename, sizeof(filename). msgbuf[4] );
-               /* Do whatever with it... */
+    main()
+    {
+      int msg[8], caps_sens;
+      char topic[20], filename[100];
+
+      evnt_mesag( msg );
+      switch( msg[0] )
+      {
+        case X_GET_HELP:
+           caps_sens = msg[5];
+          /* Read the topic portion */
+           read_string( topic, sizeof(topic), msg[3] );
+          /* Read the filename portion */
+            read_string( filename, sizeof(filename). msg[4] );
+          /* Do whatever with it... */
 !end_verbatim
 
 !label X_WM_HSPLIT
@@ -94,18 +103,18 @@
      horizontal split bar has changed:
 !begin_table [ll]
       Portion    !! Contents
-      Word 0     !! 0xE400
-      Word 1     !! Application ID
-      Word 2     !! 0
-      Word 3     !! Handle of the window being affected
-      Word 4     !! The new offset (in pixels) of the split bar
+      msg[0]     !! 0xE400
+      msg[1]     !! Application ID
+      msg[2]     !! 0
+      msg[3]     !! Handle of the window being affected
+      msg[4]     !! The new offset (in pixels) of the split bar
 !end_table
 
       The application is then free to either act upon this message and change
       the split bar position with wind_set( X_WF_HSPLIT, or to ignore the
       message completely.
 
-      See the x_wind_create() function for more information.
+      See the x_wind_create function for more information.
 
 !label X_WM_ARROWED2
 !item [X_WM_ARROWED2 (0xE600)] (!nl)
@@ -116,7 +125,7 @@
      horizontal split bar. The format of a X_WM_ARROWED2 message is
      identical to that of WM_ARROWED.
 
-      See the x_wind_create() function for more information.
+      See the x_wind_create function for more information.
 
 !label X_WM_HSLID2
 !item [X_WM_HSLID2 (0xE700)] (!nl)
@@ -133,7 +142,7 @@
      second vertical scroll gadget, which appears below a vertical split
      bar. The format of this message is identical to that of WM_VSLID.
 
-     See the x_wind_create() function for more information.
+     See the x_wind_create function for more information.
 
 !label X_WM_OBJECT
 !item [X_WM_OBJECT (0xE900) (since Update 003)] (!nl)
@@ -148,11 +157,11 @@
      to the application:
 !begin_table [ll]
        Portion   !! Contents
-       Word 0 !! 0xE900
-       Word 1 !!Application ID
-       Word 2 !! 0
-       Word 3 !! Handle of the window containing the object
-       Word 4 !! Object tree index of the object which was clicked
+       msg[0] !! 0xE900
+       msg[1] !! Application ID
+       msg[2] !! 0
+       msg[3] !! Handle of the window containing the object
+       msg[4] !! Object tree index of the object which was clicked
 !end_table
 
      Note that in order for Geneva to determine that the mouse has been
@@ -160,7 +169,7 @@
      EXIT or TOUCHEXIT.  Geneva's default window gadgets already have these
      attributes set correctly.
 
-     See also: wind_set() mode X_WF_OBJHAND.
+     See also: wind_set mode X_WF_OBJHAND.
 
 !end_description
 
