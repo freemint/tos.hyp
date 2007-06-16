@@ -1,232 +1,464 @@
 !begin_node The BIOS
+
 !label BIOS, The
 
-The (!nolink [BIOS]) ((!B)B(!b)asic(!B)I(!b)}nput/(!B)O(!b)utput (!B)S(!b)ystem) functions represent the lowest
+
+
+The (!nolink [BIOS]) ((!B)B(!b)asic(!B)I(!b)nput/(!B)O(!b)utput (!B)S(!b)ystem) functions represent the lowest
+
 level interface between the Atari's operating system and hardware,
+
 and are called via the 680X0 Trap #13. Preferably, these functions
+
 should not be used by application programs, as substantially more
+
 powerful functions on a higher level are available to provide better
+
 alternatives. Altogether the following functions are available:
 
+
+
 !begin_xlist [˘ Bconstat  ] !short
+
 !item [˘ Bconin]
+
 Read a character from a device
+
 !item [˘ Bconout]
+
 Send a character to a peripheral unit
+
 !item [˘ Bconstat]
+
 Get input status of a peripheral unit
+
 !item [˘ Bcostat]
+
 Get status of a standard output device
+
 !item [˘ Drvmap]
+
 Get information about attached devices
+
 !item [˘ Getbpb]
+
 Get address to the bios parameter block of a unit
+
 !item [˘ Getmpb]
+
 Speicherparameterblock ermitteln.
+
 !item [˘ Kbshift]
+
 Fetch/set status of the shift keys
+
 !item [˘ Mediach]
+
 Ask if the media has been changed
+
 !item [˘ Rwabs]
+
 Direct read/write operation on a unit
+
 !item [˘ Setexc]
+
 Set an get interrupt vector
+
 !item [˘ Tickcal]
+
 Get time difference between two timer calls
+
 !end_xlist
 
+
+
 The (!nolink [BIOS]) is reentrant in MagiC. This means that these functions can
+
 be also called up repeatedly from interrupts (as long as the relevant
+
 supervisor stack does not overflow...).
 
 
+
+
+
 (!B)Note:(!b)
+
 !begin_itemize
+
 !item The <saveptr_area> of the (!nolink [BIOS]) is still present (for reasons
+
       of compatibility), but it is not used by the system.
+
 !item The stack checks of Turbo C/Pure-C will fail for routines that
+
      are executed in supervisor-mode (under (!nolink [TOS]) this could happen
+
      until now only for USERDEF routines in the (!nolink [AES]), that are also
+
      executed in supervisor-mode).
+
 !end_itemize
 
+
+
 If you hook your own routines into the (!nolink [BIOS]), then make sure that you
+
 construct them to be fully reentrant. Make no assumptions about the
+
 contents of the <saveptr_area>!
 
+
+
 !label BIOS, ParameterÅbergabe im
+
 !label ParameterÅbergabe im BIOS
+
 The (!nolink [BIOS]) receives its parameters from the stack; for this the last
+
 argument from the parameter list is stored as the first on the stack.
+
 Function results are returned in the processor register d0. Only
+
 registers d3-d7 and a3-a7 are saved, all others may be altered by
+
 the call.
+
+
+
 
 
 See Also: GEMDOS ~ XBIOS ~ (!link [Reset vector][Hooking into the reset vector]) ~ VT-52 terminal
 
 
+
+
+
 !include bios/bios_trap.ui
 
+
+
 !include bios/function/bconin.u
+
 !include bios/function/bconout.u
+
 !include bios/function/bconstat.u
+
 !include bios/function/bcostat.u
+
 !include bios/function/drvmap.u
+
 !include bios/function/getbpb.u
+
 !include bios/function/getmpb.u
+
 !include bios/function/kbshift.u
+
 !include bios/function/mediach.u
+
 !include bios/function/rwabs.u
+
 !include bios/function/setexc.u
+
 !include bios/function/tickcal.u
 
 
+
+
+
 !end_node
+
+
+
+
+
 
 
 
 
 !begin_node The in-/output channels of the BIOS
 
+
+
 The following table is a summary of the channels which are known to the
+
 (!include [BIOS]). One should note that further channels can be installed
+
 via Bconmap.
 
+
+
 !begin_table [c|l|l]
+
 Channel !! Name !! Meaning
+
 !hline
+
 0 !! PRT !! Parallel port
+
 1 !! AUX !! Serial port
+
 2 !! CON !! Console (with (!link [VT-52-sequences][VT-52 terminal]))
+
 3 !! MIDI !! MIDI-port
+
 4 !! IKBD !! Intelligent Keyboard processor
+
 5 !! RAWCON !! Console (without control characters)
+
 6 !! ------ !! ST-compatible serial (Modem-1)
+
 7 !! ------ !! SCC Channel-B (Modem-2)
+
 8 !! ------ !! TT-MFP        (Serial-1)
+
 9 !! ------ !! SCC Channel-A (Serial-2)
+
 !end_table
 
+
+
 (!B)Note:(!b) Output via Channel-5 (RAWCON) can be (!I)deutlich(!i) faster
+
 than via Channel-2 (CON), as the control sequences do not have to be
+
 evaluated. A further advantage arising from this is a greater supply
+
 of characters.
 
+
+
 See Also: (!nl)
+
 Bconin ~ Bconout ~ Bconstat ~ Bcostat ~ (!link [Directory U:DEV][The directory U:DEV])
 
+
+
 !end_node
+
+
+
 
 
 !begin_node Hooking into the reset vector
+
 !label Reset-Vektor, Einklinken in
 
+
+
 The recipe for hooking your own routines into the reset-vector runs as
+
 follows:
 
+
+
 !begin_itemize
+
 !item Set the system variable resvalid to the value 0x31415926, as
+
       therwise (!I)resvector(!i) will be completely ignored by the (!nolink [BIOS ignore]).
+
 !item Write the address of your own function in the resvector vector.
+
 !item Jump back from the function via jmp(a6).
+
 !end_itemize
 
+
+
 (!B)Important:(!b) A jump back from the installed function via rts is
+
 (!I)not(!i) possible, since no stack has been initialised yet at this
+
 time. In practice one could proceed as follows, for instance:
 
+
+
 !begin_verbatim
+
 RESMAGIC    equ       $31415926
+
 _resvalid   equ       $426
+
 _resvector  equ       $42a
 
+
+
             .text
+
 install:    move.l    _resvalid,oldvalid
+
             move.l    #RESMAGIC,resvalid
+
             move.l    _resvector,oldreset
+
             move.l    #newreset,_resvector
+
             rts
 
+
+
             dc.b      "XBRARESV"
+
 oldreset:   dc.l      0
 
+
+
 newreset:   move.l    oldreset,_resvector
+
             move.l    oldvalid,_resvalid
+
             jmp       (a6)
 
+
+
             .bss
+
 oldvalid:   .ds.l     1
+
 !end_verbatim
 
+
+
 (!B)Warning:(!b) So that multiple programs may install themselves, a clean
+
 de-installation must follow the handling of the function.
 
+
+
 See Also: (!link [System variables][The system variables]) ~
+
           (!link [System vectors][The System Vectors]) ~ XBRA procedure
+
 !end_node
 
 
+
+
+
 !include bios\sys_var_en.u
+
 !include bios\sys_vec_en.ui
+
+
 
 !begin_node BIOS und XBIOS-Fehlermeldungen
 
+
+
 Fehler werden von BIOS und XBIOS als negative Werte gemeldet. Die folgende
+
 Liste enthÑlt alle bekannten Fehlermeldungen:
 
+
+
 !begin_xlist !short [Nr. Bezeichnung]
+
 !item [Nr. Bezeichnung]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [~~0 E_OK]
+
 OK (no (!nolink [error]))
+
 !item [~-1 ERROR]
+
 Fundamental (!nolink [error])
+
 !item [~-2 EDRVNR]
+
 Drive not ready
+
 !item [~-3 EUNCMD]
+
 Unknown command
+
 !item [~-4 E_CRC]
+
 CRC (!nolink [error])
+
 !item [~-5 EBADRQ]
+
 Bad request
+
 !item [~-6 E_SEEK]
+
 Seek (!nolink [error])
+
 !item [~-7 EMEDIA]
+
 Lesefehler (Medium hat unkorrekten Bootsektor).
+
 !item [~-8 ESECNF]
+
 Sector not found
+
 !item [~-9 EPAPER]
+
 Drucker ist nicht betriebsbereit.
+
 !item [-10 EWRITF]
+
 Fehler bei einer Schreiboperation.
+
 !item [-11 EREADF]
+
 Fehler bei einer Leseoperation.
+
 !item [-12 EGENRL]
+
 General (!nolink [error])
+
 !item [-13 EWRPRO]
+
 Write protect
+
 !item [-14 E_CHNG]
+
 Medium wurde nach Schreiboperation gewechselt.
+
 !item [-15 EUNDEV]
+
 Unknown device
+
 !item [-16 EBADSF]
+
 Defekte Sektoren beim Formatieren entdeckt.
+
 !item [-17 EOTHER]
+
 Insert other disk. Dieser Fehler tritt nur auf, wenn Laufwerk B: angesprochen wird, ohne angeschlossen zu sein. In diesem Fall wird der Benutzer aufgefordert, die Diskette in das erste Laufwerk einzufÅgen.
+
 !item [-18 EINSERT]
+
 MetaDOS Error: Medium einlegen
+
 !item [-19 EDVNRSP]
+
 (!nolink [MetaDOS]) Error: GerÑt antwortet nicht.
+
 !item [-128 SNDNOTLOCK]
+
 Falcon XBIOS: Sound system is not loocked.
+
 !item [-129 SNDLOCKED]
+
 Falcon XBIOS: Sound system is loocked.
+
 !end_xlist
+
+
 
 See Also: (!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~ GEMDOS-Fehlermeldungen
 
 
+
+
+
 !end_node
+
