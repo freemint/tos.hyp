@@ -3,98 +3,96 @@
 !begin_node Psemaphore
 (!begin_liste) [Availability]
 !item [Name:]
-ØPsemaphoreÆ - erzeugen, anwenden, zerstîren einer Semaphore.
+ØPsemaphoreÆ - Create, use or destroy a semaphore.
 !item [Opcode:]
 308
 !item [Syntax:]
 int32_t Psemaphore ( int16_t mode, int32_t id, int32_t timeout );
 
 !item [Description:]
-Die Funktion implementiert nicht-zÑhlende Semaphore. Nur ein Prozess kann
-einen Semaphor zur gleichen Zeit besitzen.
+The function Psemaphore implements non-counting semaphores. Only one process
+can access a semaphore at the same time.
 
-Semaphoren kînnen z.B. benutzt werden, um den Zugriff auf Datenstrukturen im
-Shared Memory von unterschiedlichen Teilprozessen zu synchronisieren: So muû
-ein Teilprozess, bevor er auf den Speicher zugreift, versuchen, in den
-Besitzt des Semaphors zu kommen. Dieser kann z.B. bei der Initialisierung
-erzeugt, und bei Programmende wieder entfernt werden.
+Semaphores can be used, for instance, to synchronise accesses to data
+structures in (!link [shared memory][Shared memory]) by different
+subprocesses: Hence a subprocess must try, before it accesses memory, to
+obtain possession of the semaphore. This can be created during
+initialisation, for instance, and removed again at program termination.
 
-Semaphore werden durch einen Namen identifiziert. Dieser Name ist ein
-Langwort, das auch vier ASCII-Zeichen enthalten kann. Semaphore, deren Namen
-mit dem Unterstrich '_' beginnen sind dabei fÅr das Betriebssystem
-reserviert.
+Semaphores are identified by a name. This name is a LONGword that may
+contain four ASCII characters. Semaphores whose name starts with an
+underscore '_' are reserved for the operating system.
 
-(!B)Der Parameter (!I)timeout(!i) wird nur im Modus 2 benutzt. Es gilt dabei
-die folgende Belegung:(!b)
+(!B)The parameter (!I)timeout(!i) is only used in (!I)mode 2(!i). The
+following assignments apply:(!b)
 !begin_xlist !short [timeout]
 !item [timeout]
-= ~0: sofort zurÅckkehren
+= ~0: Return immediately.
 !item [~]
-= -1: kein Timeout (Forever).
+= -1: No timeout (wait indefinitely).
 !end_xlist
-Andere Werte fÅr (!I)timeout(!i) geben die Wartezeit in Millisekunden an,
-bevor ein Timeout eintritt.
+Other values for (!I)timeout(!i) specify the delay time in milliseconds
+before a timeout occurs.
 
-(!B)FÅr den Parameter (!I)mode(!i) sind folgende Werte mîglich:(!b)
+(!B)The following values are possible for the parameter (!I)mode(!i):(!b)
 !begin_xlist !short [mode]
 !item [mode]
-Bedeutung
+Meaning
 !item [~]
 ~
 !item [0]
-Semaphore mit Kennung (!I)id(!i) erzeugen (und besitzen).
+Create a semaphore with the ID (!I)id(!i) (and grant ownership to the
+calling process)
 !item [1]
-Semaphore mit Kennung (!I)id(!i) entfernen. Dies klappt nur, wenn der
-Aufrufer die Semaphore besitzt.
+Destroy semaphore with the ID (!I)id(!i); this works only if the semaphore
+is owned by the caller
 !item [2]
-Besitz der Semaphore mit Kennung (!I)id(!i) beantragen. Dies blockiert den
-Aufrufer bis die Semaphore frei wird, oder ein Timeout eintritt.
+Request ownership of the semaphore with the ID (!I)id(!i); this blocks the
+caller until the semaphore becomes available, or a timeout occurs
 !item [3]
-Semaphore mit Kennung (!I)id(!i) freigeben. Dies klappt nur, wenn der
-Aufrufer die Semaphore besitzt.
+Release ownership of semaphore with the ID (!I)id(!i); this works only if
+the semaphore is owned by the caller
 !end_xlist
-(!B)Hinweis:(!b) Wenn ein Prozess eine Semaphore erzeugt, besitzt er sie
-auch sofort. Damit andere Prozesse diese nutzen kînnen, muû sie zunÑchst
-freigegeben werden. Da fÅr das Erzeugen einer Semphore interner Speicher
-angefordert werden muss, sollte die Funktion sparsam verwendet werden.
+(!B)Note:(!b) When a process creates a semaphore, it also owns it
+immediately. So that other processes may use it, it must first be released.
+As the creation of a semphore has to reserve internal memory, the function
+should be used frugally.
 
-Wenn ein blockierter Prozess auf eine Semaphore wartet (bevor der Timeout
-eintritt), und ein anderer Prozess entfernt die Semaphore, dann kehrt die
-Funktion Psemaphore mit der Meldung ERANGE zurÅck, da die angeforderte
-Semaphore nicht lÑnger existiert.
+If a blocked process is waiting for a semaphore (before the timeout occurs),
+and a different process destroys the semaphore, then the function Psemaphore
+returns with the message ERANGE, as the requested semaphore no longer
+exists.
 
-Wenn ein Prozess terminiert, werden alle Semaphore die er besitzt,
-automatisch freigegeben. Der Besitz einer Semaphore kann nicht vererbt
-werden (etwa mit Pfork). Wenn ein Prozess eine Semaphore erzeugt und dann
-abstÅrzt, bleibt die Semaphore erhalten, und kann nicht mehr entfernt
-werden.
+When a process terminates, all semaphores owned by it are released
+automatically (but not destroyed). The ownership of a semaphore can not be
+inherited (say with Pfork). If a process creates a semaphore and then
+crashes, the semaphore remains and cannot be removed any more.
 
-In MagiC sorgen PlausibilitÑtsÅberprÅfungen dafÅr, daû keine
-System-Semaphoren freigegeben werden kînnen; auûerdem werden z.Zt. nur die
-Modi 2 und 3 unterstÅtzt.
+In MagiC, plausibility checks ensure that no system semaphores can be
+released; in addition, only modes 2 and 3 are supported at present.
 
-!item [(!nolink [Return]) Value:]
-Die Funktion kann folgende RÅckgabewerte liefern:
+!item [(!nolink [Return]) value:]
+The function can return the following results:
 !begin_xlist !short [ERANGE:]
 !item [E_OK~ :]
-kein Fehler aufgetreten.
+No error has arisen
 !item [ERROR :]
-es wurde eine Semaphore beantragt, die der Antragsteller bereits besitzt.
+A semaphore was requested that the caller already owns
 !item [EACCDN:]
-es wurde versucht eine Semaphore zu erzeugen, die bereits existiert, der
-Aufrufer ist nicht im Besitz der Semaphore oder ein Timeout ist eingetreten.
+An attempt was made to create a semaphore that already esists, the caller is
+not the owner of the semaphore or a timeout has occurred
 !item [ERANGE:]
-der angegebene Semaphor existiert nicht.
+The specified semaphore does not exist
 !end_xlist
 
 !item [Availability:]
 Available when a 'MiNT' cookie with a version of at least 0.92 exists and
-(!nolink [MagiC]) since version 3.0.
+(!nolink [MagiC]) as of version 3.0.
 
 !item [Group:]
-Process Functions
+Process functions
 
-!item [See Also:] (!link [Binding][Bindings for Psemaphore]) ~
+!item [See also:] (!link [Binding][Bindings for Psemaphore]) ~
           Semaphoren in MagiC
 (!ende_liste)
 
@@ -111,14 +109,8 @@ move.l    id,-(sp)       ; Offset 4
 move.w    mode,-(sp)     ; Offset 2
 move.w    #308,-(sp)     ; Offset 0
 trap      #1             ; GEMDOS
-lea       $C(sp),sp      ; correct stack
+lea       $C(sp),sp      ; Correct stack
 !end_verbatim
-!ifdest [html]
-!item [GFA-Basic]
-!begin_raw
-<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
-!end_raw
-!endif
 (!ende_liste)
 !end_node
 !end_node
@@ -238,12 +230,6 @@ move.w    #308,-(sp)     ; Offset 0
 trap      #1             ; GEMDOS aufrufen
 lea       $C(sp),sp      ; Stack korrigieren
 !end_verbatim
-!ifdest [html]
-!item [GFA-Basic]
-!begin_raw
-<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
-!end_raw
-!endif
 (!ende_liste)
 !end_node
 !end_node

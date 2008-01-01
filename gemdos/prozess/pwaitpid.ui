@@ -3,93 +3,94 @@
 !begin_node Pwaitpid
 (!begin_liste) [Availability]
 !item [Name:]
-ØPwaitpidÆ - auf Childprozess warten, Exitcode ermitteln.
+ØPwaitpidÆ - Get exit code information about one or more child processes.
 !item [Opcode:]
 314
 !item [Syntax:]
 int32_t Pwaitpid ( int16_t pid, int16_t flag, int32_t *rusage );
 
 !item [Description:]
-Die Funktion versucht den Exit-Code von Childprozessen, die gestoppt oder
-beendet worden sind, zu ermitteln. Falls Bit-1 des Parameters (!I)flag(!i)
-gesetzt ist, werden z.Zt. gestoppte, anderenfalls gerade beendete bzw. durch
-Tracing gestoppte Childprozesse gemeldet.
+The function Pwaitpid tries to obtain the exit code of child processes that
+have been stopped or terminated. If bit 1 of the parameter (!I)flag(!i) is
+set, then the child processes currently stopped will be reported; if clear,
+child processes newly terminated or stopped by tracing will be reported.
 
-Ein gestoppter Prozess wird i.d.R. einmal gemeldet (sofern er nicht neu
-gestartet, und wieder gestoppt wurde). Ebenso wird ein beendetet Prozess nur
-einmal gemeldet.
+A stopped process will be reported once, as a rule, (as long as it has not
+been restarted and stopped again). Equally, a terminated process will be
+reported only once.
 
-Wenn Childs vorhanden sind, die weder gestoppt oder beendet sind (oder auf
-ein solches Ereignis warten), wird das weitere Verhalten der Funktion durch
-Bit-0 des Parameters (!I)flag(!i) gesteuert. Dabei gilt:
+If child processes are present that have neither been stopped nor terminated
+(or are waiting for such an event), then the further behaviour of the
+function is determined by bit 0 of the parameter (!I)flag(!i). The following
+applies here:
 !begin_xlist !short [Bit-0 = 0]
 !item [Bit-0 = 0:]
-warten, bis Child stoppt oder beendet wird.
+Wait until child is stopped or terminated
 !item [Bit-0 = 1:]
-sofort zurÅckkehren.
+Return immediately
 !end_xlist
-(!B)öber den Parameter (!I)pid(!i) kînnen die Childs genauer spezifiziert
-werden. Es gilt:(!b)
+(!B)With the parameter (!I)pid(!i) the children whose exit codes are of
+interest can be specified more exactly:(!b)
 !begin_xlist !short [< -1]
 !item [pid]
-Bedeutung
+Meaning
 !item [~]
 ~
 !item [-1]
-Status fÅr alle Childs abfragen
+Inquire status for all children
 !item [>0]
-(!I)pid(!i) ist die Prozess-Kennung des Childs, dessen Status erfragt werden
-soll
+(!I)pid(!i) is the process ID of the child whose status is to be established
 !item [=0]
-Status fÅr alle Childs abfragen, deren Gruppen-ID gleich der des aufrufenden
-Prozesses ist.
+Inquire status for all children whose group ID is the same as that of the
+calling process
 !item [< -1]
-Status fÅr alle Childs abfragen, deren Gruppen-ID dem Absolutwert (Betrag)
-von (!I)pid(!i) entspricht.
+Inquire status for all children whose group ID corresponds to the absolute
+value of (!I)pid(!i)
 !end_xlist
-(!B)öber den Parameter (!I)rusage(!i) werden Informationen Åber den
-Verbrauch an CPU-Zeit des Childs abgelegt:(!b)
+(!B)With the parameter (!I)rusage(!i) information about the usage of CPU
+time of the child is accounted for:(!b)
 !begin_xlist !short
 !item [rusage[0]:]
-Zeitverbrauch im User-Space (msec)
+Time spent in user space (msec)
 !item [rusage[1]:]
-Zeitverbrauch im Kernel-Space (msec)
+Time spent in kernel space (msec)
 !end_xlist
-Falls ein Child gefunden wurde, wird dessen PID in den oberen 16-Bit und
-sein Exit-Status in den unteren 16-Bit des RÅckgabewertes abgelegt. Wenn der
-Prozess durch das Signal mit der Nummer n gestoppt oder beendet wurde, ist
-sein Exit-Status 256*n+x mit:
+If a child process was found, its PID will be given in the upper 16 bits and
+its exit status in the lower 16 bits of the return value. If the process was
+stopped or terminated by a signal with the number n, its exit status will be
+256*n+x, where:
 !begin_xlist !short [x = 127]
 !item [x = 127,]
-falls der Prozess gestoppt wurde.
+if the process was stopped
 !item [x = 0,]
-falls der Prozess beendet wurde.
+If the process was terminated
 !end_xlist
-(!B)Achtung:(!b)
-In MagiC werden angehaltene Child-Prozesse noch nicht
-erkannt, sondern nur beendete Childs. DarÅber hinaus werden im
-Parameter (!I)rusage(!i) z.Zt. immer nur Null-Werte zurÅckgegeben.
+(!B)Warning:(!b) In MagiC, stopped child-processes are not yet recognized,
+but only terminated child processes. In addition, only NULL-values are
+returned at present in the parameter (!I)rusage(!i).
 
-Auch Prozeûgruppen werden z.Zt. noch nicht richtig unterstÅtzt, da die
-Funktion Psetpgrp() noch fehlt.
-!item [(!nolink [Return]) Value:]
-Die Funktion kann folgende RÅckgabewerte liefern:
+Process groups, too, are not properly supported at present because the
+function Psetpgrp is missing.
+!item [(!nolink [Return]) value:]
+The function can return the following values:
 !begin_xlist !short [EFILNF:]
 !item [>0~~~ :]
-Exit-Status und PID des Childs
+Exit status and PID of the child  in the lower and upper 16 bits
+respectively of a 32-bit return code
 !item [~0~~~ :]
-falls Bit-0 des Parameters (!I)flag(!i) gesetzt ist, und die Funktion beim
-Warten auf das Exit bzw. Stop des Childs blockiert werden wÅrde.
+No child processes have been stopped and/or terminated, or, if bit 0 of the
+parameter (!I)flag(!i) is set, the function would be blocked when waiting
+for the exit or the stopping of the child process
 !item [EFILNF:]
-es existieren keine Childs.
+No child processes exist
 !end_xlist
 
 !item [Availability:]
-Available when a 'MiNT' cookie with a version of at least 0.96 exists
-and MagiC since version 5.04.
+Available when a 'MiNT' cookie with a version of at least 0.96 exists, and
+MagiC as of Version 5.04.
 
 !item [Group:]
-Process Functions
+Process functions
 
 !item [See Also:] (!link [Binding] [Bindings for Pwaitpid]) ~ Pwait ~ Pwait3
 (!ende_liste)
@@ -107,14 +108,8 @@ move.w    flag,-(sp)   ; Offset 4
 move.w    pid,-(sp)    ; Offset 2
 move.w    #314,-(sp)   ; Offset 0
 trap      #1           ; GEMDOS
-lea       $A(sp),sp    ; correct stack
+lea       $A(sp),sp    ; Correct stack
 !end_verbatim
-!ifdest [html]
-!item [GFA-Basic]
-!begin_raw
-<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
-!end_raw
-!endif
 (!ende_liste)
 !end_node
 !end_node
@@ -230,12 +225,6 @@ move.w    #314,-(sp)   ; Offset 0
 trap      #1           ; GEMDOS aufrufen
 lea       $A(sp),sp    ; Stack korrigieren
 !end_verbatim
-!ifdest [html]
-!item [GFA-Basic]
-!begin_raw
-<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
-!end_raw
-!endif
 (!ende_liste)
 !end_node
 !end_node

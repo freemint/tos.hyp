@@ -3,97 +3,99 @@
 !begin_node Fsfirst
 (!begin_liste) [Availability]
 !item [Name:]
-Øsearch first fileÆ - ersten Dateieintrag suchen.
+Øsearch first fileÆ - Search for first file entry.
 !item [Opcode:]
 78
 !item [Syntax:]
 int32_t Fsfirst ( const int8_t *filename, int16_t attr );
 
 !item [Description:]
-Die GEMDOS-Routine Fsfirst erlaubt es, Informationen Åber Dateien zu
-ermitteln. Es gilt:
+The (!nolink [GEMDOS]) routine Fsfirst can obtain information about the
+first occurrence of a file or subdirectory. The following apply:
 !begin_xlist !short [Parameter]
 !item [Parameter]
-Bedeutung
+Meaning
 !item [~]
 ~
 !item [filename]
-Zeiger auf den Dateinamen
+Pointer to the filename or subdirectory
 !item [attr]
-Attribute, die auf den gesuchten Dateityp passen sollen.
+Attributes that should be matched by the file searched for
 !begin_xlist !short
 !item [Bit-0:]
-Datei ist schreibgeschÅtzt
+Include read-only files
 !item [Bit-1:]
-Datei ist versteckt
+Include hidden files
 !item [Bit-2:]
-Systemdatei
+Include system files
 !item [Bit-3:]
-Diskettenname
+Include volume labels
 !item [Bit-4:]
-Verzeichnis
+Include subdirectories
 !item [Bit-5:]
-Archiv-Bit
+Include files with archive-bit set
 !end_xlist
 !end_xlist
-Der Pfadname kann auch die Joker '*' und '?' enthalten. Nach Abschluû der
-Funktion steht der Verzeichniseintrag unter der DiskettenÅbertragungsadresse
-DTA, die mit Fgetdta und Fsetdta ermittelt bzw. festgelegt werden kann. Die
-Informationen kînnen dann der Struktur (!nolink [DTA]) entnommen werden.
+The filename or path may also contain the jokers '*' and '?'. When the
+function terminates, the directory entry will fill the disk transfer area
+(DTA), whose location can be obtained or set with Fgetdta and Fsetdta
+respectively. The required information can then be obtained from the
+(!nolink [DTA]) structure.
 
-Die (!nolink [DTA]) muss durch Fsfirst() initialisiert werden!
+The (!nolink [DTA]) must be initialised with Fsfirst!
 
-(!B)Hinweis:(!b) Falls das Programm in der MiNT-Domain lÑuft, liefert
-Fsfirst 'lower case' Filenamen. Da es Filesysteme gibt die case sensitiv
-arbeiten, sollten Sie diese Umwandlung auf keinen Fall manuell durchfÅhren.
-Wenn Sie hingegen unbedingt 'upper case' Filenamen benîtigen, sollten Sie
-Ihr Programm per Pdomain in der TOS-Domain laufen lassen.
+(!B)Note:(!b) If the program runs in the MiNT-domain, Fsfirst will return
+lower case filenames. As (!link [file-systems][File-systems]) exist that are
+case sensitive, you should avoid making such conversions manually. However,
+if you absolutely need upper case filenames you should use Pdomain to make
+your program run in the TOS-domain.
 
-(!B)Anmerkung zu (!nolink [MagiC]):(!b) Ist Bit-3 von attr gesetzt, so ruft der Kernel
-die XFS-Funktion xfs_rlabel auf. Das aufrufende Anwenderprogramm kann damit
-leider unter MagiC nicht mehr Datum und Uhrzeit des Disknamens ermitteln.
-Der Kernel setzt alle Felder auf 0, und die Funktion Fsnext darf dann nicht
-ausgefÅhrt werden. Ab (!nolink [MagiC])-3 wird stattdessen die Funktion Dreadlabel
-benutzt, die auch mit langen Dateinamen zurechtkommt.
+(!B)Notes about (!nolink [MagiC]):(!b) If bit 3 of (!I)attr(!i) is set, then
+the kernel will call the (!link [XFS][MagiC's XFS-concept]) function
+xfs_rlabel. The calling user program can unfortunately no longer get the
+date and time of the disk name under (!nolink [MagiC]) with this. The kernel
+sets all fields to 0 and the function Fsnext may not be executed. As of
+(!nolink [MagiC]) 3, the function Dreadlabel is used instead, which also
+manages long filenames.
 
-Ist Bit-3 von attr nicht gesetzt, wird wie in TOS nach Dateien gesucht. Ist
-eine Datei ein symbolischer Link, ruft der DOS-Kernel die Funktion Fxattr
-auf, um den Link zu verfolgen. Die von Fxattr gelieferten Werte werden dann
-in die DTA kopiert.
+If bit 3 of (!I)attr(!i) is not set, a search for files is made as in
+(!nolink [TOS]). If a file is a symbolic link, the DOS kernel calls the
+function Fxattr to follow the link. The values returned by Fxattr are then
+copied to the (!nolink [DTA]).
 
-(!B)Achtung:(!b) (!nolink [MagiC]) ist nicht immer in der Lage, relative symbolische
-Links wÑhrend eines Fsfirst/(!nolink [Fsnext]) korrekt auszuwerten. Es bieten sich 3
-Auswege an:
+(!B)Warning:(!b) (!nolink [MagiC]) is not always able to evaluate correctly
+relative symbolic links during Fsfirst/(!nolink [Fsnext]). There are three
+ways to overcome this:
 !begin_xlist !short [(a)]
 !item [(a)]
-Am besten: Dxreaddir verwenden.
+Best: use Dxreaddir
 !item [(b)]
-Nur absolute symbolische Links verwenden.
+Use only absolute symbolic links
 !item [(c)]
-Das Suchverzeichnis jeweils zum aktuellen machen.
+Alays make the search directory the current one
 !end_xlist
-MiNT behandelt diesen Fall zwar korrekt, jedoch auf Kosten eines gewaltigen
-Aufwands. Das Fsfirst/next-Konzept ist grundsÑtzlich veraltet, ineffektiv
-und unsicher, und sollte sowohl in MiNT als auch in (!nolink [MagiC]) vermieden werden.
-!item [(!nolink [Return]) Value:]
-Die Funktion liefert folgende Resultate:
+Though MiNT handles this case correctly, it is at a huge cost. The
+Fsfirst/next concept is basically obsolete, ineffective and unsafe, and
+should be avoided both in MiNT as well as in (!nolink [MagiC]).
+!item [(!nolink [Return]) value:]
+The function returns the following results:
 !begin_xlist !short [EFILNF :]
 !item [E_OK :]
-kein Fehler aufgetreten
+No error has occurred
 !item [EFILNF :]
-Datei nicht gefunden
+File not found
 !item [ENMFIL :]
-keine weiteren Dateien
+No more files
 !end_xlist
 
-!item [Availability:] All GEMDOS versions.
+!item [Availability:] All (!nolink [GEMDOS]) versions.
 
 !item [Group:]
-File Functions
+File functions
 
-!item [See Also:] (!link [Binding] [Bindings for Fsfirst]) ~ Fgetdta ~ 
-    Fsetdta ~  Fsnext ~ DTA ~ (!link [rekursive Suche][DTA]) ~ 
-    (!link [XFS-Konzept][Das XFS-Konzept von MagiC])
+!item [See Also:] (!link [Binding][Bindings for Fsfirst]) ~ Fgetdta ~
+Fsetdta ~  Fsnext ~ DTA ~ (!link [Recursive search][DTA]) ~
+(!link [XFS-concept][MagiC's XFS-concept])
 (!ende_liste)
 
 
@@ -108,7 +110,7 @@ move.w    attr,-(sp)   ; Offset 6
 pea       filename     ; Offset 2
 move.w    #78,-(sp)    ; Offset 0
 trap      #1           ; GEMDOS
-addq.l    #8,sp        ; correct stack
+addq.l    #8,sp        ; Correct stack
 !end_verbatim
 
 !item [GFA-Basic]

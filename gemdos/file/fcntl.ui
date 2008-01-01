@@ -3,662 +3,677 @@
 !begin_node Fcntl
 (!begin_liste) [Availability]
 !item [Name:]
-ØFcntlÆ - Kontrolloperationen auf einem File ausfÅhren.
+ØFcntlÆ - Perform command operations on a given file.
 !item [Opcode:]
 260
 !item [Syntax:]
 int32_t Fcntl ( int16_t fh, int32_t arg, int16_t cmd );
 
 !item [Description:]
-Die Funktion fÅhrt verschiedene Kontrolloperationen auf der Datei mit der
-Handle (!I)fh(!i) duch. Der Parameter (!I)cmd(!i) beschreibt die gewÅnschte
-Operation, und kann folgende Werte annehmen ((!I)arg(!i) ist dabei vom
-gewÑhlten Kommando abhÑngig):
+The function performs various command operations on the file with the handle
+(!I)fh(!i). The parameter (!I)cmd(!i) describes the desired operation, and
+can assume the following values. ((!I)arg(!i) here depends on the selected
+command):
 
-!label Fcntl, File-Kommandos fÅr
+!label Fcntl, File commands for
 !label F_DUPFD
 (!B)F_DUPFD (0):(!b)
 (!nl)
-Dupliziert das angegebene Datei-Handle. FÅr das neue Intervall gilt:
-(!I)arg(!i) <= Handle < 32. Falls in dem angegebenen Bereich keine freien
-Handles existieren, wird die Fehlermeldung ENHNDL zurÅckgegeben. Ein Aufruf
-von Fdup (handle) ist also Ñquivalent zu Fcntl (handle, 6L, F_DUPFD).
+               Duplicates the specified file handle. The following  
+               applies for the new interval: @{I}arg@{0} <= Handle < 32. 
+If no free handles exist in the specified segment, the error-message ENHNDL
+will be returned. A call of Fdup (handle) is therefore equivalent to Fcntl
+(handle, 6L, F_DUPFD).
 
 !label F_GETFD
 (!B)F_GETFD (1):(!b)
 (!nl)
-Dieses Kommando gibt das nicht-vererbungs-Flag fÅr das Handle f zurÅck. Das
-Flag ist 0, wenn per Pexec gestartete Tochterprozesse die angegebene Datei
-erben sollen, anderenfalls hat es den Wert 1. Der Parameter (!I)arg(!i)
-besitzt keine Bedeutung.
+This command returns the non-inheritance flag for the handle (!I)f(!i). The
+flag is 0 when child processes started with Pexec are to inherit the file
+handle, otherwise it has the value 0 and the parameter (!I)arg(!i) is
+ignored.
 
 !label F_SETFD
 (!B)F_SETFD (2):(!b)
 (!nl)
-Dieses Kommando setzt das nicht-vererbungs-Flag fÅr das Handle f. Der
-Defaultwert des Flags ist 0 fÅr die Standard-Handles im Bereich von 0...5
-und 1 fÅr alle anderen, also nicht-Standard-Handles.
+This command sets the non-inheritance flag for the handle (!I)f(!i). The
+default value for the flag is 0 for the standard handles in the region 0...5
+and 1 for all others, i.e. non-standard handles.
 
 !label F_GETFL
 (!B)F_GETFL (3):(!b)
 (!nl)
-Dieses Kommando gibt die Dateihandle-Flags zurÅck, die durch den Benutzer
-verÑndert werden kînnen. Dabei handelt es sich um den bei Fopen angegebenen
-Parameter mode, sofern dieser nicht durch einen anderen Aufruf von Fcntl
-verÑndert worden ist.
+This command returns the file descriptor flags that can be altered by the
+user. We are here dealing with  the parameter (!I)mode(!i) specified at
+Fopen, as long as this has not been altered by another call of Fcntl.
+(!I)arg(!i) is ignored.
 
 !label F_SETFL
 (!B)F_SETFL (4):(!b)
 (!nl)
-Dieses Kommando setzt die Dateihandle-Flags neu, die durch den Benutzer
-verÑndert werden kînnen (andere Bits werden ignoriert, und sollten auf den
-Wert 0 gesetzt werden). Es ist nicht mîglich, den Schreib-Lese Modus bzw.
-die Modi fÅr Filesharing zu verÑndern.
+This command sets the file descriptor flags that can be altered by the user
+to (!I)arg(!i) (the other bits are ignored, and should be set to the value
+0). It is not possible to alter the read/write mode or the modes for file
+sharing.
 
 !label F_GETLK
 (!B)F_GETLK (5):(!b)
 (!nl)
-Der Parameter (!I)arg(!i) ist ein Zeiger auf eine (!link [flock-Struktur][flock, Fcntl]), in der
-Informationen Åber einen Datei-Lock gespeichert sind. Falls ein Lock
-existiert, wird er in die Struktur kopiert. Dabei wird in der Komponenten
-l_pid die PID des sperrenden Prozesses vermerkt. Falls kein Lock existiert,
-wird die Komponente l_type auf den Wert F_UNLCK gesetzt. FÅr den Fall, daû
-der Lock von einem anderen Rechner im Netzwerk gehalten wird, wird die
-Komponente l_pid auf einen vom NFS (Netzwerk-Filesystem) definierten Wert
-gesetzt. FÅr diesen Wert gilt: 0x1000 <= l_pid <= 0xffff. Man denke daran,
-daû normale PID's einen Wert kleiner als 1000 besitzen.
+The parameter (!I)arg(!i) is a pointer to an
+(!link [flock structure][flock, Fcntl]), in which information about file
+locks are stored. If a lock exists then it will be copied into the
+structure. During this the element (!I)l_pid(!i) will hold the PID of the
+locking process. If no lock exists, then the element (!I)l_type(!i) will be
+set to the value F_UNLCK. For the case that the lock is held by another
+computer in a network, the element (!I)l_pid(!i) is set to a value defined
+by the NFS ((!B)N(!b)etwork (!B)F(!b)ile (!B)S(!b)ystem). For this value,
+0x1000 <= (!I)l_pid(!i) <= 0xffff. One should note that normal PID's have a
+value smaller than 1000.
 
 !label F_SETLK
 (!B)F_SETLK (6):(!b)
 (!nl)
-Dieses Kommando setzt (l_type = F_RDLCK oder F_WRLCK) bzw. lîscht
-(l_type = F_UNLCK) einen beratenden Lock auf eine Datei. Falls diese eine
-FIFO-Queue (First-in-First-Out) ist, muû die gesamte Datei auf einmal
-behandelt werden. FÅr den Fall, daû der Lock mit von anderen Prozessen
-gesetzten Locks kollidiert, wird der Wert ELOCKED zurÅckgegeben. Wenn
-versucht wird, einen nicht-existierenden Lock zu lîschen, wird der Wert
-ENSLOCK zurÅckgeliefert. Zu beachten ist, daû sich Read-Locks Åberlappen
-dÅrfen, Write-Locks hingegen nicht. Falls eine gelockte Datei geschlossen
-wird, oder der entsprechende Prozess terminiert, werden alle gesetzten Locks
-automatisch aufgehoben (d.h. zurÅckgesetzt).
+This command sets ((!I)l_type(!i) = F_RDLCK or F_WRLCK) or lifts
+((!I)l_type(!i) = F_UNLCK) an advisory lock on the specified file. If this
+is a  FIFO queue ((!B)F(!b)irst-(!B)I(!b)n-(!B)F(!b)irst-(!B)O(!b)ut), the
+whole file must be processed at the same time. For the case when the lock
+conflicts with locks set by other processes, the value ELOCKED will be
+returned. If one tries to lift a non-existent lock, the value ENSLOCK will
+be returned. One should note that read-locks may overlap, but write-locks
+may not. If a locked file is closed, or the corresponding process
+terminates, then all set locks will be lifted automatically (i.e. reset).
 
 !label F_SETLKW
 (!B)F_SETLKW (7):(!b)
 (!nl)
-Analog F_SETLK, mit dem Unterschied, daû wenn der Lock mit solchen von
-anderen Prozessen kollidiert, nicht ELOCKED zurÅckgeliefert wird, sondern
-der sperrende Prozess suspendiert wird, bis das Locking vom anderen Prozess
-aufgehoben wird.
+Similar to F_SETLK, with the difference that if the lock conflicts with
+those from other processes, then ELOCKED is not returned but the locked
+process is suspended until the locking from the other process is lifted.
 
 !label FSTAT
 (!B)FSTAT (0x4600):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf eine XATTR-Struktur
-zurÅckgeliefert, so als ob ein Aufruf von Fxattr gemacht worden wÑre. Das
-Kommando wird in MagiC ab Version 3.0 unterstÅtzt.
+Gets the extended attributes of a file. The parameter (!I)arg(!i) returns a
+pointer to an XATTR structure that is filled in with the file's extended
+attributes, as if an Fxattr call had been made. This command is supported in
+MagiC as of Version 3.0.
 
 !label FIONREAD
 (!B)FIONREAD (0x4601):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf einen Long-Wert zurÅckgegeben,
-in dem die Anzahl der Bytes angegeben ist, die z.Zt. vom angegebenen
-Datei-Handle gelesen werden kînnen, ohne daû der Prozess blockiert wird. Die
-Angabe ist nicht zwingend korrekt, da die genaue Anzahl in einigen FÑllen
-nur geschÑtzt werden kann. Das Kommando wird in MagiC ab Version 3.0
-unterstÅtzt.
+In the parameter (!I)arg(!i) a pointer to a LONG value is returned which
+shows the number of bytes that may be read currently from a specified file
+handle without causing the process to block (wait for more input). The
+returned value is not necessarily correct, as the exact amount can only be
+estimated in some cases. The command is supported in MagiC as of Version
+3.0.
 
 !label FIONWRITE
 (!B)FIONWRITE (0x4602):(!b)
 (!nl)
-Analog FIONREAD, nur wird hier die Anzahl der Bytes, die z.Zt. geschrieben
-werden kînnen, ausgegeben. Das Kommando wird in MagiC ab Version 3.0
-unterstÅtzt.
+Similar to FIONREAD, only here the number of bytes that may be written at
+present is returned. The command is supported in MagiC as of Version 3.0.
 
 !label FUTIME
 (!B)FUTIME (0x4603):(!b)
 (!nl)
-z.Zt. keine Informationen bekannt.
+No information available at present.
 
 !label FTRUNCATE
 (!B)FTRUNCATE (0x4604):(!b)
 (!nl)
-Der Parameter (!I)arg(!i) ist ein Zeiger auf einen Long-Wert, der die neue
-LÑnge der zu verkÅrzenden Datei enthÑlt. Das Kommando wird in MagiC ab
-Version 3.0 unterstÅtzt.
+The parameter (!I)arg(!i) is a pointer to a LONG value that contains the new
+length of the file to be truncated. The command is supported in MagiC as of
+Version 3.0.
 
 !label FIOEXECPT
 (!B)FIOEXECPT (0x4605):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf einen Long-Wert zurÅckgegeben,
-in dem steht, ob sich die Datei in einem Ausnahmezustand befindet (1) oder
-nicht (0).
+In the parameter (!I)arg(!i) a pointer to a LONG value is returned which
+specifies whether the file is in an exception state (1) or not (0).
 
-!label Fcntl, Terminal-Kommandos fÅr
-Die folgenden Kommandos sind auf alle Terminal-Devices wie die Console oder
-ein Pseudo-Terminal anzuwenden:
+!label Fcntl, Terminal commands for
+(!B)The following commands are to be applied to all terminal devices such as
+the console or a pseudo-terminal:(!b)
 
 !label TIOCGETP
 (!B)TIOCGETP (0x5400):(!b)
 (!nl)
-Dieses Kommando gibt Åber den Parameter (!I)arg(!i) einen Zeiger auf eine
-sgttyb-Struktur zurÅck, in der die Parameter des Terminals definiert sind.
+This command returns via the parameter (!I)arg(!i) a pointer to a sgttyb
+structure, in which the parameters of the terminal are defined.
 
 !label TIOCSETN
 (!B)TIOCSETN (0x5401):(!b)
 (!nl)
-öber dieses Kommando kann ein neue sgttyb-Struktur gesetzt werden, welche
-die Parameter des Terminals festlegt.
+With this command one can set a new sgttyb structure which sets the
+parameters of the terminal. You should first get the terminal
+(!nolink [control]) parameters, modify what you wish to change, and then set
+them with this call.
 
 !label TIOCGETC
 (!B)TIOCGETC (0x5402):(!b)
 (!nl)
-Dieses Kommando liefert Åber den Parameter (!I)arg(!i) einen Zeiger auf eine
-tchars-Struktur zurÅck, in welcher die Terminal-Kontrollzeichen definiert
-sind.
+This command returns via the parameter (!I)arg(!i) a pointer to a tchars
+structure in which the terminal (!nolink [control]) characters are defined.
 
 !label TIOCSETC
 (!B)TIOCSETC (0x5403):(!b)
 (!nl)
-öber dieses Kommando kînnen neue Terminal-Kontrollzeichen gesetzt werden.
-Dazu Åbergibt man in (!I)arg(!i) einen Zeiger auf eine tchars-Struktur, in
-welcher die Kontrollzeichen definiert sind. Wird ein Zeichen auf 0C gesetzt,
-so wird die entsprechende Funktion gesperrt.
+With this command new terminal (!nolink [control]) characters can be set.
+For this one passes a pointer in (!I)arg(!i) to a tchars structure in which
+the (!nolink [control]) characters are defined. If a character is set to 0
+then the corresponding function will be disabled.
 
 !label TIOCGLTC
 (!B)TIOCGLTC (0x5404):(!b)
 (!nl)
-Dieses Kommando liefert Åber den Parameter (!I)arg(!i) einen Zeiger auf eine
-ltchars-Struktur zurÅck, in welcher die erweiterten Terminal-Kontrollzeichen
-definiert sind.
+This command returns via the parameter (!I)arg(!i) a pointer to a ltchars
+structure in which extended terminal (!nolink [control]) characters are
+defined.
 
 !label TIOCSLTC
 (!B)TIOCSLTC (0x5405):(!b)
 (!nl)
-öber dieses Kommando kînnen neue erweiterte Terminal-Kontrollzeichen gesetzt
-werden. Dazu Åbergibt man in (!I)arg(!i) einen Zeiger auf eine
-ltchars-Struktur, in welcher die Kontrollzeichen definiert sind. Wird ein
-Zeichen auf 0C gesetzt, so wird die entsprechende Funktion gesperrt.
+With this command one can set new extended terminal (!nolink [control])
+characters. To do this, one passes in (!I)arg(!i) a pointer to a ltchars
+structure in which the (!nolink [control]) characters are defined. If a
+character is set to 0 then the corresponding function will be disabled.
 
 !label TIOCGPGRP
 (!B)TIOCGPGRP (0x5406):(!b)
 (!nl)
-Dieses Kommando liefert Åber den Parameter (!I)arg(!i) einen Zeiger auf die
-Prozess-Gruppe des Terminals zurÅck.
+This command returns via the parameter (!I)arg(!i) a pointer to the process
+group ID of the terminal.
 
 !label TIOCSPGRP
 (!B)TIOCSPGRP (0x5407):(!b)
 (!nl)
-öber dieses Kommando kann die Prozess-Gruppe des Terminals eingestellt
-werden. Dazu wird Åber den Parameter (!I)arg(!i) ein Zeiger auf die
-entsprechende Prozess-Gruppe Åbergeben. Sollten Prozesse aus anderen Gruppen
-versuchen, auf dieses Terminal (lesend oder schreibend) zuzugreifen, so
-werden ihnen Job-Control-Signale (SIGTSTP etc.) gesendet.
+With this command one can set the process group ID of the terminal. To do
+this, one passes in the parameter (!I)arg(!i) a pointer to the corresponding
+process group. If processes from other groups should attempt to access this
+terminal (read or write) then they will be sent job (!nolink [control])
+signals (SIGTSTP etc.).
 
 !label TIOCFLUSH
 (!B)TIOCFLUSH (0x5408):(!b)
 (!nl)
-öber dieses Kommando kann die Art des Flushings spezifiziert werden. Dazu
-wird Åber den Parameter (!I)arg(!i) ein Zeiger auf einen Long-Wert
-Åbergeben, der die gewÅnschte Art beschreibt. Dabei gilt:
-!begin_xlist !short [Bit-1 gesetzt]
-!item [Wert]
-Bedeutung
+With this command one can specify the type of flushing. For this, one passes
+a pointer in the parameter (!I)arg(!i) to a LONG value that describes the
+desired type. The following apply:
+!begin_xlist !short [Bit 1 set]
+!item [Value]
+Meaning
 !item [~]
 ~
 !item [0]
-Ein- und Ausgabe flushen
-!item [Bit-0 gesetzt]
-Eingabe flushen
-!item [Bit-1 gesetzt]
-Ausgabe flushen
+Flush input and output
+!item [Bit 0 set]
+Flush input
+!item [Bit 1 set]
+Flush output
 !end_xlist
 
 
 !label TIOCSTOP
 (!B)TIOCSTOP (0x5409):(!b)
 (!nl)
-Dieses Kommando unterbricht die Ausgabe auf das Terminal (Ñhnlich der
-Fluûkontrolle per Control-S). Der Parameter (!I)arg(!i) ist in diesem
-Zusammenhang ohne Bedeutung.
+This command interrupts the output to the terminal (similar to flow
+(!nolink [control]) with Control-S). The parameter (!I)arg(!i) is ignored in
+this case.
 
 !label TIOCSTART
 (!B)TIOCSTART (0x540a):(!b)
 (!nl)
-Dieses Kommando sorgt dafÅr, daû die Ausgabe des Terminals wieder
-aufgenommen wird (Ñhnlich der Fluûkontrolle per Control-Q). Der Parameter
-(!I)arg(!i) ist in diesem Zusammenhang ohne Bedeutung.
+This command restarts output to the terminal again (similar to flow
+(!nolink [control]) with Control-Q). The parameter (!I)arg(!i) is ignored in
+this case.
 
 !label TIOCGWINSZ
 (!B)TIOCGWINSZ (0x540b):(!b)
 (!nl)
-öber dieses Kommando kann die Fenstergrîûe fÅr ein Textfenster erfragt
-werden. Dazu wird Åber den Parameter (!I)arg(!i) ein Zeiger auf eine
-winsize-Struktur zurÅckgeliefert. Falls eine Komponente dieser Struktur den
-Wert 0 besitzt, so bedeutet dies, daû der entsprechende Wert unbekannt ist.
+With this command one can inquire the size of a text window. For this a
+pointer to a winsize structure is returned via the parameter (!I)arg(!i). If
+an element of this structure has the value 0, then it means that the
+corresponding value is unknown.
 
 !label TIOCSWINSZ
 (!B)TIOCSWINSZ (0x540c):(!b)
 (!nl)
-öber dieses Kommando kann die Fenstergrîûe gesetzt werden. Dazu wird Åber
-den Parameter (!I)arg(!i) ein Zeiger auf eine winsize-Struktur Åbergeben,
-die die notwendigen Informationen enthÑlt. Zu beachten ist in diesem
-Zusammenhang, daû der Kernel den Aufruf zwar bearbeitet, die AusfÅhrung aber
-Window-Managern ÅberlÑût. Diese senden auch das Signal SIGWINCH, falls
-notwendig.
+With this command one can set the window size. For this a pointer to a
+winsize structure is passed via the parameter (!I)arg(!i) which contains the
+required information. In this connection one should note that though the
+kernel handles the call, it leaves its execution to window managers. These
+also send the signal SIGWINCH if necessary.
 
 !label TIOCGXKEY
 (!B)TIOCGXKEY (0x540d):(!b)
 (!nl)
-Dieses Kommando ermittelt die Definition einer Funktions- bzw. Cursortaste.
-Dazu wird Åber den Parameter (!I)arg(!i) ein Zeiger auf eine xkey-Struktur
-Åbergeben. Die Komponente xk_num der Struktur muû dabei mit der gewÅnschten
-Taste gefÅllt werden:
+This command returns the current definition of a system key (function,
+cursor etc.). For this a pointer to the xkey structure is passed in the
+parameter (!I)arg(!i). The element xk_num of the structure has to be filled
+with the desired key:
 !begin_table [r l]
-xk_num !! Taste
+xk_num !! Key
 !hline
 0-9 !! F1-F10
-10-19 !! F11-F20 (Åber shift erreichbar)
-20 !! Cursor hoch
-21 !! Cursor runter
-22 !! Cursor nach rechts
-23 !! Cursor nach links
+10-19 !! F11-F20 (reached via Shift)
+20 !! Cursor up
+21 !! Cursor down
+22 !! Cursor to right
+23 !! Cursor to left
 24 !! Help
 25 !! Undo
 26 !! Insert
 27 !! Clr/Home
-28 !! Shift + Cursor hoch
-29 !! Shift + Cursor runter
-30 !! Shift + Cursor nach rechts
-31 !! Shift + Cursor nach links
+28 !! Shift + cursor up
+29 !! Shift + cursor down
+30 !! Shift + cursor to right
+31 !! Shift + cursor to left
 !end_table
-Der zu der Taste gehîrende String (es gilt die Konvention der Sprache C)
-wird Åber die Komponente xk_def zurÅckgeliefert.
+The NULL-terminated string associated with the key (the convention of the C
+language applies) is returned via the element xk_def.
 
 !label TIOCSXKEY
 (!B)TIOCSXKEY (0x540e):(!b)
 (!nl)
-öber dieses Kommando kann die Definition einer Funktions- bzw. Cursortaste
-gesetzt werden. Dazu Åbergibt man Åber den Parameter (!I)arg(!i) einen
-Zeiger auf eine xkey-Struktur, in der die Komponenten xk_num und xk_def
-bereits gesetzt sein mÅssen. Nach AusfÅhrung des Kommandos wird dann per
-Fread der in xk_def angegebene String (statt ASCII-0) zurÅckgeliefert. Diese
-öbersetzung findet jedoch nur statt, wenn das Programm per Pdomain in die
-MiNT-Domain gesetzt wurde. Da der in xk_def Åbergebene String nullterminiert
-sein muû, kînnen auf diese Art und Weise maximal 7 Zeichen Åbergeben werden.
+With this command one can set the current definition of a system key
+(function or cursor etc.). For this a pointer to the xkey structure is
+passed in the parameter (!I)arg(!i), in which the elements xk_num and xk_def
+must have been set already. After the execution of the command, Fread
+returns the text string (instead of ASCII-0) specified in xk_def. This
+translation only happens, however, if the program has been set into the MiNT
+domain with Pdomain and if the terminal is reading characters using Fread.
+As the string passed in xk_def has to be NULL-terminated, one can pass a
+maximum of 7 characters in this way.
 
 !label TIOCIBAUD
 (!B)TIOCIBAUD (0x5412):(!b)
 (!nl)
-öber dieses Kommando kann die Baudrate fÅr die Eingabe des Terminals
-eingestellt werden. Dazu wird Åber den Parameter (!I)arg(!i) ein Zeiger auf
-einen Long-Wert Åbergeben, in dem die Baudrate angegeben ist.
+With this command one can set the Baud rate for input to the terminal. For
+this a pointer is passed via the parameter (!I)arg(!i) to a LONG value that
+specifies the Baud rate.
 
 !label TIOCOBAUD
 (!B)TIOCOBAUD (0x5413):(!b)
 (!nl)
-öber dieses Kommando kann die Baudrate fÅr die Ausgabe des Terminals
-eingestellt werden. Dazu wird Åber den Parameter (!I)arg(!i) ein Zeiger auf
-einen Long-Wert Åbergeben, in dem die Baudrate angegeben ist.
+With this command one can set the Baud rate for output from the terminal.
+For this a pointer is passed via the parameter (!I)arg(!i) to a LONG value
+that specifies the Baud rate.
 
 !label TIOCCBRK
 (!B)TIOCCBRK (0x5414):(!b)
 (!nl)
-Dieses Kommando lîscht Bit-3 des TSR-Registers des Peripherie-Bausteins
-MFP68901.
+This command clears bit 3 of the TSR register (the break condition) of the
+MFP68901 peripheral component. The parameter (!I)arg(!i) is ignored.
 
 !label TIOCSBRK
 (!B)TIOCSBRK (0x5415):(!b)
 (!nl)
-Dieses Kommando setzt Bit-3 des TSR-Registers des Peripherie-Bausteins
-MFP68901. Dadurch wird ein Break gesendet, sobald das Senderegister leer
-ist. Der Parameter (!I)arg(!i) ist in diesem Zusammenhang ohne Bedeutung.
+This command sets bit 3 of the TSR register of the MFP68901 peripheral
+component. This causes a break signal to be sent as soon as the transmit
+register is empty. The parameter (!I)arg(!i) is ignored.
 
 !label TIOCGFLAGS
 (!B)TIOCGFLAGS (0x5416):(!b)
 (!nl)
-Dieses Kommando gibt Åber den Parameter (!I)arg(!i) einen Zeiger auf die
-Terminal-Kontrollflags zurÅck.
+This command returns in the lower 16 bits of the LONG pointed to by the
+parameter (!I)arg(!i) the terminal (!nolimk [control]) flags (i.e. the
+current stop-bit and data-bit configuration). Valid mask values for
+(!I)arg(!i) are:
+
+!begin_table [r l]
+Mask !! Meaning
+!hkline
+0x0001 !! 1 stop-bit
+0x0002 !! 1.5 stop-bits 
+0x0003 !! 2 stop-bits 
+0x0000 !! 8 data-bits 
+0x0004 !! 7 data-bits 
+0x0008 !! 6 data-bits 
+0x000C !! 5 data-bits 
+!end_table
 
 !label TIOCSFLAGS
 (!B)TIOCSFLAGS (0x5417):(!b)
 (!nl)
-Dieses Kommando setzt neue Terminal-Kontrollflags, die Åber den Parameter
-(!I)arg(!i) Åbergeben werden.
+This command sets new terminal (!nolink [control]) flags that are passed via
+the parameter (!I)arg(!i).
 
 !label TIOCOUTQ
 (!B)TIOCOUTQ (0x5418):(!b)
 (!nl)
-Dieses Kommando gibt in (!I)arg(!i) einen Zeiger auf einen Long-Wert zurÅck,
-in dem die Anzahl der Bytes im Ausgabepuffer gespeichert ist.
+This command returns in (!I)arg(!i) a pointer to a LONG value in which the
+number of bytes in the output buffer is stored.
 
 !label TIOCSETP
 (!B)TIOCSETP (0x5419):(!b)
 (!nl)
-Funktioniert analog zu TIOCSETN, mit dem Unterschied, daû (wenn das Terminal
-TIOCOUTQ unterstÅtzt) die Funktion erst dann zurÅckkehrt, wenn der
-Ausgabepuffer leer ist.
+Functions in a similar way to TIOCSETN, but with the difference that (if the
+terminal supports TIOCOUTQ) the function only returns when the output buffer
+is empty.
 
 !label TCURSOFF
 (!B)TCURSOFF (0x6300):(!b)
 (!nl)
-Dieses Kommando schaltet den Cursor des Terminals aus.
+This command switches off the cursor of the terminal. The parameter
+(!I)arg(!i) is ignored.
 
 !label TCURSON
 (!B)TCURSON (0x6301):(!b)
 (!nl)
-Dieses Kommando schaltet den Cursor des Terminals ein.
+This command switches on the cursor of the terminal. The parameter
+(!I)arg(!i) is ignored.
 
 !label TCURSBLINK
 (!B)TCURSBLINK (0x6302):(!b)
 (!nl)
-Dieses Kommando schaltet den Cursor des Terminals auf Blinken. Die Blinkrate
-lÑût sich per TCURSSRATE einstellen.
+This command switches on blinking of the terminal's cursor. The blink rate
+can be set with TCURSSRATE. The parameter (!I)arg(!i) is ignored.
 
 !label TCURSSTEADY
 (!B)TCURSSTEADY (0x6303):(!b)
 (!nl)
-Dieses Kommando schaltet das Cursor-Blinken des Terminals wieder aus.
+This command switches off blinking of the terminal's cursor again. The
+parameter (!I)arg(!i) is ignored.
 
 !label TCURSSRATE
 (!B)TCURSSRATE (0x6304):(!b)
 (!nl)
-Dieses Kommando setzt die Cursor-Blinkrate des Terminals. Dazu wird in
-(!I)arg(!i) ein Zeiger auf einen Long-Wert Åbergeben, der angibt, nach
-wievielen Vertical-Blanks der Cursor einmal invertiert werden soll.
+This command sets the blink rate of the terminal's cursor. For this a
+pointer to a LONG value is passed in (!I)arg(!i) which specifies after how
+many vertical blanks the cursor is to be inverted.
 
 !label TCURSGRATE
 (!B)TCURSGRATE (0x6305):(!b)
 (!nl)
-Dieses Kommando ermittelt die Cursor-Blinkrate des Terminals. Diese wird in
-einem Long-Wert zurÅckgegeben, auf den (!I)arg(!i) zeigt.
+This command obtains the cursor blink rate of the terminal. This is returned
+in a LONG value to which (!I)arg(!i) points.
 
-!label Fcntl, Prozess-Kommandos fÅr
-Die folgenden Kommandos sind nur auf (als Dateien geîffnete) Prozesse
-anwendbar. Um den eigenen Prozess als Datei zu îffnen, muû als Pfad fÅr
-Fopen 'U:PROC\prozessname.-1' angegeben werden. Dabei wÑhlt die Extension
--1 den eigenen, und -2 den Parent-Prozess.
+!label Fcntl, Process commands for
+(!B)The following commands are applicable only for processes (opened as
+files)(!b). To open your own process as a file, you have to specify the path
+for Fopen as 'U:PROC\processname.-1'. Here the extension -1 selects your
+own, and -2 the parent process.
 
 !label PBASEADDR
 (!B)PBASEADDR (0x5002):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf die Adresse der Basepage, des
-als Datei geîffneten Prozesses zurÅckgegeben. Das Kommando wird in MagiC ab
-Version 3.0 unterstÅtzt.
+In the parameter (!I)arg(!i) a pointer to the address of the
+(!nolink [GEMDOS]) basepage of the process opened as a file is returned. The
+command is supported in MagiC from Version 3.0 onwards.
 
 !label PPROCADDDR
 (!B)PPROCADDDR (0x5001):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf die Adresse des PCB
-(Prozess-Control-Blocks) zurÅckgegeben.
+In the parameter (!I)arg(!i) a pointer to the address of the PCB
+((!B)P(!b)rocess (!B)C(!b)ontrol (!B)B(!b)lock) is returned.
 
 !label PCTXTSIZE
 (!B)PCTXTSIZE (0x5003):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf einen Long-Wert geliefert, in
-dem die LÑnge des Prozess-Control-Blocks angegeben ist. Zwei dieser
-Strukturen befinden sich im Speicher vor dem PCB, dessen Adresse mit
-PPROCADDR erfragt werden kann. Die erste Struktur ist dabei fÅr den
-aktuellen Prozesskontext verantwortlich, wÑhrend die zweite den
-gespeicherten Kontext des letzten Systemaufrufs enthÑlt.
+In the parameter (!I)arg(!i) a pointer to a LONG value is returned in which
+the length of the process context structure is specified. Two of these
+structures lie in memory before the PCB, whose address may be inquired with
+PPROCADDR. The first structure is responsible for the current process
+context, while the second contains the stored context of the last system
+call.
 
 !label PSETFLAGS
 (!B)PSETFLAGS (0x5004):(!b)
 (!nl)
-Dieses Kommando setzt die Programmflags (entsprechend denen im
-Programmheader. In (!I)arg(!i) wird dazu ein Zeiger auf einen Long-Wert
-Åbergeben, dessen untere 16 Bits die Programmflags darstellen.
+This command sets the program flags (corresponding to those in the
+(!link [program header][Program header]). For this a pointer to a LONG value
+is passed in (!I)arg(!i) whose lower 16 bits represent the program flags.
 
 !label PGETFLAGS
 (!B)PGETFLAGS (0x5005):(!b)
 (!nl)
-Dieses Kommando ermittelt die aktuellen (!link [Programmflags][Die Programmflags]). öber den Parameter
-(!I)arg(!i) wird dabei ein Zeiger auf diese Flags zurÅckgegeben.
+This command obtains the current (!link [program flags][Program header]).
+For this a pointer to these flags is returned via the parameter (!I)arg(!i).
 
 !label PTRACESFLAGS
 (!B)PTRACESFLAGS (0x5006):(!b)
 (!nl)
-Dieses Kommando setzt die Prozess-Tracing-Flags. Im Parameter (!I)arg(!i)
-wird ein Zeiger auf einen Long-Wert Åbergeben, der die Flags reprÑsentiert:
+This command sets the process trace flags. A pointer to a LONG value is
+passed in the parameter (!I)arg(!i) that represents the flags:
 !begin_xlist !short [P_ENABLE]
 !item [P_ENABLE]
-= 1 (Tracen einschalten)
+= 1 (Enable tracing)
 !item [P_DOS]
-= 2 (GEMDOS-Aufrufe tracen)
+= 2 (Trace (!nolink [GEMDOS]) calls)
 !item [P_BIOS]
-= 4 (BIOS-Aufrufe tracen)
+= 4 (Trace (!nolink [BIOS]) calls)
 !item [P_XBIOS]
-= 8 (XBIOS-Aufrufe tracen)
+= 8 (Trace (!nolink [XBIOS]) calls)
 !end_xlist
 
 !label PTRACEGFLAGS
 (!B)PTRACEGFLAGS (0x5007):(!b)
 (!nl)
-Dieses Kommando ermittelt die aktuellen Prozess-Tracing Flags. öber den
-Parameter (!I)arg(!i) wird ein Zeiger auf diese Flags zurÅckgegeben.
+This command obtains the current process trace flags. A pointer to these
+flags is returned via the parameter (!I)arg(!i).
 
-(!B)PTRACEGO   (0x5008):(!b) (ab MC-68020 Prozessor) (!nl)
+(!B)PTRACEGO   (0x5008):(!b) (from MC-68020 processor on) (!nl)
 (!B)PTRACEFLOW (0x5009):(!b) (!nl)
 (!B)PTRACESTEP (0x500a):(!b) (!nl)
 (!B)PTRACE11   (0x500b):(!b) (!nl)
-Diese Funktionen sollen einmal das Tracen von Prozessen ermîglichen. Der zu
-tracende Prozess muû sich dafÅr im Zustand 'suspendiert' befinden. Er wird
-durch die Trace Funktion wieder aufgeweckt. Diese Funktionen sind z.Zt.
-jedoch noch nicht implementiert.
+These functions should in future enable tracing of processes. The process to
+be traced must be in the 'suspended' state for this; it will be reawakened
+by the trace function. These functions are however not yet implemented at
+present.
 
 !label PLOADINFO
 (!B)PLOADINFO (0x500c):(!b)
 (!nl)
-Dieses Kommando gibt in (!I)arg(!i) einen Zeiger auf die ploadinfo Struktur
-zurÅck, in der Programmname und Kommandozeile gespeichert sind.
+This command returns in (!I)arg(!i) a pointer to the ploadinfo structure, in
+which the program name and command line are stored.
 
 !label PFSTAT
 (!B)PFSTAT (0x500d):(!b)
 (!nl)
-Dieses Kommando entspricht FSTAT. Es ermittelt die erweiterten Attribute der
-zum Prozess gehîrenden Programmdatei.
+This command corresponds to FSTAT. It obtains the extended attributes of the
+program file belonging to the process.
 
-!label Fcntl, SharedMem-Kommandos fÅr
-Die folgenden Kommandos sind nur auf Dateien anwendbar, die Shared Memory
-reprÑsentieren:
+!label Fcntl, SharedMem commands for
+(!B)The following commands are applicable only to files that represent
+(link [shared memory][Shared memory]):(!b)
 
 !label SHMGETBLK
 (!B)SHMGETBLK (0x4d00):(!b)
 (!nl)
-Dieses Kommando liefert die Adresse eines per SHMSETBLK allozierten
-Speicherblocks zurÅck (bzw. einen Nullzeiger bei Fehlern). Aus
-KompatibilitÑtsgrÅnden muû der Parameter (!I)arg(!i) auf den Wert 0 gesetzt
-werden. (!B)Hinweis:(!b) Verschiedene Prozesse kînnen den Speicherblock an
-unterschiedlichen Stellen in ihrem Adressraum sehen. Aus diesem Grund darf
-ein Shared-Memory-Bereich keine absoluten Zeiger auf Daten enthalten! Das
-Kommando wird in MagiC ab Version 3.0 unterstÅtzt.
+This command returns the address of a memory block allocated with SHMSETBLK
+(or a NULL-pointer in case of error). For the sake of compatibility the
+parameter (!I)arg(!i) must be set to the value 0. (!B)Note:(!b) Different
+processes may see the memory block at different positions in their address
+space. For this reason a (!link [shared memory][Shared memory]) block may
+not contain absolute pointers to data! The command is supported in MagiC as
+of Version 3.0.
 
 !label SHMSETBLK
 (!B)SHMSETBLK (0x4d01):(!b)
 (!nl)
-Im Parameter (!I)arg(!i) wird ein Zeiger auf einen Speicherblock Åbergeben,
-welcher vorher per Malloc/Mxalloc alloziert wurde. Der Speicher wird nun
-unter dem Dateinamen der Datei mit Handle (!I)fh(!i) zum Sharing angeboten.
-Die Datei muû dazu im Unterverzeichnis U:\SHM angelegt werden. Der Block
-wird derart markiert, daû er nicht beim Beenden des Prozesses freigegeben
-wird. Die LÑnge wird ermittelt und sowohl fÅr die geîffnete Datei verwendet,
-als auch in das Verzeichnis eingetragen. UngÅltige Blockadressen fÅhren zum
-Fehlercode EIMBA oder zu einem Bus- oder Adreûfehler. Das Kommando wird in
-MagiC ab Version 3.0 unterstÅtzt.
+A pointer is passed in the parameter (!I)arg(!i) to a memory block that was
+earlier allocated with Malloc/Mxalloc. The memory is then offered for
+sharing under the filename of the file with the handle (!I)fh(!i). For this
+the file must be created in the subdirectory U:\SHM. The block is marked in
+such a way that it will not be released at the termination of the process.
+The length will be obtained and used both for the opened file as well as
+entered in the directory. Invalid block addresses lead to the error-code
+EIMBA or to a bus- or address-error. The command is supported in MagiC as of
+Version 3.0.
 
-!label Fcntl, CD-ROM-Kommandos fÅr
-!label CD-ROM-Funktionen
-Die folgenden Kommandos sind im Zusammenhang mit CD-ROM's interessant:
+!label Fcntl, CD-ROM commands for
+!label CD-ROM functions
+(!B)The following commands are of interest in connection with
+(!nolink [CD])-ROM's:(!b)
 
 !label CDROMREADOFFSET
 (!B)CDROMREADOFFSET (0x4300):(!b)
 (!nl)
-Dieses Kommando ermittelt die Blocknummer des ersten Sektors der letzten
-Session einer Multi-Session-CD. Der Parameter (!I)arg(!i) enthÑlt nach dem
-Aufruf diese Blocknummer.
+This command obtains the block number of the first sector of the last
+session of a multi-session (!nolink [CD]). The parameter (!I)arg(!i)
+contains this block number after the call.
 
 !label CDROMPAUSE
 (!B)CDROMPAUSE (0x4301):(!b)
 (!nl)
-Dieses Kommando veranlaût ein CD-ROM beim Abspielen einer Audio-CD in den
-Status Pause zu treten.
+This command causes a (!nolink [CD])-ROM to enter the pause state when
+playing an audio (!nolink [CD]).
 
 !label CDROMRESUME
 (!B)CDROMRESUME (0x4302):(!b)
 (!nl)
-Dieses Kommando veranlaût ein CD-ROM das Abspielen einer Audio-CD
-fortzusetzen (Pause wird aufgehoben).
+This command causes a (!nolink [CD])-ROM to resume playing of an audio
+(!nolink [CD]) (pause is rescinded).
 
 !label CDROMPLAYMSF
 (!B)CDROMPLAYMSF (0x4303):(!b)
 (!nl)
-Dieses Kommando startet eine Audio-Wiedergabe. Der Parameter (!I)arg(!i) ist
-ein Zeiger auf eine cdrom_msf-Struktur, in die Anfangs- und Endzeit in
-MSF-Notation einzutragen sind.
+This command starts audio playback. The parameter (!I)arg(!i) is a pointer
+to a cdrom_msf structure, in which the start and end times are to be entered
+in MSF notation.
 
 !label CDROMPLAYTRKIND
 (!B)CDROMPLAYTRKIND (0x4304):(!b)
 (!nl)
-Dieses Kommando startet eine Audio-Wiedergabe. Der Parameter (!I)arg(!i) ist
-ein Zeiger auf eine cdrom_ti-Struktur, in die Start- und Endposition in
-Track/Index-Schreibweise einzutragen sind. Bei den meisten Audio-CD's aus
-dem POP Bereich sind die Tracks nicht weiter eingeteilt. Viele Klassik-CD's
-haben aber auch innerhalb der Tracks noch eine feinere Einstellung in
-Indices. (!B)Achtung:(!b) Nicht jedes CD-ROM kann gezielt Indizes ungleich
-Eins ansteuern!
+This command starts audio playback. The parameter (!I)arg(!i) is a pointer
+to a cdrom_ti structure in which the start and end positions are to be
+entered in track/index notation. In most audio (!nolink [CD])'s from the POP
+world the tracks are not subdivided any further. But many classical
+(!nolink [CD])'s also have finer markings within tracks as indices.
+(!B)Warning:(!b) Not every (!nolink [CD])-ROM can access directly indices
+other than 1!
 
 !label CDROMREADTOCHDR
 (!B)CDROMREADTOCHDR (0x4305):(!b)
 (!nl)
-Dieses Kommando erlaubt es, Informationen Åber den Aufbau einer CD zu
-ermitteln. Der Parameter (!I)arg(!i) ist ein Zeiger auf eine
-cdrom_tochdr-Struktur, in welche der erste und letzte Track der CD
-eingetragen werden.
+This command allows one to obtain information about the structure of a
+(!nolink [CD]). The parameter (!I)arg(!i) is a pointer to a cdrom_tochdr
+structure in which the first and last track of the (!nolink [CD]) are
+entered.
 
 !label CDROMREADTOCENTRY
 (!B)CDROMREADTOCENTRY (0x4306):(!b)
 (!nl)
-Dieses Kommando erlaubt es, Informationen Åber den Aufbau einer CD zu
-ermitteln. Der Parameter (!I)arg(!i) ist ein Zeiger auf eine
-cdrom_tocentry-Struktur, in welche die gewÅnschten Informationen eingetragen
-werden.
+This command allows one to obtain further information about the structure of
+a (!nolink [CD]). The parameter (!I)arg(!i) is a pointer to a cdrom_tocentry
+structure in which the desired information is entered.
 
 !label CDROMSTOP
 (!B)CDROMSTOP (0x4307):(!b)
 (!nl)
-Dieses Kommando stoppt das entsprechende Laufwerk.
+This command stops the corresponding drive.
 
 !label CDROMSTART
 (!B)CDROMSTART (0x4308):(!b)
 (!nl)
-Dieses Kommando startet das entsprechende Laufwerk, und zieht ggfs. die
-Schublade wieder ein.
+This command starts the corresponding drive, and may also close the drawer.
 
 !label CDROMEJECT
 (!B)CDROMEJECT (0x4309):(!b)
 (!nl)
-Dieses Kommando sorgt fÅr das Ausfahren der Schublade des entsprechenden
-Laufwerkes.
+This command serves for opening the drawer of the corresponding drive.
 
 !label CDROMVOLCTRL
 (!B)CDROMVOLCTRL (0x430a):(!b)
 (!nl)
-Dieses Kommando erlaubt es, die LautstÑrke und Kanalzuordnungen der
-einzelnen Audio-KanÑle zu verÑndern. Der Parameter (!I)arg(!i) ist ein
-Zeiger auf eine cdrom_volctrl-Struktur. Das Kommando ist zum entsprechenden
-SunOS-Aufruf kompatibel. (!B)Achtung:(!b) Das Verstellen der LautstÑrke ist
-nicht bei allen GerÑten mîglich!
+This command permits altering the volume and channel assignments of the
+individual audio channels. The parameter (!I)arg(!i) is a pointer to a
+cdrom_volctrl structure. The command is compatible to the corresponding
+SunOS call. (!B)Warning:(!b) Altering the volume is not possible with all
+devices!
 
 !label CDROMSUBCHNL
 (!B)CDROMSUBCHNL (0x430b):(!b)
 (!nl)
-Dieses Kommando ermittelt die aktuellen Positionsdaten, sowie den
-Audio-Status. Der Parameter (!I)arg(!i) ist ein Zeiger auf eine
-cdrom_subchnl-Struktur.
+This command obtains the current position data, as well as the audio state.
+The parameter (!I)arg(!i) is a pointer to a cdrom_subchnl structure.
 
 !label CDROMREADMODE2
 (!B)CDROMREADMODE2 (0x430c):(!b)
 (!nl)
-Dieses Kommando ermîglicht das Lesen von Modus-2 Sektoren. Solche Sektoren
-werden bei XA-CDs (Beispiel: Photo-CD ohne Fehlerkorrektur oder Video-CD)
-verwendet und enthalten 2336 Bytes. Der Parameter (!I)arg(!i) ist ein Zeiger
-auf eine cdrom_read Struktur. (!B)Achtung:(!b) Nicht alle GerÑte kînnen
-diese Sektortypen lesen, und nicht alle Treiber bieten diese Funktion an.
+This command enables reading of Mode-2 sectors. Such sectors are used by
+XA-CDs (e.g.: Photo-CDs without error correction or Video-CDs) and contain
+2336 bytes. The parameter (!I)arg(!i) is a pointer to a cdrom_read
+structure. (!B)Warning:(!b) Not all devices can read these sector types, and
+not all drivers offer this function.
 
 !label CDROMREADMODE1
 (!B)CDROMREADMODE1 (0x430d):(!b)
 (!nl)
-Dieses Kommando ermîglicht das Lesen von Modus-1 Sektoren. Solche Sektoren
-sind 2048 Bytes groû, und werden auf normalen CD-ROMs benutzt. Der Parameter
-(!I)arg(!i) ist ein Zeiger auf eine cdrom_read-Struktur. (!B)Achtung:(!b)
-Nicht alle GerÑte kînnen diese Sektortypen lesen, und nicht alle Treiber
-bieten diese Funktion an.
+This command enables reading of Mode-1 sectors. Such sectors have a size of
+2048 bytes and are used on normal (!nolink [CD])-ROMs. The parameter
+(!I)arg(!i) is a pointer to a cdrom_read structure. (!B)Warning:(!b) Not all
+devices can read these sector types, and not all drivers offer this
+function.
 
 !label CDROMPREVENTREMOVAL
 (!B)CDROMPREVENTREMOVAL (0x430e):(!b)
 (!nl)
-Dieses Kommando sperrt die Auswurffunktion des entsprechenden CD-ROMs. Dies
-kann z.B. nÅtzlich sein, wenn das GerÑt an einem îffentlichen Ort steht, und
-man dem CD-Klau vorbeugen will.
+This command blocks the eject function of the corresponding
+(!nolink [CD])-ROM. This can be useful, for instance, if the device is
+positioned in a public place and one wants to prevent theft of the
+(!nolink [CD]).
 
 !label CDROMALLOWREMOVAL
 (!B)CDROMALLOWRMOVAL (0x430f):(!b)
 (!nl)
-Dieses Kommando gibt den Auswurf des entsprechenden CD-ROMs wieder frei.
+This command releases the eject function of the corresponding
+(!nolink [CD])-ROM once more.
 
 !label CDROMAUDIOCTRL
 (!B)CDROMAUDIOCTRL (0x4310):(!b)
 (!nl)
-Diese Kommando erlaubt es, die LautstÑrke und Kanalzuordnungen der
-einzelnen Audio-KanÑle zu verÑndern. Der Parameter (!I)arg(!i) ist ein
-Zeiger auf eine cdrom_audioctrl-Struktur. Indem man die Komponente set
-dieser Struktur auf den Wert Null setzt, kînnen die aktuellen Einstellungen
-erfragt werden. (!B)Achtung:(!b) Das Verstellen der LautstÑrke ist nicht bei
-allen GerÑten mîglich!
+This command permits altering the volume and channel assignments of the
+individual audio channels. The parameter (!I)arg(!i) is a pointer to a
+cdrom_audioctrl structure. By setting the element (!I)set(!i) of this
+structure to the value 0, one can inquire the current settings.
+(!B)Warning:(!b) Altering the volume is not possible with all devices!
 
 !label CDROMREADDA
 (!B)CDROMREADDA (0x4311):(!b)
 (!nl)
-Dieses Kommando ermîglicht das Lesen von Digital-Audio (DA) Sektoren. Solche
-Sektoren sind 2352 Bytes groû, und enthalten pro Sektor 588 Samples im
-16-Bit-Stereo-PCM Format. Der Parameter (!I)arg(!i) ist ein Zeiger auf eine
-cdrom_read Struktur. (!B)Achtung:(!b) Nicht alle GerÑte kînnen diese
-Sektortypen lesen, und nicht alle Treiber bieten diese Funktion an.
+This command permits the reading of Digital Audio (DA) sectors. Such sectors
+have a size of 2352 bytes, and contain per sector 588 samples in 16-bit
+stereo-PCM format. The parameter (!I)arg(!i) is a pointer to a cdrom_read
+structure. (!B)Warning:(!b) Not all devices can read these sector types, and
+not all drivers offer this function.
 
 !label CDROMGETMCN
 (!B)CDROMGETMCN (0x4313):(!b)
 (!nl)
-Dieses Kommando ermittelt die Media Catalog Number, die theoretisch benutzt
-werden kann, um eine CD einwandfrei zu identifizieren. Leider ist diese
-Information auf den allerwenigsten CDs vorhanden. Der Parameter (!I)arg(!i)
-ist ein Zeiger auf eine cdrom_mcn-Struktur.
+This command obtains the Media Catalog Number, which can be used
+theoretically to identify a (!nolink [CD]) easily. Unfortunately this
+information is present in only very few CDs. The parameter (!I)arg(!i) is a
+pointer to a cdrom_mcn structure.
 
 !label CDROMGETTISRC
 (!B)CDROMGETTISRC (0x4314):(!b)
 (!nl)
-Dieses Kommando ermittelt den Track-International-Standard Recording-Code,
-der eine eindeutige Kennzeichnung fÅr einzelne Tracks darstellen soll. Der
-Parameter (!I)arg(!i) ist ein Zeiger auf eine cdrom_tisrc-Struktur.
+This command obtains the Track International Standard Recording Code, which
+should represent unique identifiers for individual tracks. The parameter
+(!I)arg(!i) is a pointer to a cdrom_tisrc structure.
 
-!item [(!nolink [Return]) Value:]
-Die Funktion kann folgende RÅckgabewerte liefern:
+!item [(!nolink [Return]) value:]
+The function can return the following results:
 !begin_xlist !short [EINVFN :]
 !item [>= 0 :]
-kein Fehler aufgetreten (Abweichungen s.o.)
+No error occurred (deviations see above).
 !item [EIHNDL :]
-ungÅltiges Datei-Handle.
+Invalid file handle.
 !item [EINVFN :]
-Kommando kann mit dem Handle (!I)fh(!i) nicht ausgefÅhrt werden.
+Command cannot be executed with the handle (!I)fh(!i).
 !end_xlist
 
 !item [Availability:] This function is available under all MiNT versions
-              integrated with MultiTOS and MagiC since Version 3.0.
+integrated with MultiTOS, and MagiC as of Version 3.0.
               
 !item [Group:]
-File Functions
+File functions.
 
-!item [See Also:] (!link [Binding] [Bindings for Fcntl]) ~ Fdup ~ Flock ~
+!item [See also:] (!link [Binding] [Bindings for Fcntl]) ~ Fdup ~ Flock ~
         Fopen ~ Fxattr ~  Pgetpgrp ~
-        Psetpgrp ~  Metaioctl ~  CD-ROM Definitionen
+        Psetpgrp ~  Metaioctl ~  CD-ROM definitions
 (!ende_liste)
 
 
@@ -674,14 +689,8 @@ move.l    arg,-(sp)    ; Offset 4
 move.w    fh,-(sp)     ; Offset 2
 move.w    #260,-(sp)   ; Offset 0
 trap      #1           ; GEMDOS
-lea       $A(sp),sp    ; correct stack
+lea       $A(sp),sp    ; Correct stack
 !end_verbatim
-!ifdest [html]
-!item [GFA-Basic]
-!begin_raw
-<A HREF="http://www.milanstation.de/at/gfahutil/gfau7gd.htm">GFA-H-Util GEMDOS</A>
-!end_raw
-!endif
 (!ende_liste)
 !end_node
 !end_node

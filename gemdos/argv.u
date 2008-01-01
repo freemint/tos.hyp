@@ -1,3 +1,124 @@
+!iflang [english]
+
+!begin_node ARGV procedure
+!label Command lines, extended
+
+The ARGV procedure serves for passing extended command lines, and was
+specified officially in the autumn of 1989 by (!I)Ken Badertscher(!i) (of
+Atari USA). The procedure works as follows:
+
+The environmental variable ARGV indicates that this procedure is being used;
+the value of the variables does (!I)not(!i) play a part in this, only its
+presence is decisive. The ARGV variable must be the last environmental
+variable, so that the called program can continue to use the "front" part as
+its normal environment.
+
+The extended command line is now simply written as a series of strings
+(NULL-terminated !) after ARGV in the environment. The first string here
+contains the name of the launched program, in the same way that it is passed
+with (!nolink [Pexec]) (and corresponds to the so far unused argv[0]). The
+following strings contain the individual parameters, in which space
+characters may appear too; the end of the list is indicated by a double 0,
+as for a normal environment.
+
+Beyond that one passes the value 127 with (!nolink [Pexec]) as the
+length-byte (first byte of the command line), which due to the existing
+length restriction to 125 bytes could not be accepted until now. This allows
+the called program to make sure that the values passed in the environment
+are really valid and have not been left behind by a program that does not
+know the ARGV standard, perhaps.
+
+Depending on whether one wants to pass parameters to programs via ARGV or
+just to read them, one proceeds in one of the following two ways:
+
+ù ARGV with a launched program
+!label ARGV with a launched program
+
+First establish whether the variable ARGV is present in the environment. If
+this is the case (!I)and(!i) the command line length-byte has the value 127,
+then one finds after the first 0 following ARGV (since the variable could
+have a value) the individual command line parameters. At the end one should
+set the first letter of 'ARGV' to 0 so that the environment takes the
+standard form again.
+
+ù ARGV at the caller
+!label ARGV at the caller
+
+First a new environment has to be created for the program to be called. To
+do this, calculate, say, the length of the environment already present, add
+the length of the command line and allocate a corresponding number of bytes.
+Then copy the existing environment (and during this remove any existing ARGV
+variable), followed by the command line parameters one after the other (each
+NULL-terminated). A final NULL concludes the environment. At the end pass
+the magic value 127 in the length-byte of the command line.
+
+ù Extension of the ARGV procedure
+!label ARGV procedure, extended
+
+A problem with the original definition of the ARGV procedure was not being
+able to pass (!I)empty(!i) parameters (two zeros following each other will
+terminate the environment !). To be able to pass these nevertheless, the
+procedure was extended as follows:
+
+!begin_itemize
+!item Empty parameters are set in the command line in (!I)single(!i)
+quotation marks, and appear in the environment as (!I)exactly(!i) one space.
+!item A value is defined for the variable ARGV: if this starts with 'NULL:',
+the rest of the line contains comma-separated positions of the empty
+parameters. (!B)Example:(!b) ARGV=NULL:3,5,9 means that argv[3], argv[5] and
+argv[9] are empty. The startup code should then be responsible for deleting
+the corresponding parameters.
+!end_itemize
+
+(!B)Note:(!b) To ensure maximum compatibility to old programs, the extended
+ARGV procedure should be used @{I}only when@{0} empty parameters actually
+have to be passed. In all other cases one should fall back to the original
+definiton.
+
+ù ARGV procedure as of MagiC 3.0
+!label ARGV procedure as of MagiC 3.0
+!label MagiC, MagiC, ARGV procedure in
+
+From (!nolink [MagiC]) 3 onwards the ARGV procedure is supported by Pexec in
+three different ways:
+
+!begin_itemize
+!item (!B)If the length-byte of the command line is 127(!b),
+(!nolink [Pexec]) assumes that the calling program supports ARGV and the
+environment has been manipulated accordingly already; the environment is not
+changed, therefore.
+!item (!B)If the length-byte is 254(!b), (!nolink [MagiC]) expects directly
+after it the string "ARGV=", followed by a NULL-byte and a list of
+parameters terminated by two NULL-bytes. By passing "ARGV=NULL..." etc. one
+can also use the extended ARGV procedure that permits passing of empty
+parameters (see above).
+
+(!nolink [Pexec]) deletes any ARGV present and enters the new environment.
+The command line consists only of the value 127 as an indicator that the
+parameters lie in the environment. This procedure is suitable if it is
+certain that the called program can handle the ARGV procedure.
+!item (!B)If the length-byte is 255(!b), (!nolink [MagiC]) expects directly
+after it a space-separated and NULL-byte terminated list of parameters (as
+the command line is passed generally). (!nolink [Pexec]) deletes any ARGV
+that may be present, creates a list of arguments from the command line and
+enters these as ARGV into the environment. The program file path that was
+passed to (!nolink [Pexec]) will be taken as argv[0]. If this path is
+invalid the result will be rubbish, so one should pass a sensible program
+name even with mode 5 of (!nolink [Pexec]) (create basepage). With mode 7,
+argv[0] will simply be called "NONAME", since no name is passed in this
+case.
+
+The command line has 127 as a length-byte as an indicator of the presence of
+ARGV. If the length of the command line is < 127, then it will also be
+copied to the basepage, otherwise the command line consists only of the
+value 127. This procedure is suitable if the called program is not certain
+that it understands ARGV.
+!end_itemize
+
+!end_node
+
+!else
+
 !begin_node ARGV-Verfahren
 !label Kommandozeilen, erweiterte
 
@@ -122,3 +243,5 @@ nicht sicher ist, daž das aufgerufene Programm ARGV versteht.
 !end_itemize
 
 !end_node
+
+!endif

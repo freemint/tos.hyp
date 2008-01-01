@@ -3,170 +3,156 @@
 !begin_node Ptrace
 (!begin_liste) [Availability]
 !item [Name:]
-¯Ptrace® -  process tracing and debugging
+¯Ptrace® -  Process tracing and debugging
 !item [Opcode:]
 265
 !item [Syntax:]
 int16_t Ptrace(int16_t request, int16_t pid, void * addr, int32_t data)
 
 !item [Description:]
-     Ptrace provides tracing and debugging facilities.  It allows one pro-
-     cess (the tracing process) to control another (the traced process).  Most
-     of the time, the traced process runs normally, but when it receives a
-     signal (see sigaction(2)), it stops.  The tracing process is expected to
-     notice this via wait(2) or the delivery of a SIGCHLD signal, examine the
-     state of the stopped process, and cause it to terminate or continue as
-     appropriate.  Ptrace is the mechanism by which all this happens.
+Ptrace provides tracing and debugging facilities. It allows one process (the
+tracing process) to (!nolink [control]) another (the traced process). Most
+of the time, the traced process runs normally, but when it receives a signal
+(see sigaction(2)), it stops. The tracing process is expected to notice this
+via wait(2) or the delivery of a SIGCHLD signal, examine the state of the
+stopped process, and cause it to terminate or continue as appropriate.
+Ptrace is the mechanism by which all this happens.
 
-     The request argument specifies what operation is being performed; the
-     meaning of the rest of the arguments depends on the operation, but except
-     for one special case noted below, all ptrace calls are made by the
-     tracing process, and the pid argument specifies the process ID of the
-     traced process.  request can be:
+The (!I)request(!i) argument specifies what operation is being performed;
+the meaning of the rest of the arguments depends on the operation, but
+except for one special case noted below, all ptrace calls are made by the
+tracing process, and the (!I)pid(!i) argument specifies the process ID of
+the traced process. (!I)request(!i) can be:
 !begin_xlist [PT_TRACE_ME]
 !label PT_TRACE_ME
-     !item [PT_TRACE_ME (0)]   This request is the only one used by the traced process; it
-                   declares that the process expects to be traced by its par-
-                   ent.  All the other arguments are ignored.  (If the parent
-                   process does not expect to trace the child, it will proba-
-                   bly be rather confused by the results; once the traced pro-
-                   cess stops, it cannot be made to continue except via
-                   ptrace.)  When a process has used this request and calls
-                   execve(2) or any of the routines built on it (such as
-                   execv(3)), it will stop before executing the first instruc-
-                   tion of the new image.  Also, any setuid or setgid bits on
-                   the executable being executed will be ignored.
+!item [PT_TRACE_ME (0)]
+This request is the only one used by the traced process; it declares that
+the process expects to be traced by its parent. All the other arguments are
+ignored. (If the parent process does not expect to trace the child, it will
+probably be rather confused by the results; once the traced process stops,
+it cannot be made to continue except via ptrace.) When a process has used
+this request and calls execve(2) or any of the routines built on it (such as
+execv(3)), it will stop before executing the first instruction of the new
+image. Also, any setuid or setgid bits on the executable being executed will
+be ignored.
 
 !label PT_READ_I
 !label PT_READ_D
-     !item [PT_READ_I (1), PT_READ_D (2)] (!nl)
-                   These requests read a single int of data from the traced
-                   process' address space.  Traditionally, ptrace has al-
-                   lowed for machines with distinct address spaces for in-
-                   struction and data, which is why there are two requests:
-                   conceptually, PT_READ_I reads from the instruction space
-                   and PT_READ_D reads from the data space.  In the current
-                   NetBSD implementation, these two requests are completely
-                   identical.  The addr argument specifies the address (in the
-                   traced process' virtual address space) at which the read is
-                   to be done.  This address does not have to meet any align-
-                   ment constraints.  The value read is returned as the return
-                   value from ptrace.
+!item [PT_READ_I (1), PT_READ_D (2)] (!nl)
+These requests read a single int of data from the traced process' address
+space. Traditionally, ptrace has allowed for machines with distinct address
+spaces for instruction and data, which is why there are two requests:
+conceptually, PT_READ_I reads from the instruction space and PT_READ_D reads
+from the data space. In the current NetBSD implementation, these two
+requests are completely identical. The addr argument specifies the address
+(in the traced process' virtual address space) at which the read is to be
+done. This address does not have to meet any alignment constraints. The
+value read is returned as the return value from ptrace.
 
 !label PT_WRITE_I
 !label PT_WRITE_D 
-     !item [PT_WRITE_I (4), PT_WRITE_D (5)] (!nl)
-                   These requests parallel PT_READ_I and PT_READ_D, except
-                   that they write rather than read.  The data argument sup-
-                   plies the value to be written.
+!item [PT_WRITE_I (4), PT_WRITE_D (5)] (!nl)
+These requests parallel PT_READ_I and PT_READ_D, except that they write
+rather than read. The data argument supplies the value to be written.
 
 !label PT_CONTINUE
-     !item [PT_CONTINUE (7)]   The traced process continues execution.  addr is an address
-                   specifying the place where execution is to be resumed (a
-                   new value for the program counter), or (caddr_t)1 to indi-
-                   cate that execution is to pick up where it left off.  data
-                   provides a signal number to be delivered to the traced pro-
-                   cess as it resumes execution, or 0 if no signal is to be
-                   sent.
+!item [PT_CONTINUE (7)]
+The traced process continues execution. (!I)addr(!i) is an address
+specifying the place where execution is to be resumed (a new value for the
+program counter), or (caddr_t)1 to indicate that execution is to pick up
+where it left off. (!I)data(!i) provides a signal number to be delivered to
+the traced process as it resumes execution, or 0 if no signal is to be sent.
 
 !label PT_KILL
-     !item [PT_KILL (8)]       The traced process terminates, as if PT_CONTINUE had been
-                   used with SIGKILL given as the signal to be delivered.
+!item [PT_KILL (8)]
+The traced process terminates, as if PT_CONTINUE had been used with SIGKILL
+given as the signal to be delivered.
 
 !label PT_ATTACH
-     !item [PT_ATTACH (9)]     This request allows a process to gain control of an other-
-                   wise unrelated process and begin tracing it.  It does not
-                   need any cooperation from the to-be-traced process.  In
-                   this case, pid specifies the process ID of the to-be-traced
-                   process, and the other two arguments are ignored.  This re-
-                   quest requires that the target process must have the same
-                   real UID as the tracing process, and that it must not be
-                   executing a setuid or setgid executable.  (If the tracing
-                   process is running as root, these restrictions do not ap-
-                   ply.)  The tracing process will see the newly-traced pro-
-                   cess stop and may then control it as if it had been traced
-                   all along.
+!item [PT_ATTACH (9)]
+This request allows a process to gain (!nolink [control]) of an otherwise
+unrelated process and begin tracing it. It does not need any cooperation
+from the to-be-traced process. In this case, (!I)pid(!i) specifies the
+process ID of the to-be-traced process, and the other two arguments are
+ignored. This request requires that the target process must have the same
+real UID as the tracing process, and that it must not be executing a setuid
+or setgid executable. (If the tracing process is running as root, these
+restrictions do not apply.) The tracing process will see the newly-traced
+process stop and may then control it as if it had been traced all along.
 
-                   Two other restrictions apply to all tracing processes, even
-                   those running as root.  First, no process may trace the
-                   process running init(8).  Second, if a process has its root
-                   directory set with chroot(2), it may not trace another pro-
-                   cess unless that process's root directory is at or below
-                   the tracing process's root.
+Two other restrictions apply to all tracing processes, even those running as
+root. First, no process may trace the process running init(8). Second, if a
+process has its root directory set with chroot(2), it may not trace another
+process unless that process' root directory is at or below the tracing
+process' root.
 
 !label PT_DETACH
-     !item [PT_DETACH (10)]     This request is like PT_CONTINUE, except that it does not
-                   allow specifying an alternative place to continue execu-
-                   tion, and after it succeeds, the traced process is no
-                   longer traced and continues execution normally.
+!item [PT_DETACH (10)]
+This request is like PT_CONTINUE, except that it does not allow specifying
+an alternative place to continue execution, and after it succeeds, the
+traced process is no longer traced and continues execution normally.
 
 !label PT_SYSCALL
-		!item [PT_SYSCALL (11)] Continue and stop at next return from syscall.
-
+!item [PT_SYSCALL (11)]
+Continue and stop at next return from syscall.
 !end_xlist
-     Additionally, machine-specific requests can exist.  On the SPARC, these
-     are:
+Additionally, machine-specific requests can exist. On the SPARC, these are:
 
 !begin_xlist
-     !item [PT_GETREGS]    This request reads the traced process' machine registers
-                   into the ``struct reg'' (defined in <machine/reg.h>) point-
-                   ed to by addr.
-
-     !item [PT_SETREGS]    This request is the converse of PT_GETREGS; it loads the
-                   traced process' machine registers from the ``struct reg''
-                   (defined in <machine/reg.h>) pointed to by addr.
-
-     !item [PT_GETFPREGS]  This request reads the traced process' floating-point reg-
-                   isters into the ``struct fpreg'' (defined in
-                   <machine/reg.h>) pointed to by addr.
-
-     !item [PT_SETFPREGS]  This request is the converse of PT_GETFPREGS; it loads the
-                   traced process' floating-point registers from the ``struct
-                   fpreg'' (defined in <machine/reg.h>) pointed to by addr.
+!item [PT_GETREGS]
+This request reads the traced process' machine registers into the
+struct reg (defined in <machine/reg.h>) pointed to by (!I)addr(!i).
+!item [PT_SETREGS]
+This request is the converse of PT_GETREGS; it loads the traced process'
+machine registers from the struct reg (defined in <machine/reg.h>) pointed
+to by (!I)addr(!i).
+!item [PT_GETFPREGS]
+This request reads the traced process' floating-point registers into the
+struct fpreg (defined in <machine/reg.h>) pointed to by (!I)addr(!i).
+!item [PT_SETFPREGS]
+This request is the converse of PT_GETFPREGS; it loads the traced process'
+floating-point registers from the struct fpreg (defined in <machine/reg.h>)
+pointed to by (!I)addr(!i).
 !end_xlist
 
-!item [(!nolink [Return]) Value:]
-      Some requests can cause ptrace to return -1 as a non-error value; to
-      disambiguate, errno can be set to 0 before the call and checked after-
-      wards.  The possible errors are:
+!item [(!nolink [Return]) alue:]
+Some requests can cause ptrace to return -1 as a non-error value; to
+disambiguate, errno can be set to 0 before the call and checked afterwards.
+The possible errors are:
 !begin_xlist [EINVAL]
 !item [ww]
-            No process having the specified process ID exists.
-
+No process having the specified process ID exists.
 !item [EINVAL]
-	!begin_itemize !short
-            !item   A process attempted to use PT_ATTACH on itself.
-            !item   The request was not one of the legal requests.
-            !item   The signal number (in data) to PT_CONTINUE was neither 0 nor a
-                legal signal number.
-            !item   PT_GETREGS, PT_SETREGS, PT_GETFPREGS, or PT_SETFPREGS was at-
-                tempted on a process with no valid register set.  (This is nor-
-                mally true only of system processes.)
-	!end_itemize
+!begin_itemize !short
+!item A process attempted to use PT_ATTACH on itself.
+!item The request was not one of the legal requests.
+!item The signal number (in (!I)data(!i)) to PT_CONTINUE was neither 0 nor a
+      legal signal number.
+!item PT_GETREGS, PT_SETREGS, PT_GETFPREGS, or PT_SETFPREGS was attempted on
+      a process with no valid register set. (This is normally true only of
+      system processes.)
+!end_itemize
 !item [EBUSY]
- 	!begin_itemize !short
-            !item   PT_ATTACH was attempted on a process that was already being
-                traced.
-            !item A request attempted to manipulate a process that was being
-                traced by some process other than the one making the request.
-            !item A request (other than PT_ATTACH) specified a process that
-                wasn't stopped.
-	!end_itemize
-
+!begin_itemize !short
+!item PT_ATTACH was attempted on a process that was already being traced.
+!item A request attempted to manipulate a process that was being traced by
+      some process other than the one making the request.
+!item A request (other than PT_ATTACH) specified a process that wasn't
+      stopped.
+!end_itemize
 !item [EPERM]
- 	!begin_itemize !short
-            !item A request (other than PT_ATTACH) attempted to manipulate a pro-
-                cess that wasn't being traced at all.
-            !item An attempt was made to use PT_ATTACH on a process in violation
-                of the requirements listed under PT_ATTACH above.
-	!end_itemize
-
+!begin_itemize !short
+!item A request (other than PT_ATTACH) attempted to manipulate a process
+      that wasn't being traced at all.
+!item An attempt was made to use PT_ATTACH on a process in violation of the
+      requirements listed under PT_ATTACH above.
+!end_itemize
 !end_xlist
 !item [Availability:]
-This function is available since FreeMiNT 1.15.11.
+This function is available as of FreeMiNT 1.15.11.
 
 !item [Group:]
-Process Functions
+Process functions
 
 !item [See Also:] (!link [Binding] [Bindings for Ptrace])
 (!ende_liste)
@@ -186,7 +172,7 @@ move.w    pid          ; Offset 4
 move.w    request      ; Offset 2
 move.w    #265,-(sp)   ; Offset 0
 trap      #1           ; GEMDOS
-addq.l    #14,sp       ; correct stack
+addq.l    #14,sp       ; Correct stack
 !end_verbatim
 (!ende_liste)
 !end_node
@@ -212,11 +198,11 @@ int16_t Ptrace(int16_t request, int16_t pid, void * addr, int32_t data)
      state of the stopped process, and cause it to terminate or continue as
      appropriate.  Ptrace is the mechanism by which all this happens.
 
-     The request argument specifies what operation is being performed; the
+     The (!I)request(!i) argument specifies what operation is being performed; the
      meaning of the rest of the arguments depends on the operation, but except
      for one special case noted below, all ptrace calls are made by the
      tracing process, and the pid argument specifies the process ID of the
-     traced process.  request can be:
+     traced process. (!I)request(!i) can be:
 !begin_xlist [PT_TRACE_ME]
 !label PT_TRACE_ME
      !item [PT_TRACE_ME (0)]   This request is the only one used by the traced process; it
@@ -255,10 +241,10 @@ int16_t Ptrace(int16_t request, int16_t pid, void * addr, int32_t data)
                    plies the value to be written.
 
 !label PT_CONTINUE
-     !item [PT_CONTINUE (7)]   The traced process continues execution.  addr is an address
+     !item [PT_CONTINUE (7)]   The traced process continues execution.  (!I)addr(!i) is an address
                    specifying the place where execution is to be resumed (a
                    new value for the program counter), or (caddr_t)1 to indi-
-                   cate that execution is to pick up where it left off.  data
+                   cate that execution is to pick up where it left off.  (!I)data(!i)
                    provides a signal number to be delivered to the traced pro-
                    cess as it resumes execution, or 0 if no signal is to be
                    sent.
@@ -303,20 +289,20 @@ int16_t Ptrace(int16_t request, int16_t pid, void * addr, int32_t data)
 
 !begin_xlist
      !item [PT_GETREGS]    This request reads the traced process' machine registers
-                   into the ``struct reg'' (defined in <machine/reg.h>) point-
+                   into the struct reg (defined in <machine/reg.h>) point-
                    ed to by addr.
 
      !item [PT_SETREGS]    This request is the converse of PT_GETREGS; it loads the
-                   traced process' machine registers from the ``struct reg''
-                   (defined in <machine/reg.h>) pointed to by addr.
+                   traced process' machine registers from the struct reg
+                   (defined in <machine/reg.h>) pointed to by (!I)addr(!i).
 
      !item [PT_GETFPREGS]  This request reads the traced process' floating-point reg-
-                   isters into the ``struct fpreg'' (defined in
-                   <machine/reg.h>) pointed to by addr.
+                   isters into the struct fpreg (defined in
+                   <machine/reg.h>) pointed to by (!I)addr(!i).
 
      !item [PT_SETFPREGS]  This request is the converse of PT_GETFPREGS; it loads the
-                   traced process' floating-point registers from the ``struct
-                   fpreg'' (defined in <machine/reg.h>) pointed to by addr.
+                   traced process' floating-point registers from the struct
+                   fpreg (defined in <machine/reg.h>) pointed to by addr.
 !end_xlist
 
 !item [Ergebnis:]
@@ -331,7 +317,7 @@ int16_t Ptrace(int16_t request, int16_t pid, void * addr, int32_t data)
 	!begin_itemize !short
             !item   A process attempted to use PT_ATTACH on itself.
             !item   The request was not one of the legal requests.
-            !item   The signal number (in data) to PT_CONTINUE was neither 0 nor a
+            !item   The signal number (in (!I)data(!i)) to PT_CONTINUE was neither 0 nor a
                 legal signal number.
             !item   PT_GETREGS, PT_SETREGS, PT_GETFPREGS, or PT_SETFPREGS was at-
                 tempted on a process with no valid register set.  (This is nor-
