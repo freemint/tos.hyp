@@ -4,225 +4,232 @@
 
 !begin_node Cookie, XSDD
 
-Extended Serial Device Driver
+(!B)Extended Serial Device Driver(!b)
 
 (!U)Introduction(!u)
 
-Bekanntlich sind die Mîglichkeiten des TOS zur Bedienung der seriellen Schnitt-
-stellen recht beschrÑnkt:
+As is generally known, the ability of (!nolink [TOS]) to service the serial ports 
+is very restricted:
 !begin_itemize !short
-!item die Bedienung diverser Kontrolleitungen (wie DCD, DTR, RI usw.) ist nur durch
-  Direktzugriff auf die Hardware mîglich
-!item Es sind nur die von Rsconf angebotenen Baudraten einstellbar, auch wenn die
-  Hardware mehr erlaubt
-!item Der Zugriff auf eine Schnittstelle von mehreren Programmen kann nicht koordiniert
-  werden
-!item Da mit BIOS jedes Zeichen einzeln Åbertragen werden muû, ist die I/O-Performance
-  nicht sehr hoch
+!item The operation of various (!nolink [control]) lines (e.g. DCD, DTR, RI etc.) 
+     is only possible with direct accesses to the hardware
+!item Only the Baud rates offered by Rsconf can be set, even if the  
+     hardware allows more
+!item The access to one port by several programs cannot be coordinated
+!item As (!nolink [BIOS]) has to transfers each character individually, the I/O 
+     performance is not very high
 !end_itemize
-Im Rahmen der Entwicklung eines seriellen Treibers fÅr MiNT, der diese SchwÑchen
-beheben sollte, kam die Idee auf, die erweiterte FunktionalitÑt auch unter reinem
-TOS zugÑnglich zu machen. Dies ist ein erster Vorschlag, wie das aussehen kînnte.
-Im wesentlichen werden dabei die Low-Level-Routinen des MiNT-Treibers Åber einen
-Cookie von auûen zugÑnglich gemacht. Denkbar wÑre jedoch auch, die beiden Ebenen
-vîllig zu trennen und den MiNT-Treiber auf einen separaten TOS-Treiber aufzu-
-setzen.
+During the development of a serial driver for MiNT, which was to 
+remedy these weaknesses, the idea arose to make the extended functio-
+nality available under pure (!nolink [TOS]) as well. This is the first suggestion 
+how this could look.  Essentially, the low-level routines of the MiNT 
+driver are made accessible from the outside via a cookie. Conceivably 
+it would be possible also to completely divorce the two levels and to  
+sit the MiNT driver on top of a separate (!nolink [TOS]) driver. 
 
-!label XSDD Protocol
-(!U)Das XSDD Protocol(!u)
+!label XSDD protocol
+(!U)The XSDD protocol(!u)
 
-Das XSDD-Protokoll unterstÅtzt die Åber Bconmap verwalteten Devices 6 bis ein-
-schlieûlich <maptabsize+5> (soweit das zugrundeliegende TOS sie zur VerfÅgung
-stellt), sowie das Device 1 (AUX). Operationen auf AUX beziehen sich immer auf
-das zum Zeitpunkt des Aufrufs von XSDD gerade aktuelle Bconmap-Device. In Zu-
-kunft wird AUX mîglicherweise aus technischen GrÅnden nur noch dann unterstÅtzt,
-wenn das zugrundeliegende TOS kein Bconmap hat.
+The XSDD protocol supports devices 6 up to <maptabsize+5> inclusive 
+managed via Bconmap (provided the underlying (!nolink [TOS]) makes them available)
+as well as the device 1 (AUX). Operations on AUX always refer to the 
+Bconmap device active at the time XSDD is called. In future it is 
+possible for technical reasons that AUX will only be supported if the 
+underlying (!nolink [TOS]) has no Bconmap.
 
-Der Treiber installiert einen Cookie "XSDD". Der Cookie zeigt auf den Einsprung-
-punkt des XSDD-Treibers. Unmittelbar vor der Routine (also an Offset -4 vor der
-Adresse aus dem Cookie) steht zur Absicherung nochmals die Long-Konstante "XSDD".
+The driver installs a cookie "XSDD". The cookie points to the jump-in 
+point of the XSDD driver. Immediately before the routine (that is 
+at offset -4 before the address from the cookie) there is, for the 
+sake of safety, once more the LONG constant "XSDD".
 
-Aufruf: Welche Funktion ausgefÅhrt werden soll, wird durch einen Opcode (WORD)
-angegeben. Dieser Opcode ist bei jedem Aufruf das erste Argument. Wenn ein un-
-gÅltiger Opcode angegeben wird, wird EINVFN zurÅckgeliefert.
+Call: The function that is to be performed is specified by an opcode 
+(WORD). This opcode is the first argument for each call. If an invalid
+code is specified, then EINVFN is returned.
 
-Die öbergabe aller Parameter erfolgt nach GEMDOS-Konvention, d.h. auf dem Stack.
-Der RÅckgabewert wird in D0 geliefert. Auûer D0 werden keine Register verÑndert.
-Der Aufruf von XSDD darf AUSSCHLIESSLICH im Supervisor-Modus erfolgen. 
+The passing of all parameters follows the (!nolink [GEMDOS]) convention, i.e. on 
+the stack. The return value will lie in d0. Apart from d0 no registers 
+are altered. Calling XSDD must be (!I)exclusively(!i) in supervisor mode.
 
-Z.Zt. sind die im folgenden aufgelisteten Funktionen vorgesehen (Opcodes mÅssen
-noch vergeben werden). FÅr die Parametertypen gilt folgende Vereinbarung:
+At the time of writing the functions listed below are foreseen (the 
+opcodes have still to be allocated). For the parameter types the  
+following convention applies:
 !begin_verbatim
-BYTE:  8-Bit-Zeichen
-WORD:  16-Bit signed Integer
-UWORD: 16-Bit unsigned Integer
-LONG:  32-Bit signed Integer
+BYTE:  8-Bit  character
+WORD:  16-Bit signed integer
+UWORD: 16-Bit unsigned integer
+LONG:  32-Bit nsigned integer
 !end_verbatim
 
 !begin_description
 !item [WORD XSVersion(void)] (!nl)
-  Liefert die Versionsnummer des vom XSDD-Treibers implementierten Protokolls
-  zurÅck, Major-Version im Hi-Byte, Minor-Version im Low-Byte (Beispiel: 0x0102
-  entspricht Version 1.2). Diese Nummer soll nicht etwa die Version des Treiber-
-  programms wiederspiegeln, sondern nur die des implementierten Protokolls.
+  Returns the version number of the protocol implemented by the 
+     XSDD driver, major-version in the high byte, minor version in 
+     the low byte (example: 0x0102 corresponds to Version 1.2). This 
+     number is not meant to reflect the version of the driver program,
+     but only that of the implemented protocol.
 
-  RÅckgabe: (!nl)
+  Return value:: (!nl)
   Protokollversion.
 
 !item [WORD XSDriverInfo(BYTE *info, LONG *product, WORD *version)] (!nl)
-  Dieser Aufruf liefert einen Info-String, eine Produktkennung, sowie die Version
-  des jeweiligen Treiberprogramms zurÅck. (!I)info(!i) muû dabei auf einen mindestens 80
-  Bytes groûen Puffer zeigen, in den der Info-String nullterminiert eingetragen
-  wird (der String kann z.B. den Author und den Namen des Treibers enthalten). In
-  den LONG, auf den (!I)product(!i) zeigt, wird die Produktkennung eingetragen, sowie in
-  das WORD, auf das (!I)version(!i) zeigt, die Treiberversion.
+This call returns an info-string, a product identifier, as well 
+     as the version of the relevant driver program. (!I)info(!i) here must 
+     point to a buffer at least 80 bytes long in which the NULL-
+     terminated info-string will be entered (the string may contain 
+     the author and the name of the driver, for instance). In the LONG 
+     to which (!I)product(!i) points the product ID will be entered, and in 
+     the WORD to which (!I)version(!i) points, the driver version.
   
-  RÅckgabe: (!nl)
+  Return value: (!nl)
   0
 
 !item [WORD XSDevName(WORD device, BYTE *name)] (!nl)
-  Ermittelt den Namen des zum BIOS-Device gehîrigen Ports (z.B. "Modem1"). (!I)name(!i)
-  muû auf ein mindestens 9 Bytes groûes Array zeigen. Dort wird der Name nulltermi-
-  niert eingetragen.
-  
-  RÅckgabe: (!nl)
-  0 bei Erfolg (!nl)
-  EUNDEV - UngÅltiges Device
+  Obtains the name of the port belonging to the (!nolink [BIOS]) device (e.g. 
+     "Modem1"). (!I)name(!i) must point to an array at least 9 bytes long, 
+     in which the NULL-terminated name will be entered.
+
+  Return value: (!nl)
+  0 on success (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSReserve(WORD device)] (!nl)
-  Device reservieren. Es handelt sich hier um ein "advisory" Locking, d.h. es ist
-  darauf angewiesen, daû jedes Programm den Lock abfragt und freiwillig auf weitere
-  Zugriffe verzichtet, wenn das Device bereits belegt ist. Jedes Programm hat vor
-  irgendeinem Zugriff auf das Device diesen Aufruf durchzufÅhren. Wenn das Device
-  noch frei  war, ist es nach dem Aufruf reserviert. Wenn es bereits reserviert war,
-  wird ein Fehlercode zurÅckgeliefert. In diesem Fall sollte keinerlei Zugriff mehr
-  auf das Device erfolgen.
+     Reserve device. This is an "advisory" locking, i.e. depends on 
+     every program inquiring about the lock and voluntarily forgoing 
+     any further accesses if the device has been allocated already. 
+     Every program has to perform this call before any kind of access 
+     to  the device is made. If the device was still free, then it 
+     will be reserved after the call. If it was reserved already, an 
+     error-code will be returned; in that case there should be no 
+     further accesses to the device.
   
-  RÅckgabewert: (!nl)
-  0 - das Device ist jetzt reserviert (!nl)
-  EACCDN - das GerÑt war bereits reserviert (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 - The device is now reserved (!nl)
+  EACCDN - The device was reserved already (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSRelease(WORD device)] (!nl)
-  Device wieder freigeben. Dieser Aufruf darf NUR gemacht werden, wenn vorher
-  ein erfolgreicher XSReserve durchgefÅhrt werden konnte (mit RÅckgabe 0).
+     Release device again. This call may be made (!I)only(!i) if a successful 
+     XSReserve was perfomed (with return value 0).
 
-  Falls auf dem Device noch eine XSCtlSig-Routine angemeldet war, wird sie
-  automatisch freigegeben.
+     If an XSCtlSig routine was initialized on the device, then it 
+     will be released automatically.
 
-  RÅckgabewert: (!nl)
-  0 bei Erfolg,  (!nl)
-  EACCDN - wenn das Device nicht reserviert war. (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 on success  (!nl)
+  EACCDN - If the device was not reserved (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSCapMap(WORD device)] (!nl)
-  Fragt diverse Eigenschaften von Treiber und Device ab. Wenn kein Fehler vorliegt,
-  wird ein Bitvektor zurÅckgeliefert. Folgende Bits sind z.Zt. definiert:
+     Inquires various attributes of the driver and device. If no error 
+     occurs, a bit-vector will be returned. The following bits are 
+     defined at present:
   !begin_verbatim
-  #define XS_BREAK  0x01   /* Device kann Break senden */
-  #define XS_RTSCTS 0x02   /* Device beherrscht RTS/CTS-Handshaking */
-  #define XS_TANDEM 0x04   /* Device beherrscht XON/XOFF-Handshaking */
-  #define XS_IOBAUD 0x08   /* Device beherrscht verschiedene I- und O-Baudraten */
+  #define XS_BREAK  0x01   /* Device can send Break */
+  #define XS_RTSCTS 0x02   /* Device understands RTS/CTS handshaking */
+  #define XS_TANDEM 0x04   /* Device understands XON/XOFF handshaking */
+  #define XS_IOBAUD 0x08   /* Device understands various I and O Baud rates */
 
-  #define XS_BIOSRW 0x8000 /* Treiber benutzt BIOS zum Lesen/Schreiben */
+  #define XS_BIOSRW 0x8000 /* Driver uses BIOS for read/write */
   !end_verbatim
-  Alle anderen Bits sind reserviert und sollten bis auf weiteres ignoriert
-  werden.
+  All other bits are reserved and should be ignored for the time 
+  being.
   
-  RÅckgabewert: (!nl)
-  >=0 (LONG!) - VerfÅgbare FÑhigkeiten (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 (LONG!) - Available attributes (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSIBaud(WORD device, LONG baudrate)] (!nl)
-  Eingabe-Baudrate (genauer: bps) des angegebenen Devices setzen/abfragen. Die Baud-
-  rate wird unkodiert im "Klartext" angegeben (38400L entspricht z.B. 38400 bps).
-  Wenn -1L angegeben wird, wird die Baudrate nicht verÑndert (nur Abfrage). Falls
-  eine Baudrate angfordert wird, die auf dem Device nicht zur VerfÅgung steht, wird
-  die nÑchst niedrigere verfÅgbare eingestellt und zurÅckgeliefert.
+Set/inquire the input Baud rate (more exactly: bps) of the 
+     specified device. The Baud rate is given uncoded in plain text 
+     (so for instance 38400L corresponds to 38400 bps). If -1L is  
+     specified, the Baud rate is not altered (only inquired). If a 
+     Baud rate is requested that is not available on the device, then 
+     the next lower available rate will be set and returned.
 
-  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und Aus-
-  gabe. In diesem Fall wird mit einem XSIBaud gleichzeitig auch die Ausgabe-
-  Baudrate verÑndert (dies kann mit XSCapMap abgefragt werden).
+     Most devices do not support separate Baud rates for input and 
+     output. In that case an XSIBaud call changes the output Baud rate 
+     at the same time (this can be inquired for with XSCapMap).
 
-  RÅckgabewert: (!nl)
-  >0 - eingestellte Baudrate (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >0 - Set Baud rate (!nl)
+  EUNDEV - Invalid device
 
   Anmerkung: Durch die RÅckgabe der nÑchst niedrigen verfÅgbaren Baudrate kann
   der Aufrufer alle fÅr dieses Device verfÅgbaren Baudraten durch "Abklappern"
   von oben nach unten ermitteln.
 
 !item [LONG XSOBaud(WORD device, LONG baudrate)] (!nl)
-  Ausgabe-Baudrate (genauer: bps) des angegebenen Devices setzen/abfragen. Die
-  Funktionsweise ist ansonsten analog zu XSIBaud.
+     Set/inquire the output Baud rate (more exactly: bps) of the 
+     specified device. Functioning is otherwise similar to XSIBaud.
 
-  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und Aus-
-  gabe. In diesem Fall wird mit einem XSOBaud gleichzeitig auch die Eingabe-
-  Baudrate verÑndert (dies kann mit XSCapMap abgefragt werden).
+     Most devices do not support separate Baud rates for input and 
+     output. In that case an XSOBaud call changes the input Baud rate 
+     at the same time (this can be inquired for with XSCapMap).
 
-  RÅckgabewert: (!nl)
-  >0 - eingestellte Baudrate (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >0 - Set Baud rate (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSBreak(WORD device, WORD on)] (!nl)
-  Ein BREAK auf dem Device setzen/lîschen. Wenn (!I)on(!i) ungleich 0 ist, wird BREAK
-  gesetzt, ansonsten gelîscht. Wenn das Device BREAK nicht beherrscht, wird der
-  Aufruf ignoriert.
+     Set/clear a BREAK on the device. If (!I)on(!i) in non-zero, BREAK will
+     be set, else cleared. If the device does not understand BREAK, 
+     the call will be ignored.
 
-  RÅckgabe: (!nl)
-  0 bei Erfolg (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 on success (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSSetFlags(WORD device, UWORD flags)] (!nl)
-  öbertragungsparameter einstellen. Versuche, Einstellungen zu machen, die auf dem
-  Device nicht mîglich sind (d.h. solche, die XSCapMap als nicht verfÅgbar meldet),
-  werden ignoriert. (!I)flags(!i) enthÑlt die Einstellung in folgender Kodierung (ent-
-  spricht der des TIOCGFLAGS-Fcntl von MiNT):
+     Set transmission parameters. Attempts to make settings that are 
+     not possible on the device (i.e. those reported by XSCapMap as 
+     not available) are ignored. (!I)flags(!i) contains the setting in the 
+     following coding (corresponds to those of TIOCGFLAGS-Fcntl of 
+     MiNT): 
 
-  Maske: TF_STOPBITS 0x0003 (!nl)
+  Mask: TF_STOPBITS 0x0003 (!nl)
   Werte: (!nl)
-  0x0000  UngÅltig (!nl)
-  0x0001  1 Stop-Bit (!nl)
-  0x0002  1.5 Stop-Bits (!nl)
-  0x0003  2 Stop-Bits
+  0x0000  Invalid (!nl)
+  0x0001  1 stop-bit (!nl)
+  0x0002  1.5 stop-bit (!nl)
+  0x0003  2 stop-bit
 
-  Maske: TF_CHARBITS 0x000C (!nl)
+  Mask: TF_CHARBITS 0x000C (!nl)
   Werte: (!nl)
-    0x0000  8 Bits pro Zeichen (!nl)
-    0x0004  7 Bits (!nl)
-    0x0008  6 Bits (!nl)
-    0x000C  5 Bits
+    0x0000  8 bits per character (!nl)
+    0x0004  7 bits per character (!nl)
+    0x0008  6 bits per character (!nl)
+    0x000C  5 bits per character
 
-  Maske: TF_PARITY 0xc000 (!nl)
+  Mask: TF_PARITY 0xc000 (!nl)
   Werte: (!nl)
-  0x0000  Keine ParitÑt (!nl)
-  0x4000  Gerade ParitÑt (!nl)
-  0x8000  Ungerade ParitÑt (!nl)
-  0xc000  UngÅltig
+  0x0000  No parity (!nl)
+  0x4000  Even parity (!nl)
+  0x8000  Odd parity (!nl)
+  0xc000  Invalid
   
-  Weitere Bits: (!nl)
+  Further bits: (!nl)
   T_TANDEM  0x1000  XON/XOFF Handshake (!nl)
   T_RTSCTS  0x2000  RTS/CTS Handshake
 
-  Alle Åbrigen Bits sind reserviert und sollten 0 sein.
+  All remaining bits are reserved and should be 0.
 
-  RÅckgabewert: (!nl)
-  >=0 (LONG!) - die vor dem Aufruf eingestellten Flags (!nl)
-  ERANGE - es wurden ungÅltige Parameter festgestellt (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 (LONG!) - The flags set before the call (!nl)
+  ERANGE - Invalid parameter were found (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSGetFlags(WORD device)] (!nl)
-  öbertragungsparameter abfragen.
+  Inquire transmission parameters.
 
-  RÅckgabewert: (!nl)
-  >=0 (LONG!) - Eingestellte Parameter (Kodierung siehe XSSetFlags). (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 (LONG!) - Set parameters (coding see XSSetFlags). (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSCtlMap(WORD device)] (!nl)
-  Auf dem Device verfÅgbare Kontrolleitungen abfragen. Wenn kein Fehler vorliegt,
-  wird ein Bitvektor zurÅckgeliefert, in dem fÅr die verfÅgbaren Kontrolleitungen
-  das entsprechende Bit 1 ist, fÅr die nicht verfÅgbaren 0. Folgende Bits sind
-  definiert:
+     Inquire (!nolink [control]) lines available on the device. If no error 
+     arises, a bit-vector is returned in which the relevant bit is 1 
+     for available (!nolink [control]) lines, and 0 for those not available. 
+     The following bits are defined:
   !begin_verbatim
   #define TIOCM_LE  0x01        /* line enable */
   #define TIOCM_DTR 0x02        /* data terminal ready */
@@ -232,187 +239,195 @@ LONG:  32-Bit signed Integer
   #define TIOCM_RNG 0x20        /* ring */
   #define TIOCM_DSR 0x40        /* data set ready */
   !end_verbatim
-  Alle anderen Bits sind reserviert und sollten bis auf weiteres ignoriert
-  werden.
+  All other bits are reserved and should be ignored until further notice.
 
-  RÅckgabewert: (!nl)
-  >=0 (LONG!) - VerfÅgbare Kontrolleitungen (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 (LONG!) - Available (!nolink [control]) lines (!nl)
+  EUNDEV - Invalid device
 
-  Anmerkung: Die Werte werden mîglicherweise noch geÑndert, um sie an die (hof-
-  fentlich bald festgelegten) Definitionen der entsprechenden MiNT-Fcntls anzu-
-  passen.
+  (!I)Note:(!i) The values may still be changed in order to adapt them to 
+     the (hopefully soon determined) definitions of the corresponding
+     MiNT Fcntl.
 
 !item [LONG XSGetCtl(WORD device)] (!nl)
-  Status der Kontrolleitungen abfragen (DCD, RI etc.). Falls kein Fehler auf-
-  tritt, wird ein Bit-Vektor geliefert (Kodierung wie bei XSCtlMap beschrieben).
-  Die Bits sind 1, wenn die entsprechende Leitung aktiviert ist, sonst 0.
+     Inquire status of the (!nolink [control]) lines (DCD, RI etc.).  If no error 
+     arises, a bit-vector is returned (coding as in XSCtlMap). The 
+     bits are 1 if the corresponding line is active, else 0.
 
-  RÅckgabewert: (!nl)
-  >=0 (LONG!) - Status der Kontrolleitungen (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 (LONG!) - Status of the (!nolink [control]) lines (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSSetCtl(WORD device, UWORD ctl)] (!nl)
-  Kontrolleitungen setzen. Kodierung wieder wie in XSCtlMap. Manche Leitungen (z.B.
-  CTS) sind Read-only und kînnen daher nicht beeinfluût werden (das sollte aus dem
-  Kontext hervorgehen). Versuche, solche und Leitungen, die nicht von dem Device
-  unterstÅtzt werden (d.h. von XSCtlMap als nicht verfÅgbar gemeldet wurden), zu
-  beeinflussen, werden ignoriert.
+     Set (!nolink [control]) lines. Coding again as in XSCtlMap. Some lines 
+     (e.g. CTS) are read-only and hence cannot be affected (that 
+     should be clear from the context). Attempts to affect these, 
+     and those lines that are not supported by the device (i.e. those 
+     reported by XSCapMap as not available) are ignored. 
 
-  RÅckgabewert: (!nl)
+  Return value: (!nl)
   0 bei Erfolg (!nl)
   EUNDEV - UngÅltiges Device
 
 !item [WORD XSOnCtl(WORD device, UWORD on_mask)] (!nl)
-  Die Kontrolleitungen, deren Bit in (!I)on_mask(!i) gesetzt ist, aktivieren, ohne die
-  anderen zu beeiflussen. Ansonsten gelten dieselben Bedingungen, wie bei XSSetCtl.
+     Activate the (!nolink [control]) lines whose bit is set in (!I)on_mask(!i), without 
+     affecting the others. Otherwise the same conditions apply as for 
+     XSSetCtl.
 
-  RÅckgabewert: (!nl)
-  0 bei Erfolg (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 on success (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSOffCtl(WORD device, UWORD off_mask)] (!nl)
-  Die Kontrolleitungen, deren Bit in (!I)off_mask(!i) gesetzt ist, ausschalten, ohne die
-  anderen zu beeiflussen. Ansonsten gelten dieselben Bedingungen, wie beiXSSetCtl.
+     Deactivate the (!nolink [control])} lines whose bit is set in (!I)off_mask(!i), 
+     without affecting the others. Otherwise the same conditions apply 
+     as for XSSetCtl.
 
-  RÅckgabewert: (!nl)
-  0 bei Erfolg (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 on success (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSInStat(WORD device)] (!nl)
-  Ermittelt Anzahl der Zeichen, die z.Zt. auf dem Device zum Lesen verfÅgbar sind.
-  Der zurÅckgelieferte Wert muû nicht exakt sein. Es ist nur garantiert, daû mit
-  dem nÑchsten Lesezugriff mindestens soviele Bytes gelesen werden kînnen, es
-  kînnen aber auch mehr sein.
+     Obtain the number of characters that are currently available on 
+     the device for reading. The returned value need not be exact. It 
+     only guarantees that the next read access can read at least that 
+     many bytes, but it could be more.
   
-  RÅckgabewert: (!nl)
-  >=0 - Anzahl der verfÅgbaren Zeichen (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 - Number of available characters (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSOutStat(WORD device)] (!nl)
-  Ermittelt Anzahl der Zeichen, die z.Zt. auf das Device geschrieben werden kînnen.
-  Der zurÅckgelieferte Wert muû nicht exakt sein. Es ist nur garantiert, daû mit
-  dem nÑchsten Schreibzugriff mindestens soviele Bytes ausgegeben werden kînnen,
-  es kînnen aber auch mehr sein.
+     Obtain the number of characters that are currently available on 
+     the device for writing. The returned value need not be exact. It 
+     only guarantees that the next write access can output at least 
+     that many bytes, but it could be more.
 
-  RÅckgabewert: (!nl)
-  >=0 - Anzahl der Zeichen, die ausgegeben werden kînnen (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  >=0 - Number of characters that can be output (!nl)
+  EUNDEV - Invalid device
 
 !item [LONG XSRead(WORD device, LONG count, BYTE *buffer)] (!nl)
-  Maximal (!I)count(!i) Zeichen in den durch (!I)buffer(!i) angegebenen Speicherbereich lesen.
-  Wenn z. Zt. nicht soviele Zeichen verfÅgbar sind, kehrt XSWrite sofort zurÅck
-  (non-blocking).
+     Read a maxmum of (!I)count(!i) characters from the memory block speci-
+     fied in (!I)buffer.(!i) If that many characters are not available at 
+     the time, XSRead returns immediately (non-blocking).
 
-  RÅckgabewert: (!nl)
-  >=0 - Anzahl der Zeichen, die gelesen wurden wurden (!nl)
+  Return value: (!nl)
+  >=0 - Number of characters that were read (!nl)
   EUNDEV - UngÅltiges Device (!nl)
   Weitere (negative) TOS-Fehlernummern bei I/O-fehlern
 
 !item [LONG XSWrite(WORD device, LONG count, BYTE *buffer)] (!nl)
-  (!I)count(!i) Zeichen aus dem durch (!I)buffer(!i) angegebenen Speicherbereich auf das Device
-  schreiben. Wenn z. Zt. nicht so viele Zeichen geschrieben werden kînnen, kehrt
-  XSWrite sofort zurÅck (non-blocking).
+     Write (!I)count(!i) characters from the memory block specified in (!I)buffer(!i) 
+     to the device. If that many characters could not be written at 
+     the time, XSWrite returns immediatelly (non-blocking).
 
-  RÅckgabewert: (!nl)
-  >=0 - Anzahl der Zeichen, die geschrieben wurden (!nl)
-  EUNDEV - UngÅltiges Device (!nl)
-  Weitere (negative) TOS-Fehlernummern bei I/O-Fehlern
+  Return value: (!nl)
+  >=0 - Number of characters that were written (!nl)
+  EUNDEV - Invalid device (!nl)
+  Further (negative) (!nolink [TOS]) error-messages at I/O-errors
 
 !item [WORD XSFlush(WORD device, WORD mode)] (!nl)
-  Verwerfe Zeichen, die noch im Puffer des Treibers stehen. (!I)mode(!i) gibt genauer
-  an, was verworfen wird: (!nl)
-  0: Verwerfe Zeichen, die empfangen, aber noch nicht ausgelesen wurden (!nl)
-  1: Verwerfe Zeichen, die geschrieben, aber noch nicht gesendet wurden (!nl)
-  2: Verwerfe alle noch gepufferten Zeichen
+     Discard characters remaining in the driver's buffer. (!I)mode(!i) speci-
+     fies more exactly what is to be discarded:
+ (!nl)
+  0: Discard characters that have been received but not yet read out (!nl)
+  1: Discard characters that have been written but not yet sent (!nl)
+  2: Discard all characters still buffered
   
-  Wenn die Operation auf dem Device nicht mîglich ist, wird der Aufruf ignoriert.
+  If the operation is not possible on the device, the call is ignored.
   
-  RÅckgabewert: (!nl)
-  0 bei Erfolg (!nl)
-  ERANGE - wenn (!I)mode(!i) nicht 0, 1 oder 2 ist (!nl)
-  EUNDEV - UngÅltiges Device
+  Return value: (!nl)
+  0 on success (!nl)
+  ERANGE - If (!I)mode(!i) is not 0, 1 or 2 (!nl)
+  EUNDEV - Invalid device
 
 !item [WORD XSInSig(WORD device, void (*func)(WORD device))] (!nl)
-  Weist den Treiber an, die durch (!I)func(!i) angegebene Funktion anzuspringen, sobald
-  ein neues Zeichen von dem Device  eingetroffen ist. Der Routine wird dabei die
-  Device-Nummer auf dem Stack Åbergeben. Die angegebene Routine wird sehr wahr-
-  scheinlich aus einem Interrupt heraus aufgerufen. Dementsprechend darf sie keine
-  Register verÑndern und sollte mîglichst kurz sein. Die Routine wird nur genau
-  einmal aufgerufen, danach wird der XSInSig automatisch wieder deaktiviert. Wenn
-  vor dem Aufruf bereits ein XSInSig aktiv war, wird der neue nicht installiert
-  und EACCDN zurÅckgeliefert.
-  
-  Wenn als (!I)func(!i) ein Null-Zeiger Åbergeben wird, wird ein vorher gesetzter XSInSig
-  annuliert.
-  
-  XSInSig muû nicht auf jedem Device verfÅgbar sein; in diesem Fall wird EINVFN
-  zurÅckgeliefert.
+     Directs the driver to start up the function specified by (!I)func(!i) 
+     as soon as a new character has arrived from the device. For this 
+     the routine is passed the device number on the stack. The speci-
+     fied routine is most probably called from within an interrupt. 
+     Accordingly it may not alter any registers and should be as short 
+     as possible. The routine is called just once, thereafter XSInSig 
+     is deactivated again automatically. If an XSInSig was already 
+     active before the call, the new one will not be (!nolink [installed]) and 
+     EACCDN will be returned.
 
-  RÅckgabe: (!nl)
-  0 - bei Erfolg (!nl)
-  EINVFN - Device unterstÅtzt XSInSig nicht (!nl)
-  EACCDN - Es ist bereits ein XSInSig aktiv (!nl)
-  EUNDEV - UngÅltiges Device  
+     If a NULL-pointer is passed for (!I)func(!i), a previously set XSInSig 
+     will be annulled.
 
-  Anmerkung: Diese Funktion ist in der Hauptsache zur Implementation von MiNT-
-  Treibern gedacht und sollte von Anwendungsprogrammen nicht verwendet werden.
+     XSInSig need not be available on every device; in that case 
+     EINVFN will be returned.
+
+  Return value: (!nl)
+  0 - on success (!nl)
+  EINVFN - Device does not support XSInSig (!nl)
+  EACCDN - There is already an XSInSig active (!nl)
+  EUNDEV - Invalid device
+
+     (!I)Note:(!i) This function is intended mainly for implementation in 
+     MiNT drivers and should not be used by application programs.
 
 !item [WORD XSOutSig(WORD device, void (*func)(WORD device))] (!nl)
-  Weist den Treiber an, die durch (!I)func(!i) angegebene Funktion anzuspringen, sobald
-  ein neues Zeichen auf das Device ausgegeben werden kann. Die Funktionsweise ist
-  ansonsten analog zu XSInSig.
+     Directs the driver to start up the function specified by (!I)func(!i) 
+     as soon as a new character can be output to the device. The 
+     functionality is otherwise similar to XSInSig.
 
-  Wenn als (!I)func(!i) ein Null-Zeiger Åbergeben wird, wird ein vorher gesetzter
-  XSOutSig annuliert.
-  
-  XSOutSig muû nicht auf jedem Device verfÅgbar sein; in diesem Fall wird EINVFN
-  zurÅckgeliefert.
+     If a NULL-pointer is passed for (!I)func(!i), a previously set XSOutSig 
+     will be annulled.
 
- RÅckgabe: (!nl)
-  0 - bei Erfolg (!nl)
-  EINVFN - Device unterstÅtzt XSOutSig nicht (!nl)
-  EACCDN - Es ist bereits ein XSOutSig aktiv (!nl)
-  EUNDEV - UngÅltiges Device  
+     XSOutSig need not be available on every device; in that case 
+     EINVFN will be returned.
 
-  Anmerkung: Diese Funktion ist in der Hauptsache zur Implementation von MiNT-
-  Treibern gedacht und sollte von Anwendungsprogrammen nicht verwendet werden.
+ Return value: (!nl)
+  0 - on success (!nl)
+  EINVFN - Device does not support XSOutSig (!nl)
+  EACCDN - There is already an XSOutSig active (!nl)
+  EUNDEV - Invalid device
 
+     (!I)Note:(!i) This function is intended mainly for implementation in 
+     MiNT drivers and should not be used by application programs.
+ 
 !item [LONG XSCtlSig(WORD device, UWORD ctl_mask, void (*func)(WORD device, UWORD ctl))] (!nl)
-  Weist den Treiber an, die durch (!I)func(!i) angegebene Funktion anzuspringen, sobald
-  sich der Zustand einer der in (!I)ctl_mask(!i) spezifizierten Kontrolleitungen Ñndert
-  (Kodierung wie bei XSCtlMap angegeben). Der Routine wird dabei die Device-Nummer
-  und ein Bitvektor, in dem das Bit der auslîsenden Kontrolleitung gesetzt ist,
-  auf dem Stack Åbergeben. Die angegebene Routine wird sehr wahrscheinlich aus
-  einem Interrupt heraus aufgerufen. Dementsprechend darf sie keine Register ver-
-  Ñndern und sollte mîglichst kurz sein. Die Routine wird nur genau einmal aufge-
-  rufen, danach wird der XSCtlSig automatisch wieder deaktiviert. Wenn vor dem
-  Aufruf bereits ein XSCtlSig aktiv war, wird der neue nicht installiert und
-  EACCDN zurÅckgeliefert.
+     Directs the driver to start up the function specified by (!I)func(!i) 
+     as soon as the state of a (!nolink [control]) line specified in (!I)ctl_mask(!i) 
+     has altered (coding as stated in XSCtlMap). For this the routine 
+     is passed on the stack the device number and a bit-vector in 
+     which the bit of the triggered control line is set. The specified 
+     routine is most probably called from within an interrupt. 
+     Accordingly it may not alter any registers and should be as short 
+     as possible. The routine is called just once, thereafter XSCtlSig 
+     is deactivated again automatically.
+     
+     If an XSCtlSig was already active before the call, the new one 
+     will not be (!nolink [installed]) and EACCDN will be returned.
 
-  Wenn als (!I)func(!i) ein Null-Zeiger Åbergeben wird, wird ein vorher gesetzter
-  XSCtlSig annuliert.
-  
-  XSCtlSig muû nicht auf jedem Device verfÅgbar sein; in diesem Fall wird EINVFN
-  zurÅckgeliefert. Ebenso muû er nicht fÅr alle verfÅgbaren Kontrolleitungen ver-
-  fÅgbar sein. Wenn in (!I)ctl_mask(!i) Kontrolleitungen angegeben werden, die durch
-  XSCtlSig nicht unterstÅtzt werden, wird das ignoriert. Auf welche Leitungen
-  tatsÑchlich reagiert wird, kann man aus dem RÅckgabewert ersehen.
+     If a NULL-pointer is passed for (!I)func(!i), a previously set XSCtlSig 
+     will be annulled.
 
-  Sobald ein Device mit XSRelease freigegeben wird, werden noch darauf installierte
-  XCtlSig automatisch abgemeldet.
-  
-  RÅckgabe: (!nl)
-  >0 (LONG!) - Maske mit den tatsÑchlich berÅcksichtigten Kontrolleitungen. (!nl)
-  EINVFN - Device unterstÅtzt XSCtlSig nicht (!nl)
-  EACCDN - Es ist bereits ein XSCtlSig aktiv (!nl)
-  EUNDEV - UngÅltiges Device  
+     XSCtlSig need not be available on every device; in that case 
+     EINVFN will be returned. Equally it need not be available for 
+     all of the available (!nolink [control]) lines. If there are (!nolink [control]) lines 
+     specified in (!I)ctl_mask(!i) that are not supported by XSCtlSig, 
+     they will be ignored. Which lines are actually reacted to can be 
+     seen from the return value.
 
-  Anmerkung: Diese Funktion kann z.B. verwendet werden, um effizient die RI- oder
-  DCD-Leitungen zu Åberwachen (man installiert eine Routine, die im eigenen Pro-
-  gramm ein Flag setzt und fragt dieses periodisch ab). ACHTUNG: Ein Programm,
-  daû diese Funktion benutzt, darf keinesfalls vergessen, den XSCtlSig vor dem
-  Beenden wieder zu annulieren.
+     As soon as a device is released with XSRelease, any XCtlSig still 
+     (!nolink [installed]) on it will be deinstalled automatically.
+
+  Return value: (!nl)
+  >0 (LONG!) - Mask with the (!nolink [control]) lines actually taken into
+            account (!nl)
+  EINVFN - Device does not support XSCtlSig (!nl)
+  EACCDN - There is already an XSCtlSig active (!nl)
+  EUNDEV - Invalid device  
+
+(!I)Note:(!i) This function can be used, for instance, to oversee effi-
+     ciently the RI or DCD lines (one installs a routine in which 
+     the program sets a flag and then interrogates this periodically).
+     WARNING: A program using this function may not forget on any 
+     account to annul the XSCtlSig before termination.
+
 !end_description
 
 !end_node
@@ -425,8 +440,8 @@ Extended Serial Device Driver
 
 (!U)Einleitung(!u)
 
-Bekanntlich sind die Mîglichkeiten des TOS zur Bedienung der seriellen Schnitt-
-stellen recht beschrÑnkt:
+Bekanntlich sind die Mîglichkeiten des TOS zur Bedienung der seriellen
+Schnitt!-stellen recht beschrÑnkt:
 !begin_itemize !short
 !item die Bedienung diverser Kontrolleitungen (wie DCD, DTR, RI usw.) ist nur durch
   Direktzugriff auf die Hardware mîglich
@@ -442,32 +457,33 @@ beheben sollte, kam die Idee auf, die erweiterte FunktionalitÑt auch unter reine
 TOS zugÑnglich zu machen. Dies ist ein erster Vorschlag, wie das aussehen kînnte.
 Im wesentlichen werden dabei die Low-Level-Routinen des MiNT-Treibers Åber einen
 Cookie von auûen zugÑnglich gemacht. Denkbar wÑre jedoch auch, die beiden Ebenen
-vîllig zu trennen und den MiNT-Treiber auf einen separaten TOS-Treiber aufzu-
-setzen.
+vîllig zu trennen und den MiNT-Treiber auf einen separaten TOS-Treiber
+aufzu!-setzen.
 
 !label XSDD-Protokoll
 (!U)Das XSDD-Protokoll(!u)
 
-Das XSDD-Protokoll unterstÅtzt die Åber Bconmap verwalteten Devices 6 bis ein-
-schlieûlich <maptabsize+5> (soweit das zugrundeliegende TOS sie zur VerfÅgung
+Das XSDD-Protokoll unterstÅtzt die Åber Bconmap verwalteten Devices 6 bis
+ein!-schlieûlich <maptabsize+5> (soweit das zugrundeliegende TOS sie zur VerfÅgung
 stellt), sowie das Device 1 (AUX). Operationen auf AUX beziehen sich immer auf
-das zum Zeitpunkt des Aufrufs von XSDD gerade aktuelle Bconmap-Device. In Zu-
-kunft wird AUX mîglicherweise aus technischen GrÅnden nur noch dann unterstÅtzt,
+das zum Zeitpunkt des Aufrufs von XSDD gerade aktuelle Bconmap-Device. In Zu!-kunft
+wird AUX mîglicherweise aus technischen GrÅnden nur noch dann unterstÅtzt,
 wenn das zugrundeliegende TOS kein Bconmap hat.
 
-Der Treiber installiert einen Cookie "XSDD". Der Cookie zeigt auf den Einsprung-
-punkt des XSDD-Treibers. Unmittelbar vor der Routine (also an Offset -4 vor der
-Adresse aus dem Cookie) steht zur Absicherung nochmals die Long-Konstante "XSDD".
+Der Treiber installiert einen Cookie "XSDD". Der Cookie zeigt auf den
+Einsprung!-punkt des XSDD-Treibers. Unmittelbar vor der Routine (also an Offset -4
+vor der Adresse aus dem Cookie) steht zur Absicherung nochmals die
+Long-Konstante "XSDD".
 
 Aufruf: Welche Funktion ausgefÅhrt werden soll, wird durch einen Opcode (WORD)
-angegeben. Dieser Opcode ist bei jedem Aufruf das erste Argument. Wenn ein un-
-gÅltiger Opcode angegeben wird, wird EINVFN zurÅckgeliefert.
+angegeben. Dieser Opcode ist bei jedem Aufruf das erste Argument. Wenn ein
+un!-gÅltiger Opcode angegeben wird, wird EINVFN zurÅckgeliefert.
 
 Die öbergabe aller Parameter erfolgt nach GEMDOS-Konvention, d.h. auf dem Stack.
 Der RÅckgabewert wird in D0 geliefert. Auûer D0 werden keine Register verÑndert.
 Der Aufruf von XSDD darf AUSSCHLIESSLICH im Supervisor-Modus erfolgen. 
 
-Z.Zt. sind die im folgenden aufgelisteten Funktionen vorgesehen (Opcodes mÅssen
+Zur Zeit sind die im folgenden aufgelisteten Funktionen vorgesehen (Opcodes mÅssen
 noch vergeben werden). FÅr die Parametertypen gilt folgende Vereinbarung:
 !begin_verbatim
 BYTE:  8-Bit-Zeichen
@@ -499,8 +515,8 @@ LONG:  32-Bit signed Integer
 
 !item [WORD XSDevName(WORD device, BYTE *name)] (!nl)
   Ermittelt den Namen des zum BIOS-Device gehîrigen Ports (z.B. "Modem1"). (!I)name(!i)
-  muû auf ein mindestens 9 Bytes groûes Array zeigen. Dort wird der Name nulltermi-
-  niert eingetragen.
+  muû auf ein mindestens 9 Bytes groûes Array zeigen. Dort wird der Name
+  nulltermi!-niert eingetragen.
   
   RÅckgabe: (!nl)
   0 bei Erfolg (!nl)
@@ -557,8 +573,8 @@ LONG:  32-Bit signed Integer
   eine Baudrate angfordert wird, die auf dem Device nicht zur VerfÅgung steht, wird
   die nÑchst niedrigere verfÅgbare eingestellt und zurÅckgeliefert.
 
-  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und Aus-
-  gabe. In diesem Fall wird mit einem XSIBaud gleichzeitig auch die Ausgabe-
+  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und
+  Aus!-gabe. In diesem Fall wird mit einem XSIBaud gleichzeitig auch die Ausgabe-
   Baudrate verÑndert (dies kann mit XSCapMap abgefragt werden).
 
   RÅckgabewert: (!nl)
@@ -573,8 +589,8 @@ LONG:  32-Bit signed Integer
   Ausgabe-Baudrate (genauer: bps) des angegebenen Devices setzen/abfragen. Die
   Funktionsweise ist ansonsten analog zu XSIBaud.
 
-  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und Aus-
-  gabe. In diesem Fall wird mit einem XSOBaud gleichzeitig auch die Eingabe-
+  Die meisten Devices unterstÅtzen keine getrennten Baudraten fÅr Ein- und
+  Aus!-gabe. In diesem Fall wird mit einem XSOBaud gleichzeitig auch die Eingabe-
   Baudrate verÑndert (dies kann mit XSCapMap abgefragt werden).
 
   RÅckgabewert: (!nl)
@@ -593,8 +609,8 @@ LONG:  32-Bit signed Integer
 !item [LONG XSSetFlags(WORD device, UWORD flags)] (!nl)
   öbertragungsparameter einstellen. Versuche, Einstellungen zu machen, die auf dem
   Device nicht mîglich sind (d.h. solche, die XSCapMap als nicht verfÅgbar meldet),
-  werden ignoriert. (!I)flags(!i) enthÑlt die Einstellung in folgender Kodierung (ent-
-  spricht der des TIOCGFLAGS-Fcntl von MiNT):
+  werden ignoriert. (!I)flags(!i) enthÑlt die Einstellung in folgender Kodierung
+  (ent!-spricht der des TIOCGFLAGS-Fcntl von MiNT):
 
   Maske: TF_STOPBITS 0x0003 (!nl)
   Werte: (!nl)
@@ -656,9 +672,9 @@ LONG:  32-Bit signed Integer
   >=0 (LONG!) - VerfÅgbare Kontrolleitungen (!nl)
   EUNDEV - UngÅltiges Device
 
-  Anmerkung: Die Werte werden mîglicherweise noch geÑndert, um sie an die (hof-
-  fentlich bald festgelegten) Definitionen der entsprechenden MiNT-Fcntls anzu-
-  passen.
+  Anmerkung: Die Werte werden mîglicherweise noch geÑndert, um sie an die
+  (hof!-fentlich bald festgelegten) Definitionen der entsprechenden MiNT-Fcntls
+  anzu!-passen.
 
 !item [LONG XSGetCtl(WORD device)] (!nl)
   Status der Kontrolleitungen abfragen (DCD, RI etc.). Falls kein Fehler auf-
@@ -718,11 +734,11 @@ LONG:  32-Bit signed Integer
 
 !item [LONG XSRead(WORD device, LONG count, BYTE *buffer)] (!nl)
   Maximal (!I)count(!i) Zeichen in den durch (!I)buffer(!i) angegebenen Speicherbereich lesen.
-  Wenn z. Zt. nicht soviele Zeichen verfÅgbar sind, kehrt XSWrite sofort zurÅck
+  Wenn z. Zt. nicht soviele Zeichen verfÅgbar sind, kehrt XSRead sofort zurÅck
   (non-blocking).
 
   RÅckgabewert: (!nl)
-  >=0 - Anzahl der Zeichen, die gelesen wurden wurden (!nl)
+  >=0 - Anzahl der Zeichen, die gelesen wurden (!nl)
   EUNDEV - UngÅltiges Device (!nl)
   Weitere (negative) TOS-Fehlernummern bei I/O-fehlern
 
@@ -801,8 +817,8 @@ LONG:  32-Bit signed Integer
   (Kodierung wie bei XSCtlMap angegeben). Der Routine wird dabei die Device-Nummer
   und ein Bitvektor, in dem das Bit der auslîsenden Kontrolleitung gesetzt ist,
   auf dem Stack Åbergeben. Die angegebene Routine wird sehr wahrscheinlich aus
-  einem Interrupt heraus aufgerufen. Dementsprechend darf sie keine Register ver-
-  Ñndern und sollte mîglichst kurz sein. Die Routine wird nur genau einmal aufge-
+  einem Interrupt heraus aufgerufen. Dementsprechend darf sie keine Register
+  ver!-Ñndern und sollte mîglichst kurz sein. Die Routine wird nur genau einmal aufge-
   rufen, danach wird der XSCtlSig automatisch wieder deaktiviert. Wenn vor dem
   Aufruf bereits ein XSCtlSig aktiv war, wird der neue nicht installiert und
   EACCDN zurÅckgeliefert.
@@ -811,8 +827,8 @@ LONG:  32-Bit signed Integer
   XSCtlSig annuliert.
   
   XSCtlSig muû nicht auf jedem Device verfÅgbar sein; in diesem Fall wird EINVFN
-  zurÅckgeliefert. Ebenso muû er nicht fÅr alle verfÅgbaren Kontrolleitungen ver-
-  fÅgbar sein. Wenn in (!I)ctl_mask(!i) Kontrolleitungen angegeben werden, die durch
+  zurÅckgeliefert. Ebenso muû er nicht fÅr alle verfÅgbaren Kontrolleitungen
+  ver!-fÅgbar sein. Wenn in (!I)ctl_mask(!i) Kontrolleitungen angegeben werden, die durch
   XSCtlSig nicht unterstÅtzt werden, wird das ignoriert. Auf welche Leitungen
   tatsÑchlich reagiert wird, kann man aus dem RÅckgabewert ersehen.
 
@@ -826,8 +842,8 @@ LONG:  32-Bit signed Integer
   EUNDEV - UngÅltiges Device  
 
   Anmerkung: Diese Funktion kann z.B. verwendet werden, um effizient die RI- oder
-  DCD-Leitungen zu Åberwachen (man installiert eine Routine, die im eigenen Pro-
-  gramm ein Flag setzt und fragt dieses periodisch ab). ACHTUNG: Ein Programm,
+  DCD-Leitungen zu Åberwachen (man installiert eine Routine, die im eigenen
+  Pro!-gramm ein Flag setzt und fragt dieses periodisch ab). ACHTUNG: Ein Programm,
   daû diese Funktion benutzt, darf keinesfalls vergessen, den XSCtlSig vor dem
   Beenden wieder zu annulieren.
 !end_description
