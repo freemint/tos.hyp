@@ -1,3 +1,185 @@
+!iflang [english]
+
+!begin_node Toolbar support
+!label Toolbars, Redraw and update of
+From (!nolink [AES]) version 4.1 onwards the operating system supports so-called
+toolbars. A toolbar is an OBJECT tree that is positioned below the
+information-line of a window (and above the working area) which makes
+it possible to display buttons, icons etc. in a window.
+
+As already known from the window routines, the management of toolbars
+is shared betwen the (!nolink [AES]) and the application. (!B)Here the (!nolink [AES])
+is respon!-sible for the following actions:(!b)
+
+!begin_itemize !short
+!item Adaptation of the X- and Y-coordinates of the toolbar when the
+     window is moved or its size is changed.
+!item Ensuring that the window is configured to the size required by
+     the window components and the toolbar.
+!item Adjustment of the toolbar's width to the width of the window.
+!item Redraw of the toolbar on receipt of a WM_REDRAW message.
+!item Sending of (!nolink [AES]) messages when the user activates an object of
+     the toolbar.
+!end_itemize
+
+(!B)The application, on the other hand, must look after the following:(!b)
+
+!begin_itemize !short
+!item Construction of an OBJECT tree for the toolbar (in particulat one
+     has to ensure that all selectable elements of the toolbox have
+     the status TOUCHEXIT).
+!item Adjustment of the width of a toolbar object if this depends on
+     the width of the window (may be required when changing the size
+     of the window).
+!item Handling of USERDEF objects.
+!item Redrawing all objects whose appearance is to be changed. In this
+     case it is imperative that the rectangle-list of the toolbar is
+     inquired for and/or taken into account.
+!item Problems that arise in connection with the screen resolution have
+     to be solved. Thus, for instance, the height of an icon in the
+     ST Medium resolution can differ from the height of the icon in
+     the TT030 Medium resolution.
+!end_itemize
+
+(!B)For supporting toolbars in your own programs, you should respect the
+following points:(!b)
+
+!begin_itemize !short
+!item Communication with the (!nolink [AES]) window-manager
+!item (!link [Problems with wind_calc][wind_calc, Problems with])
+!item Redraw and updating of toolbars
+!item Toolbar support under XaAES
+!end_itemize
+
+See also: (!nl)
+WF_TOOLBAR ~  (!link [WF_FTOOLBAR][wind_get" "WF_FTOOLBAR, wind_get])  ~ 
+(!link [WF_NTOOLBAR][wind_get" "WF_NTOOLBAR, wind_get]) ~ WM_TOOLBAR ~
+wind_get ~ wind_set
+
+
+
+!begin_node Redraw und Updating von Toolbars
+
+For redraws of (parts of) the toolbar, one has to pay respect to the
+rectangle-list as usual. As the previous wind_get opcodes
+(!link [WF_FIRSTXYWH][WF_FIRSTXYWH, wind_get]) and
+(!link [WF_NEXTXYWH][WF_NEXTXYWH, wind_get]) (!I)only respect the working area(!i)
+of a window, however, two new parameters
+((!link [WF_FTOOLBAR][WF_FTOOLBAR, wind_get]) and
+(!link [WF_NTOOLBAR][WF_NTOOLBAR, wind_get])) were introduced, with
+whose help the rectangle-list of a toolbar can be interrogated.
+
+(!B)A redraw  of (parts of) the toolbar may be necessary in the following
+situations:(!b)
+!begin_itemize !short
+!item The toolbar contains user-defined objects (USERDEF's).
+!item The status of an object in the toolbar was altered. The area to
+     be redrawn here consists of the size of the object plus the space
+     required for special effects (3D, shadowing, outlining etc.).
+!end_itemize
+
+(!B)Redraw is not necessary in the following cases, for instance:(!b)
+
+!begin_itemize !short
+!item The relevant window is iconified. The application does not have
+     to take on any management of the toolbar; this is only required
+     at the restoration of the iconification, the so-called uniconify.
+!item The toolbar present in the window is to be replaced by another
+     one. In this case a call of wind_set with the opcode WF_TOOLBAR
+     and the address of the new OBJECT tree will suffice.
+!item The toolbar present in the window is to be removed. In this case
+     a call of wind_set with the opcode WF_TOOLBAR and NULL parameters
+     will suffice.
+!end_itemize
+
+See also:
+(!link [Rectangle-list of a window][The rectangle-list of a window]) ~
+Toolbar-Support
+!end_node
+
+
+
+!begin_node Toolbars and the window-manager
+
+For handling toolbars an application can have recourse to the window-
+manager of the (!nolink [AES]). In detail:
+
+!label Toolbar, Tacking on a
+(!B)For tacking on a toolbar to a window(!b), it is sufficient to call
+wind_set(handle, WF_TOOLBAR, ...) with the address of the toolbar
+object tree. If this call is executed while the window is open, then
+it is itself responsible for the correct calculation of the height
+of the toolbar.
+
+!label Toolbar, Exchange of a
+(!B)To exchange a toolbar for another one(!b), one can have recourse to a call
+of (!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) with the address of the new
+toolbar. If this call is executed while the window is open, then it
+is itself responsible for the correct calculation of the height of
+the (new) toolbar.
+
+!label Toolbar, Removal of a
+(!B)To remove a toolbar from a window(!b), it is necessary to call
+(!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) with NULL parameters. If
+this call is executed while the window is open, then it is itself responsible
+for the correct calculation of the height of the toolbar.
+
+(!B)In addition the following points have to be taken into consideration:(!b)
+
+!begin_itemize !short
+!item If a window is closed with wind_close, then any toolbar present
+     will (!I)not(!i) be removed. At a later reopening the toolbar will be
+     in place once more.
+!item If a window is removed with wind_delete, then its link to a
+     toolbar will be dissolved.
+!item To be able to recognize mouse-clicks on toolbar objects, these
+     have to possess the status TOUCHEXIT. When such an object is
+     clicked on, the (!nolink [AES]) creates a (!nolink [WM_TOOLBAR]) message which
+     is sent to the relevant application.
+!end_itemize
+
+See also: AES ~ GEM ~ Toolbar support
+!end_node
+
+
+
+!begin_node Problems with wind_calc in toolbar windows
+!label wind_calc, Problems with
+
+When applying the function wind_calc to windows that possess a toolbar
+there are several problems to be taken into account:
+
+As this function is (!I)not(!i) passed a window ID (window handle), the
+desired sizes cannot be calculated correctly when a toolbar is present
+in the window. The reason for this is that, quite simply, the (!nolink [AES]) in
+this case has (!I)no information(!i) about the toolbar, and specially about
+its size.
+
+Hence the values returned by wind_calc in such cases have to be
+further refined by the application. As the program can access the
+relevant OBJECT tree (and with this also the height of the toolbar),
+this should present no problems. (!B)In detail:(!b)
+
+!begin_itemize !short
+!item When ascertaining the (!I)border areas(!i) of the window, the height of
+     the toolbar must be added to the height returned by the function.
+!item When ascertaining the (!I)working area(!i) of the window, the height of
+     the toolbar must be added to the Y-value ((!I)couty(!i)) returned by the
+     function.
+!end_itemize
+
+(!B)Note:(!b) Besides the height of the actual object, the height of the
+toolbar should include also the space requirement for special effects
+(3D, shadowing, etc.).
+
+See also: (!link [WF_FTOOLBAR][WF_FTOOLBAR, wind_get]) ~ 
+(!link [WF_NTOOLBAR][WF_NTOOLBAR, wind_get]) ~ WM_TOOLBAR ~ objc_sysvar
+!end_node
+
+!end_node
+
+!else
+
 !begin_node Toolbar-Support
 !label Toolbars, Redraw und Update von
 
@@ -62,7 +244,8 @@ WF_TOOLBAR ~  (!link [WF_FTOOLBAR][WF_FTOOLBAR, wind_get])  ~
 Bei der Neuzeichnung (von Teilen) der Toolbar ist, wie Åblich, die
 Rechteckliste zu beachten. Da die bisherigen wind_get Opcodes
 (!link [WF_FIRSTXYWH][WF_FIRSTXYWH, wind_get])
-und (!link [WF_NEXTXYWH][WF_NEXTXYWH, wind_get]) jedoch (!I)nur den Arbeitsbereich(!i) eines Fensters
+und (!link [WF_NEXTXYWH][WF_NEXTXYWH, wind_get]) jedoch (!I)nur den Arbeitsbereich(!i)
+eines Fensters
 berÅcksichtigen, wurden zwei neue Parameter ((!link [WF_FTOOLBAR][WF_FTOOLBAR, wind_get])
 und (!link [WF_NTOOLBAR][WF_NTOOLBAR, wind_get]))
 eingefÅhrt, mit deren Hilfe die Rechteckliste fÅr eine Toolbar abgefragt
@@ -115,16 +298,16 @@ Hîhe der Toolbar verantwortlich.
 
 !label Toolbar, Austauschen einer
 (!B)Um eine Toolbar gegen eine andere auszutauschen(!b), kann auf einen
-Aufruf von (!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) mit der Adresse der neuen
-Toolbar zurÅckgegriffen werden. Falls dieser Aufruf durchgefÅhrt wird
+Aufruf von (!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) mit der Adresse
+der neuen Toolbar zurÅckgegriffen werden. Falls dieser Aufruf durchgefÅhrt wird
 wÑhrend das Fenster geîffnet ist, so ist dieses selbst fÅr die korrekte
 Berechnung der Hîhe der (neuen) Toolbar verantwortlich.
 
 !label Toolbar, Entfernen einer
 (!B)Um eine Toolbar aus einem Fenster zu lîsen(!b), ist ein Aufruf von
-(!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) mit NULL Parametern erforderlich. Falls
-dieser Aufruf durchgefÅhrt wird wÑhrend das Fenster geîffnet ist, so ist
-dieses selbst fÅr die korrekte weitere Bearbeitung verantwortlich.
+(!nolink [wind_set])(handle, (!nolink [WF_TOOLBAR]), ...) mit NULL Parametern
+erforderlich. Falls dieser Aufruf durchgefÅhrt wird wÑhrend das Fenster geîffnet
+ist, so ist dieses selbst fÅr die korrekte weitere Bearbeitung verantwortlich.
 
 (!B)DarÅber hinaus sind die folgenden Punkte zu beachten:(!b)
 
@@ -136,11 +319,11 @@ dieses selbst fÅr die korrekte weitere Bearbeitung verantwortlich.
       zur Toolbar aufgelîst.
 !item Um Mausklicks auf Toolbar-Objekte erkennen zu kînnen, mÅssen diese den
       Status TOUCHEXIT besitzen. Bei einem Klick auf ein solches Objekt wird
-      vom (!nolink [AES]) eine (!nolink [WM_TOOLBAR])-Nachricht erzeugt, und an die betreffende
-      Applikation geschickt.
+      vom (!nolink [AES]) eine (!nolink [WM_TOOLBAR])-Nachricht erzeugt, und
+      an die betreffende Applikation geschickt.
 !end_itemize
 
-Querverweis: AES  ~ GEM ~  Toolbar-Support
+Querverweis: AES ~ GEM ~ Toolbar-Support
 !end_node
 
 
@@ -175,8 +358,9 @@ zugreifen kann, ist dies problemlos mîglich. (!B)Konkret:(!b)
 Objektes den Platzbedarf fÅr Spezialeffekte (3D, Shadowing, etc.) beinhalten.
 
 Querverweis: (!link [WF_FTOOLBAR][WF_FTOOLBAR, wind_get]) ~ 
-(!link [WF_NTOOLBAR][WF_NTOOLBAR, wind_get]) ~  WM_TOOLBAR ~  objc_sysvar
+(!link [WF_NTOOLBAR][WF_NTOOLBAR, wind_get]) ~ WM_TOOLBAR ~ objc_sysvar
 !end_node
 
 !end_node
 
+!endif
