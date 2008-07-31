@@ -1,95 +1,398 @@
+!iflang [english]
+
+
+
 !begin_node TOS2WIN
 
+
+
 !label Cookie, _T2W
+
 (!B)Tos2Win Cookie(!b)
 
-Um feststellen zu kînnen welche Tos2Win Version und welche Features vorhanden sind, gibt
-es ab Version 1.19 einen Cookie '_T2W' mit einem Zeiger auf folgende Datenstruktur:
+
+
+To ascertain which Tos2Win version and which features are present,
+
+as of Version 1.19 a cookie '_T2W' exists with a pointer to the
+
+following data structure:
+
 !begin_xlist [4 x Long ] !short
-   !item [1 x Word] LÑnge der Struktur
-   !item [1 x Word] Version in BCD d.h. $0119 = Version 1.19
-   !item [1 x Long] Offset des Atari-Speichers im PC-Speicher zum Umrechnen von Zeigern
-   !item [4 x Long] Bitfelder fÅr einzelne T2W Features
+
+   !item [1 x Word] Length of the structure
+
+   !item [1 x Word] Version in BCD i.e. $0119 = Version 1.19
+
+   !item [1 x Long] Offset of the Atari memory in PC memory for recalculation
+
+                    of pointers
+
+   !item [4 x Long] Bit-fields for individual T2W features
+
 !end_xlist
 
+
+
 (!nl)
+
+(!B)Call PC-DLLs as of Version 1.19J(!b)
+
+
+
+In TOS2WIN all PC calls are introduced with the sequence $4858, which
+
+is followed by the group code (e.g. $5043) for the DLL functions, and
+
+is terminated with the function number (e.g. $0000).
+
+
+
+So a call of a DLL function would look as follows:
+
+
+
+!begin_verbatim
+
+Function start
+
+                    .
+
+                    .
+
+                    .
+
+                  $4858
+
+                  $5043
+
+                  $0000
+
+                    .
+
+                    .
+
+                    .
+
+Function end       RTS
+
+!end_verbatim
+
+
+
+The parameters for the function lie from a7 + 4 onwards. This means
+
+placing all required parameters on the stack (always only LONGwords)
+
+and then a bsr to function start.
+
+
+
+All pointers passed to the PC function to values in Atari memory have
+
+to be corrected with an offset. Atari address + offset = PC address.
+
+One can get the offset either via the Tos2Win cookie or via the DLL
+
+function $0000. The offset does not alter during the runtime of the
+
+program.
+
+
+
+DLL function
+
+!begin_xlist [$0000 ]
+
+  !item [$0000]   LONG HoleOffset()
+
+               !begin_xlist [RÅckgabewert:] !short
+
+                 !item  [Return value:] Returns in d0 the offset for recalculation
+
+               !end_xlist
+
+
+
+         This function can also be used to ascertain whether the
+
+         following functions are present. Just load register d0 with
+
+         zero and call the function. If there is still zero in d0,
+
+         then the functions are not implemented.
+
+
+
+  !item [$0001]   LONG OpenLibrary(Name)
+
+               !begin_xlist [Return value:] !short
+
+                 !item  [Name        :] Pointer to a NULL-terminated string that
+
+                         contains the name of the desired DLL, e.g.
+
+                         'GDI32.DLL' (the pointer must be corrected
+
+                         with the offset)
+
+                 !item  [Return value:] Returns in d0 a handle to the DLL
+
+               !end_xlist
+
+
+
+  !item [$0002]   VOID CloseLibrary(Handle)
+
+               !begin_xlist [Return value:] !short
+
+                 !item  [Handle      :] Handle to the DLL to be closed; when the
+
+                         internal Windows counter has reached zero,
+
+                         the DLL is removed from memory
+
+               !end_xlist
+
+  !item [$0003]   LONG GetFunctionAdress(Handle,Name)
+
+               !begin_xlist [Return value:] !short
+
+                 !item  [Handle      :] Handle for the DLL
+
+                 !item  [Name        :] Pointer to a NULL-terminated string that
+
+                         contains the name of the function (pointer
+
+                         has to be corrected)
+
+                 !item  [Return value:] Address of the function in PC memory
+
+               !end_xlist
+
+
+
+  !item [$0004]   LONG CallLibraryFunction(Adr,Number,.....)
+
+               !begin_xlist [Return value:] !short
+
+                 !item  [Adr         :] Address of the desired function
+
+                 !item  [Number      :] Number of parameters passed to the PC function
+
+                 !item  [....        :] The corresponding parameters (pointers have
+
+                                        to be corrected)
+
+                 !item  [Return value:] Possible return value of the PC function
+
+               !end_xlist
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+!else
+
+
+
+!begin_node TOS2WIN
+
+
+
+!label Cookie, _T2W
+
+(!B)Tos2Win Cookie(!b)
+
+
+
+Um feststellen zu kînnen welche Tos2Win Version und welche Features
+
+vorhanden sind, gibt es ab Version 1.19 einen Cookie '_T2W' mit einem
+
+Zeiger auf folgende (!nolink [Datenstruktur]):
+
+!begin_xlist [4 x Long ] !short
+
+   !item [1 x Word] LÑnge der Struktur
+
+   !item [1 x Word] Version in BCD d.h. $0119 = Version 1.19
+
+   !item [1 x Long] Offset des Atari-Speichers im PC-Speicher zum Umrechnen
+
+                    von Zeigern
+
+   !item [4 x Long] Bitfelder fÅr einzelne T2W Features
+
+!end_xlist
+
+
+
+(!nl)
+
 (!B)PC-DLL's aufrufen ab Version 1.19J(!b)
 
+
+
 In TOS2WIN werden alle PC-Aufrufe Åber die Sequenz $4858 eingeleitet, danach folgt der
+
 Gruppencode z.B. $5043 fÅr die DLL-Funktionen und wird mit der Funktionsnummer z.B. $0000
+
 abgeschlossen.
+
+
 
 Ein Aufruf einer DLL-Funktion wÅrde also wie folgt aussehen:
 
+
+
 !begin_verbatim
+
 FunktionsAnfang
+
                     .
-                    .                
+
                     .
+
+                    .
+
                   $4858
-                  $5043 
+
+                  $5043
+
                   $0000
+
                     .
+
                     .
+
                     .
+
 Funktionsende      RTS
+
 !end_verbatim
 
-Die Parameter fÅr die Funktion liegen ab A7 + 4. 
+
+
+Die Parameter fÅr die Funktion liegen ab A7 + 4.
+
 d.h. Alle notwendigen Parameter auf den Stack legen (immer nur Langworte) und dann ein
+
      bsr auf FunktionsAnfang.
 
+
+
 Alle an die PC-Funktion Åbergebenen Zeiger auf Werte im Atarispeicher mÅssen mit einem
+
 Offset korrigiert werden. Atari-Adresse plus Offset ist PC-Adresse.
+
 Den Offset bekommt man entweder Åber den Tos2Win-Cookie oder Åber die DLL-Funktion $0000.
+
 Der Offset verÑndert sich wÑhrend der Laufzeit des Programms nicht.
 
+
+
 DLL-Funktion
+
 !begin_xlist [$0000 ]
+
   !item [$0000]   LONG HoleOffset()
+
                !begin_xlist [RÅckgabewert:] !short
+
                  !item  [RÅckgabewert:] Liefert in D0 den Offset zum umrechnen zurÅck.
+
                !end_xlist
+
+
 
           Diese Funktion kann auch dazu benutzt werden, um festzustellen, ob die
+
           nachfolgenden Funktionen vorhanden sind. Einfach das Register D0 mit Null
+
           laden und die Funktion aufrufen. Wenn immer noch Null in D0 steht, sind die
-          Funktionen nicht implementiert.   
+
+          Funktionen nicht implementiert.
+
+
 
   !item [$0001]   LONG OpenLibrary(Name)
+
                !begin_xlist [RÅckgabewert:] !short
+
                  !item  [Name        :] Zeiger auf einen Nullterminierten String, der den
+
                                         Namen der gewÅnschten DLL enthÑlt z.B. 'GDI32.DLL'
+
                                         (der Zeiger muû mit dem Offset korrigiert werden).
+
                  !item  [RÅckgabewert:] Liefert in D0 ein Handle auf die DLL zurÅck.
+
                !end_xlist
+
+
 
   !item [$0002]   VOID CloseLibrary(Handle)
+
                !begin_xlist [RÅckgabewert:] !short
+
                  !item  [Handle      :] Handle auf die zu schlieûende DLL. wenn der
+
                                         interne ZÑhler Von Windows bei Null angekommen
+
                                         ist, wird die DLL aus dem Speicher entfernt.
 
+
+
                !end_xlist
+
   !item [$0003]   LONG GetFunctionAdress(Handle,Name)
+
                !begin_xlist [RÅckgabewert:] !short
+
                  !item  [Handle      :] Handle auf die DLL.
+
                  !item  [Name        :] Zeiger auf einen Nullterminierten String, der den
+
                                         Namen der Funktion enthÑlt. (Zeiger muû korrigiert
+
                                         werden)
+
                  !item  [RÅckgabewert:] Adresse der Funktion im PC-Speicher
+
                !end_xlist
+
+
 
   !item [$0004]   LONG CallLibraryFunction(Adr,Anzahl,.....)
+
                !begin_xlist [RÅckgabewert:] !short
+
                  !item  [Adr         :] Adresse der gewÅnschten Funktion.
+
                  !item  [Anzahl      :] Anzahl der an die PC-Funktion zu Åbergebenden
+
                                         Parameter.
+
                  !item  [....        :] Die entsprechenden Parameter (Zeiger mÅssen
+
                                         korrigiert werden)
-                 !item  [RÅckgabewert:] eventueller RÅckgabewert der PC-Funktion.     
+
+                 !item  [RÅckgabewert:] eventueller RÅckgabewert der PC-Funktion.
+
                !end_xlist
+
 !end_xlist
 
+
+
 !end_node
+
+
+
+!endif
 

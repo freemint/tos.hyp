@@ -1,0 +1,1460 @@
+!begin_node MagiC PC interface
+
+!ignore_subtoc
+
+
+
+(!nolink [MagiC]) PC knows two interfaces with which one can call up functions of
+
+the Windows system.
+
+
+
+!begin_itemize
+
+ !item mec0 (MPS) interface: This serves for executing any kind of
+
+     (self-written) Windows code. It is stored in a DLL and called
+
+     via illegal opcodes from within (!nolink [MagiC]) PC.
+
+
+
+ !item mec1 interface: With this a predefined set of special functions
+
+     can be called.
+
+!end_itemize
+
+
+
+!begin_node mec0 (MPS) interface
+
+
+
+(!U)0. General remarks(!u)
+
+
+
+MPS = Magic_Programmier_Schnittstelle = (!nolink [MagiC]) programmer's interface
+
+
+
+Files of the demo example:
+
+!begin_xlist [mps_base.def ] !short
+
+!item [mps_base.def]   The export list of the DLL, (!I)DO NOT ALTER!(!i)
+
+!item [mps_base.h]  Definition of the MPS interface, (!I)DO NOT ALTER!(!i)
+
+!item [mps_base.cpp]   Basic functions of the DLL, (!I)DO NOT ALTER!(!i)
+
+!item [mps_demo.h]  Definitions for the demo-DLL
+
+!item [mps_demo.cpp]   The MPS_functions of the demo-DLL
+
+
+
+!item [testmps.s]   Motorola - Example for calling the MPS functions of the demo
+
+!end_xlist
+
+
+
+To develop your own MPS_DLLs, please use (!nolink [mps_base.def]), (!nolink [mps_base.h])
+
+and (!nolink [mps_base.cpp]) (!I)unaltered.(!i) You can alter/supplement (!nolink [mps_demo.h])
+
+and (!nolink [mps_demo.cpp]). In particular, please choose your own DLL_ID in
+
+mps_demo.h for differentiation from other MPS_DLLs.
+
+
+
+(!U)I. Concept(!u)
+
+
+
+Windows-side one can use dynamic link libraries (DLLs) to establish
+
+any number of functions (called 'MPS_functions' in the following)
+
+which can be called within (!nolink [MagiC]) PC (Motorola-side).
+
+
+
+In the start-up phase (!nolink [MagiC]) PC attempts to load and start all DLLs in
+
+the MPS subdirectory. For this (!nolink [MagiC]) PC calls three functions to be
+
+exported from the DLL (in this order):
+
+!begin_enumerate
+
+!item mps_get_type():  Must return 0x4701!
+
+!item  mps_get_functionlist(...): Obtains DLL_ID and MPS_functions
+
+      list of the DLL.
+
+!item  mps_magicinfo: Provides information about (!nolink [MagiC]) PC's own data
+
+      and functions which the DLL may use on demand.
+
+!end_enumerate
+
+
+
+All functions declared in 2) can be called via special opcodes on
+
+the Motorola side. See part IV for more about the call.
+
+
+
+
+
+(!U)II. Functions of the DLL to be exported ('Basic functions')(!u)
+
+
+
+An MPS_DLL must export exactly 3 C functions under fixed ordinal
+
+numbers (these are also called basic functions): (see mfp_base.def,
+
+mfp_base.cpp, mfp_base.h)
+
+
+
+!begin_itemize
+
+!item @101: int mps_get_type()
+
+
+
+     Purpose: Serves for reassurance that it was really MPS_DLL that
+
+     was caught. !! Return value: 0x4701 !!
+
+
+
+!item @102: int mps_get_functionlist(DWORD *mps_dll_id,MPS_fuptr **p_funktionsliste);
+
+
+
+     Purpose: (!nolink [MagiC]) PC wants to know DLL_ID and MPS_functionlist.
+
+
+
+     Return values: (!nl)
+
+     *mps_ddl_id: DLL_ID (4 bytes, to be selected DLL-specifically!) (!nl)
+
+     *p_functionslist: Pointer to list of the MPS_functions. (!nl)
+
+     Return: 1: All OK
+
+
+
+!item @103: void mps_magicinfo(MPS_magicinfo *is);
+
+
+
+     Purpose: Provides information about (!nolink [MagiC]) PC's own info /
+
+     function pointers which the DLL may use:
+
+!label MPS_magicinfo
+
+!begin_verbatim
+
+        typedef struct {
+
+         DWORD sizeof_str;               // Size of MPS_magicinfo
+
+         DWORD magic_version;            // e.g. 0x010001
+
+         DWORD magic_date;               // e.g. 19960815  (ascending)
+
+         BYTE  is_demo;                  // Is it a demo version?
+
+         BYTE  uu1, uu2, uu3;            // Still unused, 0
+
+
+
+         BYTE *(*intel_adr)(DWORD motadr);   // Convert address Motorola -> Intel
+
+         BYTE *(*intel_ptr)(DWORD motptr);   // Convert pointer Motorola -> Intel (NULL stays NULL!)
+
+
+
+         WORD (*swap_word)(WORD w);      // Swap one WORD
+
+         DWORD (*swap_long)(DWORD dw);   // Swap one LONGword
+
+         } MPS_magicinfo;
+
+!end_verbatim
+
+     The address conversions return NULL if motadr or motptr is invalid.
+
+!end_itemize
+
+
+
+(!U)III. The freely definable MPS_functions of a DLL:(!u)
+
+
+
+MPS_functions basically have the form:
+
+
+
+void function_blabla( MPS_motregs *motregs )
+
+
+
+(!I)motregs(!i) here points to a list of the Motorola registers d0-a7. The
+
+contents of the registers is already in the correct Intel byte order.
+
+The Motorola registers may also have new values written to them.
+
+
+
+With mps_get_functionlist the DLL passes the list of addresses of all
+
+such MPS_functions. The function numbers correspond to the position
+
+of the function within the list. If a number is to remain free, then
+
+its address is passed as 0xffffffff (= -1). See also mps_demo.cpp.
+
+
+
+(!U)IV. Motorola-side call(!u)
+
+
+
+MPS_functions are called by a Motorola-side 8-byte opcode:
+
+
+
+!begin_verbatim
+
+    dc.w    $4fbf       * 2 bytes: (!I)Do not alter!(!i)
+
+    dc.l    DLL_ID      * 4 bytes: DLL-specific DLL_ID
+
+    dc.w    Fkt_no.     * 2 bytes: Function number
+
+!end_verbatim
+
+
+
+DLL_ID is the DLL_ID (4 bytes!) passed via mps_get_functionlist.
+
+Function number is the position of the function in the function list
+
+passed by mps_get_functionlist (count starts at 0).
+
+
+
+(!U)V. Miscellaneous(!u)
+
+!begin_enumerate
+
+!item Each DLL should use an individual DLL_ID to prevent conflicts
+
+     between multiple DLLs (see mps_demo.h). DLL_IDs with bit 31 set
+
+     are reserved for us (Application Systems) or for allocated IDs.
+
+     Therefore please do not choose a DLL_ID with set bit 31! If we
+
+     are to allocate a reserved DLL_ID to you, please get in touch
+
+     with Herr Hoffmann of Application Systems Heidelberg.
+
+
+
+     The following DLL_IDs have been allocated:
+
+   !begin_table [l|l|l]
+
+   DLL_ID !! Program name !! Author
+
+   !hline
+
+   0x003f5c66 !! MPCTime !! Robert Weiž
+
+   0x2053434B !! MPCSTiK !! Dan Ackerman
+
+   0x21342812 !! Draconis Windows Sockets !!
+
+   0x44594a01 !! In2Cat  !! Dimitri Junker
+
+   0x44594a02 !! Win_Lnk !! Dimitri Junker
+
+   0x50475752 !! MPC_POWR !! Emanuel Welter
+
+   !end_table
+
+
+
+!item Pay attention to the displacement of the address space!!
+
+     If you want to use a Motorola address on the DLL side, you should
+
+     call intel_adr(..) or intel_ptr(..) respectively for conversion
+
+     (see MPS_magicinfo in mps_base.h). Addresses from the DLL address
+
+     space can (!I)not(!i) be used Motorola-side!
+
+
+
+!item Also pay attention to the different byte order between Motorola
+
+     and Intel processors. WORDs and LONGwords from the Motorola
+
+     address space have to be swapped so that they lie correctly in
+
+     the DLL. If anything is written back then it has to be swapped
+
+     once more. For this you can call the functions swap_word(..) or
+
+     swap_long(..) (see MPS_magicinfo in mps_base.h). BUT: Elements
+
+     of MPS_motregs (d0-a7) are already in the Intel order and do not
+
+     have to be swapped.
+
+!end_enumerate
+
+
+
+
+
+!begin_node mps_base.h
+
+!begin_verbatim
+
+; ==========================================================
+
+; Export definitions for MPS MagiC PC programmer's interface   FS 15.08.96
+
+; ==========================================================
+
+;
+
+; !! DO NOT ALTER !!
+
+; ==================
+
+EXPORTS
+
+   mps_get_type         @101
+
+   mps_get_functionlist @102
+
+   mps_magicinfo        @103
+
+!end_verbatim
+
+!end_node
+
+
+
+!begin_node mps_base.def
+
+!begin_verbatim
+
+// Tab size: 3
+
+
+
+// Last change:  15.08.96
+
+// Author:   FS
+
+
+
+// ------------------------------------------------------------------------------
+
+//
+
+// The MagiC PC programmer's interface
+
+//
+
+// mps_base.h: Basic include     !! ADOPT UNALTERED !!
+
+//                               =====================
+
+
+
+#ifdef __cplusplus
+
+   extern "C" {
+
+#endif
+
+
+
+/* =========================================================================
+
+   The DLL functions freely definable by the user have the form:
+
+   void mps_function(MPS_motregs *r),
+
+   where r represents a pointer to the 16 Motorola registers, so:
+
+*/
+
+   typedef struct {                 // MPS_motregs = The Motorola registers
+
+     long d0,d1,d2,d3,d4,d5,d6,d7;
+
+     long a0,a1,a2,a3,a4,a5,a6,a7;
+
+     } MPS_motregs;
+
+                                    // MPS_fuptr = Pointer to a MPS_function:
+
+   typedef void (*MPS_fuptr)(MPS_motregs *);
+
+
+
+
+
+/* ======================================================================
+
+   The DLL basic function mps_info is passed the following info block
+
+   MPS_infostr:
+
+*/
+
+   typedef struct {
+
+     DWORD sizeof_str;           // Size of MPS_infostr
+
+     DWORD magic_version;        // e.g. 0x010001
+
+     DWORD magic_date;           // e.g. 19960815  (ascending)
+
+     BYTE  is_demo;              // Is it a demo-version?
+
+     BYTE  uu1, uu2, uu3;        // Still unused, 0
+
+
+
+     BYTE *(*intel_adr)(DWORD motadr); // Convert address Motorola -> Intel
+
+     BYTE *(*intel_ptr)(DWORD motptr); // Convert pointer Motorola -> Intel (NULL stays NULL!)
+
+
+
+     WORD (*swap_word)(WORD w);           // Swap one WORD
+
+     DWORD (*swap_long)(DWORD dw);        // Swap one LONGword
+
+     } MPS_magicinfo;
+
+
+
+// =============== 3 basic functions to be exported: ==================
+
+//
+
+   int mps_get_type();                                                        // @@101
+
+   int mps_get_functionlist(DWORD *mps_dll_id,MPS_fuptr **p_functionslist);   // @@102
+
+   void mps_magicinfo(MPS_magicinfo *is);                                     // @@103
+
+//
+
+// See also mps_base.cpp, mps_base.def
+
+
+
+
+
+#ifdef __cplusplus
+
+   }
+
+#endif
+
+!end_verbatim
+
+
+
+See also: MagiC PC interface
+
+!end_node
+
+
+
+!begin_node mps_base.cpp
+
+!begin_verbatim
+
+// Tab size: 3
+
+
+
+// Last change:  15.08.96
+
+// Author:   FS
+
+
+
+// ------------------------------------------------------------------------------
+
+// Demo example for (!nolink [MagiC]) PC programmer's interface (MPS)
+
+//
+
+// Part 1: Basic functions, adopt UNCHANGED!
+
+// =======
+
+//
+
+// ------------------------------------------------------------------------------
+
+
+
+#include "windows.h"
+
+#include "mps_base.h"
+
+#include "mps_demo.h"
+
+
+
+//
+
+// The following 3 basic functions must be exported by the DLL:
+
+//
+
+
+
+
+
+// 1) Basic function @@101: Type query
+
+// ---------------------
+
+   int mps_get_type()
+
+// ----------------
+
+ {
+
+   return(0x4701);         // Must return this value
+
+ }
+
+
+
+// 2) Basic function @@102: MagiC PC requests ID and function list
+
+// -----------------------
+
+   int mps_get_functionlist(DWORD *mps_dll_id,MPS_fuptr **p_functionslist)
+
+// ------------------------
+
+ {
+
+   *mps_dll_id = DLL_ID;              // User-defined ID, see mps_demo.h
+
+   *p_functionslist = my_funclist;    // Enter pointer to function list
+
+   return(1);
+
+ }
+
+
+
+// 3) Basic function @@103: MagiC PC passes MPS_magicinfo to the DLL
+
+// -----------------------
+
+   void mps_magicinfo(MPS_magicinfo *is)
+
+// -------------
+
+ {
+
+   m_info = *is;                    // Remember
+
+ }
+
+
+
+//
+
+// END basic functions -------------------------------------------------------
+
+//
+
+
+
+!end_verbatim
+
+
+
+See also: MagiC PC interface
+
+!end_node
+
+
+
+!begin_node mps_demo.h
+
+!begin_verbatim
+
+// Tab size: 3
+
+
+
+// Last change:  15.08.96
+
+// Author:   FS
+
+
+
+// ------------------------------------------------------------------------------
+
+// Demo example for MagiC PC programmer's interface (MPS)
+
+//
+
+// Part 2: User-defined functions, change DLL_ID to your own value !!!
+
+// =======
+
+//
+
+// ------------------------------------------------------------------------------
+
+
+
+#define DLL_ID  0x01020304           // Change to your own value
+
+                                     // !! Values with bit 31 set are
+
+                                     // reserved for Appl.Systems.
+
+                                     // ID reservation: Apply to
+
+                                     // Appl. Systems (Herr Hoffmann)!
+
+
+
+   extern MPS_fuptr my_funclist[];   // Function list in the demo-DLL
+
+
+
+   extern MPS_magicinfo m_info;      // Is adopted by MagiC PC
+
+!end_verbatim
+
+
+
+See also: MagiC PC interface
+
+!end_node
+
+
+
+!begin_node mps_demo.cpp
+
+!begin_verbatim
+
+// Tab size: 3
+
+
+
+// Last change:  15.08.96
+
+// Author:   FS
+
+
+
+// ------------------------------------------------------------------------------
+
+// Demo example for (!nolink [MagiC]) PC programmer's interface (MPS)
+
+//
+
+// Parl 2: User-defined functions, freely alterable
+
+// =======
+
+//
+
+// ------------------------------------------------------------------------------
+
+
+
+#include "windows.h"
+
+#include "mps_base.h"
+
+#include "mps_demo.h"
+
+
+
+   MPS_magicinfo m_info;               // Global for the DLL
+
+
+
+//
+
+// List of the user-defined functions (alter/extend as required):
+
+// ------------------------------------------------------------------
+
+   static void demo_0(MPS_motregs *r);
+
+   static void demo_1(MPS_motregs *r);
+
+   static void demo_3(MPS_motregs *r);
+
+   static void copy_string(MPS_motregs *r);
+
+
+
+   MPS_fuptr my_funclist[] = {
+
+     demo_0,                       // Demo function 0
+
+     demo_1,                       // Demo function 1
+
+     (MPS_fuptr) -1,               // -1 (i.e function No.2 not defined)
+
+     demo_3,                       // Demo function 3
+
+     copy_string,                  // Demo function 4
+
+     NULL                          // !! A NULL-entry at list end !!
+
+     } ;
+
+
+
+
+
+// ******************************************************************
+
+//
+
+// Here the user-defined functions:
+
+// ================================
+
+//
+
+
+
+// Demo_0 only returns the value 1 in d0:
+
+//
+
+   static void demo_0(MPS_motregs *r)
+
+// ----------------------
+
+ {
+
+   r->d0 = 1;                       // Demo-0 sets d0 to 1
+
+   return;
+
+ }
+
+
+
+// Demo_1 adds the registers d1 and d2; result to d0:
+
+//
+
+   static void demo_1(MPS_motregs *r)
+
+// ----------------------
+
+ {
+
+   r->d0 = r->d1 + r->d2;
+
+   return;
+
+ }
+
+
+
+// Demo_3 does nothing at all!
+
+//
+
+   static void demo_3(MPS_motregs *r)
+
+// ----------------------
+
+ {
+
+   return;
+
+ }
+
+
+
+// Demo routine_4 copy_string copies a string to Motorola address space:
+
+//                -----------
+
+// a0: Destination address,
+
+// d0: Maximum number of characters (incl. 0)
+
+//
+
+   static void copy_string(MPS_motregs *r)
+
+// -----------------------
+
+ {
+
+   static char string[] = "This is a demo-text of copy_string(..)";
+
+
+
+   int i, nchmax;
+
+   char *dest;
+
+
+
+   nchmax = (int) r->d0;
+
+   dest = (char *) (*m_info.intel_ptr)(r->a0);
+
+   if (nchmax<=0 || dest==NULL) return;         // Invalid?
+
+
+
+   for (i=0; i<nchmax; i++) {
+
+     if ((dest[i] = string[i])==0)
+
+       return;
+
+     }
+
+   dest[nchmax-1] = 0;                          // Too long->truncate
+
+   return;
+
+ }
+
+!end_verbatim
+
+
+
+See also: MagiC PC interface
+
+
+
+!end_node
+
+
+
+!begin_node testmps.s
+
+!begin_verbatim
+
+
+
+*                                                 FS  15.08.96
+
+*
+
+*   ===========================================================
+
+*   Sample for the call of the MPS functions from Motorola side
+
+*   ===========================================================
+
+*
+
+* Source Windows-side:
+
+* --------------------
+
+* mps_base.cpp, mps_demo.cpp
+
+*
+
+mps_code .equ  $4fbf                   * !! DO NOT ALTER !!
+
+DLL_ID   .equ  $01020304               * Enter own DLL_ID here
+
+
+
+* -------------------------------------- 60 bytes buffer
+
+bufsize  .equ  60
+
+.bss
+
+.even
+
+buffer:   ds.w  bufsize
+
+* --------------------------------------
+
+
+
+
+
+*
+
+* ------------------- Here we go: -----------------------------------
+
+*
+
+.text
+
+.globl _main
+
+_main:
+
+      moveq    #-1,d0                  * d0 to -1 (for testing)
+
+
+
+*     ===========================      * Call function 0 (Demo_0):
+
+      dc.w     mps_code                * = $4fbf
+
+      dc.l     DLL_ID                  * = Own DLL_ID
+
+      dc.w     0                       * Function number (here 0)
+
+*     ===========================
+
+      cmpi.l   #1,d0                   * Should return 1
+
+      bne      finish
+
+
+
+* Example for call with parameters (copy_string)
+
+* ----------------------------------
+
+      movea.l  #buffer,a0              * Pointer to buffer for string
+
+      move.l   #bufsize,d0             * Max. string length (incl.0-byte)
+
+
+
+*     ===========================      * Call function 4 (copy_string):
+
+      dc.w     mps_code                * = $4fbf
+
+      dc.l     DLL_ID                  * = Own DLL_ID
+
+      dc.w     4                       * Function number (here 4)
+
+*     ===========================
+
+
+
+      bsr      put_line                * Output line (a0)
+
+finish:
+
+      bsr      wait                    * Wait for keypress
+
+      rts
+
+*
+
+* --------------------- END main routine _main -----------------------
+
+*
+
+
+
+
+
+* ------------------------ Output line (a0) --------------------------
+
+put_line:
+
+      moveq    #13,d0
+
+      bsr      put_char
+
+      moveq    #10,d0
+
+put_lnext:
+
+      bsr      put_char
+
+      move.b   (a0)+,d0
+
+      bne      put_lnext
+
+      rts
+
+
+
+* ------------------------ Output chatacter d0 -----------------------
+
+put_char:
+
+      movem.l  d0-d2/a0-a2,-(sp)
+
+      move.w   d0,-(sp)
+
+      move.w   #2,-(sp)
+
+      move.w   #3,-(sp)
+
+      trap     #13
+
+      addq.l   #6,sp
+
+      movem.l  (sp)+,d0-d2/a0-a2
+
+      rts
+
+
+
+* -------------------------- Wait for keypress -----------------------
+
+wait:
+
+      move.w   #2,-(sp)
+
+      move.w   #2,-(sp)
+
+      trap     #13
+
+      addq.l   #4,sp
+
+      rts
+
+
+
+!end_verbatim
+
+
+
+See also: MagiC PC interface
+
+!end_node
+
+!end_node
+
+
+
+!begin_node mec1 interface
+
+!begin_enumerate
+
+!item Concept
+
+
+
+The mec1 interface makes it possible to call functions predefined
+
+     by the emulator in Motorola code. In principle it is similar to
+
+     the mec0 (MPS) interface, though the functions are not freely
+
+     definable in a DLL but already predefined by the emulator.
+
+     Call: The functions are called uniformly by the opcode $43bf,
+
+     followed by a function number, thus with 4 bytes total length.
+
+     Example:
+
+
+
+dc.w   $43bf,$0031
+
+
+
+calls the mec1 function with the number 0x31. ($43bf is the
+
+     opcode for chk <ea>,d1, with <ea> = 111111 binary, so invalid).
+
+     Parameter passing is, as with mec0, via the Motorola registers.
+
+
+
+!item The functions
+
+!begin_xlist [$0001 ]
+
+  !item [$0001] long emu_version:
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! None
+
+        Return: !! d0: Version number
+
+           ~    !! d1: Version date
+
+           ~    !! d2: Bit0: Is it a demo-version?
+
+        !end_table
+
+
+
+
+
+  !item [$0002] long emu_enquire: Obtains diverse information
+
+
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! long d0: What do you want to know?
+
+        Return: !!long d0: Value
+
+        !end_table
+
+
+
+        bisher definiert:
+
+        !begin_table [l l]
+
+        was: !! 1: Version number
+
+        ~    !! 2: Version date
+
+        ~    !! 3: Is it a demo?
+
+        !end_table
+
+
+
+
+
+  !item [$0003] void emu_getexepath:
+
+       Obtains the full path (including drive, without MAGIC_PC.EXE)
+
+
+
+        !begin_table [l l]
+
+        Parameters:!! a0: char *bufadr (Buffer)
+
+             ~    !! d0: short nb_max (Max. bytecount for buffer)
+
+        !end_table
+
+
+
+
+
+  !item [$0004] int emu_install_newvdi:
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: Byte *bufadr (New contents of NVDI_PC.DLL)
+
+                ~  !! d0: long nbytes  (Length)
+
+       Return: !!  d0: >0:  NVDI_PC.DLN sucessfully created.
+
+        ~      !!  At next runup it will be automatically
+
+        ~      !!  renamed to NVDI_PC.DLL, as discussed.
+
+        !end_table
+
+
+
+  !item [$0010] void dw_addline: ~! As of 03.97
+
+
+
+        Output text in new line in the debug window
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: Pointer to the text.
+
+        !end_table
+
+
+
+  !item [$0011] void dw_addtext:    ~! As of 03.97
+
+
+
+        Output text in debug window
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: Pointer to the text
+
+        !end_table
+
+
+
+  !item [$0011] void dw_formtxt:    ~! As of 03.97
+
+
+
+       Output text sprintf-like in debug window
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: Pointer to the format-string
+
+             ~     !! d0, d1, ...  Additional parameters suitable
+
+             ~     !! for the format-string. The format-string
+
+             ~     !! corresponds roughly to sprintf(format,...);
+
+             ~     !! string pointers are not allowed, however.
+
+        !end_table
+
+
+
+  !item [$0031] int printer_open         ~! As of 03.97
+
+
+
+        printer_open Opens the standard printer and starts a new document
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: char *DocName (NULL-pointer allowed)
+
+        Return: !! d0>0: All OK
+
+            ~   !! d0<=0 Error
+
+        !end_table
+
+
+
+  !item [$0032] int printer_close            ~! As of 03.97
+
+
+
+        printer_close Terminates the previously opened document
+
+                            and closes the printer
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! None
+
+        Return: !! d0>0: All OK
+
+           ~    !! d0<=0 Error
+
+        !end_table
+
+
+
+  !item [$0033] int printer_write            ~! As of 03.97
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! a0: Byte *pData;  // Pointer to the data buffer
+
+                   !! d0: long nBytes;  // No. of bytes in buffer
+
+        Return: !! d0: Number of bytes transferred
+
+        !end_table
+
+
+
+  !item [$0040] DWORD getTickCount           ~! As of 03.97
+
+
+
+        !begin_table [l l]
+
+        Return: !! d0: TickCount (msec since start of the computer)
+
+        !end_table
+
+
+
+  !item [$0041] DWORD getDrivePath           ~! ab 02.99
+
+
+
+        The function obtains the Windows path for a (!nolink [MagiC]) drive
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! d0: Drive No. (0 for A:, 1 for B:, ...)
+
+        ~          !! a0: Text buffer for the path
+
+        ~          !! d1: Size of the text buffer
+
+        Return:    !! d0: 0: Not found,
+
+        ~          !! ~~~ 1: Container drive,
+
+        ~          !! ~~~ 2: xfs drive (Windows drive)
+
+        ~          !! ~~~ 4: Floppy drive
+
+        !end_table
+
+
+
+  !item [$0042] DWORD setClipboardDir            ~! ab 02.99
+
+
+
+        !begin_table [l l]
+
+        Parameters:  !! a0: char *pPath // NULL: Set to default
+
+        Return:     !! d0: 1
+
+        !end_table
+
+
+
+        Beispiel:
+
+        !begin_verbatim
+
+        movea.l stringadr,a0    *
+
+        dc.w    $43bf,$0042     * mec1, call function $42
+
+        tst.l   d0              * -1: Function not implemented
+
+        jl  nichtimplementiert
+
+        !end_verbatim
+
+
+
+
+
+  !item [$0043] long getMouseWheel
+
+
+
+        !begin_table [l l]
+
+        Parameters: !! d0.l: 1: Reset position after readout
+
+                   !! ~~~~~~0: Don't reset position after readout
+
+        Return:    !! d0.l: Current position of the mouse-wheel
+
+        !end_table
+
+
+
+        Beispiel:
+
+        !begin_verbatim
+
+        moveq   #1,d0       * Reset position after readout
+
+        dc.w    $43bf,$0043 * mec1, call function $43
+
+        tst.l   d0          * Position altered since last reset
+
+        je  no_action
+
+        <d0.l verarbeiten>
+
+        !end_verbatim
+
+
+
+
+
+  !item [$0045] long setCompiler         ~! As of 17.06.99
+
+
+
+        !begin_table [l l]
+
+         Parameters: !! d0.l: Selection; realised at present:
+
+           ~        !! d0 = 1: Switch compiler on/off:
+
+           ~        !! -------------------------
+
+           ~        !! d1 = 0: Compiler off,
+
+           ~        !! d1 = 1: Compiler on
+
+           ~        !! d1 = -1: Query mode (from my experience
+
+           ~        !! ~~~~~~~~~this does not work, but it ought
+
+           ~        !! ~~~~~~~~~to work in the 6.20 version)
+
+         Return: !! Old mode (0 or 1)
+
+        !end_table
+
+!end_xlist
+
+!end_enumerate
+
+
+
+!end_node
+
+
+
+!end_node
+
