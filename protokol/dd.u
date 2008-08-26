@@ -1,222 +1,872 @@
-########################################
-# @(#) TOS - das Betriebssystem
-# @(#) Rolf Kotzian
-########################################
+!iflang [english]
 
-!begin_node Drag&Drop-Protokoll
-!label Protokoll, Drag&Drop-
 
-Das Drag&Drop-Protokoll wurde von Atari fÅr das Multi-TOS entwickelt. Es
-handelt sich dabei um ein sehr flexibles Protokoll, welches nicht selbst
-Bestandteil des Betriebssystems ist, und daher auch unter anderen
-Betriebssystemvarianten eingesetzt werden kînnte, wenn diese Multitasking
-und Pipes unterstÅtzen.
 
-(!nolink [AES-Nachrichten]) werden in diesem Protokoll nur dazu benutzt, um die
-Kommunikationspartner zusammenzubringen; die gesamte restliche
-DatenÅbertragung erfolgt Åber eine (!I)Pipe(!i), auf die man mit den
-gewohnten (!nolink [Dateifunktionen des GEMDOS]) zugreifen kann.
+!begin_node Drag&Drop protocol
 
-(!B)Um eine Drag&Drop-Kommunikation zu beginnen(!b), legt man in dem
-Verzeichnis U:\PIPE eine Datei mit dem Namen 'DRAGDROP.xx' an, wobei ein x
-jeweils fÅr die Buchstaben A bis Z stehen kann. Dadurch kînnten theoretisch
-bis zu 676 gleichzeitige Drag&Drop-VorgÑnge stattfinden, was sicherlich
-ausreichen sollte. Zum Anlegen der Pipe sollte man die Funktion Fcreate
-verwenden, da diese eine ordentliche Fehlermeldung zurÅckliefert wenn eine
-gleichnamige Pipe bereits existieren sollte. DarÅberhinaus sollte beim
-Anlegen der Pipe das (!I)Hidden-Bit(!i) (Bit-1) gesetzt werden: dadurch
-enthÑlt die lesende Seite ein End-of-File (EOF), wenn die andere Seite der
-Pipe geschlossen wird.
+!label Protocol, Drag&Drop
 
-Anschlieûend wird die Nachricht AP_DRAGDROP an den EmpfÑnger geschickt.
-Da keine RÅckmeldung auf diese Mitteilung vorgesehen ist, muû sich der
-Sender der Funktion (!nolink [Fselect]) bedienen, um festzustellen, ob jemand auf der
-Gegenseite die Pipe zum Lesen geîffent hat und empfangsbereit ist. Atari
-empfiehlt in diesem Zusammenhang ein Time-Out von drei bis vier Sekunden.
 
-(!B)Achtung:(!b) Der Sender ist leider (!I)nicht(!i) in der Lage im voraus
-festzustellen, ob die Ziel-Applikation das Drag&Drop-Protokoll Åberhaupt
-unterstÅtzt. Daher ist es mîglich, daû der Anwender erst nach Ablauf der
-Time-Out-Zeit eine entsprechende Mitteilung erhÑlt. Aus diesem Grund sollten
-alle Applikationen, die das Protokoll (!I)nicht(!i) unterstÅtzen, eine
-(!link [negative BestÑtigung][D&D-Listing_1]) zurÅckschicken, damit die lÑstige
-Wartezeit entfÑllt. Falls der EmpfÑnger hingegen zur Aufnahme der Daten bereit ist,
-sollte er die Kennung DD_OK (mit dem Wert 0) zurÅckschicken.
 
-Als nÑchstes mÅssen sich beide Parteien Åber die Art der zu verschickenden
-Daten einigen; Kernpunkt des Drag&Drop-Protokolls sind nÑmlich
-unterschiedliche (!link [Arten von Datentypen][Drag&Drop, Datentypen fÅr]),
-die als vier Zeichen lange
-Buchstabenfolgen dargestellt werden. Dazu schickt der EmpfÑnger eine
-(!I)nach PrÑferenz sortierte(!i) Liste von acht fÅr ihn brauchbaren
-(!nolink [Datentypen]) an den Sender. Eine Textverarbeitung kînnte auf diese Art z.B.
-mitteilen, daû sie Dateien im Rich-Text-Format (RTF) und ASCII-Format
-unterstÅtzt, und dabei ersteren den Vorzug gibt. (!B)Wichtig:(!b) Wenn
-weniger als acht (!nolink [Datentypen]) verstanden werden, muss der Rest der Liste mit
-Null-Bytes aufgefÅllt werden, so daû immer genau 32 Bytes Åbermittelt
-werden.
+The Drag&Drop protocol was developed by Atari for MultiTOS. This is
 
-Der Sender kann dann anhand der vom EmpfÑnger Åbermittelten Liste
-entscheiden, welches Datenformat verwendet werden soll. Dabei dient die
-Åbermittelte Liste jedoch nur als Richtlinie; der Sender kann also durchaus
-eine andere Reihenfolge benutzen oder auch noch andere Formate anbieten.
+a very flexible protocol which is not itself part of the operating
 
-(!B)Die öbermittlung der eigentlichen Daten erfolgt dann in den folgenden
-Schritten:(!b)
+system, and therefore could also be applied under other operating
+
+systems provided these supported multitasking and pipes.
+
+
+
+(!nolink [AES messages]) in this protocol are only used to bring the communicating
+
+partners in touch with each other; all the remaining data transfer
+
+takes place via a (!I)pipe(!i), which one can access with the usual (!nolink [GEMDOS])
+
+file functions.
+
+
+
+(!B)To initiate a Drag&Drop communication(!b), one creates in the directory
+
+U:\PIPE a file with the name 'DRAGDROP.xx', where each 'x' represents
+
+a letter from 'A' to 'Z'. (!nolink [Thanks]) to this, up to 676 simultaneous
+
+Drag&Drop procedures can take place in theory, which should certainly
+
+suffice. For creating the pipe one should use the function Fcreate,
+
+as this returns a tidy error message should a pipe with the same name
+
+exist already. In addition, when creating the pipe the (!I)hidden(!i) bit
+
+(bit 1) should be set; with this the reading end receives an End-of-
+
+file (EOF) when the other end of the pipe is closed.
+
+
+
+Subsequently the message AP_DRAGDROP is sent to the receiver. As there
+
+is no provision for an acknowledgement for this message, the sender
+
+must make use of the (!nolink [Fselect]) function to ascertain whether someone on
+
+the opposite side has opened the pipe for reading and is ready to
+
+receive. In this connection Atari recommends a timeout of three to
+
+four seconds.
+
+
+
+(!B)Warning:(!b) The sender is unfortunately (!I)not(!i) in the position to establish
+
+in advance whether the destination application supports the Drag&Drop
+
+protocol at all. Thus it is possible that the user only receives an
+
+appropriate message after the expiry of the timeout interval. For this
+
+reason, all applications that do (!I)not(!i) support this protocol should
+
+return a (!link [negative acknowledgement][D&D-listing_1]), so that the annoying waiting time
+
+is avoided. On the other hand, if the receiver is ready to receive
+
+the data, it should return the identifier DD_OK (with the value 0).
+
+
+
+Next, both parties have to agree on the type of data to be sent; the
+
+crucial point of the Drag&Drop protocol namely lies in the various
+
+(!link [kinds of data types][Drag&Drop, Data-types for]), which are represented as a four character long
+
+string of letters. For this the receiver sends a (!I)preference-sorted(!i)
+
+list of eight filetypes that it can use to the sender. For instance,
+
+a text processor could communicate in this manner that it supports
+
+files in Rich Text Format (RTF) and ASCII format, and that it gives
+
+preference to the former. (!B)Important:(!b) If fewer than eight data-types
+
+are understood, the rest of the list must be filled with NULL-bytes,
+
+so that always exactly 32 bytes are transmitted.
+
+
+
+From the list conveyed by the receiver, the sender can then decide
+
+which data format is to be used. The transmitted list only serves as
+
+a guideline for that, however; hence the sender may use a different
+
+order, or also offer other formats.
+
+
+
+(!B)Transmission of the actual data then proceeds in the following steps:(!b)
+
 !label Drag&Drop, Header bei
 
+
+
 !begin_itemize
-!item Zuerst wird ein Header Åbermittelt, der alle Informationen Åber die
-Daten - ihr Format und ihre LÑnge - enthÑlt. Der EmpfÑnger kann darauf
-dann entsprechend reagieren. Der Header ist wie folgt aufgebaut:
+
+!item First a header is transmitted that contains all information about
+
+     the data - its format and its length. The receiver can then react
+
+     accordingly. The header is constructed as follows:
+
+
 
 !begin_table [c c c]
-Position !! LÑnge !! Bedeutung
+
+Position !! Length !! Meaning
+
 !hline
-  0  !! 2 Bytes     !! LÑnge des Headers
-  2  !! 4 Bytes     !! Datentyp (z.B. ARGS)
-  6  !! 4 Bytes     !! LÑnge der zu Åbertragenden Daten
- 10  !! variabel(n) !! Name der Daten (null-terminiert)
-10+n !! variabel    !! Dateiname (null-terminiert)
+
+  0  !! 2 bytes     !! Length of the header
+
+  2  !! 4 bytes     !! Data-type (e.g. ARGS)
+
+  6  !! 4 bytes     !! Length of data to be transmitted
+
+ 10  !! Variable(n) !! Name of the data (NULL-terminated)
+
+10+n !! Variable    !! (!nolink [Filename]) (NULL-terminated)
+
 !end_table
 
-Da die LÑnge des Headers mit angegeben werden muss, ist dieser fÅr
-zukÅnftige Zwecke leicht erweiterbar.
 
-!item Nachdem er den Header eingelesen hat, kann der EmpfÑnger auf diesen
-reagieren. So kann er beispielsweise dem Sender mitteilen, daû er mit dem
-vorgeschlagenen Datenformat einverstanden ist, oder nicht. Dies geschieht
-durch Senden von verschiedenen (!link [Status-Bytes][Drag&Drop, Status Bytes fÅr]).
-!item Sobald der EmpfÑnger mit DD_OK geantwortet hat, wird mit der
-öbertragung der Daten begonnen; dabei werden genau so viele Bytes
-geschrieben, wie im Header angegeben wurden, und anschlieûend die Pipe
-geschlossen.
+
+As the length of the header has to be included, it can be easily
+
+extended for future purposes.
+
+
+
+!item After it has read in the header, the receiver can react to it.
+
+     Thus it can inform the sender, for instance, that it agrees with
+
+     the suggested data format, or not. This is done by sending
+
+     various (!link [status bytes][Drag&Drop, Status bytes for]).
+
+!item As soon as the receiver has replied with DD_OK, the transmission
+
+     of the data starts; for this, exactly as many bytes are written
+
+     as were specified in the header, and subsequently the pipe is
+
+     closed.
+
 !end_itemize
 
+
+
+(!B)Important note:(!b) Normally a process is terminated by the kernel if it
+
+writes to a pipe that has not been opened by anyone for reading. This
+
+can be avoided by ignoring the signal SIGPIPE. Furthermore, neither of
+
+the partners should use a wind_update, since otherwise it could lead
+
+to a (!I)deadlock(!i) in some circumstances if one of the two sides attempts
+
+to make a screen output (e.g. an alert box).
+
+!label Drag&Drop, Source text for
+
+
+
+(!B)Tip:(!b) A sample source text for the Drag&Drop protocol can be found, for
+
+instance, in the magazine (!I)ST-Computer(!i) (issue 12/1993).
+
+
+
+See also: (!nl)
+
+AV protocol ~ GEM ~ Style guidelines ~ (!link [Test for pipes][Pipes, Test for]) ~
+
+OLGA protocol
+
+
+
+!begin_node D&D-listing_1
+
+
+
+!begin_verbatim
+
+/* The following program fragment signals the sender of the
+
+   Drag&Drop protocol that the particular program does not
+
+   support this protocol. */
+
+
+
+#define AP_DRAGDROP   63
+
+#define DD_NAK         1
+
+
+
+/* We are now in the event-loop;
+
+   message_buff is the message buffer. */
+
+
+
+case AP_DRAGDROP:
+
+{
+
+    static BYTE pipename[] = "U:\\PIPE\\DRAGDROP.AA";
+
+    LONG fd;
+
+
+
+    pipename[18] = message_buff[7] & 0x00ff;
+
+    pipename[17] = (message_buff[7] & 0xff00) >> 8;
+
+
+
+    fd = Fopen (pipename, 2);
+
+    if (fd >= 0)
+
+    {
+
+        BYTE c = DD_NAK;
+
+
+
+        Fwrite ((WORD) fd, 1, &c);
+
+        Fclose ((WORD) fd);
+
+    }
+
+}
+
+break;
+
+!end_verbatim
+
+!end_node
+
+
+
+
+
+!begin_node Drag&Drop, Data-types for
+
+
+
+@{"Data-types" ignore} are represented within the Drag&Drop protocol by a four
+
+character long letter string. The following list contains the data-
+
+types defined at present:
+
+
+
+!begin_description [ARGS]
+
+!item [ARGS] represents a (!I)command line(!i), so generally one or more filenames
+
+     or directory names, separated from each other by a space. For
+
+     filenames that themselves contain a space, special treatment is
+
+     required: the filename is enclosed in (!I)single(!i) quotation marks,
+
+     and should a single quote mark appear in the name, it is doubled
+
+     up automatically.
+
+
+
+(!B)Example:(!b)
+
+!begin_verbatim
+
+Aus (!I)Eric's file(!i) wÅrde (!I)'Eric''s file'(!i).
+
+!end_verbatim
+
+
+
+!item [PATH] is reserved to request information about the destination object
+
+     selected by the user. The transmission in this case runs in the
+
+     (!I)opposite(!i) direction; i.e. the sender reads exactly as many bytes
+
+     as specified. For this, the receiver has to transmit the data
+
+     directly after sending DD_OK. The data should contain the full
+
+     pathname or filename of the destination window (terminated with
+
+     a '\').
+
+
+
+!item [.XXX]  represents an extension (of a filename) (!B)Examples:(!b)
+
+
+
+!begin_table [c c l]
+
+.IMG !! = !! Graphic data in (!link [XIMG format][The XIMG format for pixel images])
+
+.GEM !! = !! Graphic data in metafile format
+
+.TXT !! = !! Texts in ASCII format
+
+.RTF !! = !! Texts in Rich Text Format
+
+!end_table
+
+!end_description
+
+
+
+See also: Drag&Drop protocol
+
+
+
+!end_node
+
+
+
+
+
+!begin_node Drag&Drop, Status bytes for
+
+!label DD_OK
+
+!label DD_NAK
+
+!label DD_EXT
+
+!label DD_LEN
+
+!label DD_TRASH
+
+!label DD_PRINTER
+
+!label DD_CLIPBOARD
+
+
+
+The following list contains all the status bytes that may occur within
+
+a Drag&Drop communication:
+
+
+
+!begin_verbatim
+
+#define DD_OK         0    /* OK, - continue                    */
+
+#define DD_NAK        1    /* Abort Drag&Drop                   */
+
+#define DD_EXT        2    /* Data format is not accepted       */
+
+#define DD_LEN        3    /* Request for fewer data            */
+
+#define DD_TRASH      4    /* Destination is a wastebasket icon */
+
+#define DD_PRINTER    5    /* Destination is a printer icon     */
+
+#define DD_CLIPBOARD  6    /* Destination is a clipboard icon   */
+
+!end_verbatim
+
+
+
+All other values are reserved for future purposes.
+
+
+
+(!B)Note:(!b) The status byte DD_EXT is sent when the receiver does not like
+
+the offered data format. Following this the sender will transmit a new
+
+header with a different data format, or break off transmission on its
+
+part. This can be repeated until the sender and receiver have agreed
+
+on a format, or until it is established that there is no possibility
+
+of mutual understanding.
+
+
+
+See also: Drag&Drop protocol
+
+!end_node
+
+!end_node
+
+
+
+!else
+
+
+
+!begin_node Drag&Drop-Protokoll
+
+!label Protokoll, Drag&Drop-
+
+
+
+Das Drag&Drop-Protokoll wurde von Atari fÅr das Multi-TOS entwickelt. Es
+
+handelt sich dabei um ein sehr flexibles Protokoll, welches nicht selbst
+
+Bestandteil des Betriebssystems ist, und daher auch unter anderen
+
+Betriebssystemvarianten eingesetzt werden kînnte, wenn diese Multitasking
+
+und Pipes unterstÅtzen.
+
+
+
+(!nolink [AES-Nachrichten]) werden in diesem Protokoll nur dazu benutzt, um die
+
+Kommunikationspartner zusammenzubringen; die gesamte restliche
+
+DatenÅbertragung erfolgt Åber eine (!I)Pipe(!i), auf die man mit den
+
+gewohnten (!nolink [Dateifunktionen des GEMDOS]) zugreifen kann.
+
+
+
+(!B)Um eine Drag&Drop-Kommunikation zu beginnen(!b), legt man in dem
+
+Verzeichnis U:\PIPE eine Datei mit dem Namen 'DRAGDROP.xx' an, wobei ein x
+
+jeweils fÅr die Buchstaben A bis Z stehen kann. Dadurch kînnten theoretisch
+
+bis zu 676 gleichzeitige Drag&Drop-VorgÑnge stattfinden, was sicherlich
+
+ausreichen sollte. Zum Anlegen der Pipe sollte man die Funktion Fcreate
+
+verwenden, da diese eine ordentliche Fehlermeldung zurÅckliefert wenn eine
+
+gleichnamige Pipe bereits existieren sollte. DarÅberhinaus sollte beim
+
+Anlegen der Pipe das (!I)Hidden-Bit(!i) (Bit-1) gesetzt werden: dadurch
+
+enthÑlt die lesende Seite ein End-of-File (EOF), wenn die andere Seite der
+
+Pipe geschlossen wird.
+
+
+
+Anschlieûend wird die Nachricht AP_DRAGDROP an den EmpfÑnger geschickt.
+
+Da keine RÅckmeldung auf diese Mitteilung vorgesehen ist, muû sich der
+
+Sender der Funktion (!nolink [Fselect]) bedienen, um festzustellen, ob jemand auf der
+
+Gegenseite die Pipe zum Lesen geîffent hat und empfangsbereit ist. Atari
+
+empfiehlt in diesem Zusammenhang ein Time-Out von drei bis vier Sekunden.
+
+
+
+(!B)Achtung:(!b) Der Sender ist leider (!I)nicht(!i) in der Lage im voraus
+
+festzustellen, ob die Ziel-Applikation das Drag&Drop-Protokoll Åberhaupt
+
+unterstÅtzt. Daher ist es mîglich, daû der Anwender erst nach Ablauf der
+
+Time-Out-Zeit eine entsprechende Mitteilung erhÑlt. Aus diesem Grund sollten
+
+alle Applikationen, die das Protokoll (!I)nicht(!i) unterstÅtzen, eine
+
+(!link [negative BestÑtigung][D&D-Listing_1]) zurÅckschicken, damit die lÑstige
+
+Wartezeit entfÑllt. Falls der EmpfÑnger hingegen zur Aufnahme der Daten bereit ist,
+
+sollte er die Kennung DD_OK (mit dem Wert 0) zurÅckschicken.
+
+
+
+Als nÑchstes mÅssen sich beide Parteien Åber die Art der zu verschickenden
+
+Daten einigen; Kernpunkt des Drag&Drop-Protokolls sind nÑmlich
+
+unterschiedliche (!link [Arten von Datentypen][Drag&Drop, Datentypen fÅr]),
+
+die als vier Zeichen lange
+
+Buchstabenfolgen dargestellt werden. Dazu schickt der EmpfÑnger eine
+
+(!I)nach PrÑferenz sortierte(!i) Liste von acht fÅr ihn brauchbaren
+
+(!nolink [Datentypen]) an den Sender. Eine Textverarbeitung kînnte auf diese Art z.B.
+
+mitteilen, daû sie Dateien im Rich-Text-Format (RTF) und ASCII-Format
+
+unterstÅtzt, und dabei ersteren den Vorzug gibt. (!B)Wichtig:(!b) Wenn
+
+weniger als acht (!nolink [Datentypen]) verstanden werden, muss der Rest der Liste mit
+
+Null-Bytes aufgefÅllt werden, so daû immer genau 32 Bytes Åbermittelt
+
+werden.
+
+
+
+Der Sender kann dann anhand der vom EmpfÑnger Åbermittelten Liste
+
+entscheiden, welches Datenformat verwendet werden soll. Dabei dient die
+
+Åbermittelte Liste jedoch nur als Richtlinie; der Sender kann also durchaus
+
+eine andere Reihenfolge benutzen oder auch noch andere Formate anbieten.
+
+
+
+(!B)Die öbermittlung der eigentlichen Daten erfolgt dann in den folgenden
+
+Schritten:(!b)
+
+!label Drag&Drop, Header bei
+
+
+
+!begin_itemize
+
+!item Zuerst wird ein Header Åbermittelt, der alle Informationen Åber die
+
+Daten - ihr Format und ihre LÑnge - enthÑlt. Der EmpfÑnger kann darauf
+
+dann entsprechend reagieren. Der Header ist wie folgt aufgebaut:
+
+
+
+!begin_table [c c c]
+
+Position !! LÑnge !! Bedeutung
+
+!hline
+
+  0  !! 2 Bytes     !! LÑnge des Headers
+
+  2  !! 4 Bytes     !! Datentyp (z.B. ARGS)
+
+  6  !! 4 Bytes     !! LÑnge der zu Åbertragenden Daten
+
+ 10  !! variabel(n) !! Name der Daten (null-terminiert)
+
+10+n !! variabel    !! Dateiname (null-terminiert)
+
+!end_table
+
+
+
+Da die LÑnge des Headers mit angegeben werden muss, ist dieser fÅr
+
+zukÅnftige Zwecke leicht erweiterbar.
+
+
+
+!item Nachdem er den Header eingelesen hat, kann der EmpfÑnger auf diesen
+
+reagieren. So kann er beispielsweise dem Sender mitteilen, daû er mit dem
+
+vorgeschlagenen Datenformat einverstanden ist, oder nicht. Dies geschieht
+
+durch Senden von verschiedenen (!link [Status-Bytes][Drag&Drop, Status Bytes fÅr]).
+
+!item Sobald der EmpfÑnger mit DD_OK geantwortet hat, wird mit der
+
+öbertragung der Daten begonnen; dabei werden genau so viele Bytes
+
+geschrieben, wie im Header angegeben wurden, und anschlieûend die Pipe
+
+geschlossen.
+
+!end_itemize
+
+
+
 (!B)Wichtiger Hinweis:(!b) Normalerweise wird ein Prozess vom Kernel
+
 terminiert, wenn er in eine Pipe schreibt, die von niemandem zum Lesen
+
 geîffnet ist. Dies lÑût sich verhindern, indem man das Signal SIGPIPE
+
 ignoriert. Ferner sollte keiner der beiden Partner ein wind_update benutzen,
+
 da es sonst u.U. zu einem (!B)Deadlock(!b) kommen kînnte, wenn eine der
+
 beiden Seiten versucht eine Bildschirmausgabe (z.B. eine Alertbox) zu
+
 machen.
+
 !label Drag&Drop, Quelltext fÅr
 
+
+
 (!B)Tip:(!b) Ein Beispiel-Quelltext zum Drag&Drop-Protokoll befindet sich
+
 z.B. in der Zeitschrift (!I)ST-Computer(!i) (Ausgabe 12/1993).
 
+
+
 Querverweis: (!nl)
+
 AV-Protokoll    GEM   Style-Guidelines   (!link [Test auf Pipes][Pipes, Test auf])
+
              OLGA-Protokoll
+
+
+
 
 
 !begin_node D&D-Listing_1
 
+
+
 !begin_verbatim
+
 /* Das folgende Programmfragment signalisiert dem Sender
+
    des Drag&Drop-Protokolls, daû das eigene Programm
+
    dieses Protokoll nicht versteht. */
 
+
+
 #define AP_DRAGDROP   63
+
 #define DD_NAK         1
 
+
+
 /* wir befinden uns nun in der Event-Schleife;
+
    message_buff ist der Message-Puffer. */
 
+
+
 case AP_DRAGDROP:
+
 {
+
     static BYTE pipename[] = "U:\\PIPE\\DRAGDROP.AA";
+
     LONG fd;
 
+
+
     pipename[18] = message_buff[7] & 0x00ff;
+
     pipename[17] = (message_buff[7] & 0xff00) >> 8;
 
+
+
     fd = Fopen (pipename, 2);
+
     if (fd >= 0)
+
     {
+
         BYTE c = DD_NAK;
 
+
+
         Fwrite ((WORD) fd, 1, &c);
+
         Fclose ((WORD) fd);
+
     }
+
 }
+
 break;
+
 !end_verbatim
+
 !end_node
+
+
+
 
 
 !begin_node Drag&Drop, Datentypen fÅr
 
+
+
 Datentypen werden innerhalb des Drag&Drop-Protokolls durch eine vier
+
 Zeichen lange Buchstabenfolge reprÑsentiert. Die folgende Liste enthÑlt
+
 die zur Zeit definierten Datentypen:
 
+
+
 !begin_description [ARGS]
+
 !item [ARGS] steht fÅr eine (!I)Kommandozeile(!i), also i.a. einen oder
+
 mehrere Datei- oder Verzeichnisnamen, die voneinander durch Leerzeichen
+
 getrennt sind. FÅr Dateinamen die selbst Leerzeichen enthalten, ist eine
+
 Sonderbehandlung notwendig. Dazu wird der Dateiname in (!I)einfache(!i)
+
 AnfÅhrungsstriche eingeschlossen, und jeder AnfÅhrungsstrich, der im Namen
+
 auftritt, durch einen doppelten ersetzt.
 
+
+
 (!B)Beispiel:(!b)
+
 !begin_verbatim
+
 Aus (!I)Eric's file(!i) wÅrde (!I)'Eric''s file'(!i).
+
 !end_verbatim
 
+
+
 !item [PATH] ist reserviert, um Informationen Åber das vom Benutzer gewÑhlte
+
 Zielobjekt zu erfragen. Die öbertragung lÑuft in diesem Fall in die
+
 (!I)umgekehrte(!i) Richtung; d.h. der Sender liest genau so viele Bytes wie
+
 angegeben. Hierzu muû der EmpfÑnger nach dem Senden von DD_OK direkt die
+
 Daten Åbermitteln. Diese sollten den vollstÑndigen Pfadnamen bzw. Dateinamen
+
 des Zielfensters (mit '\' terminiert) enthalten.
+
+
 
 !item [.XXX] steht fÅr eine Extension (eines Dateinamens). (!B)Beispiele:(!b)
 
+
+
 !begin_table [c c l]
+
 .IMG !! = !! Grafikdaten im (!link [XIMG-Format][Das XIMG-Format fÅr Pixelbilder])
+
 .GEM !! = !! Grafikdaten im Metafile-Format
+
 .TXT !! = !! Texte im (!link [ASCII-Format][ASCII-Tabelle])
+
 .RTF !! = !! Texte im Rich-Text-Format
+
 !end_table
+
 !end_description
+
+
 
 Querverweis: Drag&Drop-Protokoll
 
+
+
 !end_node
+
+
+
 
 
 !begin_node Drag&Drop, Status Bytes fÅr
+
 !label DD_OK
+
 !label DD_NAK
+
 !label DD_EXT
+
 !label DD_LEN
+
 !label DD_TRASH
+
 !label DD_PRINTER
+
 !label DD_CLIPBOARD
 
+
+
 Die folgende Liste enthÑlt alle Status-Bytes, die innerhalb einer
+
 Drag&Drop-Kommunikation anfallen kînnen:
 
+
+
 !begin_verbatim
+
 #define DD_OK         0    /* Ok, - weitermachen                */
+
 #define DD_NAK        1    /* Drag&Drop abbrechen               */
+
 #define DD_EXT        2    /* Datenformat wird nicht akzeptiert */
+
 #define DD_LEN        3    /* Wunsch nach weniger Daten         */
+
 #define DD_TRASH      4    /* Ziel ist ein Papierkorb-Icon      */
+
 #define DD_PRINTER    5    /* Ziel ist ein Drucker-Icon         */
+
 #define DD_CLIPBOARD  6    /* Ziel ist ein Klemmbrett-Icon      */
+
 !end_verbatim
+
+
 
 Alle anderen Werte sind fÅr zukÅnftige Erweiterungen reserviert.
 
+
+
 (!B)Hinweis:(!b) Das Status-Byte DD_EXT wird verschickt, wenn der EmpfÑnger
+
 das angebotene Datenformat nicht mag. Der Sender wird daraufhin einen neuen
+
 Header mit einem anderen Datenformat schicken, oder seinerseits die
+
 öbertragung abbrechen. Dies kann sich solange wiederholen, bis sich Sender
+
 und EmpfÑnger auf ein Format geeinigt haben, oder bis feststeht, daû es
+
 keine Mîglichkeit der VerstÑndigung gibt.
 
+
+
 Querverweis: Drag&Drop-Protokoll
+
 !end_node
+
 !end_node
+
+
+
+!endif
+

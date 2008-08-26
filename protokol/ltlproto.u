@@ -1,502 +1,1390 @@
-# ########################################################################
-# @(#)Beschreibung des LTL-Protokolls
-# @(#)23.07.1996 by Dirk Haun, Europastr. 8, D-64569 Nauheim
-# ########################################################################
-# ########################################################################
+!iflang [english]
 
-!begin_node LTL-Protokoll
-Bei den meisten Compilersprachen wird ein Programm zunÑchst 
-com!-pi!-liert (d.h. vom Quelltext in den Maschinencode Åbersetzt) und 
-dann gelinkt (d.h. mit anderen Programmteilen und 
-Bibliotheks!-funktionen zusammengefÅgt und als Programmdatei 
-abgespeichert) bevor es aus!-ge!-fÅhrt werden kann. Beim 
-Load-Time-Linking (kurz ""LTL"") spart man sich den letzten Schritt 
-auf, bis das Programm ausgefÅhrt werden soll. Erst dann fÅgt der 
-sogenannte Loader das Programm zusammen, ohne es jedoch als 
-Programmdatei abzuspeichern. Der Linkvorgang findet also im 
-Hauptspeicher, unmittelbar vor der AusfÅhrung des Programms, statt.
 
-Dieser Text beschreibt ein Protokoll, Åber das eine Shell mit einem 
-Loader, also einem Program, das Load-Time-Linking implementiert, 
-kom!-mu!-ni!-zie!-ren kann. Dieses Protokoll wurde erst!-mals von der 
-Ent!-wick!-lungs!-um!-ge!-bung Chatwin und dem Oberon-System 
-STJ-Oberon-2 ver!-wen!-det. Das Protokoll ist aber so gehalten, daû es 
-prin!-zi!-pi!-ell auch von an!-de!-ren Shells und Loadern verwendet 
-werden kann.
+
+!begin_node LTL protocol
+
+With most compilers languages a program has to be first compiled
+
+(i.e. translated from the source text to machine code) and then linked
+
+(i.e. joined up with other program portions and library functions and
+
+saved as a program file) before it can be executed. Load-time linking
+
+(abbreviated 'LTL') omits the last step until the program is to be
+
+executed. Only then does the so-called loader assemble the program,
+
+though without saving it as a program file. Thus the linking process
+
+takes place in RAM, immediately before the execution of the program.
+
+
+
+This text desribes a protocol permitting a shell to communicate with
+
+a loader (i.e. a program that implements load-time linking). This
+
+protocol was used for the first time by the development environment
+
+Chatwin and the Oberon-System STJ-Oberon-2. But the protocol has been
+
+constructed in such a way that in principle it can also be used by
+
+other shells and loaders.
+
+
 
 !subtoc all
 
-# ########################################################################
-# !node Beschreibung des Protokolls
+
+
 
 
 # ========================================================================
-!begin_node Der OBNL-Cookie
+
+!begin_node The OBNL cookie
+
 !alias OBNL
-Die Kommunikation zwischen Shell und Loader geschieht Åber einen 
-Cookie namens (!V)OBNL(!v). Dieser zeigt auf eine Routine, Åber die 
-die Shell den Loader aufrufen kann. Folglich muû der Cookie vom Loader 
-angelegt werden.
 
-Die Routine, auf die der OBNL-Cookie zeigt, ist wie folgt deklariert:
+The communication between shell and loader takes place via a cookie
+
+named OBNL. This points to a routine with which the shell can call the
+
+loader. Hence the cookie must be created by the loader.
+
+
+
+The routine to which the OBNL cookie points is defined as follows:
+
 !begin_quote
+
 !begin_verbatim
+
 int cdecl obnload ( OBNCOMM *com );
+
 !end_verbatim
+
 !end_quote
-D.h. daû der Routine auf dem Stack ein Zeiger auf eine Struktur 
-(!V)(!nolink [OBNCOMM])(!v) Åbergeben wird und daû die Routine einen 16-Bit-Wert 
-im Register D0 zurÅckliefert.
+
+i.e. that the routine passes on the stack a pointer to a (!nolink [OBNCOMM])
+
+structure and that the routine returns a 16-bit value in register d0.
+
+
 
 !end_node
 
+
+
 # ========================================================================
-!begin_node Die OBNCOMM-Struktur
+
+!begin_node The OBNCOMM structure
+
 !alias OBNCOMM
-Die Struktur (!V)OBNCOMM(!v) hat folgenden Aufbau:
-!begin_quote
-!begin_verbatim
-typedef struct _obncomm
-{
-  int   type;
-  void *ptr;
-  int   chr;
-  void *env;
-} OBNCOMM;
-!end_verbatim
-!end_quote
-Das Feld ''(!V)type(!v)'' enthÑlt jeweils eine Nachrichtennummer. In 
-Ab!-hÑngig!-keit von dieser Nummer sind dann die anderen EintrÑge der 
-Struktur be!-legt.
 
-""(!V)int(!v)"" ist eine vorzeichenbehaftete 16-Bit-Zahl,
-""(!V)void *(!v)"" ist ein Zei!-ger auf ""irgendwas"", d.h. es ist 
-zunÑchst nicht genauer spe!-zi!-fi!-ziert, auf welche Art von Daten 
-der Zeiger zeigt.
+The OBNCOMM structure is built up as follows:
+
+!begin_quote
+
+!begin_verbatim
+
+typedef struct _obncomm
+
+{
+
+  int   type;
+
+  void *ptr;
+
+  int   chr;
+
+  void *env;
+
+} OBNCOMM;
+
+!end_verbatim
+
+!end_quote
+
+The field (!I)type(!i) contains one message number at a time. Depending on
+
+this number, the other entries of the structure are then filled.
+
+
+
+'int' is a signed 16-bit integer, 'void *' is a pointer to 'something'
+
+i.e. it is not at first specified particularly what type of data the
+
+pointer points to.
+
+
 
 !end_node
 
+
+
 # ========================================================================
-!begin_node Nachrichten der Shell an den Loader
-Die Shell kann die folgenden (!nolink [Nachrichten]) an den Loader senden:
+
+!begin_node LTL messages from the shell to the loader
+
+The shell can send the following messages to the loader:
+
 !begin_quote
+
 !begin_verbatim
- Nachricht     Nummer
+
+ (!nolink [Message])     Number
+
 ----------------------
+
  CL_INIT       0x6500
+
  CL_COMMAND    0x6501
+
  CL_TIME       0x6502
+
 !end_verbatim
+
 !end_quote
+
+
 
 !smallskip
 
+(!nolink [Messages]) from the shell to the loader always start with 'CL_'.
+
+
+
+(!B)Please note:(!b) These are (!I)not(!i) (!nolink [AES]) messages! The communication takes
+
+place via the routine to which the OBNL cookie points.
+
+
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node CL_INIT
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+With the message CL_INIT the shell inform the loader that it supports
+
+the LTL protocol. At the same time it passes to the loader the address
+
+of a function via which the loader can trigger actions in the shell.
+
+
+
+The function in the shell has the same parameters as the function to
+
+which the OBNL cookie points:
+
+!begin_quote
+
+!begin_verbatim
+
+int cdecl obnshell ( OBNCOMM *com );
+
+!end_verbatim
+
+!end_quote
+
+
+
+!smallskip
+
+
+
+Assignment of the (!nolink [OBNCOMM]) structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)CL_INIT(!v)
+
+ !item [ptr]  Address of the function in the shell
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node CL_COMMAND
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+The shell is to execute a command that requires a load-time linking.
+
+After this it passes on the complete command to the loader.
+
+
+
+!smallskip
+
+Assignment of the OBNCOMM structure:
+
+
+
+!begin_xlist [type~]
+
+ !item [type] (!V)CL_COMMAND(!v)
+
+ !item [ptr]  Pointer to a NULL-terminated string that contains the complete
+
+        command that was input (incl. parameters)
+
+ !item [chr]  Undefined
+
+ !item [env]  Pointer to the environment
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node CL_TIME
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+If there has been no user input for some time and the shell also has
+
+nothing to do otherwise, it can inform the loader about this so that
+
+it is free to perform tasks in the background if desired.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)CL_TIME(!v)
+
+ !item [ptr]  Undefined
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+!end_node
+
+
+
+# ========================================================================
+
+!begin_node LTL messages from the loader to the shell
+
+The loader can send the following messages to the shell:
+
+
+
+!begin_quote
+
+!begin_verbatim
+
+ (!nolink [Message])     Number
+
+----------------------
+
+ LC_WRCHAR     0x6503
+
+ LC_WRSTR      0x6504
+
+ LC_OUTBUF     0x6505
+
+ LC_CLOSEWIN   0x6506
+
+ LC_OPENWIN    0x6507
+
+!end_verbatim
+
+!end_quote
+
+
+
+!smallskip
+
+
+
+(!nolink [Messages]) from the loader to the shell always start with 'LC_'.
+
+
+
+(!B)Please note:(!b) These are (!I)not(!i) (!nolink [AES]) messages! The communication takes
+
+place via the routine that the shell has informed the loader about at
+
+CL_INIT.
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node LC_WRCHAR
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+!raw [stg] @xref LC_WRSTR
+
+!raw [stg] @xref LC_OUTBUF
+
+The loader sends to the shell a character that is to be output on the
+
+console.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)LC_WRCHAR(!v)
+
+ !item [ptr]  Undefined
+
+ !item [chr]  The character to be output
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node LC_WRSTR
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+!raw [stg] @xref LC_WRCHAR
+
+!raw [stg] @xref LC_OUTBUF
+
+The loader sends to the shell a NULL-terminated string that is to be
+
+output in the console.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)LC_WRSTR(!v)
+
+ !item [ptr]  Pointer to the string to be output
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node LC_OUTBUF
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+!raw [stg] @xref LC_WRCHAR
+
+!raw [stg] @xref LC_WRSTR
+
+The loader directs the shell to output to the console immediately any
+
+characters that may still be left in the buffer.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)LC_OUTBUF(!v)
+
+ !item [ptr]  Undefined
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node LC_CLOSEWIN
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+!raw [stg] @xref LC_OPENWIN
+
+The loader directs the shell to close all windows that may be open at
+
+the time. This call is required at the launch of a (!nolink [GEM]) module under
+
+Single-TOS.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)LC_CLOSEWIN(!v)
+
+ !item [ptr]  Undefined
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ------------------------------------------------------------------------
+
+!begin_node LC_OPENWIN
+
+!raw [stg] @xref "Die OBNCOMM-Struktur"
+
+!raw [stg] @xref LC_CLOSEWIN
+
+The loader directs the shell to reopen all windows closed previously
+
+with LC_CLOSEWIN.
+
+
+
+!smallskip
+
+
+
+Assignment of the OBNCOMM structure:
+
+!begin_xlist [type~]
+
+ !item [type] (!V)LC_OPENWIN(!v)
+
+ !item [ptr]  Undefined
+
+ !item [chr]  Undefined
+
+ !item [env]  Undefined
+
+!end_xlist
+
+
+
+!end_node
+
+!end_node
+
+
+
+# ########################################################################
+
+!begin_node Example: Chatwin and STJ-Oberon-2
+
+As an example one should show here briefly how Chatwin (shell) and
+
+STJ-Oberon-2 (loader) implement the LTL protocol:
+
+
+
+!begin_itemize
+
+  !item    The (!nolink [Oberon]) loader installs the OBNL cookie and then launches
+
+     (!nolink [Chatwin]).
+
+
+
+ !item  (!nolink [Chatwin]) recognizes by the presence of the cookie that LTL is
+
+     desired and declares itself to the loader with the CL_INIT call.
+
+     During this (!nolink [Chatwin]) passes a pointer to a function via which the
+
+     loader in turn can trigger actions in (!nolink [Chatwin]).
+
+
+
+ !item  Whenever (!nolink [Chatwin]) is directed now to launch a file with the
+
+     extension '*.OBJ', it passes this file and any parameters that
+
+     may be required via the message CL_COMMAND to the loader.
+
+
+
+     The loader now has to launch the program. If it is dealing with a
+
+     (!nolink [TOS]) program, then it can direct the outputs of this program via
+
+     the LC_WRCHAR and LC_WRSTR messages to Chatwin's console window.
+
+     If it is dealing with a (!nolink [GEM]) program, then the loader can direct
+
+     (!nolink [Chatwin]) under Single-TOS to close all its windows (LC_CLOSEWIN
+
+     message) before the program is launched.
+
+
+
+     (!B)Note:(!b) (!nolink [Chatwin]) recognizes by the extension whether a load-time
+
+     linking is to be performed for a given file. In older versions
+
+     the extension '*.OBJ' is fixed, as of (!nolink [Chatwin]) 3.04 the extension
+
+     can be specified in the environmental variable $LTLEXT. Due to
+
+     this (!nolink [Chatwin]) is prepared also for other languages that do not
+
+     use '*.OBJ' as extensions for the object files.
+
+
+
+ !item  If there has been no user input for some time and also there are
+
+     no other tasks pending, (!nolink [Chatwin]) cedes CPU time to the loader
+
+     by sending a CL_TIME message. Due to this the loader can perform
+
+     certain tasks in the background.
+
+
+
+ !item  A special protocol exists for program termination: When (!nolink [Chatwin])
+
+     is terminated, the loader terminates as well.
+
+
+
+!end_itemize
+
+
+
+!end_node
+
+
+
+# ########################################################################
+
+!begin_node Chatwin
+
+!begin_xlist [Hardwarevorauss.:]
+
+ !item [Programm-Name:]    Chatwin
+
+ !item [Version:]          3.02a vom 23.06.1996
+
+ !item [Programmtyp:]      Entwicklungsumgebung
+
+ !item [Status:]           Freeware
+
+ !item [Preis:]            0.-
+
+ !item [Beschreibung:]     Universelle Entwicklungsumgebung fÅr nahezu 
+
+                           alle ""klassischen"" Compilersprachen (z.B. 
+
+                           C-Compiler) und Ñhnlich aufgebaute Systeme 
+
+                           (z.B. auch ST-Guide, UDO, TeX). Spezielle 
+
+                           UnterstÅtzung des Load-Time-Linking von 
+
+                           STJ-Oberon-2.
+
+
+
+                           Beherrscht die Åblichen Standards (VA-, 
+
+                           SE-, XACC-, Drag&Drop-, View- und 
+
+                           (!nolink [Font-Protokoll]), xFSL-, (!nolink [UFSL])- und 
+
+                           MagiC 4-Fontselektor), GDOS-Druck, kann 
+
+                           Samples Åber DMA-Sound, MacSound und Petra 
+
+                           abspielen, unterstÅtzt Kobold, Stewart und 
+
+                           StIc, das IFormats-Paket von Martin Osieka, 
+
+                           etc. pp.
+
+ !item [énderungen:]       Die mir bekannten Fehler wurden beseitigt.
+
+
+
+ !item [Hardwarevorauss.:] alle Atari-Rechner und kompatible ab 1 
+
+                           MByte Hauptspeicher und einer Auflîsung von 
+
+                           640x400 Pixeln
+
+ !item [Softwarevorauss.:] Ein TOS-kompatibles Betriebssystem (TOS ab 
+
+                           1.02). FÅr die Online-Hilfe wird ST-Guide 
+
+                           benîtigt.
+
+ !item [Autor:]            Dirk Haun
+
+ !item [Download:]
+
+ !item [Archivnamen:]      CHATWIN.LZH~~(330.235 Bytes) - Komplettarchiv (!nl)
+
+                           CHTWDFY2.LZH~(103.575 Bytes) - Updatearchiv,
+
+                           benîtigt Diffy 2
+
+!end_xlist
+
+
+
+!end_node
+
+
+
+# ########################################################################
+
+
+
+!end_node
+
+
+
+!else
+
+
+
+!begin_node LTL-Protokoll
+
+Bei den meisten Compilersprachen wird ein Programm zunÑchst 
+
+com!-pi!-liert (d.h. vom Quelltext in den Maschinencode Åbersetzt) und 
+
+dann gelinkt (d.h. mit anderen Programmteilen und 
+
+Bibliotheks!-funktionen zusammengefÅgt und als Programmdatei 
+
+abgespeichert) bevor es aus!-ge!-fÅhrt werden kann. Beim 
+
+Load-Time-Linking (kurz ""LTL"") spart man sich den letzten Schritt 
+
+auf, bis das Programm ausgefÅhrt werden soll. Erst dann fÅgt der 
+
+sogenannte Loader das Programm zusammen, ohne es jedoch als 
+
+Programmdatei abzuspeichern. Der Linkvorgang findet also im 
+
+Hauptspeicher, unmittelbar vor der AusfÅhrung des Programms, statt.
+
+
+
+Dieser Text beschreibt ein Protokoll, Åber das eine Shell mit einem 
+
+Loader, also einem Program, das Load-Time-Linking implementiert, 
+
+kom!-mu!-ni!-zie!-ren kann. Dieses Protokoll wurde erst!-mals von der 
+
+Ent!-wick!-lungs!-um!-ge!-bung Chatwin und dem Oberon-System 
+
+STJ-Oberon-2 ver!-wen!-det. Das Protokoll ist aber so gehalten, daû es 
+
+prin!-zi!-pi!-ell auch von an!-de!-ren Shells und Loadern verwendet 
+
+werden kann.
+
+
+
+!subtoc all
+
+
+
+
+
+# ========================================================================
+
+!begin_node Der OBNL-Cookie
+
+!alias OBNL
+
+Die Kommunikation zwischen Shell und Loader geschieht Åber einen 
+
+Cookie namens (!V)OBNL(!v). Dieser zeigt auf eine Routine, Åber die 
+
+die Shell den Loader aufrufen kann. Folglich muû der Cookie vom Loader 
+
+angelegt werden.
+
+
+
+Die Routine, auf die der OBNL-Cookie zeigt, ist wie folgt deklariert:
+
+!begin_quote
+
+!begin_verbatim
+
+int cdecl obnload ( OBNCOMM *com );
+
+!end_verbatim
+
+!end_quote
+
+D.h. daû der Routine auf dem Stack ein Zeiger auf eine Struktur 
+
+(!V)(!nolink [OBNCOMM])(!v) Åbergeben wird und daû die Routine einen 16-Bit-Wert 
+
+im Register D0 zurÅckliefert.
+
+
+
+!end_node
+
+
+
+# ========================================================================
+
+!begin_node Die OBNCOMM-Struktur
+
+!alias OBNCOMM
+
+Die Struktur (!V)OBNCOMM(!v) hat folgenden Aufbau:
+
+!begin_quote
+
+!begin_verbatim
+
+typedef struct _obncomm
+
+{
+
+  int   type;
+
+  void *ptr;
+
+  int   chr;
+
+  void *env;
+
+} OBNCOMM;
+
+!end_verbatim
+
+!end_quote
+
+Das Feld ''(!V)type(!v)'' enthÑlt jeweils eine Nachrichtennummer. In 
+
+Ab!-hÑngig!-keit von dieser Nummer sind dann die anderen EintrÑge der 
+
+Struktur be!-legt.
+
+
+
+""(!V)int(!v)"" ist eine vorzeichenbehaftete 16-Bit-Zahl,
+
+""(!V)void *(!v)"" ist ein Zei!-ger auf ""irgendwas"", d.h. es ist 
+
+zunÑchst nicht genauer spe!-zi!-fi!-ziert, auf welche Art von Daten 
+
+der Zeiger zeigt.
+
+
+
+!end_node
+
+
+
+# ========================================================================
+
+!begin_node Nachrichten der Shell an den Loader
+
+Die Shell kann die folgenden (!nolink [Nachrichten]) an den Loader senden:
+
+!begin_quote
+
+!begin_verbatim
+
+ Nachricht     Nummer
+
+----------------------
+
+ CL_INIT       0x6500
+
+ CL_COMMAND    0x6501
+
+ CL_TIME       0x6502
+
+!end_verbatim
+
+!end_quote
+
+
+
+!smallskip
+
+
+
 (!nolink [Nachrichten]) von der Shell an den Loader beginnen immer mit 
+
 (!V)CL_(!v).
 
+
+
 (!B)Bitte beachten:(!b) Es handelt sich hierbei (!I)nicht(!i) um 
+
 (!nolink [AES])-(!nolink [Nachrichten])! Die Kommunikation geschieht
+
 Åber die Routine, auf die der OBNL-Cookie zeigt.
 
 
+
+
+
 # ------------------------------------------------------------------------
+
 !begin_node CL_INIT
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 öber die Nachricht (!V)CL_INIT(!v) teilt die Shell dem Loader mit, daû 
+
 sie das LTL-Protokoll unterstÅtzt. Gleichzeitig Åbergibt sie dem 
+
 Loader die Adresse einer Funktion, Åber die der Loader bestimmte 
+
 Aktionen in der Shell auslîsen kann.
 
+
+
 Die Funktion in der Shell hat die gleichen Parameter wie die Funktion, 
+
 auf die der OBNL-Cookie zeigt:
+
 !begin_quote
+
 !begin_verbatim
+
 int cdecl obnshell ( OBNCOMM *com );
+
 !end_verbatim
+
 !end_quote
 
+
+
 !smallskip
+
+
 
 Belegung der (!nolink [OBNCOMM])-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)CL_INIT(!v)
+
  !item [ptr]  Adresse der Funktion in der Shell
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
+
+
 
 !end_node
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node CL_COMMAND
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 Die Shell soll ein Kommando ausfÅhren, das ein Load-Time-Linking 
+
 er!-for!-dert. Sie reicht daraufhin das komplette Kommando an den 
+
 Loader weiter.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)CL_COMMAND(!v)
+
  !item [ptr]  Zeiger auf einen nullterminierten String, der das 
+
               gesamte ein!-ge!-ge!-be!-ne Kommando (also inkl. 
+
               Parameter) enthÑlt.
+
  !item [chr]  undefiniert
+
  !item [env]  Zeiger auf das Environment.
+
 !end_xlist
+
+
 
 !end_node
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node CL_TIME
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 Wenn lÑngere Zeit keine Benutzereingaben vorliegen und die Shell auch 
+
 sonst nichts zu tun hat, so kann sie den Loader benachrichtigen, 
+
 da!-mit dieser evtl. Arbeiten im Hintergrund erledigen kann.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)CL_TIME(!v)
+
  !item [ptr]  undefiniert
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
 
+
+
 !end_node
+
 !end_node
+
+
 
 # ========================================================================
+
 !begin_node Nachrichten des Loaders an die Shell
+
 Der Loader kann folgende (!nolink [Nachrichten]) an die Shell schicken:
 
+
+
 !begin_quote
+
 !begin_verbatim
+
  Nachricht     Nummer
+
 ----------------------
+
  LC_WRCHAR     0x6503
+
  LC_WRSTR      0x6504
+
  LC_OUTBUF     0x6505
+
  LC_CLOSEWIN   0x6506
+
  LC_OPENWIN    0x6507
+
 !end_verbatim
+
 !end_quote
 
+
+
 !smallskip
+
+
 
 (!nolink [Nachrichten]) von dem Loader an die Shell beginnen immer mit 
+
 (!V)LC_(!v).
 
+
+
 (!B)Bitte beachten:(!b) Es handelt sich hierbei (!I)nicht(!i) um 
+
 (!nolink [AES-Nachrichten])! Die Kommunikation geschieht Åber die Routine, die die 
+
 Shell dem Loader bei (!V)CL_INIT(!v) mitgeteilt hat.
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node LC_WRCHAR
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 !raw [stg] @xref LC_WRSTR
+
 !raw [stg] @xref LC_OUTBUF
+
 Der Loader schickt der Shell ein Zeichen, das in der Console 
+
 aus!-ge!-ge!-ben werden soll.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)LC_WRCHAR(!v)
+
  !item [ptr]  undefiniert
+
  !item [chr]  das auszugebende Zeichen
+
  !item [env]  undefiniert
+
 !end_xlist
+
+
 
 !end_node
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node LC_WRSTR
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 !raw [stg] @xref LC_WRCHAR
+
 !raw [stg] @xref LC_OUTBUF
+
 Der Loader schickt der Shell einen nullterminierten String, der in der 
+
 Console ausgegeben werden soll.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)LC_WRSTR(!v)
+
  !item [ptr]  Zeiger auf den auszugebenden String
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
+
+
 
 !end_node
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node LC_OUTBUF
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 !raw [stg] @xref LC_WRCHAR
+
 !raw [stg] @xref LC_WRSTR
+
 Der Loader weist die Shell an, evtl. noch gepufferte Zeichen jetzt in 
+
 der Console auszugeben.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)LC_OUTBUF(!v)
+
  !item [ptr]  undefiniert
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
+
+
 
 !end_node
 
+
+
 # ------------------------------------------------------------------------
+
 !begin_node LC_CLOSEWIN
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 !raw [stg] @xref LC_OPENWIN
+
 Der Loader weist die Shell an, alle evtl. gerade offenen Fenster zu 
+
 schlieûen. Dieser Aufruf wird beim Start eines (!nolink [GEM])-Moduls unter 
+
 Single!-TOS benîtigt.
 
+
+
 !smallskip
 
+
+
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)LC_CLOSEWIN(!v)
+
  !item [ptr]  undefiniert
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
 
+
+
 !end_node
+
+
 
 # ------------------------------------------------------------------------
+
 !begin_node LC_OPENWIN
+
 !raw [stg] @xref "Die OBNCOMM-Struktur"
+
 !raw [stg] @xref LC_CLOSEWIN
+
 Der Loader weist die Shell an, alle zuvor bei (!V)LC_CLOSEWIN(!v) 
+
 ge!-schlos!-senen Fenster wieder zu îffnen.
 
+
+
 !smallskip
+
+
 
 Belegung der OBNCOMM-Struktur:
+
 !begin_xlist [type~]
+
  !item [type] (!V)LC_OPENWIN(!v)
+
  !item [ptr]  undefiniert
+
  !item [chr]  undefiniert
+
  !item [env]  undefiniert
+
 !end_xlist
 
-!end_node
+
+
 !end_node
 
+!end_node
+
+
+
 # ########################################################################
+
 !begin_node Beispiel: Chatwin und STJ-Oberon-2
+
 Als Beispiel soll hier kurz aufgefÅhrt werden, wie Chatwin (Shell) und 
+
 STJ-Oberon-2 (Loader) das LTL-Protokoll implementieren:
 
+
+
 !begin_itemize
+
  !item Der (!nolink [Oberon])-Loader richtet den (!V)OBNL(!v)-Cookie ein und 
+
        startet dann (!nolink [Chatwin]) nach.
+
  !item (!nolink [Chatwin]) erkennt am Vorhandensein des Cookies, daû LTL gewÅnscht 
+
        ist und meldet sich mit dem Aufruf (!V)CL_INIT(!v) beim Loader 
+
        an. Dabei Åbergibt (!nolink [Chatwin]) einen Zeiger auf eine Funktion, Åber 
+
        die der Loader wiederum Aktionen in (!nolink [Chatwin]) auslîsen kann.
+
  !item Wann immer (!nolink [Chatwin]) nun angewiesen wird, eine Datei mit der 
+
        Ex!-ten!-si!-on (!V)*.OBJ(!v) zu starten, Åbergibt er diese 
+
        Datei und die evtl. Åbergebenen Parameter mittels der Nachricht 
+
        (!V)CL_COMMAND(!v) an den Loader.
+
        
+
        Der Loader muû nun das Programm starten. Handelt es sich um ein 
+
        TOS-Programm, so kann er die Ausgaben dieses Programms Åber die 
+
        (!nolink [Nachrichten]) (!V)LC_WRCHAR(!v) und (!V)LC_WRSTR(!v) in das 
+
        Console-Fenster von Chatwin ausgeben lassen. Handelt es sich um 
+
        ein (!nolink [GEM])-Programm, so kann der Loader (!nolink [Chatwin]) unter SingleTOS 
+
        dazu auffordern, alle seine Fenster zu schlieûen (Nachricht 
+
        (!V)LC_CLOSEWIN(!v)), bevor das Programm gestartet wird.
+
        
+
        (!B)Anmerkung:(!b) (!nolink [Chatwin]) erkennt anhand der Extension, ob fÅr 
+
        eine Datei ein Load-Time-Linking durchzufÅhren ist. In Ñlteren 
+
        Ver!-si!-onen ist die Extension (!V)*.OBJ(!v) fest vorgegeben, 
+
        ab (!nolink [Chatwin]) 3.04 kann die Extension in der Environmentvariablen 
+
        (!V)$LTLEXT(!v) angegeben werden. Dadurch ist (!nolink [Chatwin]) auch fÅr 
+
        andere Sprachen gerÅstet, die nicht (!V)*.OBJ(!v) als Extension 
+
        fÅr die Objektfiles verwenden.
+
  !item Wenn lÑngere Zeit keine Benutzereingaben und auch keine 
+
        son!-stigen Aufgaben anliegen, gibt (!nolink [Chatwin]) Zeit an den Loader 
+
        ab, indem er die Nachricht (!V)CL_TIME(!v) schickt. Der Loader 
+
        kann dadurch bestimmte Aufgaben im Hintergrund erledigen.
+
  !item FÅr das Programmende gibt es kein spezielles Protokoll: Wenn 
+
        (!nolink [Chatwin]) beendet wird, beendet sich auch der Loader.
+
 !end_itemize
 
-!end_node
 
-# !begin_appendix
-# ########################################################################
-!begin_node Chatwin
-!begin_xlist [Hardwarevorauss.:]
- !item [Programm-Name:]    Chatwin
- !item [Version:]          3.02a vom 23.06.1996
- !item [Programmtyp:]      Entwicklungsumgebung
- !item [Status:]           Freeware
- !item [Preis:]            0.-
- !item [Beschreibung:]     Universelle Entwicklungsumgebung fÅr nahezu 
-                           alle ""klassischen"" Compilersprachen (z.B. 
-                           C-Compiler) und Ñhnlich aufgebaute Systeme 
-                           (z.B. auch ST-Guide, UDO, TeX). Spezielle 
-                           UnterstÅtzung des Load-Time-Linking von 
-                           STJ-Oberon-2.
-
-                           Beherrscht die Åblichen Standards (VA-, 
-                           SE-, XACC-, Drag&Drop-, View- und 
-                           (!nolink [Font-Protokoll]), xFSL-, (!nolink [UFSL])- und 
-                           MagiC 4-Fontselektor), GDOS-Druck, kann 
-                           Samples Åber DMA-Sound, MacSound und Petra 
-                           abspielen, unterstÅtzt Kobold, Stewart und 
-                           StIc, das IFormats-Paket von Martin Osieka, 
-                           etc. pp.
- !item [énderungen:]       Die mir bekannten Fehler wurden beseitigt.
-
- !item [Hardwarevorauss.:] alle Atari-Rechner und kompatible ab 1 
-                           MByte Hauptspeicher und einer Auflîsung von 
-                           640x400 Pixeln
- !item [Softwarevorauss.:] Ein TOS-kompatibles Betriebssystem (TOS ab 
-                           1.02). FÅr die Online-Hilfe wird ST-Guide 
-                           benîtigt.
- !item [Autor:]            Dirk Haun
- !item [Download:]
- !item [Archivnamen:]      CHATWIN.LZH~~(330.235 Bytes) - Komplettarchiv (!nl)
-                           CHTWDFY2.LZH~(103.575 Bytes) - Updatearchiv,
-                           benîtigt Diffy 2
-!end_xlist
 
 !end_node
 
-# ########################################################################
-!begin_node STJ-Oberon-2
-!raw [stg] @alias Oberon
-!begin_xlist [Bekannte Probleme:]
- !item [Programmname:]      STJ-Oberon-2
- !item [Version:]           2.14
- !item [Programmtyp:]       Entwicklungssystem / Oberon-2
- !item [Status:]            Freeware
- !item [Beschreibung:]      STJ-Oberon-2 beinhaltet alles, was zur 
-                            Pro!-grammierung auf Atari-TOS-Rechnern 
-                            benîtigt wird:
-                            !begin_itemize !short
-                             !item Ein Compiler, der vollen Oberon-2 
-                                   Standard implementiert
-                             !item Ein Linker zur Erzeugung von 
-                                   Programmen
-                             !item Ein Make-Utility
-                             !item Ein Lader, der Objektmodule direkt 
-                                   ohne Linken starten kann
-                             !item Ein Laufzeitsystem auf Basis von 
-                                   Load-Time-Linking
-                             !item Ein Post-Mortem-Debugger
-                             !item Ein Optimierer (benîtigt Quelltexte)
-                             !item Bibliothek mit Åber 100 Modulen
-                            !end_itemize
- !item [Neuheiten:]         gegenÅber V2.10:
-                            !begin_itemize !short
-                             !item Nicht mehr Shareware, dafÅr auch 
-                                   keine Weiterentwicklung mehr
-                             !item Einige neue Module von H. Kleinschmidt
-                             !item Alle Sourcen inkl. Compiler dabei
-                             !item Bugfixes
-                            !end_itemize
- !item [Bekannte Probleme:] 
-                            !begin_itemize !short
-                             !item Der Debugger ist wohl ein wenig buggy
-                             !item Der Browser lÑuft nicht
-                             !item Die RSD-UnterstÅtzung des Laders 
-                                   scheint nicht mehr zu funktionieren
-                            !end_itemize
- !item [Hardwarevorauss.:]  
-                            !begin_itemize !short
-                             !item Atari-TOS-Rechner (oder kompatible)
-                             !item 2 MB Hauptspeicher empfohlen (1 MB 
-                                   wÅrde reichen, wenn man keinen 
-                                   externen Editor und Shell benîtigen 
-                                   wÅrde)
-                             !item Festplatte (belegt knapp 4MB)
-                            !end_itemize
- !item [Softwarevorauss.:]  
-                            !begin_itemize !short
-                             !item Einen Editor braucht man, der mit 
-                                   Fehler!-dateien umgehen kann, z.B. 
-                                   Everest
-                             !item Zur vernÅnftigen Arbeit wird 
-                                   Chatwin als Shell benîtigt, da die 
-                                   verfÅgbare Shell bewuût primitiv 
-                                   ist
-                            !end_itemize
- !item [Autor/Kontakt:]     Stephan Junker
- !item [Download:]          ftp.cs.tu-berlin.de unter (!nl)
-                            pub/atari/Programming/Oberon (o.Ñ.)
- !item [Archiv:]            STJOBJ14.LZH (697017 Bytes) (unbedingt 
-                            nîtig) (!nl)
-                            STJDOC14.LZH (199065 Bytes) (Docu und 
-                            DEF-Files) (!nl)
-                            STJSRC14.LZH (448668 Bytes) (Sourcen) (!nl)
-                            STJBIN14.LZH (120087 Bytes) (COMPILE.TTP & 
-                            LINK.TTP)
-!end_xlist
 
-!hline
-
-!begin_xlist [Softwarevorauss.:]
- !item [Programmname:]     STJ-Oberon-2
- !item [Version:]          2.14.1
- !item [Programmtyp:]      Entwicklungssystem / Oberon-2
- !item [Status:]           Freeware
- !item [Neuheiten:]        Bugfix zur V2.14: Der Zugriff auf globale 
-                           Record-Variablen ging nicht.
- !item [Softwarevorauss.:] STJ-Oberon-2 V2.14
- !item [Autor/Kontakt:]    Stephan Junker
- !item [Download:]
- !item [Archiv:]           STJFIX01.LZH (13056)
-!end_xlist
 
 !end_node
 
-# ########################################################################
 
-!ifnset tos_hyp
-
-!begin_node Adressen
-Das LTL-Protokoll wurde von Stephan Junker und Dirk Haun entwickelt.
-
-!begin_quote
-Stephan Junker    (!nl)
-Aachener Str. 115 (!nl)
-52076 Aachen
-
-e-mail: Stephan Junker @ AC2 (MausNet)
-!end_quote
-
-!smallskip
-
-!begin_quote
-Dirk Haun       (!nl)
-Europastr. 8    (!nl)
-D-64569 Nauheim
-
-e-mail: Dirk Haun @ WI2 (MausNet)
-!end_quote
-
-# !end_appendix
-
-!end_node
 
 !endif
-
-
-
-
-!end_node
 

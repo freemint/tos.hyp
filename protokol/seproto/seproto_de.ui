@@ -1,1082 +1,2164 @@
 # ########################################################################
+
 # @(#)seproto.u, Dirk Haun, 23.12.1997
+
 # Beschreibung des SE-Protokolls
+
 # ########################################################################
+
 # 
 
+
+
 # ########################################################################
+
 !begin_node SE-Protokoll
+
 Sinn des SE-Protokolls ist die Kommunikation zwischen Shells zur 
+
 Pro!-gramm!-ent!-wicklung und Editoren, daher auch der Name: 
+
 Shell-Editor-Protokoll.
 
+
+
 Dieses Protokoll dient dazu, unter Multitasking-Systemen die Shell vom 
+
 Editor aus zur Compilierung und Ñhnlichen Aktionen zu ver!-an!-lassen, 
+
 und um von der Shell Fehlermeldungen und/oder Fehlerdateien an den 
+
 Editor zurÅckzugeben.
 
+
+
 Kommandos bzw. (!nolink [Nachrichten]) von der Shell an den Editor beginnen mit 
+
 (!V)SE_(!v), (!nolink [Nachrichten]) vom Editor an die Shell beginnen mit 
+
 (!V)ES_(!v).
+
+
 
 Die aktuelle Versionsnummer des Protokolls ist 1.05.
 
+
+
 # !ifdest stg
+
 # Bitte lesen Sie auch !..
+
 !subtoc all
+
 #!endif
 
 
+
+
+
 # ========================================================================
+
 !begin_node Kontaktaufnahme
+
 Die Kontaktaufnahme lÑuft wie folgt ab:
 
+
+
 Die Shell verschickt nach dem Start die Nachricht (!V)SE_INIT(!v). Als 
+
 Ant!-wort erhÑlt sie darauf die Nachricht (!V)ES_OK(!v). Aus den 
+
 Bitfeldern in den bei!-den (!nolink [Nachrichten]) kann die Shell nun ableiten, 
+
 welche Kommandos sie an den Editor schicken kann und welche Kommandos 
+
 vom Editor zu er!-war!-ten sind. Wenn die Shell nicht mehr am 
+
 SE-Protokoll teilnehmen will (z.B. weil sie beendet wird), dann 
+
 schickt sie die Nachricht (!V)SE_QUIT(!v) an den Editor.
 
+
+
 Der Editor verschickt nach dem Start die Nachricht (!V)ES_INIT(!v). 
+
 Als Ant!-wort erhÑlt sie darauf die Nachricht (!V)SE_OK(!v). Aus den 
+
 Bitfeldern in den beiden (!nolink [Nachrichten]) kann der Editor nun ableiten, 
+
 welche Kommandos er an die Shell schicken kann und welche Kommandos 
+
 von der Shell zu er!-war!-ten sind. Wenn der Editor nicht mehr am 
+
 SE-Protokoll teilnehmen will (z.B. weil er beendet wird), dann schickt 
+
 er die Nachricht (!V)ES_QUIT(!v) an die Shell.
 
+
+
 Bleibt die Frage, an wen Shell und Editor diese (!nolink [Nachrichten]) schicken 
+
 sollen. Das SE-Protokoll ist sinnvoll am ehesten unter einem 
+
 Multitasking-System einsetzbar, dort wird normalerweise die 
+
 AES-Funktion (!V)appl_search()(!v) zur VerfÅgung stehen. Shell und 
+
 Editor sollten also ein!-fach ihre jeweilige Init-Nachricht an alle 
+
 Prozesse (auûer an System!-pro!-zesse) schicken.
 
+
+
 Andere Mîglichkeiten:
+
 !begin_itemize
+
  !item Wenn die Shell den Namen ihres Editors kennt, kann sie sich 
+
        na!-tÅr!-lich auch darauf beschrÑnken, (!V)SE_INIT(!v) nur an 
+
        diesen zu schicken.
 
+
+
 !index XAcc-Protokoll
+
  !item Wenn die Funktion (!V)(!nolink [appl_search])()(!v) nicht zur VerfÅgung 
+
        steht, bie!-tet sich das XAcc-Protokoll zur Kontaktaufnahme an: 
+
        Shell und Editor sollten ihre Init-(!nolink [Nachrichten]) dann einfach an 
+
        jeden Pro!-zeû schicken, der sich per XAcc anmeldet. Das 
+
        XAcc-Protokoll sieht auûer!-dem noch eine maschinenlesbare 
+
        Kennung des Pro!-gramm!-typs (XDSC) vor, so daû man u.U. sogar 
+
        erkennen kann, ob es sich bei dem 
+
        Kom!-mu!-ni!-ka!-ti!-ons!-part!-ner um eine Shell (Kennung 
+
        ''PE'' fÅr ""Pro!-gramming En!-vi!-ron!-ment"") oder um einen 
+
        Editor (Kennung ''ED'' fÅr ""Text Editor"") handelt.
+
 !end_itemize
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node Anmerkungen
+
 !index Nachricht
 
+
+
 Wenn im folgenden von einer ""Nachricht"" die Rede ist, dann ist damit 
+
 eine AES-Nachricht gemeint, die aus 8 Worten (Integers) besteht und 
+
 mit der (!nolink [AES])-Funktion (!V)appl_write()(!v) verschickt wird. Das erste 
+
 Wort ent!-hÑlt jeweils die Nummer der Nachricht, das zweite die 
+
 Ap!-pli!-ka!-ti!-ons-ID des Absenders, das dritte ist immer Null. Die 
+
 Be!-le!-gung der anderen Worte ist von der jeweiligen Nachricht 
+
 abhÑngig. Worte, fÅr die keine Belegung angegeben wird, sind auf Null 
+
 zu setzen.
 
+
+
 (!B)Bitte beachten:(!b) Da die ZÑhlung bei 0 beginnt, ist mit ""Wort 
+
 3"" im fol!-gen!-den das (!I)vierte(!i) Wort gemeint!
 
+
+
 Zur Verdeutlichung nochmals in C:
+
 !begin_quote
+
 !begin_verbatim
+
  int msg[8];
 
+
+
  msg[0] = SE_ACK;   /* Nachricht                         */
+
  msg[1] = gl_apid;  /* ID des Absenders                  */
+
  msg[2] = 0;        /* 0, d.h. keine öberlÑnge           */
+
  msg[3] = TRUE;     /* dies ist "Wort 3"                 */
+
  msg[4] = msg[5] = msg[6] = msg[7] = 0; /* Rest auf Null */
+
  appl_write (editor, 16, msg);          /* abschicken    */
+
 !end_verbatim
+
 !end_quote
 
+
+
 !smallskip
+
+
 
 !index Zeiger
+
 Wenn in einer Nachricht ein Zeiger (d.h. eine Adresse) enthalten ist,
+
 dann wird das obere Wort der Adresse im ersten und das untere Wort im
+
 zweiten der angegebenen Worte Åbergeben.
 
+
+
 Bei den Zeigern auf Speicherbereiche ist vom jeweiligen Absender der
+
 Nachricht darauf zu achten, daû diese Speicherbereiche vom EmpfÑnger
+
 auch lesbar sind (Memory Protection!). DafÅr sind diese als ""Read!-able""
+
 zu allozieren! Das geschieht Åber den Gemdos-Aufruf Mxalloc().
+
+
 
 !smallskip
 
+
+
 !index Zeilennummern
+
 Bei einigen (!nolink [Nachrichten]) kînnen Zeilen- und Spaltennummern fÅr eine 
+
 Cursorposition Åbergeben werden. Da es unterschiedliche Auffassungen 
+
 darÅber gibt, ob Zeilen und/oder Spalten ab Null oder ab Eins gezÑhlt 
+
 werden, wird empfohlen, diese Angaben vor der öbernahme zu ÅberprÅfen 
+
 und ggfs. zu korrigieren. Wenn der Editor seine Zeilen also ab Eins 
+
 zÑhlt, dann sollte ihn die Zeilennummer Null nicht aus der Fassung 
+
 bringen, sondern er sollte sie wie Zeile Eins behandeln.
+
+
 
 !end_node
 
+
+
 # ########################################################################
+
 !begin_node Nachrichten der Shell an den Editor
+
 Die Shell kann folgende (!nolink [Nachrichten]) bzw. Kommandos an den Editor
+
 sen!-den:
 
+
+
 !begin_quote
+
 !begin_verbatim
+
  Nachricht     Nummer
+
 ----------------------
+
  SE_INIT       0x4200
+
  SE_OK         0x4201
+
  SE_ACK        0x4202
+
  SE_OPEN       0x4203
+
  SE_ERROR      0x4204
+
  SE_ERRFILE    0x4205
+
  SE_PROJECT    0x4206
+
  SE_QUIT       0x4207
+
  SE_TERMINATE  0x4208
+
  SE_CLOSE      0x4209
+
  SE_MENU       0x420A
+
 !end_verbatim
+
 !end_quote
 
 
+
+
+
 # ========================================================================
+
 !begin_node SE_INIT
+
 !raw [stg] @xref ES_OK
+
 !raw [stg] @xref SE_QUIT
+
 Die Shell fragt an, ob ein Editor das SE-Protokoll versteht.
+
+
 
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: Ein Bitset, welche (!nolink [Nachrichten]) die Shell versendet:
 
+
+
      !begin_verbatim
+
       Nachricht    Bit  Hex-Wert
+
      ----------------------------
+
       SE_INIT       0    0x0001
+
       SE_OK         1    0x0002
+
       SE_ACK        2    0x0004
+
       SE_OPEN       3    0x0008
+
       SE_ERROR      4    0x0010
+
       SE_ERRFILE    5    0x0020
+
       SE_PROJECT    6    0x0040
+
       SE_QUIT       7    0x0080
+
       SE_TERMINATE  8    0x0100
+
       SE_CLOSE      9    0x0200
+
       SE_MENU      10    0x0400
+
      !end_verbatim
+
+
 
  !item [Wort 4+5]: Ein Bitset, welche Editorkommandos verstanden werden
 
+
+
      !begin_verbatim
+
       Nachricht   Bit  Hex-Wert
+
      ---------------------------
+
       ES_INIT      0    0x0001
+
       ES_OK        1    0x0002
+
       ES_ACK       2    0x0004
+
       ES_COMPILE   3    0x0008
+
       ES_MAKE      4    0x0010
+
       ES_MAKEALL   5    0x0020
+
       ES_LINK      6    0x0040
+
       ES_EXEC      7    0x0080
+
       ES_MAKEEXEC  8    0x0100
+
       ES_PROJECT   9    0x0200
+
       ES_QUIT     10    0x0400
+
       ES_SHLCTRL  11    0x0800
+
      !end_verbatim
+
      
+
      (!B)Hinweis:(!b) Wort 4 und 5 bilden zusammen ein Langwort. Da 
+
      fÅr die bisher definierten (!nolink [Nachrichten]) aber nur 12 Bits benîtigt 
+
      werden, ist Wort 4 normalerweise Null.
 
+
+
  !item [Wort 6]: UnterstÅtzte Versionsnummer des Protokolls als BCD-Zahl,
+
                  also 0x0105 (hexadezimal) fÅr Version 1.05
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Der Editor antwortet mit der Nachricht ES_OK.
 
+
+
 !smallskip
+
+
 
 (!B)siehe auch:(!b) ES_OK, SE_QUIT
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_OK
+
 !raw [stg] @xref ES_INIT
+
 Die Shell sagt dem Editor, daû sie das Protokoll versteht.
+
+
 
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: Ein Bitset, welche (!nolink [Nachrichten]) die Shell versendet:
 
+
+
      !begin_verbatim
+
       Nachricht    Bit  Hex-Wert
+
      ----------------------------
+
       SE_INIT       0    0x0001
+
       SE_OK         1    0x0002
+
       SE_ACK        2    0x0004
+
       SE_OPEN       3    0x0008
+
       SE_ERROR      4    0x0010
+
       SE_ERRFILE    5    0x0020
+
       SE_PROJECT    6    0x0040
+
       SE_QUIT       7    0x0080
+
       SE_TERMINATE  8    0x0100
+
       SE_CLOSE      9    0x0200
+
       SE_MENU      10    0x0400
+
      !end_verbatim
+
+
 
  !item [Wort 4+5]: Ein Bitset, welche Editorkommandos verstanden werden:
 
+
+
      !begin_verbatim
+
       Nachricht   Bit  Hex-Wert
+
      ---------------------------
+
       ES_INIT      0    0x0001
+
       ES_OK        1    0x0002
+
       ES_ACK       2    0x0004
+
       ES_COMPILE   3    0x0008
+
       ES_MAKE      4    0x0010
+
       ES_MAKEALL   5    0x0020
+
       ES_LINK      6    0x0040
+
       ES_EXEC      7    0x0080
+
       ES_MAKEEXEC  8    0x0100
+
       ES_PROJECT   9    0x0200
+
       ES_QUIT     10    0x0400
+
       ES_SHLCTRL  11    0x0800
+
      !end_verbatim
 
+
+
      (!B)Hinweis:(!b) Wort 4 und 5 bilden zusammen ein Langwort. Da 
+
      fÅr die bisher definierten (!nolink [Nachrichten]) aber nur 12 Bits benîtigt 
+
      werden, ist Wort 4 normalerweise Null.
 
+
+
  !item [Wort 6]: UnterstÅtzte Versionsnummer des Protokolls als BCD-Zahl,
+
                  also 0x0105 (hexadezimal) fÅr Version 1.05
 
+
+
  !item [Wort 7]: Die ApId des Programmes, dessen Nachricht beantwortet wird
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
 
+
+
 Keine. (!V)SE_OK(!v) ist bereits die Antwort der Shell auf die Nachricht
+
 (!V)ES_INIT(!v).
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_ACK
+
 Die Shell bestÑtigt den Empfang eines Editorkommandos und gibt zu!-rÅck,
+
 ob das Kommando ausgefÅhrt wird.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: (!V)TRUE(!v)~: Kommando wird verstanden und ausgefÅhrt, (!nl)
+
                  (!V)FALSE(!v): Das Kommando wird nicht verstanden
 
+
+
   Ein (!V)SE_ACK(!v) mit (!V)TRUE(!v) sagt nichts darÅber aus, ob das
+
   Kommando erfolgreich ausgefÅhrt wurde. Es sagt nur, daû die Shell das
+
   Kommando versteht und ausfÅhren wird!
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Keine ((!V)SE_ACK(!v) ist bereits die Antwort auf eine Nachricht).
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_OPEN
+
 !raw [stg] @xref ES_ACK
+
 Die Shell sagt dem Editor, daû er einen Text îffnen soll.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf den Filenamen des zu îffnenden Files
+
  !item [Wort 5+6]: Zeile, in die der Cursor positioniert werden soll
+
  !item [Wort 7]:   Spalte, in die der Cursor positioniert werden soll
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Als Antwort erhÑlt die Shell ein ES_ACK.
 
+
+
 !smallskip
 
+
+
 (!B)Hinweise:(!b) Die Angabe einer Zeilen- und Spaltennummer ist erst 
+
 ab Protokollversion 1.02 vorgesehen. Programme, die noch Ñltere 
+
 Protokoll!-ver!-si!-onen verwenden, sollten aber eigentlich die Worte 
+
 5-7 auf Null ge!-setzt haben. Will man ganz sicher gehen, muû man 
+
 ggfs. die bei (!V)SE_INIT(!v) bzw. (!V)SE_OK(!v) Åbergebene 
+
 Versionsnummer der Shell abfragen.
 
+
+
 Wenn die Shell keine Positionsangabe machen kann oder will, sollte sie 
+
 Zeile und Spalte auf Null setzen.
 
 
+
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_ERROR
+
 !raw [stg] @xref ES_ACK
+
 Es ist ein Fehler beim Compilieren aufgetreten.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf eine Infostruktur, die wie folgt
+
                    auf!-ge!-baut ist:
+
 !end_xlist
 
+
+
 !label ERRINFO
+
 !begin_verbatim
+
     typedef struct
+
     {
+
       char *errFile; /* Zeiger auf den Namen der compilierten Datei */
+
       char *errMess; /* Zeiger auf die Fehlermeldung                */
+
       int errNum;    /* Die Fehlernummer                            */
+
       long errLine;  /* Die fehlerhafte Zeile                       */
+
       int errRow;    /* Die Spalte mit dem Fehler (oder 0)          */
+
     } ERRINFO;
+
 !end_verbatim
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Mit (!V)ES_ACK(!v) bestÑtigt der Editor die Meldung.
 
+
+
 !smallskip
 
+
+
 (!B)Hinweis:(!b) Wenn die Shell keine Positionsangabe machen kann oder 
+
 will, sollte sie Zeile und Spalte auf Null setzen.
 
 
+
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_ERRFILE
+
 !raw [stg] @xref ES_ACK
+
 Es sind Fehler aufgetreten. Die Fehlermeldungen stehen in einem
+
 Error!-file, welches in der Message spezifiziert wird.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf den Filenamen des Errorfiles mit den
+
                    Fehler!-meldungen
+
  !item [Wort 5+6]: Ein Zeiger auf den Namen des compilierten Textes
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Mit ES_ACK bestÑtigt der Editor die Meldung.
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_PROJECT
+
 !raw [stg] @xref ES_ACK
+
 Die Shell teilt dem Editor mit, daû das Projekt geÑndert wurde. Der
+
 Filename des aktuellen Projektfiles wird als Parameter Åbergeben. Wird 
+
 (!V)NULL(!v) Åbergeben, sollte das aktuelle Projekt abgemeldet werden.
 
+
+
 Eine vernÅnftige Reaktion des Editors wÑre es in dem Fall, ebenfalls das
+
 Projekt zu wechseln, sofern er dies unterstÅtzt.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf den Namen des Projektfiles oder 
+
                    (!V)NULL(!v).
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Der Editor bestÑtigt mit ES_ACK.
 
+
+
 !smallskip
 
+
+
 (!B)Hinweis:(!b) Den Namen des Projektfiles auf (!V)NULL(!v) zu 
+
 setzen, ist erst ab Protokollversion 1.01 vorgesehen. Die Shell sollte 
+
 daher vorher Åber!-prÅfen, ob der Editor mindestens Protokollversion 
+
 1.01 unter!-stÅtzt.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_QUIT
+
 Die Shell teilt dem Editor mit, daû sie jetzt beendet wird. Der Editor
+
 sollte in dem Fall die Shell als Kommunikationspartner vergessen.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_description
+
  !item [keine Parameter]
+
 !end_description
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Es wird keine Antwort erwartet!
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_TERMINATE
+
 !raw [stg] @xref ES_ACK
+
 Die Shell teilt dem Editor mit, daû dieser sich beenden soll. Der Editor
+
 sollte in dem Fall sich selbst beenden und seinen ganz nor!-ma!-len
+
 Terminierungsprozeû durchlaufen (und dabei auch ein (!V)ES_QUIT(!v)
+
 ver!-schic!-ken!). Der Grund fÅr so eine Meldung der Shell kînnte zum
+
 Bei!-spiel zu wenig Speicher zum Compilieren sein.
 
+
+
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_description
+
  !item [keine Parameter]
+
 !end_description
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Mit ES_ACK bestÑtigt der Editor die Meldung.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_CLOSE
+
 !raw [stg] @xref ES_ACK
+
 Die Shell teilt dem Editor mit, daû dieser bestimmte Texte sichern 
+
 bzw. schlieûen soll. Beim Schlieûen von geÑnderten Texten sollte der 
+
 Editor vorher nachfragen.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf den Namen einer Datei oder eine 
+
                    Datei!-maske. ""(!V)*.*(!v)"" steht fÅr alle 
+
                    Textfenster (entspricht also dem (!V)SE_CLOSE(!v) 
+
                    der Protokollversion 1.00).
+
  !item [Wort 5]:   0 = nur sichern (!nl)
+
                    1 = sichern und schlieûen (!nl)
+
                    2 = schlieûen ohne Sichern (ab Version 1.04)
+
 !end_xlist
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Mit ES_ACK bestÑtigt der Editor die Meldung.
 
+
+
 !smallskip
+
+
 
 (!B)Hinweis:(!b) In der Protokollversion 1.00 waren fÅr 
+
 (!V)SE_CLOSE(!v) noch keine Parameter vorgesehen. Editoren, die nur 
+
 Version 1.00 unterstÅtzen, werden daher die Dateimasken und das Flag 
+
 ignorieren und alle Texte sichern.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node SE_MENU
+
 !raw [stg] @xref ES_ACK
+
 Die Shell teilt dem Editor mit, was er fÅr die einzelnen Programme in 
+
 sein MenÅ eintragen soll. Der Editor kann somit fÅr die MenÅpunkte, 
+
 die eine Aktion in der Shell auslîsen, die gleichen Texte wie die 
+
 Shell verwenden.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Ein Zeiger auf eine Infostruktur, die wie folgt 
+
                    auf!-ge!-baut ist:
+
 !end_xlist
 
+
+
 !label SEMENUINFO
+
 !begin_verbatim
+
   typedef struct
+
   {
+
     char *compStr;      /* Text fÅr den MenÅpunkt "Compiler"       */
+
     char *makeStr;      /* Text fÅr den MenÅpunkt "Makefile"       */
+
     char *makeAllStr;   /* Text fÅr den MenÅpunkt "Make all"       */
+
     char *linkStr;      /* Text fÅr den MenÅpunkt "Linker"         */
+
     char *execStr;      /* Text fÅr den MenÅpunkt "Execute"        */
+
     char *makeExecStr;  /* Text fÅr den MenÅpunkt "Make & Execute" */
+
     char *progName;     /* Name der Shell (ab Version 1.04)        */
+
     char *shellCtrlStr; /* Text fÅr den MenÅpunkt "Shell Control"  */
+
                         /* (ab Version 1.05)                       */
+
   } SEMENUINFO;
+
 !end_verbatim
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Mit ES_ACK bestÑtigt der Editor die Meldung.
+
+
 
 !smallskip
 
+
+
 (!B)Hinweise:(!b) Die Texte sind allesamt optional und kînnen auch 
+
 (!V)NULL(!v) sein, wenn die Shell keinen entsprechenden MenÅpunkt hat. 
+
 Dies bedeutet jedoch nicht, daû die Shell nicht Åber diese 
+
 FunktionalitÑt verfÅgt. Der Editor sollte daher fÅr alle Texte ggfs. 
+
 Defaulttexte einsetzen.
 
+
+
 Diese Nachricht existiert erst ab Protokollversion 1.02. Es genÅgt 
+
 aber der Test, ob das entsprechende Bit in (!V)ES_INIT(!v) bzw. 
+
 (!V)ES_OK(!v) gesetzt ist.
 
+
+
 Beim Zugriff auf (!V)progName(!v) und (!V)shellCtrlStr(!v) muû darauf 
+
 geachtet werden, daû der Kommunikationspartner diese auch schon 
+
 unterstÅtzt (Protokollversion testen)!
 
+
+
 !end_node
+
 !end_node
+
+
 
 # ########################################################################
+
 !begin_node Nachrichten des Editors an die Shell
+
 Der Editor kann folgende (!nolink [Nachrichten]) bzw. Kommandos an die Shell sen!-den:
 
+
+
 !begin_quote
+
 !begin_verbatim
+
  Nachricht    Nummer
+
 ---------------------
+
  ES_INIT      0x4240
+
  ES_OK        0x4241
+
  ES_ACK       0x4242
+
  ES_COMPILE   0x4243
+
  ES_MAKE      0x4244
+
  ES_MAKEALL   0x4245
+
  ES_LINK      0x4246
+
  ES_EXEC      0x4247
+
  ES_MAKEEXEC  0x4248
+
  ES_PROJECT   0x4249
+
  ES_QUIT      0x424A
+
  ES_SHLCTRL   0x424B
+
 !end_verbatim
+
 !end_quote
 
 
+
+
+
 # ========================================================================
+
 !begin_node ES_INIT
+
 !raw [stg] @xref SE_OK
+
 Ein Editor fragt an, ob eine Shell das SE-Protokoll versteht.
+
+
 
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: Ein Bitset, welche Shellnachrichten verstanden werden:
 
+
+
      !begin_verbatim
+
       Nachricht    Bit  Hex-Wert
+
      ----------------------------
+
       SE_INIT       0    0x0001
+
       SE_OK         1    0x0002
+
       SE_ACK        2    0x0004
+
       SE_OPEN       3    0x0008
+
       SE_ERROR      4    0x0010
+
       SE_ERRFILE    5    0x0020
+
       SE_PROJECT    6    0x0040
+
       SE_QUIT       7    0x0080
+
       SE_TERMINATE  8    0x0100
+
       SE_CLOSE      9    0x0200
+
       SE_MENU      10    0x0400
+
      !end_verbatim
+
+
 
  !item [Wort 4+5]: Ein Bitset, welche Editorkommandos versendet werden:
 
+
+
      !begin_verbatim
+
       Nachricht   Bit  Hex-Wert
+
      ---------------------------
+
       ES_INIT      0    0x0001
+
       ES_OK        1    0x0002
+
       ES_ACK       2    0x0004
+
       ES_COMPILE   3    0x0008
+
       ES_MAKE      4    0x0010
+
       ES_MAKEALL   5    0x0020
+
       ES_LINK      6    0x0040
+
       ES_EXEC      7    0x0080
+
       ES_MAKEEXEC  8    0x0100
+
       ES_PROJECT   9    0x0200
+
       ES_QUIT     10    0x0400
+
       ES_SHLCTRL  11    0x0800
+
      !end_verbatim
 
+
+
      (!B)Hinweis:(!b) Wort 4 und 5 bilden zusammen ein Langwort. Da 
+
      fÅr die bisher definierten (!nolink [Nachrichten]) aber nur 12 Bits benîtigt 
+
      werden, ist Wort 4 normalerweise Null.
 
+
+
  !item [Wort 6]: UnterstÅtzte Versionsnummer des Protokolls als BCD-Zahl,
+
                  also 0x0105 (hexadezimal) fÅr Version 1.05
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Als Antwort erhÑlt der Editor (!V)SE_OK(!v) von der Shell.
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_OK
+
 !raw [stg] @xref SE_INIT
+
 Der Editor beantwortet die Anfrage der Shell nach dem Protokoll.
+
+
 
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: Ein Bitset, welche Shellnachrichten verstanden werden:
 
+
+
      !begin_verbatim
+
       Nachricht    Bit  Hex-Wert
+
      ----------------------------
+
       SE_INIT       0    0x0001
+
       SE_OK         1    0x0002
+
       SE_ACK        2    0x0004
+
       SE_OPEN       3    0x0008
+
       SE_ERROR      4    0x0010
+
       SE_ERRFILE    5    0x0020
+
       SE_PROJECT    6    0x0040
+
       SE_QUIT       7    0x0080
+
       SE_TERMINATE  8    0x0100
+
       SE_CLOSE      9    0x0200
+
       SE_MENU      10    0x0400
+
      !end_verbatim
+
+
 
  !item [Wort 4+5]: Ein Bitset, welche Editorkommandos versendet werden:
 
+
+
      !begin_verbatim
+
       Nachricht   Bit  Hex-Wert
+
      ---------------------------
+
       ES_INIT      0    0x0001
+
       ES_OK        1    0x0002
+
       ES_ACK       2    0x0004
+
       ES_COMPILE   3    0x0008
+
       ES_MAKE      4    0x0010
+
       ES_MAKEALL   5    0x0020
+
       ES_LINK      6    0x0040
+
       ES_EXEC      7    0x0080
+
       ES_MAKEEXEC  8    0x0100
+
       ES_PROJECT   9    0x0200
+
       ES_QUIT     10    0x0400
+
       ES_SHLCTRL  11    0x0800
+
      !end_verbatim
 
+
+
      (!B)Hinweis:(!b) Wort 4 und 5 bilden zusammen ein Langwort. Da 
+
      fÅr die bisher definierten (!nolink [Nachrichten]) aber nur 12 Bits benîtigt 
+
      werden, ist Wort 4 normalerweise Null.
 
+
+
  !item [Wort 6]: UnterstÅtzte Versionsnummer des Protokolls als BCD-Zahl,
+
                  also 0x0105 (hexadezimal) fÅr Version 1.05
 
+
+
  !item [Wort 7]: Die ApId des Programmes, dessen Nachricht beantwortet wird
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
 
+
+
 Keine. (!V)ES_OK(!v) ist bereits die Antwort des Editors auf die Nachricht
+
 (!V)SE_INIT(!v).
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_ACK
+
 Der Editor bestÑtigt den Empfang des Kommandos.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3]: (!V)TRUE(!v)~: Kommando wird verstanden und ausgefÅhrt, (!nl)
+
                  (!V)FALSE(!v): Das Kommando wird nicht verstanden
 
+
+
   Ein (!V)ES_ACK(!v) mit (!V)TRUE(!v) sagt nichts darÅber aus, ob das
+
   Kommando erfolgreich ausgefÅhrt wurde. Es sagt nur, daû der Editor das
+
   Kommando versteht und ausfÅhren wird!
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Keine ((!V)ES_ACK(!v) ist bereits die Antwort auf eine Nachricht).
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_COMPILE
+
 !raw [stg] @xref SE_ACK
+
 Der Editor sagt der Shell, daû sie ein File Åbersetzen soll. Ein Zeiger
+
 auf den Dateinamen kann in der Nachricht Åbergeben werden.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen der zu compilierenden Datei 
+
                    oder (!V)NULL(!v).
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Diese Nachricht muû mit SE_ACK bestÑtigt werden.
 
+
+
 !smallskip
+
+
 
 (!B)Hinweis:(!b) Den Namen der zu compilierenden Datei auf 
+
 (!V)NULL(!v) zu setzen, ist erst ab Protokollversion 1.03 vorgesehen. 
+
 Der Editor sollte daher vorher Åber!-prÅfen, ob die Shell mindestens 
+
 Protokollversion 1.03 unter!-stÅtzt.
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_MAKE
+
 !raw [stg] @xref SE_ACK
+
 Der Editor sagt der Shell, daû sie ein Make ausfÅhren soll. Ein Filename
+
 kann in der Nachricht Åbergeben werden, muû aber nicht gesetzt sein und
+
 muû von der Shell auch nicht beachtet werden!
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des Makefiles (oder NULL)
+
 !end_xlist
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Die Shell bestÑtigt mit SE_ACK.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_MAKEALL
+
 !raw [stg] @xref SE_ACK
+
 Der Editor sagt der Shell, daû ein komplettes ""Make All"" ausgefÅhrt
+
 wer!-den soll. Ein Filename fÅr das Makefile kann (muû aber nicht) in
+
 der Nachricht Åbergeben werden.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des Makefiles (oder NULL)
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Die Shell bestÑtigt mit SE_ACK.
 
 
+
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_LINK
+
 !raw [stg] @xref SE_ACK
+
 Der Editor sagt der Shell, daû das Programm gelinkt werden soll. Ein
+
 Filename kann in der Nachricht Åbergeben werden, muû aber nicht
+
 un!-be!-dingt von der Shell beachtet werden!
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen der Source, die gelinkt werden
+
                    soll (oder NULL)
+
 !end_xlist
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Die Shell bestÑtigt mit SE_ACK.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_EXEC
+
 !raw [stg] @xref SE_ACK
+
 Der Editor sagt der Shell, daû das Programm zu der Source ausgefÅhrt
+
 werden soll. Ein Filename kann Åbergeben werden, muû von der Shell aber
+
 nicht beachtet werden.
 
+
+
 !smallskip
 
+
+
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des auszufÅhrenden Files
+
                    (oder NULL).
 
+
+
                    Bei einer Sourcedatei ist diese ggf. noch zu
+
                    compilieren und/oder zu linken
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Die Shell bestÑtigt mit SE_ACK.
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_MAKEEXEC
+
 !raw [stg] @xref SE_ACK
+
 Die Shell soll ein Make ausfÅhren und danach das Programm ausfÅhren.
+
 Ein Filename fÅr das Makefile kann (muû aber nicht) in der Nachricht
+
 Åbergeben werden.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des Makefiles (oder NULL)
+
 !end_xlist
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Die Shell bestÑtigt mit SE_ACK.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_PROJECT
+
 !raw [stg] @xref SE_ACK
+
 Der Editor teilt der Shell mit, daû das Projekt geÑndert/gewechselt
+
 wur!-de. Der Filename des Projektfiles wird als Parameter in der
+
 Nach!-richt Åbergeben. Wird (!V)NULL(!v) Åbergeben, sollte das 
+
 aktuelle Projekt abgemeldet werden.
 
+
+
 Eine vernÅnftige Reaktion der Shell wÑre in dem Fall, ebenfalls das
+
 Projekt zu wechseln, sofern sie dies unterstÅtzt.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des Projektfiles oder 
+
                    (!V)NULL(!v)
+
 !end_xlist
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Die Shell bestÑtigt mit SE_ACK.
 
+
+
 !smallskip
 
+
+
 (!B)Hinweis:(!b) Den Namen des Projektfiles auf (!V)NULL(!v) zu 
+
 setzen, ist erst ab Protokollversion 1.01 vorgesehen. Der Editor 
+
 sollte daher vorher Åber!-prÅfen, ob die Shell mindestens 
+
 Protokollversion 1.01 unter!-stÅtzt.
+
+
 
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_QUIT
+
 Der Editor teilt der Shell mit, daû er jetzt beendet wird. Die Shell
+
 sollte in dem Fall den Editor als Kommunikationspartner vergessen.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_description
+
  !item [keine Parameter]
+
 !end_description
+
+
 
 !smallskip
 
+
+
 (!U)Antwort(!u)
+
+
 
 Es wird keine Antwort erwartet!
 
+
+
 !end_node
 
+
+
 # ========================================================================
+
 !begin_node ES_SHLCTRL
+
 Nachricht des Editors zur Kontrolle der Shell.
 
+
+
 !smallskip
+
+
 
 (!U)Aufbau der Nachricht(!u)
+
 !begin_xlist [Wort 4+5:~]
+
  !item [Wort 3+4]: Zeiger auf den Namen des obersten Fensters des 
+
                    Editors oder (!V)NULL(!v)
+
  !item [Wort 5]:   Steuer-Flags: (!nl)
+
                    Bit 0: Shell soll sich toppen (MenÅ/Fenster)
+
 !end_xlist
 
+
+
 !smallskip
+
+
 
 (!U)Antwort(!u)
 
+
+
 Die Shell bestÑtigt mit SE_ACK.
 
+
+
 !smallskip
+
+
 
 (!B)Hinweis:(!b) Diese Nachricht existiert erst ab Protokollversion 
+
 1.05. Die Åbrigen Bits von Wort 5 sind fÅr zukÅnftige Erweiterungen 
+
 reserviert.
 
-!end_node
+
 
 !end_node
+
+
+
+!end_node
+
+
 
 # ########################################################################
+
 !begin_node History
 
+
+
 (!B)Version 1.05(!b) vom 23.12.1997
+
 !begin_itemize
+
  !item neue Nachricht (!V)ES_SHLCTRL(!v)
+
  !item neuer Eintrag (!V)shellCtrlStr(!v) in der Struktur 
+
        (!V)SEMENUINFO(!v) bei (!V)SE_MENU(!v)
+
 !end_itemize
 
+
+
 !smallskip
+
+
 
 (!B)Version 1.04(!b) vom 08.01.1997
+
 !begin_itemize
+
  !item Flag 2 (""nur schlieûen"") bei (!V)SE_CLOSE(!v)
+
  !item neuer Eintrag (!V)progName(!v) in der Struktur 
+
        (!V)SEMENUINFO(!v) bei (!V)SE_MENU(!v)
+
 !end_itemize
 
+
+
 !smallskip
+
+
 
 (!B)Version 1.03(!b) vom 19.11.1996
+
 !begin_itemize
+
 !item bei (!V)ES_COMPILE(!v) kann der Zeiger auf den Dateinamen jetzt 
+
       auch (!V)NULL(!v) sein.
+
 !end_itemize
 
+
+
 !smallskip
+
+
 
 (!B)Version 1.02(!b) vom 13.08.1996
+
 !begin_itemize
+
  !item neue Nachricht (!V)SE_MENU(!v)
+
  !item bei (!V)SE_OPEN(!v) kann nun auch eine Zeile und eine Spalte 
+
        angegeben werden
+
 !end_itemize
 
+
+
 !smallskip
+
+
 
 (!B)Version 1.01(!b) vom 30.01.1996
+
 !begin_itemize
+
  !item Angabe von Dateimasken und Close-Flag bei (!V)SE_CLOSE(!v)
+
  !item Projektname bei (!V)SE_PROJECT(!v) und (!V)ES_PROJECT(!v) kann 
+
        auch (!V)NULL(!v) sein
+
 !end_itemize
 
+
+
 !smallskip
+
+
 
 (!B)Version 1.00(!b) vom 17.01.1994
+
 !begin_itemize
+
  !item erste îffentliche Version
+
 !end_itemize
+
+
 
 !end_node
 
+
+
 # ########################################################################
+
 !begin_node Autoren und Programme
-Das SE-Protokoll wurde von Dirk Steins @ K2 und Frank Storm @ AC2 
+
+Das SE-Protokoll wurde von Dirk Steins und Frank Storm
+
 ent!-wickelt, die Erweiterungen zu den neueren Protokollversionen 
-stammen von Christian Felsch @ HH und Dirk Haun @ WI2.
+
+stammen von Christian Felsch und Dirk Haun.
+
+
 
 Die Zahl der Programme, die das (!nolink [SE-Protokoll]) unterstÅtzen, ist leider 
+
 noch nicht allzu groû:
+
 !begin_itemize
+
  !item Editoren:
+
   !begin_itemize
+
    !item Clix von Steffen Engels
+
    !item Everest von Oliver Schmidt (ab Version 3.5)
+
    !item Fred von Dirk Steins
+
    !item qed von Christian Felsch (ab Version 3.3, ab Version 3.70 
+
          wird zudem Protokollversion 1.01 unterstÅtzt)
+
   !end_itemize
+
  !item Shells:
+
   !begin_itemize
+
    !item Chatwin von Dirk Haun (ab Version 3.04 wird das SE-Protokoll 
+
          komplett unterstÅtzt, Ñltere Versionen unterstÅtzen nur die 
+
          wichtigsten (!nolink [Nachrichten]))
+
    !item Shell zum Megamax Modula-2 von Thomas Tempelmann und Dirk 
+
          Steins
+
    !item PC-Shell von Frank Schramm (ab Version 3.01)
+
   !end_itemize
+
  !item Sonstiges:
+
   !begin_itemize
+
    !item SE-Lib von Manfred Rosenboom und Dirk Haun
+
    
+
          Dieser Bibliothek liegt auch der SE-Evaluator, eine Art 
+
          Debugger fÅr das (!nolink [SE-Protokoll]), bei.
+
   !end_itemize
+
 !end_itemize
 
+
+
 Es bleibt zu hoffen, daû weitere Editoren und Shells dieses nÅtzliche 
+
 Protokoll unterstÅtzen werden. Dieser Text trÑgt dabei hoffentlich 
+
 et!-was zur Verbreitung bei !..
+
+
 
 !smallskip
 
+
+
 Dirk Haun, (!today)
-!end_node
 
 !end_node
+
+
+
+!end_node
+
