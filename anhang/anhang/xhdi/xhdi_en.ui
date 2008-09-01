@@ -2,1411 +2,2865 @@
 
 
 
+
+
+
+
 !begin_node XHDI - eXtended HardDisk Interface (Version 1.30)
+
 !label XHDI
 
-The purpose of the XHDI (`eXtended HardDisk Interface') specification is to
-enhance the communication with drivers for block oriented mass storage media.
-We started with the thought to create a uniform interface for some additional
-driver features. One goal was to create a standard method for virtual memory
-systems to lock the eject button of Syquest harddisk drives (you don't want
-the user to remove the cartridge with the swap partition).
 
-After further discussion, it was clear that the information available via the
-PUN_INFO structure just wasn't enough and that the missing information should
-be available with the help of this XHDI specification. Reasons:
+
+The purpose of the (!nolink [XHDI]) (`e(!B)X(!b)tended (!B)H(!b)ard(!B)D(!b)isk (!B)I(!b)nterface') specification
+
+is to enhance the communication with drivers for block-oriented mass
+
+storage media. We started with the thought of creating a uniform
+
+interface for some additional driver features. One goal was to create
+
+a standard method for virtual memory systems to lock the eject button
+
+of Syquest hard disk drives (you don't want the user to remove the
+
+cartridge with the swap partition).
+
+
+
+After further discussion, it was clear that the information available
+
+via the PUN_INFO structure just wasn't enough and that the missing
+
+information should be available with the help of this (!nolink [XHDI])
+
+specification. Reasons:
+
+
 
 !begin_itemize
-!item the PUN_INFO structure only has room for 16 devices, but BIOS (and some
-      GEMDOS replacements) allow 32 devices
-!item it is impossible to install more than one AHDI compatible harddisk driver
-      in the system (there is only one (!nolink [PUN_INFO]) structure).
 
-!item Atari's definition of device numbers only works for drives with Logical
-      Unit Number 0.
+!item The PUN_INFO structure only has room for 16 devices, but (!nolink [BIOS])
+
+     (and some (!nolink [GEMDOS]) replacements) allow 32 devices
+
+!item It is impossible to install more than one AHDI-compatible
+
+     hard disk driver in the system (there is only one (!nolink [PUN_INFO])
+
+     structure)
+
+
+
+!item Atari's definition of device numbers only works for drives with
+
+     Logical Unit Number 0
+
 !end_itemize
 
-(!B)For these reasons, the purpose of the XHDI specification is:(!b)
+
+
+(!B)For these reasons, the purpose of the (!nolink [XHDI]) specification is:(!b)
+
+
 
 !begin_itemize
-!item to provide more information about the installed devices
-!item to support new driver features like Stop/Start or Lock/Unlock.
+
+!item To provide more information about the (!nolink [installed]) devices
+
+!item To support new driver features like Stop/Start or Lock/Unlock
+
 !end_itemize
 
-The XHDI specification doesn't define new driver features -- it should be
-easy to retrofit it into existing drivers.
+
+
+The (!nolink [XHDI]) specification doesn't define new driver features - it should
+
+be easy to retrofit it into existing drivers.
+
+
 
 See Also: (!nl)
-XHDI-Cookie ~ XHDI-Terminologie ~ (!link [Partition types][Recommended partition types]) ~
-Arbitration ~ XHDI-Funktionen ~  SCSI-Spezifikation
+
+XHDI cookie ~ XHDI terminology ~ (!link [Partition types][Recommended partition types]) ~
+
+Arbitration ~ XHDI functions ~  SCSI specification
+
+
+
+
 
 
 
 !begin_node XHDI-Cookie
 
-Cookie id: "(!nolink [XHDI])". The contents of the cookie points to the start
-address of a function, which provides procedures for dealing with block
-storage devices. As an additional check, the function is preceded by the
-long constant $27011992.
 
-The contents of the XHDI cookie may change (because it can be used by more
-than one driver). Therefore, in some applications (example: DA's) the cookie
-contents must be inquired each time before the handler is called.
 
-(!B)How to install more than one XHDI driver:(!b)
+Cookie ID: '(!nolink [XHDI])'. The contents of the cookie points to the start
+
+address of a function which provides procedures for dealing with
+
+block storage devices. As an additional check, the function is
+
+preceded by the LONG constant 0x27011992.
+
+
+
+The contents of the (!nolink [XHDI]) cookie may change (because it can be used by
+
+more than one driver). Therefore, in some applications (example: Desk
+
+accessories) the cookie contents must be inquired each time before the
+
+handler is called.
+
+
+
+(!B)How to install more than one (!nolink [XHDI]) driver:(!b)
+
+
 
 !begin_xlist [(1)]
+
 !item [(1)]
-During the installation, check if the cookie is alreay set. If so:
+
+During the installation, check whether the cookie is already set. If so:
+
+
 
 !item [(2)]
-For XHGetVersion first jump through the old vector and return the
-minimum of this and your own version number.
+
+For XHGetVersion first jump through the old vector and return
+
+the minimum of this and your own version number.
+
+
 
 !item [(3)]
-For XHDrvmap first jump through the old vector and then or-in the
-drive bits for the devices supported by you.
+
+For XHDrvMap first jump through the old vector and then OR in
+
+the drive bits for the devices supported by you.
+
+
 
 !item [(4)]
-For all other functions: check, if one of your devices. If not, jump
-through the old vector.
+
+For all other functions: Check whether it is one of your
+
+devices. If not, jump through the old vector.
+
+
 
 !end_xlist
 
+
+
 See Also:
-(!link [XHDI-Spezifikation][XHDI])  ~ GEMDOS  ~ BIOS  ~ Cookie-Jar ~
-SCSI-Spezifikation
+
+(!link [XHDI specification][XHDI]) ~ About the GEMDOS ~
+
+About the BIOS ~ Cookie jar ~ SCSI specification
+
 !end_node
 
 
-!begin_node XHDI-Terminologie
+
+
+
+!begin_node XHDI terminology
+
+
 
 Definition of data types:
+
 !begin_verbatim
-UWORD:  16 Bit, unsigned
-LONG:   32 Bit, signed
-ULONG:  32 Bit, unsigned
-char *: 32 Bit, pointer to a zero terminated string
+
+UWORD:  16-bit, unsigned
+
+LONG:   32-bit, signed
+
+ULONG:  32-bit, unsigned
+
+char *: 32-bit, pointer to a zero terminated string
+
 !end_verbatim
 
+
+
 !label Major Device Number
+
 !begin_xlist [major:]
 
+
+
 !item [major:]
+
 (!B)Major Device Number(!b)
+
 !begin_xlist !short [65..255:]
+
 !item [0..7:]
+
 Devices on the ACSI bus with ATARI-compatible command set
+
 !item [8..15:]
+
 Devices on the SCSI bus
+
 !item [16..17:]
+
 Devices connected to the primary IDE interface
+
 !item [18..19:]
+
 Devices connected to a secondary IDE interface
+
 !item [20..23:]
+
 Additional IDE devices
+
 !item [24..63:]
+
 Extensions as defined in the pun field in the PUN_INFO structure
+
 !item [64:]
+
 Devices on the standard floppy controller
+
 !item [65..255:]
+
 Extensions outside the scope of AHDI.
+
 !end_xlist
+
+
 
 !label Minor Device Number
+
 !item [minor:]
+
 Minor Device Number (for `major' 0..15: LUN of the ACSI or SCSI
+
 device), maximal 255.
 
+
+
 !item [key:]
-A 16 bit key, returned by XHReserve(), or 0, if the device is not
-locked or if the key is unknown.
+
+A 16-bit key, returned by XHReserve, or 0 if the device is
+
+not locked or if the key is unknown
+
 !end_xlist
+
+
 
 Notation:
 
-Numerical values are, when not specified otherwise, decimal. Hex values
-(base 16) are introduced by a dollar sign ($).
+
+
+Numerical values are, when not specified otherwise, decimal. Hex
+
+values (base 16) are introduced by a dollar sign (0x).
+
+
 
 See Also:
-(!link [XHDI-Spezifikation][XHDI]) ~  GEMDOS ~  BIOS ~
-SCSI-Spezifikation
+
+(!link [XHDI specification][XHDI]) ~ About the GEMDOS ~
+
+About the BIOS ~ SCSI specification
+
+
+
 !end_node
+
+
 
 
 
 !begin_node Arbitration
 
-For device drivers which support SCSI arbitration, the machine needs an own
-SCSI device number which must be unique and shouldn't be stored on disk.
-Atari has reserved byte 16 in the Non Volatile Memory of the Atari TT and
-Falcon computers. Bit assignments:
+
+
+For device drivers which support SCSI arbitration, the machine needs
+
+an own SCSI device number which must be unique and shouldn't be stored
+
+on disk. Atari has reserved byte 16 in the non-volatile memory (NVRAM)
+
+of the Atari TT030 and Falcon030 computers. Bit assignments:
+
+
 
 !begin_xlist !short [Bit 0..2:]
+
 !item [Bit 0..2:]
-device number
+
+Device number
+
 !item [Bit 7:]
-arbitration on (1) or off (0)
+
+Arbitration on (1) or off (0)
+
 !end_xlist
+
+
 
 (!B)The current arbitration number could be inquired this way:(!b)
 
+
+
 !begin_verbatim
+
 WORD arbitration_id (VOID)
+
 {
+
    LONG ret = EINVFN;
+
    UBYTE nvmdata = 0;
+
    OSHEADER *Sys;
+
    LONG oldstack = Super(0L);
+
    Sys = *_sysbase;
+
    Super((VOID *)oldstack);
+
+
 
    host_id = -1;   /* no arbitration by default */
 
+
+
    if (Sys->os_version >= 0x300)
+
       ret = NVMaccess (0, 16, (WORD) sizeof (nvmdata), &nvmdata);
 
+
+
    if (ret == E_OK && (nvmdata & 0x80))
+
       host_id = nvmdata & 7;
 
+
+
    return host_id;
+
 }
+
 !end_verbatim
 
+
+
 See Also:
-(!link [XHDI-Spezifikation][XHDI])  ~ SCSI-Spezifikation ~  GEMDOS  ~ BIOS
+
+(!link [XHDI specification][XHDI]) ~ SCSI specification ~
+
+About the GEMDOS ~ About the BIOS
+
 !end_node
 
 
 
-!begin_node Recommended partition types
-!label Partitiontyp, BGM
-!label Partitiontyp, GEM
+
+
+
+
+!begin_node  Recommended partition types
+
+!label Partition type, BGM
+
+!label Partition type, GEM
+
+
 
 !begin_xlist !short [GEM]
+
 !item [Typ]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [BGM]
+
 (!nolink [GEMDOS]) partition > 16 MB
+
 !item [(!nolink [GEM])]
+
 (!nolink [GEMDOS]) partition < 16 MB
+
 !item [RAW]
-(!link [Partitiontyp-RAW][Partitiontyp RAW])
+
+Partition type RAW
+
 !end_xlist
+
+
 
 The following types can be supported optionally (for example with a
+
 configurable list of partition ID's in the driver).
 
+
+
 !begin_xlist !short [GEM]
+
 !item [Typ]
+
 Meaning
+
 !item [~]
+
 ~
-!label Partitiontyp, F32
-!label Partitiontyp, LNX
-!label Partitiontyp, MAC
-!label Partitiontyp, MIX
-!label Partitiontyp, QWA
-!label Partitiontyp, SWP
-!label Partitiontyp, UNX
-!item [F32]  TOS compatible FAT32 partition
+
+!label Partition type, F32
+
+!label Partition type, LNX
+
+!label Partition type, MAC
+
+!label Partition type, MIX
+
+!label Partition type, QWA
+
+!label Partition type, SWP
+
+!label Partition type, UNX
+
+!item [F32]  (!nolink [TOS])-compatible FAT32 partition
+
 !item [LNX]  Linux Ext2 partition, should be handled like `RAW'
+
 !item [MAC]
+
 MAC HFS partition, should be handled like `RAW'
+
 !item [MIX]
+
 Minix partition, should be handled like `RAW'
+
 !item [QWA]
+
 QDOS partition, should be handled like `RAW'
+
 !item [SWP]
+
 Swap partition, should be handled like `RAW'
+
 !item [UNX]
+
 ASV (Atari System V R4) partition, should be handled like `RAW'
+
 !end_xlist
 
+
+
 See Also:
-(!link [XHDI-Spezifikation][XHDI]) ~  GEMDOS  ~ BIOS
+
+(!link [XHDI specification][XHDI]) ~ About the GEMDOS ~
+
+About the BIOS
 
 
 
-!begin_node Partitiontyp RAW
 
-(!nolink [XHDI])-1.10 compliant drivers shall support the third partition type
-RAW (in addition to (!nolink [GEM]) and BGM). For these partitions, the following
+
+!begin_node Partition type RAW
+
+
+
+(!nolink [XHDI])-1.10 compliant drivers shall support the third partition type RAW
+
+(in addition to (!nolink [GEM]) and BGM). For these partitions, the following
+
 should be true:
 
 
+
+
+
 !begin_xlist [(1)]
+
 !item [(1)]
-The partition size is `arbitrary' (32 bit sector numbers).
+
+The partition size is `arbitrary' (32-bit sector numbers).
+
 !item [(2)]
-The partition can be accessed as (!nolink [BIOS]) device; Getbpb returns a NULL
-pointer (so that GEMDOS won't access it; however, calling Getbpb resets
-the driver internal media change state).
+
+The partition can be accessed as a (!nolink [BIOS]) device; Getbpb returns a
+
+      NULL pointer (so that (!nolink [GEMDOS]) won't access it; however, calling
+
+      Getbpb resets the driver internal media change state).
+
+
 
 !item [(3)]
-Rwabs (in physical or logical mode) and XHReadWrite() may be used
-to access the partition. The physical block size of the medium is used
-(see XHInqTarget).
+
+Rwabs (in physical or logical mode) and XHReadWrite may be
+
+      used to access the partition. The physical block size of the
+
+      medium is used (see XHInqTarget).
+
+
 
 !item [(4)]
+
 XHInqDev2 (as compared to XHInqDev) returns size and type of the partition.
 
+
+
 !end_xlist
 
-These extensions have been made to make it easier to create drivers for new
-filesystems for MiNT or MagiC (like the Minix file system).
+
+
+These extensions have been made to make it easier to create drivers
+
+for new filesystems for MiNT or MagiC (like the Minix filesystem).
+
+
 
 See Also:
-(!link [XHDI-Spezifikation][XHDI])  ~ GEMDOS ~  BIOS
+
+(!link [XHDI specification][XHDI]) ~ About the GEMDOS ~
+
+About the BIOS
+
 !end_node
+
 !end_node
 
 
 
-!begin_node XHDI-Funktionen
 
-All functions have to be called from supervisor mode. The effects of a call
-in user mode are undefined. All processor registers except d0 are preserved.
-(!nolink [EINVFN]) is returned for invalid opcodes.
 
-Some of the function calls -- notably `XHReadWrite()' -- might be implemented
-by calls to (!nolink [BIOS]) or (!nolink [XBIOS]) functions and therefore can
-activate the `Critical Error Handler'. It's the responsibility of the caller
-to switch of the `CEH', if this is needed.
 
-!label XHDI error codes
 
-FÅr alle Funktionen seien folgende (!nolink [Return])-Werte definiert:
+!begin_node XHDI functions
 
-(!B)TOS (!nolink [error]) codes:(!b)
+
+
+All functions have to be called from supervisor-mode. The effects of a
+
+call in user-mode are undefined. All processor registers except d0 are
+
+preserved. (!nolink [EINVFN]) is returned for invalid opcodes.
+
+
+
+Some of the function calls - notably `XHReadWrite' - might be
+
+implemented by calls to (!nolink [BIOS]) or (!nolink [XBIOS]) functions and therefore can
+
+activate the `Critical Error Handler'. It's the responsibility of the
+
+caller to switch of the `CEH', if this is needed.
+
+
+
+!label XHDI error-codes
+
+The following return values are defined for all functions:
+
+
+
+(!B)(!nolink [TOS]) error-codes:(!b)
+
+
 
 !begin_table [r l]
+
   0: !! OK (OK)
- -1: !! unspecified (!nolink [error]) ((!nolink [ERROR]))
- -2: !! device not responding ((!nolink [EDRVNR]))
--15: !! unknown device ((!nolink [EUNDEV]))
--32: !! invalid function number ((!nolink [EINVFN]))
--36: !! access denied, device is reserved ((!nolink [EACCDN]))
--46: !! invalid drive number ((!nolink [EDRIVE]))
+
+ -1: !! Unspecified (!nolink [error]) ((!nolink [ERROR]))
+
+ -2: !! Device not responding ((!nolink [EDRVNR]))
+
+-15: !! Unknown device ((!nolink [EUNDEV]))
+
+-32: !! Invalid function number ((!nolink [EINVFN]))
+
+-36: !! Access denied, device is reserved ((!nolink [EACCDN]))
+
+-46: !! Invalid drive number ((!nolink [EDRIVE]))
+
 !end_table
 
-(!B)SCSI (!nolink [error]) codes (ranging from -200 to -455)(!b)
+
+
+(!B)SCSI error-codes (ranging from -200 to -455)(!b)
+
+
 
 !begin_xlist [(-200 - N):]
+
 !item [(-200 - N):]
-SCSI (!nolink [error]) code N (the `Additional Sense Code', Byte 12 in the
-`Extended Sense Format', see Appendix B in `draft proposed
-American National Standard for information systems -Revision 11a
-- SCSI-3 Primary Commands, 28 March 1997)
+
+SCSI error-code N (the `Additional Sense Code', byte 12
+
+              in the `Extended Sense Format', see @{"Appendix" ignore} B in `Draft
+
+              proposed American National Standard for information
+
+              systems - Revision 11a - SCSI-3 Primary Commands, 28
+
+              March 1997)
+
 !end_xlist
 
-(!B)IDE (!nolink [error]) codes (ranging from -456 to -711)(!b)
+
+
+(!B)IDE error-codes (ranging from -456 to -711)(!b)
+
+
 
 !begin_xlist [(-456 - N):]
+
 !item [(-456 - N):]
-IDE (!nolink [error]) code N (value of the IDE error register)
+
+IDE error-code N (value of the IDE error register)
+
 !end_xlist
 
-Note: obviously, you can get SCSI (!nolink [error]) codes only for ACSI or SCSI devices.
-For other device types like IDE drives the following assignments may be used:
+
+
+(!B)Note:(!b) Obviously, you can get SCSI error-codes only for ACSI or SCSI
+
+devices. For other device types like IDE drives the following
+
+assignments may be used:
+
+
 
 !begin_table [l l l l]
+
 Bit in IDE- !! ~ !! ~ !! ~
-(!nolink [error]) register !! meaning !! SCSI error !! (!nolink [XHDI]) error
+
+(!nolink [error]) register !! Meaning !! SCSI error !! (!nolink [XHDI]) error
+
 !hline
+
 1 !! Track 0 not found      !! $06 !! -206
+
 0 !! DAM not found          !! $13 !! -219
+
 4 !! ID-Field not found     !! $12 !! -218
+
 7 !! Bad block mark         !! $10 !! -216
+
 6 !! Uncorrectable (!nolink [error])    !! $11 !! -217
+
 2 !! Command aborted        !! $20 !! -232
+
 5 !! Media Change           !! $28 !! -240
+
 3 !! Media Change requested !! $5A !! -290
+
 !end_table
 
-(it is recommended to test the bits in the above order).
 
-For other devices (like disk drives connected to the floppy controller) there
-may be other, not yet defined, (!nolink [error]) codes.
 
-Parameters are passed the same way as to GEMDOS functions. All values are put
-onto the stack, with the 16 bit opcode last, i.e. at the lowest address. The
-32 bit result is returned in d0.
+(It is recommended to test the bits in the above order).
 
-Wherever it is specified that `the caller may pass a zero pointer' for a
-pointer parameter, then passing such a zero pointer indicates that the caller
-is not interested in the value to be returned. Drivers must always check
-pointers for zero before dereferencing them.
+
+
+For other devices (like disk drives connected to the floppy
+
+controller) there may be other, not yet defined, error-codes.
+
+
+
+Parameters are passed the same way as to (!nolink [GEMDOS]) functions. All values
+
+are put onto the stack, with the 16-bit opcode last, i.e. at the
+
+lowest address. The 32-bit result is returned in d0.
+
+
+
+Wherever it is specified that `the caller may pass a zero pointer' for
+
+a pointer parameter, then passing such a zero pointer indicates that
+
+the caller is not interested in the value to be returned. Drivers must
+
+always check pointers for zero before dereferencing them.
+
+
 
 See Also:
-(!link [XHDI-Spezifikation][XHDI])  ~ SCSI-Spezifikation ~  BIOS
+
+(!link [XHDI specification][XHDI]) ~ SCSI specification ~ About the BIOS
+
+
+
+
 
 
 
 !begin_node XHDOSLimits
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHDOSLimitsÆ - interne Limits von DOS erfragen/setzen
+
+ØXHDOSLimitsÆ - Set/get internal limits of DOS.
+
+
 
 !item [Opcode:]
+
 17
 
+
+
 !item [Syntax:]
+
 LONG XHDOSLimits ( UWORD which, ULONG limit );
 
-!item [Description:]
-This functions aks the driver for the internal limits of the currently
-running DOS (or sets the driver's limits). Example: it can be used by a FAT
-file system driver to inform the driver about the change of some of the
-limits. (!I)which(!i) describes the type of limit, (!I)limit(!i) is the new
-value (with zero meaning that the value shouldn't be changed). The function
-returns the previous value for the limit.
 
-As a requirered functionality starting with (!nolink [XHDI]) release 1.30
-a driver shall retrieve limit values from previously started (!nolink [XHDI])
-drivers, if these exists. When a limit is changed, this information then
-shall be passed through to other (!nolink [XHDI]) drivers.
+
+!item [Description:]
+
+The function XHDOSLimits asks the driver for the
+
+internal limits of the currently running DOS (or sets
+
+the driver's limits). (!B)Example:(!b) it can be used by a FAT
+
+filesystem driver to inform the driver about the change
+
+of some of the limits. (!I)which(!i) describes the type of
+
+limit, (!I)limit(!i) is the new value (with zero meaning that
+
+the value shouldn't be changed). The function returns
+
+the previous value for the limit.
+
+
+
+As a required functionality starting with (!nolink [XHDI])
+
+release 1.30 a driver shall retrieve limit values from
+
+previously started (!nolink [XHDI]) drivers, if these exist. When
+
+a limit is changed, this information then shall be
+
+passed through to other (!nolink [XHDI]) drivers.
+
+
 
 
 
 !label XH_DL_SECSIZ
+
 !label XH_DL_MINFAT
+
 !label XH_DL_MAXFAT
+
 !label XH_DL_MINSPC
+
 !label XH_DL_MAXSPC
+
 !label XH_DL_CLUSTS
+
 !label XH_DL_MAXSEC
+
 !label XH_DL_DRIVES
+
 !label XH_DL_CLSIZB
+
 !begin_xlist !short [XH_DL_SECSIZ (0)]
+
 !item [which]
-Bedeutung
+
+Meaning
+
 !item [~]
+
 ~
+
 !item [XH_DL_SECSIZ (0)]
-maximal sector size (BIOS level)
+
+Maximum sector size ((!nolink [BIOS]) level)
+
 !item [XH_DL_MINFAT (1)]
-minimal number of FATs
+
+Minimum number of FATs
+
 !item [XH_DL_MAXFAT (2)]
-maximal number of FATs
+
+Maximal number of FATs
+
 !item [XH_DL_MINSPC (3)]
-sectors per cluster minimal
+
+Minimum sectors per cluster
+
 !item [XH_DL_MAXSPC (4)]
-sectors per cluster maximal
+
+Maximum sectors per cluster
+
 !item [XH_DL_CLUSTS (5)]
-maximal number of clusters of a 16 bit FAT
+
+Maximum number of clusters of a 16-bit FAT
+
 !item [XH_DL_MAXSEC (6)]
-maximal number of sectors
+
+Maximum number of sectors
+
 !item [XH_DL_DRIVES (7)]
-maximal number of (!nolink [BIOS]) drives supported by the DOS
+
+Maximum number of (!nolink [BIOS]) drives supported by the DOS
+
 !item [XH_DL_CLSIZB (8)]
- maximale Clustergrîûe
+
+Maximum cluster size
+
 !end_xlist
 
-- with XHDI version 1.30 and above -
+
+
+- (!B)With (!nolink [XHDI]) version 1.30 and above:(!b)
+
 !label XH_DL_RDLEN
+
 !label XH_DL_CLUSTS12
+
 !label XH_DL_CLUSTS32
+
 !label XH_DL_BFLAGS
+
 !begin_xlist !short [XH_DL_SECSIZ (0)]
-!item [XH_DL_RDLEN (9)]     max. (bpb->rdlen * bpb->recsiz / 32)
-!item [XH_DL_CLUSTS12 (12)] max. number of clusters of a 12 bit FAT
-!item [XH_DL_CLUSTS32 (13)] max. number of clusters of a 32 bit FAT
-!item [XH_DL_BFLAGS (14)]   supported bits in bpb->bflags
+
+!item [XH_DL_RDLEN (9)]     Max. (bpb->rdlen * bpb->recsiz/32)
+
+!item [XH_DL_CLUSTS12 (12)] Max. number of clusters of a 12-bit FAT
+
+!item [XH_DL_CLUSTS32 (13)] Max. number of clusters of a 32 bit FAT
+
+!item [XH_DL_BFLAGS (14)]   Supported bits in bpb->bflags
+
 !end_xlist
 
-(!B)Note:(!b) Diese Funktion ist optional, daher darf ein Aufruf mit
-(!nolink [EINVFN]) beantwortet werden.
 
-!item [(!nolink [Return]) Value:]
-Die Funktion liefert den Wert des bisherigen Limits.
+
+(!B)Note:(!b) This function is optional, hence a call may
+
+be answered with (!nolink [EINVFN]).
+
+
+
+!item [(!nolink [Return]) value:]
+
+The function returns the value of the previous limit.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
-Arbitration ~  _drvbits ~  (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables])   ~   XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHDriverSpecial
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHDriverSpecialÆ - treiberspezifische Erweiterungen nutzen
+
+ØXHDriverSpecialÆ - Use driver-specific extensions.
+
+
 
 !item [Opcode:]
+
 13
 
+
+
 !item [Syntax:]
-LONG XHDriverSpecial ( ULONG key1, ULONG key2, UWORD subopcode,
-                       VOID *data );
+
+LONG XHDriverSpecial ( ULONG key1, ULONG key2, UWORD subopcode,  VOID *data );
+
+
 
 !item [Description:]
-This opcode may be used for driver specific extensions. It's up to the driver
-how to interpret the arguments in (!I)subopcode(!i) and (!I)data(!i).
-(!I)key1(!i) and (!I)key2(!i) are used to specify for which driver the call is:
 
-(!I)key1(!i) should contain four
-printable (!link [ASCII-Zeichen][ASCII-Table]) characters, (!I)key2(!i) a
-random ULONG value (example: date of definition in BCD format).
+This opcode may be used for driver-specific extensions.
 
-(!B)Note:(!b)
-OPTIONAL function, may return EINVFN.
+It's up to the driver how to interpret the arguments
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+in (!I)subopcode(!i) and (!I)data.(!i) (!I)key1(!i) and (!I)key2(!i) are used to
+
+specify for which driver the call is intended:
+
+
+
+(!I)key1(!i) should contain four printable (!link [ASCII characters][ASCII table]),
+
+(!I)key2(!i) a random ULONG value (example: date of definition in BCD format).
+
+
+
+(!B)Note:(!b) OPTIONAL function, may return EINVFN.
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~  XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~ XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHDrvMap
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHDrvMapÆ - Bitvektor mit BIOS XHDI-GerÑtenummern liefern
+
+ØXHDrvMapÆ - Return bit-vector with (!nolink [BIOS XHDI]) device numbers.
+
+
 
 !item [Opcode:]
+
 6
 
+
+
 !item [Syntax:]
+
 ULONG XHDrvMap ( VOID );
 
-!item [Description:]
-Returns a bit mask of (!nolink [BIOS]) devices supported by the (!nolink [XHDI])
-driver(s) (like the return value from Drvmap()).
 
-!item [(!nolink [Return]) Value:]
-Der RÅckgabewert ist der entsprechende Bitvektor.
+
+!item [Description:]
+
+XHDrvMap returns a bit-mask of (!nolink [BIOS]) devices supported
+
+by the (!nolink [XHDI]) driver(s) (like the return value from Drvmap).
+
+
+
+!item [(!nolink [Return]) value:]
+
+The return value is the corresponding bit-vector.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables])  ~ XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHEject
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHEjectÆ - Medium auswerfen bzw. wieder einziehen
+
+ØXHEjectÆ - Eject medium or reinsert it again.
+
+
 
 !item [Opcode:]
+
 5
 
+
+
 !item [Syntax:]
+
 LONG XHEject ( UWORD major, UWORD minor, UWORD do_eject, UWORD key );
 
+
+
 !item [Description:]
-Ejects or inserts the medium.
+
+XHEject ejects or inserts the medium.
+
+
 
 !begin_xlist !short [Parameter]
+
 !item [Parameter]
-Bedeutung
+
+Meaning
+
 !item [~]
+
 ~
+
 !item [do_eject]
+
 !begin_xlist !short [(1)]
+
 !item [(1)]
+
 Ejects medium
+
 !item [(0)]
+
 Inserts medium
-!end_xlist
-!item [key]
-If the device is reserved pass the key, otherwise zero.
+
 !end_xlist
 
-!item [(!nolink [Return]) Value:]
-Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
-Informationen werden allerdings auch nicht benîtigt, da man ja mit
-XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+!item [key]
+
+If the device is reserved pass the key, otherwise zero.
+
+!end_xlist
+
+
+
+!item [(!nolink [Return]) value:]
+
+The code returned in case of errors is undefined. But more information is not
+
+really required, since one can make a targeted test for this capability
+
+beforehand with XHInqTarget.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHGetCapacity
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHGetCapacityÆ - Anzahl der adressierbaren Sektoren und deren Grîûe
+
+ØXHGetCapacityÆ - Obtain number of addressable sectors and their size.
+
 ermitteln
 
+
+
 !item [Opcode:]
+
 14
 
+
+
 !item [Syntax:]
+
 LONG XHGetCapacity ( UWORD major, UWORD minor, ULONG *blocks,
+
                      ULONG *blocksize );
 
+
+
 !item [Description:]
-This functions returns the number of adressable sectors in (!I)blocks(!i) and their
-size in (!I)blocksize(!i). Note that -- depending of the device used -- this
-function may need several seconds to complete.
 
-(!B)Note:(!b)
-This function is optional, may return (!nolink [EINVFN]).
+The XHGetCapacity functions returns the number of
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+adressable sectors in (!I)blocks(!i) and their size in
+
+(!I)blocksize.(!i) Note that - depending of the device used -
+
+this function may need several seconds to complete.
+
+
+
+(!B)Note:(!b) This function is optional, may return (!nolink [EINVFN]).
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHGetVersion
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHGetVersionÆ - Protokollversion erfragen
+
+ØXHGetVersionÆ - Inquire protocol version.
+
+
 
 !item [Opcode:]
+
 0
 
+
+
 !item [Syntax:]
+
 UWORD XHGetVersion ( VOID );
 
-!item [Description:]
-Returns the current protocol version. Example: $0119 is Version 1.19 (the
-format is similar to that returned by Sversion, but high and low byte are
-not reversed). This version of the XHDI specification has the version number
-$0130.
 
-!item [(!nolink [Return]) Value:]
-Der RÅckgabewert beschreibt die Versionsnummer des (!nolink [XHDI])-Protokolls. Dabei
-enthÑlt das High-Byte die Versionsnummer und das Low-Byte die Revision.
+
+!item [Description:]
+
+XHGetVersion returns the current protocol version.
+
+(!B)Example:(!b) 0x0119 is Version 1.19 (the format is similar
+
+to that returned by Sversion but high and low bytes are
+
+not reversed). This version of the (!nolink [XHDI]) specification
+
+has the version number 0x0130.
+
+
+
+!item [(!nolink [Return]) value:]
+
+The return value describes the version number of the
+
+(!nolink [XHDI]) protocol, with the high byte containing the
+
+version number and the low byte the revision.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~ XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHInqDev
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHInqDevÆ - Major, (!nolink [Minor Device Number]), Startsektor und
-Bios-Parameter-Block ((!nolink [BPB])) eines (!nolink [BIOS])-GerÑts ermitteln
+
+ØXHInqDevÆ - Obtain major and minor device number, start sector and Bios
+
+parameter block ((!nolink [BPB]) of a (!nolink [BIOS]) device.
+
+
 
 !item [Opcode:]
+
 7
 
+
+
 !item [Syntax:]
+
 LONG XHInqDev ( UWORD bios_device, UWORD *major, UWORD *minor,
+
                 ULONG *start_sector, BPB *bpb );
 
+
+
 !item [Description:]
-Returns major device number, minor device number, starting sector and BPB of
-a given (!nolink [BIOS]) device (Note: getting the (!nolink [BPB]) this way will
-NOT reset the internal media change state).
 
-Note: the caller provides a pointer to the (!nolink [BPB]) structure, which
-is filled by the driver.
+XHInqDev returns major device number, minor device
 
-!item [(!nolink [Return]) Value:]
-E_OK, EDRNVR (device not responding, eg. medium not inserted),
-EDRIVE (wrong BIOS device number) or some other applicable (!nolink [error]) code. If the
-error code is (!nolink [EDRVNR]), (!I)major(!i) and (!I)minor(!i) contain
-the correct values anyway.
+number, starting sector and BPB of a given (!nolink [BIOS]) device.
 
-If (!I)start_sector(!i) is $FFFFFFFF, the device is only temporarily inaccessible
-(example: you have inserted a cartridge with two partitions, but three drive
-bits have been reserved for the device).
+((!B)Note:(!b) Getting the (!nolink [BPB]) this way will (!I)not(!i) reset the
+
+internal media-change state).
+
+
+
+(!B)Note 2:(!b) The caller provides a pointer to the (!nolink [BPB])
+
+structure, which is filled by the driver.
+
+
+
+!item [(!nolink [Return]) value:]
+
+E_OK, EDRNVR (device not responding, e.g. medium not inserted), EDRIVE (wrong
+
+(!nolink [BIOS]) device number) or some other applicable error-code. If the
+
+error-code is (!nolink [EDRVNR]), (!I)major(!i) and (!I)minor(!i) contain the
+
+correct values anyway.
+
+
+
+If (!I)start_sector(!i) is 0xFFFFFFFF, the device is only
+
+temporarily inaccessible (example: you have inserted
+
+a cartridge with two partitions, but three drive bits
+
+have been reserved for the device).
+
+
 
 The (!nolink [BPB]) is invalid if the structure element (!I)recsiz(!i) is zero.
 
-(!B)Note:(!b) A file system is fully described by major and minor device number and
-the starting block number. This does NOT mean, that it is necessarely a FAT
-file system.
+
+
+(!B)Note:(!b) A filesystem is fully described by major and
+
+minor device number and the starting block number. This
+
+does (!I)not(!i) mean that it is necessarily a FAT filesystem.
+
+
 
 The caller may pass a zero pointer for (!I)major(!i), (!I)minor(!i),
-(!I)start_sector(!i) and (!I)bpb(!i).
+
+(!I)start_sector(!i) and (!I)bpb.(!i)
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~ XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHInqDev2
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHInqDev2Æ - Major, (!nolink [Minor Device Number]), Startsektor und
-Bios-Parameter-Block (BPB) eines GerÑts erfragen
+
+ØXHInqDev2Æ - Inquire major and minor device number, start sector and Bios
+
+parameter block ((!nolink [BPB])) of a device.
+
+
 
 !item [Opcode:]
+
 12
 
+
+
 !item [Syntax:]
+
 LONG XHInqDev2 ( UWORD bios_device, UWORD *major, UWORD *minor,
+
                  ULONG *start_sector, BPB *bpb, ULONG *blocks,
+
                  BYTE *partid );
 
+
+
 !item [Description:]
-Returns major device number, minor device number, starting sector, BPB, size
-and partition ID of a given (!nolink [BIOS]) device (Note: getting the BPB this way will
-NOT reset the internal media change state).
 
-Note: the caller provides a pointer to the (!nolink [BPB]) structure, which is
-filled by the driver.
+XHInqDev2 returns major device number, minor device
 
-The function is only available with (!nolink [XHDI]) version 1.10 and above.
+number, starting sector, BPB, size and partition ID of
 
-!item [(!nolink [Return]) Value:]
- E_OK, EDRNVR (device not responding, eg. medium not inserted),
-EDRIVE (wrong BIOS device number) or some other applicable (!nolink [error]) code. If the
-error code is EDRVNR, (!I)major(!i) and (!I)minor(!i) (!I)start_sector(!i)
-contain the correct values anyway.
+a given (!nolink [BIOS]) device ((!B)Note:(!b) Getting the BPB this way
 
-If (!I)start_sector(!i) is $FFFFFFFF, the device is only temporarily inaccessible
-(example: you have inserted a cartridge with two partitions, but three drive
-bits have been reserved for the device).
+will (!I)not(!i) reset the internal media-change state).
+
+
+
+(!B)Note 2:(!b) The caller provides a pointer to the (!nolink [BPB])
+
+structure, which is filled by the driver.
+
+
+
+The function is available only with (!nolink [XHDI]) version 1.10 and above.
+
+
+
+!item [(!nolink [Return]) value:]
+
+E_OK, EDRNVR (device not responding, e,g. medium not
+
+inserted), EDRIVE (wrong (!nolink [BIOS]) device number) or some
+
+other applicable error-code. If the error-code is
+
+EDRVNR, (!I)major(!i) and (!I)minor(!i) (!I)start_sector(!i) contain the
+
+correct values anyway.
+
+
+
+If (!I)start_sector(!i) is 0xFFFFFFFF, the device is only
+
+temporarily inaccessible (example: you have inserted a
+
+cartridge with two partitions, but three drive bits
+
+have been reserved for the device).
+
+
 
 The (!nolink [BPB]) is invalid if the structure element (!I)recsiz(!i) is zero.
 
-If the partition ID isn't available (possible reason: no standard Atari root
-sector or no root sector at all), an empty string is returned.
 
-Starting with (!nolink [XHDI]) 1.20 for MSDOS compatible media the one byte
-partition code is returned as: partid[0] = '\0' (zero byte), partid[1] = 'D' (for
-'DOS'), partid[2] = partition code.
 
-Note: a file system is fully described by major and minor device number and
-the starting block number. This does NOT mean, that it is necessarely a FAT
-file system.
+If the partition ID isn't available (possible reason:
 
-Note: the caller may pass a zero pointer for `major', `minor',
-`start_sector', `bpb', `blocks' and `partid'.
+no standard Atari root sector or no root sector at
+
+all), an empty string is returned.
+
+
+
+Starting with (!nolink [XHDI]) 1.20 for MSDOS-compatible media the
+
+one byte partition code is returned as: (!nl)
+
+ partid[0] = '\0' (zero byte) (!nl)
+
+ partid[1] = 'D' (for 'DOS') (!nl)
+
+ partid[2] = Partition code
+
+
+
+(!B)Note:(!b) A filesystem is fully described by major and
+
+minor device number and the starting block number. This
+
+does (!I)not(!i) mean that it is necessarily a FAT filesystem.
+
+
+
+(!B)Note 2:(!b) The caller may pass a zero pointer for (!I)major(!i),
+
+(!I)minor(!i), (!I)start_sector(!i), (!I)bpb(!i), (!I)blocks(!i) and (!I)partid.(!i)
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~ XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHInqDriver
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHInqDriverÆ - Informationen Åber den Treiber erfragen
+
+ØXHInqDriverÆ - Obtain information about the driver.
+
+
 
 !item [Opcode:]
+
 8
 
+
+
 !item [Syntax:]
+
 LONG XHInqDriver ( UWORD bios_device, BYTE *name, BYTE *version,
+
                    BYTE *company, UWORD *ahdi_version, UWORD *maxIPL );
 
-!item [Description:]
-Gets information about the driver for the bios_device.
 
-!item [(!nolink [Return]) Value:]
+
+!item [Description:]
+
+XHInqDriver gets information about the driver for the (!I)bios_device.(!i)
+
+
+
+!item [(!nolink [Return]) value:]
+
 !begin_xlist !short [ahdi_version]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [name]
-Name of driver (max. 17 characters).
+
+Name of driver (max. 17 characters)
+
 !item [version]
-String with version number (max. 7 characters).
+
+String with version number (max. 7 characters)
+
 !item [company]
+
 Name of company/programmer (max. 17 characters).
+
 !item [ahdi_version]
+
 AHDI version level (as defined in the PUN_INFO structure).
+
 !item [maxIPL:]
+
 Highest IPL under which the driver can work (usually 5 for
+
 drivers which use _hz_200 for timing loops).
+
 !end_xlist
 
-Note: the caller may pass a zero pointer for (!I)name(!i), (!I)version(!i),
-(!I)company(!i), (!I)ahdi_version(!i) and (!I)maxIPL(!i).
+
+
+(!B)Note:(!b) The caller may pass a zero pointer for (!I)name(!i),
+
+(!I)version(!i), (!I)company(!i), (!I)ahdi_version(!i) and (!I)maxIPL.(!i)
+
 
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHInqTarget
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHInqTargetÆ - Informationen Åber ein GerÑt liefern
+
+ØXHInqTargetÆ - Return information about a device.
+
+
 
 !item [Opcode:]
+
 1
 
+
+
 !item [Syntax:]
-LONG XHInqTarget ( UWORD major, UWORD minor, ULONG *blocksize,
+
+LONG XHInqTarget ( UWORD major, UWORD minor, ULONG *block_size,
+
                    ULONG *device_flags, BYTE *product_name );
 
-!item [Description:]
-Returns information about the device specified by (!I)major(!i) and (!I)minor(!i).
-Reservations made with XHReserve are reflected in (!I)device_flags(!i).
 
-!item [(!nolink [Return]) Value:]
+
+!item [Description:]
+
+XHInqTarget returns information about the device
+
+specified by (!I)major(!i) and (!I)minor.(!i) Reservations made with
+
+XHReserve are reflected in (!I)device_flags.(!i)
+
+
+
+!item [(!nolink [Return]) value:]
+
 !begin_xlist !short [device_flags:]
+
 !item [block_size:]
-Block size for this device (important for `XHReadWrite').
-Usually 512.
+
+Block size for this device (important for `XHReadWrite'); usually 512
+
+
 
 !label XH_TARGET_STOPPABLE
+
 !label XH_TARGET_REMOVABLE
+
 !label XH_TARGET_LOCKABLE
+
 !label XH_TARGET_EJECTABLE
+
 !label XH_TARGET_LOCKED
+
 !label XH_TARGET_STOPPED
+
 !label XH_TARGET_RESERVED
+
 !item [device_flags:]
+
 (Bit set -> Capability available):
+
 !begin_xlist !short [Bi]
+
 !item [Bit]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [0]
+
 Device is stoppable (XH_TARGET_STOPPABLE (0x00000001L))
+
 !item [1]
+
 The medium is removable (XH_TARGET_REMOVABLE (0x00000002L))
+
 !item [2]
+
 The eject mechanism can be locked (XH_TARGET_LOCKABLE (0x00000004L))
+
 !item [3]
+
 The device can physically eject the medium (XH_TARGET_EJECTABLE (0x00000008L))
+
 !item [29]
+
 Eject mechanism has been locked by the driver  (XH_TARGET_LOCKED (0x20000000L), from
+
 (!nolink [XHDI]) 1.25 up).
+
 !item [30]
+
 Device has been stopped by the driver (XH_TARGET_STOPPED (0x40000000L),
+
 from (!nolink [XHDI]) 1.25 up ).
 
+
+
 !item [31]
+
 The device is currently reserved (XH_TARGET_RESERVED (0x80000000L)).
+
 !end_xlist
+
 All other bits are reserved, drivers should set them to zero.
 
+
+
 !item [product_name:]
-Product name of the device, similar to the information returned
-by the SCSI command INQUIRE (max. 33 characters incl.
-terminating zero). If this information is not available, the
-driver should return a zero length string.
+
+Product name of the device, similar to the information returned by the SCSI
+
+command INQUIRE (max. 33 characters incl. terminating zero). If this
+
+information is not available, the driver should return a zero-length string.
+
+
 
 !item [Note:]
+
 !begin_xlist !short [-]
+
 !item [-]
-the caller may pass a zero pointer for `blocksize', `device_flags' and
-`product_name'.
+
+The caller may pass a zero pointer for (!I)block_size(!i), (!I)device_flags(!i)
+
+and (!I)product_name.(!i)
+
 !item [-]
-for IDE devices, product name information might have to be truncated to
-fit into 32 characters. See XHInqTarget2.
+
+For IDE devices, product name information might have to be truncated to fit into
+
+32 characters. (See XHInqTarget2)
+
+
+
 !end_xlist
+
 !end_xlist
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHInqTarget2
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHInqTarget2Æ - Informationen Åber GerÑt liefern
+
+ØXHInqTarget2Æ - Obtain information about a device.
+
+
 
 !item [Opcode:]
+
 11
 
+
+
 !item [Syntax:]
-LONG XHInqTarget2 ( UWORD major, UWORD minor, ULONG *blocksize,
+
+LONG XHInqTarget2 ( UWORD major, UWORD minor, ULONG *block_size,
+
                     ULONG *device_flags, BYTE *product_name,
+
                     UWORD stringlen );
 
+
+
 !item [Description:]
-Liefert Informationen Åber das durch (!I)major(!i) und (!I)minor(!i) spezifizierte
-GerÑt (in (!I)device_flags(!i): ein Attributvektor, in (!I)product_name(!i): optional die
-Produktbezeichnung des GerÑts).
-Mit XHReserve vorgenommene Reservierungen werden dabei berÅcksichtigt.
 
-Function is only available with XHDI version 1.01 and above.
+XHInqTarget2 returns information about the device
 
-!item [(!nolink [Return]) Value:]
+specified by (!I)major(!i) and (!I)minor(!i) (in (!I)device_flags(!i):
+
+an attribute vector, in (!I)product_name(!i): optionally the
+
+product descriptin of the device). Reservations made
+
+with XHReserve are respected.
+
+
+
+This function is available only with (!nolink [XHDI]) version 1.01 and above.
+
+
+
+!item [(!nolink [Return]) value:]
+
 !begin_xlist !short [device_flags]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [block_size]
-Block size for this device (important for XHReadWrite).
-Usually 512.
+
+Block size for this device (important for XHReadWrite);
+
+usually 512.
+
 !item [device_flags]
+
 (Bit set -> Capability available):
+
 !begin_xlist !short [Bit 29]
+
 !item [Bit 0:]
+
 Device is stoppable (XH_TARGET_STOPPABLE)
+
 !item [Bit 1:]
+
 The medium is removable (XH_TARGET_REMOVABLE)
+
 !item [Bit 2:]
+
 The eject mechanism can be locked (XH_TARGET_LOCKABLE)
+
 !item [Bit 3:]
+
 The device can physically eject the medium  (XH_TARGET_EJECTABLE)
+
 !item [Bit 29:]
+
  Eject mechanism has been locked by the driver (XH_TARGET_LOCKED, from
+
 (!nolink [XHDI]) 1.25 up)
+
 !item [Bit 30:]
+
 Device has been stopped by the driver (XH_TARGET_STOPPED, from (!nolink [XHDI]) 1.25 up)
+
 !item [Bit 31:]
+
 The device is currently reserved (XH_TARGET_RESERVED)
+
 !end_xlist
+
 All other bits are reserved, drivers should set them to zero.
 
+
+
 !item [product_name]
-Product name of the device, similar to the information returned
-by the SCSI command INQUIRE (max. `stringlen' characters incl.
-terminating zero). If this information is not available, the
-driver should return a zero length string.
+
+Product name of the device, similar to the information returned by the SCSI
+
+command INQUIRE (maximum (!I)stringlen(!i) characters incl. terminating zero); if
+
+this information is not available, the driver should return a zero-length string
+
+
 
 !item [stringlen]
-Length of string buffer passed in (!I)product_name(!i).
+
+Length of string buffer passed in (!I)product_name(!i)
+
+
 
 !end_xlist
+
+
 
 !begin_xlist !short [Note:]
+
 !item [Note:]
-The caller may pass a zero pointer for (!I)blocksize(!i), (!I)device_flags(!i) and
-(!I)product_name(!i). Product names of IDE devices may contain up to 40 characters.
+
+The caller may pass a zero pointer for
+
+(!I)blocksize(!i), (!I)device_flags(!i) and (!I)product_name.(!i)
+
 !end_xlist
 
+
+
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHLastAccess
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHLastAccessÆ - Anzahl der Millisekunden seit dem letzten Zugriff ermitteln
+
+ØXHLastAccessÆ - Obtain number of milliseconds since the last access.
+
+
 
 !item [Opcode:]
+
 18
 
+
+
 !item [Syntax:]
+
 LONG XHLastAccess ( UWORD major, UWORD minor, ULONG *ms );
 
+
+
 !item [Description:]
-Returns in (!I)ms(!i) the amount of milliseconds since the last successfull
-read or write operation on the device.
 
-This function is only available with XHDI version 1.25 and above.
+XHLastAccess returns in (!I)ms(!i) the amount of milliseconds
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+since the last successfull read or write operation on the device.
+
+
+
+This function is available only with (!nolink [XHDI]) version 1.25 and above.
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~  XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHLock
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHLockÆ - Auswurfknopf verriegeln bzw. entriegeln
+
+ØXHLockÆ - Lock or unlock eject button.
+
+
 
 !item [Opcode:]
+
 3
 
+
+
 !item [Syntax:]
+
 LONG XHLock ( UWORD major, UWORD minor, UWORD do_lock, UWORD key );
 
-!item [Description:]
-Locks or unlocks the eject mechanism of the device.
 
-Der Treiber hat sich darum zu kÅmmern, ob dieser Befehl an das GerÑt
-weitergeleitet wird oder nicht (falls das Medium nicht verriegelbar ist).
+
+!item [Description:]
+
+XHLock locks or unlocks the eject mechanism of the device.
+
+
+
+The driver has to attend to whether this (!nolink [command]) is
+
+passed on to the device or not (in case the medium is
+
+not capable of being locked).
+
+
 
 !begin_xlist !short [Parameter]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [do_lock]
+
 !begin_xlist !short [(1)]
+
 !item [(1)]
+
 Lock
+
 !item [(0)]
-unlock
-!end_xlist
-!item [key]
-If the device is reserved pass the key, otherwise zero.
+
+Unlock
+
 !end_xlist
 
-!item [(!nolink [Return]) Value:]
-Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
-Informationen werden allerdings auch nicht benîtigt, da man ja mit
-XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+!item [key]
+
+If the device is reserved pass the key, otherwise zero.
+
+!end_xlist
+
+
+
+!item [(!nolink [Return]) value:]
+
+The code returned in case of errors is undefined. But
+
+more information is not really required, since one can
+
+make a targeted test for this capability beforehand with XHInqTarget.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHMediumChanged
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHMediumChangedÆ - Treiber Åber Mediumwechsel informieren
+
+ØXHMediumChangedÆ - Set or inquire MiNT-specific information.
+
+
 
 !item [Opcode:]
+
 15
 
+
+
 !item [Syntax:]
+
 LONG XHMediumChanged ( UWORD major, UWORD minor );
 
+
+
 !item [Description:]
-Informs the driver that the medium in the given device has been changed. Upon
-receiving this notice, the driver should do the same things as if the device
-itself would have returned a media change status.
 
-(!B)Note:(!b)
-This function is optional and may return EINVFN.
+XHMediumChanged informs the driver that the medium in
 
-!item [(!nolink [Return]) Value:]
-The return value is E_OK if
-and only if this information has been correctly interpreted (this means: all
-logical drives on the device are either disabled or ready to use).
+the given device has been changed. Upon receiving this
+
+notice, the driver should do the same things as if the
+
+device itself had returned a media-change status.
+
+
+
+(!B)Note:(!b) This function is optional and may return EINVFN.
+
+
+
+!item [(!nolink [Return]) value:]
+
+The return value is E_OK if, and only if, this
+
+information has been correctly interpreted (this means:
+
+all logical drives on the device are either disabled or ready to use).
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHMiNTInfo
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHMiNTInfoÆ - MiNT spezifische Informationen setzen bzw. abfragen
+
+ØXHMiNTInfoÆ - Set or inquire MiNT-specific information.
+
+
 
 !item [Opcode:]
+
 16
 
+
+
 !item [Syntax:]
+
 LONG XHMiNTInfo ( UWORD opcode, VOID *data );
 
-!item [Description:]
-A function for setting/inquiring MiNT related information.
 
-The following opcodes are defined (for unknown opcodes EINVFN is returned,
-E_OK is returned if and only if the call has been executed correctly).
+
+!item [Description:]
+
+XHMiNTInfo is a function for setting/inquiring MiNT-related information.
+
+
+
+The following opcodes are defined (for unknown opcodes
+
+EINVFN is returned; E_OK is returned if, and only if,
+
+the call has been executed correctly).
+
+
 
 !label XH_MI_SETKERINFO
+
 XH_MI_SETKERINFO (0) [struct kerinfo *data]
 
-Sends (through (!I)data(!i)) a pointer to the MiNT kernel info structure to the
-driver. The driver can use it for direct calls of kernel functions.
+
+
+Sends (through (!I)data(!i)) a pointer to the MiNT kernel
+
+info structure to the driver. The driver can use it
+
+for direct calls of kernel functions.
+
+
 
 !label XH_MI_GETKERINFO
+
 XH_MI_GETKERINFO (1) [struct kerinfo **data]
 
-Inquires for a previously set MiNT kernel info pointer. The pointer is
-returned in the struct kerinfo * pointed by `data'. If the adress of the MiNT
-kernel info structure is unknown, (!I)data(!i) is filled with a NULL pointer.
 
-(!B)Note:(!b)
-This function is optional and may return EINVFN.
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+Inquires for a previously set MiNT kernel info pointer.
+
+The pointer is returned in the struct kerinfo * pointed
+
+to by (!I)data.(!i) If the adress of the MiNT kernel info
+
+structure is unknown, (!I)data(!i) is filled with a NULL pointer.
+
+
+
+(!B)Note:(!b) This function is optional and may return EINVFN.
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHNewCookie
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHNewCookieÆ - zusÑtzlichen (!nolink [XHDI]) Handler installieren
+
+ØXHNewCookieÆ - Install additional (!nolink [XHDI]) handler.
+
+
 
 !item [Opcode:]
+
 9
 
+
+
 !item [Syntax:]
+
 LONG XHNewCookie ( ULONG newcookie );
 
+
+
 !item [Description:]
-Installiert einen zusÑtzlichen (!nolink [XHDI])-Handler. Vorteil: der XHDI-Cookie zeigt
-nach wie vor auf die gleiche Adresse. Wer diese Funktion unterstÅtzt muû
-also folgendes tun:
+
+XHNewCookie installs an additional (!nolink [XHDI]) handler.
+
+Advantage: The XHDI cookie continues to point to the
+
+same address. Those who want to support this function must do the following:
+
+
 
 !begin_xlist !short [1.]
+
 !item [1.]
-Falls dies der erste Aufruf dieser Art ist: anschlieûend so vorgehen, als
-hÑtte der (!nolink [XHDI])-Cookie bei der Installation bereits auf newcookie gezeigt.
+
+(!B)If this is the first call of this kind:(!b)
+
+     Proceed subsequently as if the (!nolink [XHDI cookie])
+
+     had already pointed to (!I)newcookie(!i) at the time of installation.
+
+
+
 !item [2.]
-Falls nicht: Funktion an 'nÑchsten' Handler weiterleiten.
+
+(!B)If not:(!b) Pass function on to 'next' handler.
+
 !end_xlist
 
-Wer eine Mehrfachinstallation vornehmen mîchte, sollte so vorgehen:
+
+
+Those who would like to perform a multiple installation
+
+should proceed as follows:
+
+
 
 !begin_xlist !short [1.]
+
 !item [1.]
-Testen, ob XHNewCookie() zum Erfolg fÅhrt.
+
+Test whether XHNewCookie leads to success.
+
 !item [2.]
-Anderenfalls den Cookie `per Hand' versetzen.
+
+Otherways displace the cookie `by hand'.
+
 !end_xlist
 
-(!B)Note:(!b)
-This function is optional and may return EINVFN.
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+
+(!B)Note:(!b) This function is optional and may return EINVFN.
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHReaccess
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHReaccessÆ - GerÑt auf Mediachange ÅberprÅfen
+
+ØXHReaccessÆ - Check device for media-change.
+
+
 
 !item [Opcode:]
+
 19
 
+
+
 !item [Syntax:]
+
 LONG XHReaccess ( UWORD major, UWORD minor );
 
+
+
 !item [Description:]
-Calling this function causes the driver to check the device for a possible
-media change and to actualize partition informations if needed (like
-XHMediumChange, but the driver checks for the media change status before
-continuing).
 
-This function is only available with XHDI version 1.25 and above.
+Calling the XHReaccess function causes the driver to
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+check the device for a possible media-change and to
+
+update the partition information if needed (like
+
+XHMediumChange, but the driver checks for the media-
+
+change status before continuing).
+
+
+
+This function is available only with (!nolink [XHDI]) version 1.25 and above.
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node XHReadWrite
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHReadWriteÆ - physikalische Blocknummern lesen/schreiben
+
+ØXHReadWriteÆ - Read/write physical block numbers.
+
+
 
 !item [Opcode:]
+
 10
 
+
+
 !item [Syntax:]
+
 LONG XHReadWrite ( UWORD major, UWORD minor, UWORD rwflag, ULONG recno,
+
                    UWORD count, VOID *buf );
 
+
+
 !item [Description:]
-Read or write physical blocks, like the (!nolink [BIOS]) function Rwabs.
+
+XHReadWrite reads or writes physical blocks, like the
+
+(!nolink [BIOS]) function Rwabs.
+
+
 
 !begin_xlist !short [Parameter]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [rwflag]
+
 !begin_xlist !short [Bit 0..2:]
+
 !item [Bits 0..2:]
-as defined in the AHDI Release (!nolink [Notes]) (3.00, April 18, 1990)
+
+As defined in the AHDI Release (!nolink [Notes]) (3.00, April 18, 1990)
+
 !item [Bit 3:]
+
 (physical mode) is ignored
-!end_xlist
-All other bits are reserved and should be set to zero.
-!item [recno]
-block number
-!item [count]
-block count
-!item [buf]
-pointer to buffer
+
 !end_xlist
 
-!item [(!nolink [Return]) Value:]
-XHDI-Fehlercodes
+All other bits are reserved and should be set to zero.
+
+!item [recno]
+
+Block number
+
+!item [count]
+
+Block count
+
+!item [buf]
+
+Pointer to buffer
+
+!end_xlist
+
+
+
+!item [(!nolink [Return]) value:]
+
+XHDI error-codes
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
 
 
 !begin_node XHReserve
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHReserveÆ - GerÑt reservieren bzw. wieder freigeben
+
+ØXHReserveÆ - Reserve a device, or release it again.
+
+
 
 !item [Opcode:]
+
 2
 
+
+
 !item [Syntax:]
+
 LONG XHReserve ( UWORD major, UWORD minor, UWORD do_reserve, UWORD key );
 
-!item [Description:]
-Reserves or releases a device. XHLock, XHStop and XHEject only
-work for reserved devices if the correct key parameter is passed.
 
-Example: take a virtual memory manager which has locked a removable hard disk
-with the swap partition. You don't want the user to be able to unlock this
-device with a CPX module!
+
+!item [Description:]
+
+XHReserve reserves or releases a device. XHLock,
+
+XHStop and XHEject only work for reserved devices if
+
+the correct (!I)key(!i) parameter is passed.
+
+
+
+(!B)Example:(!b) Take a virtual memory manager which has locked
+
+a removable hard disk with the swap partition. You
+
+don't want the user to be able to unlock this device with a CPX module!
+
+
 
 !begin_xlist !short [Parameter]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [do_reserve]
+
 !begin_xlist !short [(1)]
+
 !item [(1)]
+
 Reserve
+
 !item [(0)]
-release
-!end_xlist
-!item [key]
-only used for release
+
+Release
+
 !end_xlist
 
-!item [(!nolink [Return]) Value:]
-On success, a 16 bit key different from 0 is returned.
-Dieser SchlÅssel muû bei allen weiteren Zugriffen auf das
-GerÑt angegeben sowie beim Wieder-Freigeben angegeben werden.
+!item [key]
+
+Only used for release
+
+!end_xlist
+
+
+
+!item [(!nolink [Return]) value:]
+
+On success, a 16-bit key different from 0 is returned.
+
+This key must be specified for all further accesses to
+
+the device, as well as for releasing it again.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
 
 
 !begin_node XHStop
 
+
+
 (!begin_liste) [Return Value]
 
+
+
 !item [Name:]
-ØXHStopÆ - GerÑt stoppen bzw. wieder starten
+
+ØXHStopÆ - Stop device, or restart it again.
+
+
 
 !item [Opcode:]
+
 4
 
+
+
 !item [Syntax:]
+
 LONG XHStop ( UWORD major, UWORD minor, UWORD do_stop, UWORD key );
 
+
+
 !item [Description:]
-Stops (ships) or starts the device.
+
+XHStop stops (ships) or starts the device.
+
+
 
 !begin_xlist !short [Parameter]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [do_stop]
+
 !begin_xlist !short [(1)]
+
 !item [(1)]
+
 Stop
+
 !item [(0)]
+
 Start
+
 !end_xlist
+
 !item [key]
-if the device is reserved pass the key, otherwise zero.
+
+If the device is reserved pass the key, otherwise zero.
+
 !end_xlist
 
-Note: if the drive is accessed, the driver should restart it without an
-explicit restart call.
 
-!item [(!nolink [Return]) Value:]
-Welchen Code man im Fehlerfall zurÅckerhÑlt, ist undefiniert. Mehr
-Informationen werden allerdings auch nicht benîtigt, da man ja mit
-XHInqTarget() vorher gezielt auf diese FÑhigkeit abtesten kann.
+
+(!B)Note:(!b) if the drive is accessed, the driver should
+
+restart it without an explicit restart call.
+
+
+
+!item [(!nolink [Return]) value:]
+
+The code returned in case of errors is undefined. But
+
+more information is not really required, since one can
+
+make a targeted test for this capability beforehand with XHInqTarget.
+
+
 
 !item [Group:]
-XHDI-Funktionen
+
+XHDI functions
+
+
 
 !item [See Also:]
+
 Arbitration ~ _drvbits ~ (!link [Partition types][Recommended partition types]) ~
-(!link [System variables][The system variables]) ~ XHDI-Cookie ~ XHDI-Funktionen ~
-XHDI-Terminologie
+
+(!link [System variables][The system variables]) ~  XHDI cookie ~
+
+XHDI terminology
+
+
 
 (!ende_liste)
+
 !end_node
+
 !end_node
+
 !end_node
+

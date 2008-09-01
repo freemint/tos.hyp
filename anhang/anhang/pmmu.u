@@ -1,343 +1,1368 @@
-## Hypertext zum TOS-Betriebssystem
-## entwickelt fÅr den ST-Guide
-##
-## Last Edit: 02.11.95
-##
-## Kapitel x: Beschreibung des PMMU-Funktionshandlers
+!iflang [english]
 
 
 
-!begin_node Der PMMU-Funktionshandler
+!begin_node The PMMU functions-handler
 
-Der Funktionshandler ist Åber den (!link [PMMU-Cookie][Cookie, PMMU]) erreichbar,
-und wird von Programmen wie (!I)Outside(!i) oder (!I)VRAM(!i) angelegt. Der Aufruf des
-Handlers ist nur im Supervisor-Modus erlaubt, und geschieht Åber eine
-Funktionsnummer, die im Datenregister D0 abgelegt wird. Eventuelle
-RÅckgabewerte finden sich ebenfalls in diesem Register wieder. Andere
-Prozessorregister werden nicht verÑndert.
 
-Zur Zeit stehen die folgenden Funktionen zur VerfÅgung:
+
+The (!B)P(!b)aged (!B)M(!b)emory (!B)M(!b)anagement (!B)U(!b)nit functions-handler
+
+can be reached via the (!link [PMMU-Cookie][Cookie, PMMU]), and is created by
+
+programs such as (!I)Outside(!i)
+
+or (!I)VRAM(!i) that can swap blocks of memory to and from a hard drive
+
+when insufficient RAM is available for a given task. These memory
+
+blocks will then lie in so-called 'virtual RAM' divided into 'pages'
+
+on the drive.
+
+
+
+The handler can only be called in supervisor-mode, and works via a
+
+function number that is stored in data register d0. Possible return
+
+values will be found in this register as well. Other processor
+
+registers are not altered.
+
+
+
+The following functions are available at present:
+
+
 
 !begin_itemize !short
+
 !item ClearPageMode
+
 !item GetHdv_inuse
+
 !item GetPageSize
+
 !item pmem_size
+
 !item PMMUversion
+
 !item SetPageMode
+
 !item vmem_size
+
 !end_itemize
 
-(!B)Wichtiger Hinweis:(!b) Diese Funktionen sind nur fÅr einige wenige
-Programme aus dem Bereich der Systemsoftware von Bedeutung, und haben in
-Anwenderprogrammen (!I)nichts(!i) zu suchen.
 
-Querverweis:
-Super ~  Supexec
+
+(!B)Important note:(!b) These functions only have meaning for a few programs
+
+in the region of system software, an have (!I)no place(!i) in user programs.
+
+
+
+See also:
+
+Super ~ Supexec
+
+
+
+
 
 
 
 !begin_node ClearPageMode
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-ØClearPageModeÆ - PMMU Modus fÅr einen Bereich lîschen.
 
-!item [Nummer:]
+ØClearPageModeÆ - Clear PMMU mode for a memory block.
+
+
+
+!item [Number:]
+
 2
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 ULONG ClearPageMode ( ULONG mode, ULONG start_address, ULONG length );
 
-!item [Beschreibung:]
-Die Funktion lîscht den PMMU-Modus fÅr einen bestimmten Speicherbereich. Es
-gilt:
+
+
+!item [Description:]
+
+The call ClearPagemode clears the PMMU mode for a given
+
+               block of memory. The following apply:
+
+
 
 !begin_xlist !short [start_address]
+
 !item [Parameter]
-Bedeutung
+
+Meaning
+
 !item [~]
+
 ~
+
 !item [mode]
-Bit-Vektor analog SetPageMode
+
+Bit-vector as in SetPageMode
+
 !item [start_address]
-Anfangsadresse des Speicherbereichs
+
+Start address of memory segment
+
 !item [length]
-LÑnge des gewÅnschten Bereichs
+
+Length of desired segment
+
 !end_xlist
 
-(!B)Hinweis:(!b) Alle anderen Bits sind fÅr zukÅnftige Zwecke reserviert.
-Ein Programm darf nur die Bits lîschen, die es vorher selbst gesetzt hat.
 
-!item [Ergebnis:]
-Die Funktion liefert bei fehlerfreier AusfÅhrung den Wert Null zurÅck.
-Anderenfalls wird ein Wert zurÅckgeliefert, bei dem die Bits gesetzt sind,
-die nicht manipuliert werden konnten.
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+(!B)Note:(!b) All other bits are reserved for future purposes.
 
-!item [Querverweis:]
-GetHdv_inuse  ~ GetPageSize ~  pmem_size ~  PMMUversion ~
-SetPageMode  ~  vmem_size
+A program may only clear those bits that it has set itself previously.
+
+
+
+!item [Return value:]
+
+The function returns zero on error-free execution. Otherwise a value is returned
+
+in which the bits that could not be manipulated are set.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler]))
+
+
+
+!item [See also:]
+
+GetHdv_inuse ~ GetPageSize ~ pmem_size ~ PMMUversion ~
+
+SetPageMode ~ vmem_size
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
 
 
 !begin_node GetHdv_inuse
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-ØGetHdv_inuseÆ - AktivitÑt des Plattentreibers ermitteln.
 
-!item [Nummer:]
+ØGetHdv_inuseÆ - Obtain the activity of the hard disk driver.
+
+
+
+!item [Number:]
+
 4
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 UWORD *GetHdv_inuse ( VOID );
 
-!item [Beschreibung:]
-Die Funktion ermîglicht es festzustellen, ob der Plattentreiber gerade dabei
-ist, eine Seite ein- oder auszuswappen.
 
-(!B)Hinweis:(!b) Eine öberprÅfung dieses Wortes muû erfolgen, bevor aus
-einer Interruptroutine heraus ein Zugriff auf das virtuelle RAM stattfindet.
-Der Plattentreiber darf nÑmlich nicht durch einen Zugriff auf eine nicht
-existente Speicherseite unterbrochen werden, falls gerade eine andere Seite
-ausgelagert wird. Ist das Statuswort ungleich Null, muû der Zugriff
-verschoben werden.
 
-!item [Ergebnis:]
-Die Funktion liefert einen Zeiger auf das hdv_inuse-Wort zurÅck.
+!item [Description:]
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+The call GetHdv_inuse enables one to check whether
 
-!item [Querverweis:]
-ClearPageMode ~  GetPageSize ~  pmem_size ~  PMMUversion ~
-SetPageMode   ~  vmem_size
+               the hard disk driver is currently in the process of
+
+               swapping a page from or to RAM.
+
+
+
+               (!B)Note:(!b) A check of this WORD (!I)must(!i) be made before the
+
+               virtual RAM is accessed from an interrupt routine. This
+
+               is because the hard disk driver may not be interrupted
+
+               by an access to a non-existing memory page if it is
+
+               currently offloading another page. If the status WORD
+
+               is non-zero, the access has to be delayed.
+
+
+
+!item [Return value:]
+
+The function returns a pointer to the hdv_inuse WORD.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler])
+
+
+
+!item [See also:]
+
+ClearPageMode ~ GetPageSize ~ pmem_size ~ PMMUversion ~
+
+SetPageMode ~ vmem_size
+
+
 
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node GetPageSize
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-ØGetPageSizeÆ - Grîûe der Speicherseiten ermitteln.
 
-!item [Nummer:]
+ØGetPageSizeÆ - Obtain size of a memory page.
+
+
+
+!item [Number:]
+
 3
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 ULONG GetPageSize ( VOID );
 
-!item [Beschreibung:]
-Die Funktion ermittelt die aktuelle Grîûe einer Speicherseite.
 
-(!B)Hinweis:(!b) Beim MC-68030 kann die Grîûe zwischen 256 Bytes und 32
-Kbyte liegen.
 
-!item [Ergebnis:]
-Die Funktion liefert Grîûe einer Speicherseite zurÅck.
+!item [Description:]
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+The call GetPageSize obtains the current size of a memory page.
 
-!item [Querverweis:]
+
+
+               (!B)Note:(!b) With a MC-68030 the size can lie between 256
+
+               bytes and 32 kbytes.
+
+
+
+!item [Return value:]
+
+The function returns the size of a memory page.
+
+
+
+!item [Group:]
+
+
+
+
+
+!item [See also:]
+
 ClearPageMode ~  GetHdv_inuse ~  pmem_size ~  PMMUversion ~
+
 SetPageMode  ~   vmem_size
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node pmem_size
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-Øpmem_sizeÆ - Gesamtgrîûe des vom Speichermanagers verwalteten
-physikalischen Speichers ermitteln.
 
-!item [Nummer:]
+Øpmem_sizeÆ - Obtain total size of the physical memory
+
+               handled by the memory manager.
+
+
+
+!item [Number:]
+
 6
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 ULONG pmem_size ( VOID );
 
-!item [Beschreibung:]
-Die Funktion ermittelt die Gesamtgrîûe des physikalischen Speichers, der vom
-Speichermanager verwaltet wird.
 
-(!B)Hinweis:(!b) Diese Funktion steht erst ab Version 1.01 des PMMU-Cookies
-zur VerfÅgung.
 
-!item [Ergebnis:]
-Die Funktion liefert die genannte Grîûe zurÅck.
+!item [Description:]
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+The call pmem_size obtains the total size of the
 
-!item [Querverweis:]
+               physical memory that is being handled by the memory
+
+               manager.
+
+
+
+               (!B)Note:(!b) This function is only available as of
+
+               Version 1.01 of the PMMU cookie.
+
+
+
+!item [Return value:]
+
+The function returns the named size.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler])
+
+
+
+!item [See also:]
+
 ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~
+
 PMMUversion   ~  SetPageMode ~   vmem_size
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node PMMUversion
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-ØPMMUversionÆ - ermittelt die Versionsnummer des Handlers
 
-!item [Nummer:]
+ØPMMUversionÆ - Obtains the version number of the handler.
+
+
+
+!item [Number:]
+
 0
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 UWORD PMMUversion ( VOID );
 
-!item [Beschreibung:]
-Die Funktion ermittelt die Versionsnummer des PMMU-Handlers. Dabei wird in
-den Bits 8..15 die Version, und in den Bits 0..7 die Revision abgelegt. Ein
-Wert von 0x102 steht demnach fÅr Version 1.02
 
-!item [Ergebnis:]
-Die Funktion liefert die Versionsnummer des Handlers im o.g. Format zurÅck.
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+!item [Description:]
 
-!item [Querverweis:]
+The call PMMUversion obtains the version number of the
+
+               PMMU handler. Here the bits 8..15 store the version,
+
+               and the bits 0..7 the revision. A value of 0x102 thus
+
+               represents Version 1.02.
+
+
+
+!item [Return value:]
+
+The function returns the version number of the handler
+
+               in the above-mentioned format.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler])
+
+
+
+!item [See also:]
+
 ClearPageMode ~   GetHdv_inuse ~  GetPageSize  ~ pmem_size ~
+
 SetPageMode   ~  vmem_size
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node SetPageMode
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-ØSetPageModeÆ - PMMU Modus fÅr einen Bereich setzen.
 
-!item [Nummer:]
+ØSetPageModeÆ - Set PMMU mode for a memory block.
+
+
+
+!item [Number:]
+
 1
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 ULONG SetPageMode ( ULONG mode, ULONG start_address, ULONG length );
 
-!item [Beschreibung:]
-Die Funktion setzt den PMMU-Modus fÅr einen bestimmten Speicherbereich. Es
-gilt:
+
+
+!item [Description:]
+
+The call SetPageMode sets the PMMU mode for a given
+
+               block of memory. The following apply:
+
+
 
 !begin_xlist !short [start_address]
+
 !item [Parameter]
-Bedeutung
+
+Meaning
+
 !item [~]
+
 ~
+
 !item [mode]
-Modus als Bit-Vektor
+
+Mode as a bit-vector
+
 !begin_xlist !short [Bit-0 =]
+
 !item [Bit-0 =]
-(!B)SwapInhabit(!b)
+
+(!B)SwapInhibit(!b)
+
 (!nl)
-Der Speicherbereich wird nicht ausgelagert.
+
+The memory block will not be offloaded
+
 !item [Bit-1 =]
+
 (!B)WriteProtect(!b)
+
 (!nl)
-Der Speicherbereich wird schreibgeschÅtzt; Schreibversuche fÅhren zu einem
-Busfehler.
+
+The memory block will be write-protected; attempts to write to it lead to a
+
+bus error
+
 !item [Bit-2 =]
+
 (!B)Used(!b)
+
 (!nl)
-Der Speicherbereich wird als benutzt gekennzeichnet. Hierdurch erhÑlt er
-temporÑr eine hîhere PrioritÑt, und wird vorerst nicht ausgelagert.
+
+The memory block is marked as being in use; by this it
+
+temporarily gets a higher priority and is not offloaded at first
+
 !item [Bit-3 =]
+
 (!B)Modified(!b)
+
 (!nl)
-Der Speicherbereich wird als verÑndert markiert. Dadurch wird dieser Bereich
-auf jeden Fall auf die Platte geschrieben, bevor neue Daten an seine
-physikalische Adresse eingelesen werden.
+
+The memory block is marked as having been modified; due to this the block is
+
+written to disk in any case before new data are read into its ophysical address
+
 !item [Bit-4 =]
-(!B)CacheInhabit(!b)
+
+(!B)CacheInhibit(!b)
+
 (!nl)
-Die Prozessor-Caches werden fÅr den angegebenen Bereich abgeschaltet.
+
+The processor caches are switched off for the specified block
+
 !end_xlist
+
 !item [start_address]
-Anfangsadresse des Speicherbereichs
+
+Start address of memory block
+
 !item [length]
-LÑnge des gewÅnschten Bereichs
+
+Length of the desired block
+
 !end_xlist
 
-(!B)Hinweis:(!b) Die restlichen Bits sind reserviert und mÅssen auf Null
-gesetzt werden. FÅr die virtuelle Speicherverwaltung ist in erster Linie das
-SwapInhabit-Bit von Bedeutung, da es die Mîglichkeit bietet, bestimmte
-Speicherbereiche gegen Auslagern abzusichern.
 
-Beim SchreibschÅtzen von Speicherbereichen ist unbedingt zu beachten, daû
-der Speicher in Seiten unterteilt ist, die die kleinste Einheit fÅr einen
-Schreibschutz darstellen. Es muû sichergestellt werden, daû sich der
-Schreibschutz nicht auch auf einen Bereich erstreckt, der nicht geschÅtzt
-werden darf, weil er beispielsweise nicht zum eigenen Programm gehîrt.
 
-!item [Ergebnis:]
-Die Funktion liefert bei fehlerfreier AusfÅhrung den Wert Null zurÅck.
-Anderenfalls wird ein Wert zurÅckgeliefert, bei dem die Bits gesetzt sind,
-die nicht manipuliert werden konnten.
+               (!B)Note:(!b) The remaining bits are reserved and must be
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+               set to zero. For the virtual memory management the
+
+               SwapInhibit bit is the most meaningful one, since it
+
+               offers the possibility of protecting given memory
+
+               blocks from being offloaded to disk.
+
+
+
+               With write-protection of memory blocks it is imperative
+
+               to note that the memory is subdivided into pages, which
+
+               form the smallest unit that can be write-protected. One
+
+               has to ensure that the write-protection does not extend
+
+               to a block that must not be protected, because it does
+
+               not belong to the program in question, for instance.
+
+
+
+!item [Return value:]
+
+The function returns zero on error-free execution.
+
+               Otherwise a value is returned in which the bits that
+
+               could not be manipulated are set.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler])
+
                        
-!item [Querverweis:]
+
+!item [See also:]
+
 ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~  pmem_size ~
+
 PMMUversion   ~  vmem_size
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node vmem_size
 
-(!begin_liste) [Beschreibung]
+
+
+(!begin_liste) [Description]
+
+
 
 !item [Name:]
-Øvmem_sizeÆ - Gesamtgrîûe des virtuellen Speichers erfragen.
 
-!item [Nummer:]
+Øvmem_sizeÆ - Inquire total size of the virtual memory.
+
+
+
+!item [Number:]
+
 5
 
-!item [Deklaration:]
+
+
+!item [Declaration:]
+
 ULONG vmem_size ( VOID );
 
-!item [Beschreibung:]
-Die Funktion ermittelt die Gesamtgrîûe des virtuellen Speichers.
 
-!item [Ergebnis:]
-Die Funktion liefert die genannte Grîûe zurÅck.
 
-!item [Gruppe:]
-(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+!item [Description:]
 
-!item [Querverweis:]
+The call vmem_size obtains the total size of the virtual memory.
+
+
+
+!item [Return value:]
+
+The function returns the named size.
+
+
+
+!item [Group:]
+
+(!link [PMMU functions-handler][The PMMU functions-handler])
+
+
+
+!item [See also:]
+
 ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~  pmem_size ~
+
 PMMUversion   ~  SetPageMode
 
+
+
 (!ende_liste)
+
 !end_node
+
 !end_node
+
+
+
+!else
+
+
+
+!begin_node Der PMMU-Funktionshandler
+
+
+
+Der Funktionshandler ist Åber den (!link [PMMU-Cookie][Cookie, PMMU]) erreichbar,
+
+und wird von Programmen wie (!I)Outside(!i) oder (!I)VRAM(!i) angelegt. Der Aufruf des
+
+Handlers ist nur im Supervisor-Modus erlaubt, und geschieht Åber eine
+
+Funktionsnummer, die im Datenregister D0 abgelegt wird. Eventuelle
+
+RÅckgabewerte finden sich ebenfalls in diesem Register wieder. Andere
+
+Prozessorregister werden nicht verÑndert.
+
+
+
+Zur Zeit stehen die folgenden Funktionen zur VerfÅgung:
+
+
+
+!begin_itemize !short
+
+!item ClearPageMode
+
+!item GetHdv_inuse
+
+!item GetPageSize
+
+!item pmem_size
+
+!item PMMUversion
+
+!item SetPageMode
+
+!item vmem_size
+
+!end_itemize
+
+
+
+(!B)Wichtiger Hinweis:(!b) Diese Funktionen sind nur fÅr einige wenige
+
+Programme aus dem Bereich der Systemsoftware von Bedeutung, und haben in
+
+Anwenderprogrammen (!I)nichts(!i) zu suchen.
+
+
+
+Querverweis:
+
+Super ~  Supexec
+
+
+
+
+
+
+
+!begin_node ClearPageMode
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+ØClearPageModeÆ - PMMU Modus fÅr einen Bereich lîschen.
+
+
+
+!item [Nummer:]
+
+2
+
+
+
+!item [Deklaration:]
+
+ULONG ClearPageMode ( ULONG mode, ULONG start_address, ULONG length );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion lîscht den PMMU-Modus fÅr einen bestimmten Speicherbereich. Es
+
+gilt:
+
+
+
+!begin_xlist !short [start_address]
+
+!item [Parameter]
+
+Bedeutung
+
+!item [~]
+
+~
+
+!item [mode]
+
+Bit-Vektor analog SetPageMode
+
+!item [start_address]
+
+Anfangsadresse des Speicherbereichs
+
+!item [length]
+
+LÑnge des gewÅnschten Bereichs
+
+!end_xlist
+
+
+
+(!B)Hinweis:(!b) Alle anderen Bits sind fÅr zukÅnftige Zwecke reserviert.
+
+Ein Programm darf nur die Bits lîschen, die es vorher selbst gesetzt hat.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert bei fehlerfreier AusfÅhrung den Wert Null zurÅck.
+
+Anderenfalls wird ein Wert zurÅckgeliefert, bei dem die Bits gesetzt sind,
+
+die nicht manipuliert werden konnten.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+GetHdv_inuse  ~ GetPageSize ~  pmem_size ~  PMMUversion ~
+
+SetPageMode  ~  vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+!begin_node GetHdv_inuse
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+ØGetHdv_inuseÆ - AktivitÑt des Plattentreibers ermitteln.
+
+
+
+!item [Nummer:]
+
+4
+
+
+
+!item [Deklaration:]
+
+UWORD *GetHdv_inuse ( VOID );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion ermîglicht es festzustellen, ob der Plattentreiber gerade dabei
+
+ist, eine Seite ein- oder auszuswappen.
+
+
+
+(!B)Hinweis:(!b) Eine öberprÅfung dieses Wortes muû erfolgen, bevor aus
+
+einer Interruptroutine heraus ein Zugriff auf das virtuelle RAM stattfindet.
+
+Der Plattentreiber darf nÑmlich nicht durch einen Zugriff auf eine nicht
+
+existente Speicherseite unterbrochen werden, falls gerade eine andere Seite
+
+ausgelagert wird. Ist das Statuswort ungleich Null, muû der Zugriff
+
+verschoben werden.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert einen Zeiger auf das hdv_inuse-Wort zurÅck.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+ClearPageMode ~  GetPageSize ~  pmem_size ~  PMMUversion ~
+
+SetPageMode   ~  vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+
+
+!begin_node GetPageSize
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+ØGetPageSizeÆ - Grîûe der Speicherseiten ermitteln.
+
+
+
+!item [Nummer:]
+
+3
+
+
+
+!item [Deklaration:]
+
+ULONG GetPageSize ( VOID );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion ermittelt die aktuelle Grîûe einer Speicherseite.
+
+
+
+(!B)Hinweis:(!b) Beim MC-68030 kann die Grîûe zwischen 256 Bytes und 32
+
+Kbyte liegen.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert Grîûe einer Speicherseite zurÅck.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+ClearPageMode ~  GetHdv_inuse ~  pmem_size ~  PMMUversion ~
+
+SetPageMode  ~   vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+
+
+!begin_node pmem_size
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+Øpmem_sizeÆ - Gesamtgrîûe des vom Speichermanagers verwalteten
+
+physikalischen Speichers ermitteln.
+
+
+
+!item [Nummer:]
+
+6
+
+
+
+!item [Deklaration:]
+
+ULONG pmem_size ( VOID );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion ermittelt die Gesamtgrîûe des physikalischen Speichers, der vom
+
+Speichermanager verwaltet wird.
+
+
+
+(!B)Hinweis:(!b) Diese Funktion steht erst ab Version 1.01 des PMMU-Cookies
+
+zur VerfÅgung.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert die genannte Grîûe zurÅck.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~
+
+PMMUversion   ~  SetPageMode ~   vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+
+
+!begin_node PMMUversion
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+ØPMMUversionÆ - ermittelt die Versionsnummer des Handlers
+
+
+
+!item [Nummer:]
+
+0
+
+
+
+!item [Deklaration:]
+
+UWORD PMMUversion ( VOID );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion ermittelt die Versionsnummer des PMMU-Handlers. Dabei wird in
+
+den Bits 8..15 die Version, und in den Bits 0..7 die Revision abgelegt. Ein
+
+Wert von 0x102 steht demnach fÅr Version 1.02
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert die Versionsnummer des Handlers im o.g. Format zurÅck.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+ClearPageMode ~   GetHdv_inuse ~  GetPageSize  ~ pmem_size ~
+
+SetPageMode   ~  vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+
+
+!begin_node SetPageMode
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+ØSetPageModeÆ - PMMU Modus fÅr einen Bereich setzen.
+
+
+
+!item [Nummer:]
+
+1
+
+
+
+!item [Deklaration:]
+
+ULONG SetPageMode ( ULONG mode, ULONG start_address, ULONG length );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion setzt den PMMU-Modus fÅr einen bestimmten Speicherbereich. Es
+
+gilt:
+
+
+
+!begin_xlist !short [start_address]
+
+!item [Parameter]
+
+Bedeutung
+
+!item [~]
+
+~
+
+!item [mode]
+
+Modus als Bit-Vektor
+
+!begin_xlist !short [Bit-0 =]
+
+!item [Bit-0 =]
+
+(!B)SwapInhabit(!b)
+
+(!nl)
+
+Der Speicherbereich wird nicht ausgelagert.
+
+!item [Bit-1 =]
+
+(!B)WriteProtect(!b)
+
+(!nl)
+
+Der Speicherbereich wird schreibgeschÅtzt; Schreibversuche fÅhren zu einem
+
+Busfehler.
+
+!item [Bit-2 =]
+
+(!B)Used(!b)
+
+(!nl)
+
+Der Speicherbereich wird als benutzt gekennzeichnet. Hierdurch erhÑlt er
+
+temporÑr eine hîhere PrioritÑt, und wird vorerst nicht ausgelagert.
+
+!item [Bit-3 =]
+
+(!B)Modified(!b)
+
+(!nl)
+
+Der Speicherbereich wird als verÑndert markiert. Dadurch wird dieser Bereich
+
+auf jeden Fall auf die Platte geschrieben, bevor neue Daten an seine
+
+physikalische Adresse eingelesen werden.
+
+!item [Bit-4 =]
+
+(!B)CacheInhabit(!b)
+
+(!nl)
+
+Die Prozessor-Caches werden fÅr den angegebenen Bereich abgeschaltet.
+
+!end_xlist
+
+!item [start_address]
+
+Anfangsadresse des Speicherbereichs
+
+!item [length]
+
+LÑnge des gewÅnschten Bereichs
+
+!end_xlist
+
+
+
+(!B)Hinweis:(!b) Die restlichen Bits sind reserviert und mÅssen auf Null
+
+gesetzt werden. FÅr die virtuelle Speicherverwaltung ist in erster Linie das
+
+SwapInhabit-Bit von Bedeutung, da es die Mîglichkeit bietet, bestimmte
+
+Speicherbereiche gegen Auslagern abzusichern.
+
+
+
+Beim SchreibschÅtzen von Speicherbereichen ist unbedingt zu beachten, daû
+
+der Speicher in Seiten unterteilt ist, die die kleinste Einheit fÅr einen
+
+Schreibschutz darstellen. Es muû sichergestellt werden, daû sich der
+
+Schreibschutz nicht auch auf einen Bereich erstreckt, der nicht geschÅtzt
+
+werden darf, weil er beispielsweise nicht zum eigenen Programm gehîrt.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert bei fehlerfreier AusfÅhrung den Wert Null zurÅck.
+
+Anderenfalls wird ein Wert zurÅckgeliefert, bei dem die Bits gesetzt sind,
+
+die nicht manipuliert werden konnten.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+                       
+
+!item [Querverweis:]
+
+ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~  pmem_size ~
+
+PMMUversion   ~  vmem_size
+
+
+
+(!ende_liste)
+
+!end_node
+
+
+
+
+
+
+
+!begin_node vmem_size
+
+
+
+(!begin_liste) [Beschreibung]
+
+
+
+!item [Name:]
+
+Øvmem_sizeÆ - Gesamtgrîûe des virtuellen Speichers erfragen.
+
+
+
+!item [Nummer:]
+
+5
+
+
+
+!item [Deklaration:]
+
+ULONG vmem_size ( VOID );
+
+
+
+!item [Beschreibung:]
+
+Die Funktion ermittelt die Gesamtgrîûe des virtuellen Speichers.
+
+
+
+!item [Ergebnis:]
+
+Die Funktion liefert die genannte Grîûe zurÅck.
+
+
+
+!item [Gruppe:]
+
+(!link [PMMU-Funktionshandler][Der PMMU-Funktionshandler])
+
+
+
+!item [Querverweis:]
+
+ClearPageMode ~  GetHdv_inuse ~  GetPageSize ~  pmem_size ~
+
+PMMUversion   ~  SetPageMode
+
+
+
+(!ende_liste)
+
+!end_node
+
+!end_node
+
+
+
+!endif
+

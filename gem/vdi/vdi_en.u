@@ -1,934 +1,1868 @@
 ## Hypertext zum TOS-Betriebssystem
+
 ##
+
 ## Kapitel 5: VDI-Funktionsaufrufe
+
+
 
 !begin_node About the VDI
 
 
+
+
+
 The (!nolink [VDI]) ((!B)V(!b)irtual (!B)D(!b)evice (!B)I(!b)nterface) is a part of GEM, and can be
+
 looked at in the first instance as a standardized graphics system.
+
 From the point of view of the programmer the (!nolink [VDI]) can be seen as a
+
 very comprehensive device-independent graphics library whose output
+
 format is portable across several platforms. The (!nolink [VDI]) can be divided
+
 into the following function groups:
 
+
+
 !begin_itemize !short
+
 !item Attribute functions
+
 !item Output functions
+
 !item Inquire functions
+
 !item Input functions
+
 !item Escape functions
+
 !item Colour table functions
+
 !item Control functions
+
 !item Raster functions
+
 !end_itemize
 
+
+
 Since the original (!nolink [VDI]) in Atari's (!nolink [TOS]) suffers from several
+
 weaknesses and, above all, is not particularly fast, many users have found NVDI
+
 to be (!I)the(!i) replacement for the normal (!nolink [VDI]).
 
+
+
 Some functions of the (!nolink [VDI]) require the GDOS extension that was meant
+
 to be part of the operating system originally, but had to be offloaded
+
 by Atari due to lack of memory space in the ROMs of the first STs.
+
 Hence it (or its later replacements such as FSM-GDOS, SpeedoGDOS,
+
 NVDI, ...) have to be loaded from (floppy or hard) disk.
 
+
+
 With consistent use of the (!nolink [VDI]) routines every programmer can ensure
+
 that their programs will run cleanly on various computer variants and
+
 in almost all resolutions.
 
+
+
 See Also:
+
 VDI fundamentals ~ Bindings of the VDI ~ AES
+
+
 
 !end_node
 
 
+
+
+
 !begin_node VDI fundamentals
+
 !label VDI, Fundamentals of the
+
 The(!nolink [VDI]) ((!B)V(!b)irtual (!B)D(!b)evice (!B)I(!b)nterface) forms the
+
 lower half of GEM; it is so to speak the basis of all (!nolink [AES]) functions.
 
+
+
 Even if one normally regards the (!nolink [VDI]) primarily as providing functions
+
 for graphics output, its tasks also extend to (!I)inputs(!i) (such as with
+
 the mouse or graphics tablet, for instance). Hence (!nolink [the VDI]) is an
+
 operating system layer for addressing (in the widest sense) graphics-
+
 oriented output (!I)and(!i) input devices. This section describes the
+
 items:
 
+
+
 !begin_itemize !short
+
 !item VDI bindings
+
 !item Clipping
+
 !item (!link [GDOS][About the GDOS])
+
 !item GDOS drivers
+
 !item VDI coordinate systems
+
 !item (!link [Line-A routines][The Line-A emulator])
+
 !item Metafile format
+
 !item NVDI
+
 !item Off-screen bitmaps
+
 !item (!link [OUT fileformat][The OUT file format])
+
 !item Raster formats
+
 !item SpeedoGDOS
+
 !item (!link [Vector fonts][Details about vector fonts])
+
 !item VDI workstations
+
 !item (!link [XIMG format][The XIMG format for pixel images])
+
+
 
 !end_itemize
 
+
+
 As the word 'virtual' already indicates, nearly all function calls
+
 can be applied to any available output device (screen, printer,
+
 plotter, slide maker, imagesetter etc.). So it makes no difference
+
 whether one wants to draw circles or output text: this can be realized
+
 with the same operating system functions in each case.
 
+
+
 !label VDI, Origin of the
+
 The roots of the (!nolink [VDI]) lie in the CP/M-GSX system, which arose at the
+
 start of the eighties from the requirement for a portable graphics
+
 interface for the then-dominant CP/M systems. Similarities in the
+
 functions and designations to the GKS ((!B)G(!b)raphical (!B)K(!b)ern (!B)S(!b)ystem)
+
 are hence by no means accidental but were fully intented by the (!I)Digital
+
 Research(!i) developers.
 
+
+
 The (!nolink [VDI]) complies with the ANSI standard X3H3.6CG-(!nolink [VDI]).
+
+
 
 See Also: Style guidelines
 
 
+
+
+
 !begin_node Clipping
 
+
+
 Clipping is a procedure that is really only made possible by the use
+
 of a windowed operating system. For this one uses a clipping
+
 rectangle which specifies to which part of the screen all graphic
+
 outputs of the relevant workstation are to be restricted; everything
+
 that protrudes outside the specified image section will be omitted in
+
 the screen output.
 
+
+
 A low efficency but easily programmed window output routine would
+
 simply set one clipping rectangle for each partial rectangle of the
+
 window and then repeat all screen outputs required for building up
+
 the window contents. If you take the trouble to first make plausibi-
+
 lity checks whether the object to be drawn is actually going to be
+
 (!I)visible(!i), you can naturally save a considerable amount of time.
 
+
+
 (!B)Note:(!b) Like so much else in life, clipping too is not available for
+
 free. If you want to achieve optimum speed for screen build-ups, you
+
 should switch off the clipping rectangle as often as possible.
+
+
 
 See also: VDI fundamentals ~ Style guidelines ~ vs_clip
 
+
+
 !end_node
+
+
+
 
 
 !begin_node About the GDOS
+
 !label FontGDOS
+
 !label FSM-GDOS
+
 !label AMC-GDOS
+
 !label GDOS, Font-
+
 !label GDOS, FSM-
+
 !label GDOS, AMC-
+
 Several functions of the (!nolink [VDI]) can only be used properly after the
+
 installation of a GDOS from the AUTO folder. Basically a GDOS
+
 ((!B)G(!b)raphics (!B)D(!b)evice (!B)O(!b)perating (!B)S(!b)ystem) allows the loading of various
+
 device drivers and fonts, and then to use them.
 
+
+
 The GDOS itself is completely independent of the device used. Only the
+
 post-loaded drivers that realize the (!nolink [VDI]) functions on the correspon-
+
 ding device are device-specific. With detailed knowledge of the driver
+
 format it is possible to use any - even exotic - output devices as a
+
 (!nolink [VDI]) output device.
 
+
+
 With resident GDOS the number of available (!nolink [VDI]) functions increases,
+
 while all other functions remain fully functional or contain extended
+
 output capabilities. However this is not the case the other way round,
+
 functions that require GDOS lead to a crash of the computer if GDOS is
+
 not resident.
 
 
+
+
+
 !label GDOS, Family of
+
 !ifdest [html]
+
 !ifset [No_Bilder_Pfad]
+
 !image gdos_ahn The family tree of the GDOS family
+
 !else
+
 !image (!picture_path)\gdos_ahn The family tree of the GDOS family
+
 !endif
+
 !else
+
 !image (!picture_path)\gdos_ahn The family tree of the GDOS family
+
 !endif
+
+
 
 !label vq_gdos
+
 (!B)Therefore it is important to know in some cases whether a complete
+
 GDOS is installed at all.(!b) Atari has documented the following
+
 procedure for this purpose: The trap-dispatcher alters the input
+
 value -2 for register d0 only when a GDOS is installed. Many compilers
+
 make the function (!B)vq_gdos(!b) available, which returns a value of 0
+
 when (!I)no(!i) GDOS is installed. This functions is based essentially on
+
 the following code:
 
+
+
 !begin_verbatim
+
 vq_gdos:      move.w   #-2,d0
+
               trap     #2
+
               cmp.w    #-2,d0
+
               sne      d0
+
               ext.w    d0
+
               rts
+
 !end_verbatim
+
+
 
 (!B)Wichtiger Hinweis:(!b) vq_gdos liefert nur die Information, ob ein GDOS
+
 vorhanden ist, oder nicht. Es wird (!I)nichts(!i) darber ausgesagt, um
+
 welches GDOS es sich handelt bzw. welche F„higkeiten das installierte GDOS
+
 besitzt. So l„žt sich mit Hilfe dieser Funktion beispielsweise das AMC-GDOS
+
 (!I)nicht(!i) von SpeedoGDOS oder NVDI unterscheiden.
 
+
+
 !label ABC-GEM
+
 (!B)Attention:(!b) The GEM versions of the Dutch software house "ABC"
+
 (ABC-(!nolink [GEM]) 2.x) will crash at this call!
 
+
+
 !label vq_vgdos
+
 !label _vq_gdos
+
 Allernatively there is also vq_vgdos (_vq_gdos):
+
 !begin_verbatim
+
 vq_vgdos:     move.w   #-2,d0
+
               trap     #2
+
               rts
+
 !end_verbatim
 
+
+
 !label GDOS_NONE
+
 !label GDOS_ATARI
+
 !label GDOS_AMC
+
 !label GDOS_AMCLIGHT
+
 !label GDOS_FNT
+
 !label GDOS_FSM
+
 Als Rckgabe erh„lt man:
+
 !begin_table [l|l|l]
+
 Name !! Value !! GDOS Type
+
 !hline
+
 GDOS_NONE    !! -2 !! GDOS not (!nolink [installed]).
+
 -            !! Any other value.     !! GDOS 1.0  or 1.2
+
 GDOS_ATARI   !! 0x0007E88A           !! GDOS 1.1 from Atari Corp.
+
 GDOS_AMC     !! 0x0007E864           !! AMC-GDOS from Arnd Beissner
+
 GDOS_AMCLIGHT !! 0x0007E8BA          !! GEMINI-special GDOS from Arnd Beissner
+
 -            !! 0x3e5d0957           !! ttf-gdos from Trevor Blight
+
 GDOS_FNT     !! 0x5F464E54 ('_FNT')  !! FONTGDOS
+
 GDOS_FSM     !! 0x5F46534D ('_FSM')  !! FSMGDOS
+
 -            !! 0x66564449 ('fVDI')  !! fVDI
+
 !end_table
 
+
+
 # Quelle: ttf-gdos aus Archiv ttf-gdos.lzh auf meine Festplatte ;-) [GS]
+
 # Quelle: GDOS_ATARI, GDOS_AMC und GDOS_AMCLIGHT aus der Headerdatei portvdi.h
+
 #         von Maustausch-Fontend CAT
 
+
+
 The current (and more efficient) versions of GDOS are (!nolink [SpeedoGDOS]) and
+
 (!nolink [NVDI]) (as of Version 3.0), that, amid other things, permit handling
+
 vector fonts in TrueType, Type-1 or Speedo format. (!nolink [NVDI]) is also
+
 available in a special (!I)Macintosh version(!i) (NVDIMac), and permits any
+
 program that can ouput via GDOS (in conjunction with MagiC Mac) to
+
 make its output on Apple printers and in a network as well.
 
+
+
 See also: (!link [ASSIGN.SYS file][The make-up of the ASSIGN.SYS file]) ~
+
 VDI fundamentals ~ Style guidelines
 
+
+
 !end_node
+
+
+
 
 
 !include gem\vdi\assign_sys.ui
 
 
+
+
+
 !begin_node GDOS drivers
+
 !label Drivers, GDOS
+
 !label Drivers, VDI
+
 !label VDI drivers
+
 A GDOS driver is essentially a normal program file without a startup
+
 code, which contains a dispatcher for the incoming (!nolink [VDI]) calls as a
+
 first routine. All drivers must be declared in the ASSIGN.SYS file
+
 that is evaluated by GDOS at the start.
 
+
+
 The following list shows the most important drivers with their
+
 respective device numbers:
 
+
+
 !begin_xlist [Load and draw Bit-Image driver] !short
+
 !item [Screen driver]                        (01-10)
+
 !item [Plotter driver]                       (11-20)
+
 !item [Printer driver]                       (21-30)
+
 !item [Metafile driver]                      (31-40)
+
 !item [Kamera driver]                        (41-50)
+
 !item [Tablet driver]                        (51-60)
+
 !item [Memory driver]                        (61-70)
+
 !item [Fax driver]                           (81-90)
+
 !item [Bit-Image driver]                     (91-100)
+
 !item [Multimedia driver]                    (101-110)
+
 !item [Sound driver]                         (111-120)
+
 !item [Load and draw Bit-Image driver]       (121-130)
+
 !end_xlist
+
+
 
 For implementing the dispatcher one should respect the following:
 
+
+
 !begin_itemize !short
+
 !item The address of the (!nolink [VDI]) parameter block is passed in register D1
+
 !item The function itself is terminated with an RTS statement
+
 !end_itemize
 
+
+
 A GDOS driver always operates in a raster-coordinate system; the
+
 conversion of values in the ptsin and ptsout fields is taken on by
+
 the GDOS. In addition one should bear in mind that not all functions
+
 reach the actual driver in exactly the same form as they were sent,
+
 since they are partially pre-processed by the GDOS.
+
+
 
 See Also: (!link [GDOS][About the GDOS]) ~ VDI fundamentals ~ Bindings of the VDI
 
+
+
 !begin_node Screen drivers
+
 !label GDOS drivers, Screen
+
 !label Drivers, Screen
+
 The (!nolink [TOS]) screen driver can be replaced by a custom driver, which has
+
 to be post-loaded by the GDOS.
 
+
+
 Such drivers exist already for various graphics cards (e.g. (!I)NVDI-
+
 ET4000(!i) for graphics cards with the Tseng ET-4000 chip).
 
+
+
 When acquiring an alternative screen driver, one should ensure that
+
 the driver supports all relevant functions of the (!nolink [VDI]), and also has
+
 no problems with @{GEM ignore} fonts.
 
+
+
 See also: GDOS drivers ~
+
 (!link [Minimum range of functions][Minimum range of functions for screen drivers])
+
 !end_node
+
+
+
 
 
 !begin_node Minimum range of functions for screen drivers
 
+
+
 The following list describes the range of functions that a screen
+
 driver should offer as a minimum; this comes from a specification
+
 from the Atari (!I)(!nolink [GEM]) Programmer's Guide.(!i)
 
+
+
 !begin_table [c c l]
+
 Opcode !! Subcode !! Function
+
 !hline
+
   1 !!    !! v_opnwk
+
   2 !!    !! v_clswk
+
   3 !!    !! v_clrwk
+
   4 !!    !! v_updwk
+
   5 !!    !! Escape functions:
+
     !!  1 !! vq_chcells
+
     !!  2 !! v_exit_cur
+
     !!  3 !! v_enter_cur
+
     !!  4 !! v_curup
+
     !!  5 !! v_curdown
+
     !!  6 !! v_curright
+
     !!  7 !! v_curleft
+
     !!  8 !! v_curhome
+
     !!  9 !! v_eeos
+
     !! 10 !! v_eeol
+
     !! 11 !! v_curaddress
+
     !! 12 !! v_curtext
+
     !! 15 !! vq_curaddress
+
     !! 18 !! v_dspcur
+
     !! 19 !! v_rmcur
+
   6 !!    !! v_pline
+
   7 !!    !! v_pmarker
+
   8 !!    !! v_gtext
+
   9 !!    !! v_fillarea
+
  11 !!    !! Output functions:
+
     !!  1 !! v_bar
+
     !!  2 !! v_arc
+
     !!  3 !! v_pieslice
+
     !!  4 !! v_circle
+
     !!  5 !! v_ellipse
+
     !!  6 !! v_ellarc
+
     !!  7 !! v_ellpie
+
     !!  8 !! v_rbox
+
     !!  9 !! v_rfbox
+
     !! 10 !! v_justified
+
  12 !!    !! vst_height
+
  14 !!    !! vs_color
+
  15 !!    !! vsl_type
+
  17 !!    !! vsl_color
+
  18 !!    !! vsm_type
+
  20 !!    !! vsm_color
+
  21 !!    !! vst_font
+
  22 !!    !! vst_color
+
  23 !!    !! vsf_interior
+
  24 !!    !! vsf_style
+
  25 !!    !! vsf_color
+
  26 !!    !! vq_color
+
  28 !!    !! vrq_locator
+
  31 !!    !! vrq_string
+
  32 !!    !! vswr_mode
+
  33 !!    !! vsin_mode
+
  35 !!    !! vql_attributes
+
  36 !!    !! vqm_attributes
+
  37 !!    !! vqf_attributes
+
  38 !!    !! vqt_attributes
+
  39 !!    !! vst_alignment
+
 100 !!    !! v_opnvwk
+
 101 !!    !! v_clsvwk
+
 102 !!    !! vq_extnd
+
 104 !!    !! vsf_perimeter
+
 106 !!    !! vst_effects
+
 107 !!    !! vst_point
+
 108 !!    !! vsl_ends
+
 109 !!    !! vro_cpyfm
+
 110 !!    !! vr_trnfm
+
 111 !!    !! vsc_form
+
 112 !!    !! vsf_udpat
+
 113 !!    !! vsl_udsty
+
 114 !!    !! vr_recfl
+
 115 !!    !! vqin_mode
+
 116 !!    !! vqt_extent
+
 117 !!    !! vqt_width
+
 118 !!    !! vex_timv
+
 121 !!    !! vrt_cpyfm
+
 122 !!    !! v_show_c
+
 123 !!    !! v_hide_c
+
 124 !!    !! vq_mouse
+
 125 !!    !! vex_butv
+
 126 !!    !! vex_motv
+
 127 !!    !! vex_curv
+
 128 !!    !! vq_key_s
+
 129 !!    !! vs_clip
+
 130 !!    !! vqt_name
+
 131 !!    !! vqt_fontinfo
+
 !end_table
 
+
+
 !end_node
+
+
+
 
 
 !begin_node Bit-image drivers
+
 !label GDOS Driver, Bit-Image
+
 !label Drivers, Bit-image
+
 With the aid of a bit-image driver, all applications that can output
+
 via GDOS can print directly to a file.
 
+
+
 With NVDI drivers, one can set the page format and the name of the
+
 bit-image file for v_opnwk. The filename can also be passed with the
+
 help of vq_extnd:
 
+
+
 !begin_verbatim
+
 contrl[1]   = 4;
+
 ptsin[2]    = 1157;
+
 ptsin[3..4] = Pointer to the filename (BYTE *);
+
 ptsin[5..6] = Pointer to the error variable (int16_t *);
+
 ptsin[7]    = 0;
+
 !end_verbatim
 
+
+
 (!B)Note:(!b) One can certainly argue about the sense or nonsense of this
+
 feature, since vq_extnd is actually a pure information function!
 
+
+
 See Also: GDOS drivers ~
+
 (!link [ASSIGN.SYS file][The make-up of the ASSIGN.SYS file])
 
+
+
 !end_node
+
+
+
 
 
 !begin_node Printer drivers
+
 !label GDOS drivers, Printer
+
 !label Drivers, Printer
 
+
+
 The selection of printer drivers for GDOS is at present almost
+
 inexhaustible; the only bottleneck seems to be for some colour
+
 printers.
 
+
+
 When working with printer drivers one should note that not all drivers
+
 are completely identical functionally. So when using, say, a laser
+
 printer there are not only extra functions, but some of the existing
+
 ones may be partly extended as well.
 
+
+
 For NVDI printer drivers one can set the page format and the (!nolink [GEMDOS])
+
 output device for v_opnwk. For outputting (colour) images one should
+
 use the vrt_cpyfm or vro_cpyfm functions. They can be addressed in
+
 (!nolink [NVDI]) for printer drivers (and IMG, etc.) exactly like the functions
+
 of the screen driver. The only difference is that rasters cannot be
+
 moved within a printer bitmap (source and destination MFDB with
+
 fd_addr == 0L), as the printer bitmap generally consists of several
+
 slices that are handled sequentially. But this difference presents
+
 no restrictions, since copying within the device bitmap makes no
+
 sense for printer output!
 
+
+
 If necessary, the printer driver buffers the bitmap in the display
+
 list should insufficient memory be available; there is therefore no
+
 need to hold the bitmap in memory with v_updwk until output.
 
+
+
 If the bitmap has to be scaled, the program should not itself enlarge
+
 the bitmap if possible, but leave this work to vrt_cpyfm/vro_cpyfm.
+
 This improves the output quality, less data has to be buffered on
+
 the hard drive, and the printout is speeded up. Whether the driver
+
 is capable of scaling can be established with the vq_extnd call.
 
+
+
 When outputting colour images in 8-colour mode, rasters should be
+
 treated before dithering with a correction function. Recommended is
+
 a gamma correction with an exponent of 0.3 to 0.4, so that the image
+
 does not appear completely dull and oversaturated. In TrueColor mode
+
 the driver performs colour correction, black separation and other
+
 quality improvements itself - bitmaps here should be sent without
+
 previous correction and without rasterising to the driver.
 
+
+
 See Also:
+
 GDOS drivers ~  Bitmap format for printer drivers ~
+
 (!link [Minimum range of function] [Minimum range of functions for printer drivers])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Minimum range of functions for printer drivers
 
+
+
 The following list describes the range of functions that a printer
+
 driver should offer as a minimum; this comes from a specification
+
 from the Atari (!I)(!nolink [GEM]) Programmer's Guide.(!i)
 
+
+
 !begin_table [c c l]
+
 Opcode !! Subcode !! Function
+
 !hline
+
   1 !!    !! v_opnwk
+
   2 !!    !! v_clswk
+
   3 !!    !! v_clrwk
+
   4 !!    !! v_updwk
+
   5 !!    !! Escape functions:
+
     !!  1 !! vq_chcells
+
     !! 20 !! v_form_adv
+
     !! 21 !! v_output_window
+
     !! 22 !! v_clear_disp_list
+
     !! 23 !! v_bit_image
+
   6 !!    !! v_pline
+
   7 !!    !! v_pmarker
+
   8 !!    !! v_gtext
+
   9 !!    !! v_fillarea
+
  11 !!    !! Output functions:
+
     !!  1 !! v_bar
+
     !!  2 !! v_arc
+
     !!  3 !! v_pieslice
+
     !!  4 !! v_circle
+
     !!  5 !! v_ellipse
+
     !!  6 !! v_ellarc
+
     !!  7 !! v_ellpie
+
     !!  8 !! v_rbox
+
     !!  9 !! v_rfbox
+
     !! 10 !! v_justified
+
  12 !!    !! vst_height
+
  15 !!    !! vsl_type
+
  17 !!    !! vsl_color
+
  18 !!    !! vsm_type
+
  20 !!    !! vsm_color
+
  21 !!    !! vst_font
+
  22 !!    !! vst_color
+
  23 !!    !! vsf_interior
+
  24 !!    !! vsf_style
+
  25 !!    !! vsf_color
+
  26 !!    !! vq_color
+
  32 !!    !! vswr_mode
+
  35 !!    !! vql_attributes
+
  36 !!    !! vqm_attributes
+
  37 !!    !! vqf_attributes
+
  38 !!    !! vqt_attributes
+
  39 !!    !! vst_alignment
+
 102 !!    !! vq_extnd
+
 104 !!    !! vsf_perimeter
+
 106 !!    !! vst_effects
+
 107 !!    !! vst_point
+
 108 !!    !! vsl_ends
+
 112 !!    !! vsf_udpat
+
 116 !!    !! vqt_extent
+
 117 !!    !! vqt_width
+
 129 !!    !! vs_clip
+
 130 !!    !! vqt_name
+
 131 !!    !! vqt_fontinfo
+
 !end_table
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Bitmap format for printer drivers
+
 !label Printer drivers, Bitmap format
 
+
+
 Just as for the screen, vq_scrninfo returns the format of the bitmap
+
 for printers as well. As a rule, there are only 3 different formats
+
 here:
 
+
+
 !begin_itemize !short
+
 !item Monochrome bitmap, if the driver has 2 colours.
+
 !item Three sequential planes, if the driver has 8 colours.
+
 !item Packed pixels with 32 bits, if the driver runs in TrueColor mode.
+
 !end_itemize
 
+
+
 As formats (1) and (3) will be self-explanatory, we only need to deal
+
 with format (2) here: For 8 colours, a coloured bitmap consists of 3
+
 complete planes lying sequentially in memory. So the device-specific
+
 raster format corrresponds to the standard format. The allocation of
+
 the (!nolink [VDI]) colour index to pixel values follows the standard arrangement
+
 that applies to all (!nolink [VDI]) drivers.
 
+
+
 See Also: Printer drivers ~  Raster formats ~  vro_cpyfm ~  vrt_cpyfm
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Fax drivers
+
 !label GDOS drivers, Fax
+
 !label Drivers, Fax
 
+
+
 A fax driver is, in principle, nothing more than a simple printer
+
 driver. With the help of such a driver, all applications that output
+
 via (!nolink [GDOS]) can send faxes directly.
 
+
+
 For a fax driver one can specify neither a page format nor a (!nolink [GEMDOS])
+
 device. One should also not attempt to alter the size of the bitmap.
 
+
+
 See Also: GDOS drivers ~ (!link [ASSIGN.SYS file][The make-up of the ASSIGN.SYS file])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Tablet drivers
+
 !label GDOS drivers, Tablet
+
 !label Drivers, Tablet
 
+
+
 As no drivers for graphics tablets exist at present, it is not
+
 possible to give further information here.
 
+
+
 See Also: GDOS drivers ~ (!link [ASSIGN.SYS file][The make-up of the ASSIGN.SYS file])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Camera drivers
+
 !label GDOS drivers, Camera
+
 !label Drivers, Camera
 
+
+
 As no drivers for the (!I)Polaroid palette(!i) exist at present, it
+
 is not possible to give further information here.
 
+
+
 See Also:
+
 GDOS drivers ~
+
 (!link [Minimum range of functions][Minimum range of functions for camera drivers])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Minimum range of functions for camera drivers
 
+
+
 The following list describes the range of functions that a camera
+
 driver should offer as a minimum; this comes from a specification
+
 from (!I)Digital Research(!i) for PC-(!nolink [GEM]) 2.0:
 
+
+
 !begin_table [c c l]
+
 Opcode !! Subcode !! Function
+
 !hline
+
   1 !!    !! v_opnwk
+
   2 !!    !! v_clswk
+
   3 !!    !! v_clrwk
+
   4 !!    !! v_updwk
+
   5 !!    !! Escape functions:
+
     !!  1 !! vq_chcells
+
     !! 23 !! v_bit_image
+
     !! 91 !! vsp_film
+
     !! 92 !! vqp_filmname
+
   6 !!    !! v_pline
+
  11 !!    !! Output functions:
+
     !!  1 !! v_bar
+
     !!  2 !! v_arc
+
     !!  3 !! v_pieslice
+
     !!  4 !! v_circle
+
     !!  5 !! v_ellipse
+
     !!  6 !! v_ellarc
+
     !!  7 !! v_ellpie
+
     !!  8 !! v_rbox
+
     !!  9 !! v_rfbox
+
     !! 10 !! v_justified
+
  12 !!    !! vst_height
+
  13 !!    !! vst_rotation
+
  14 !!    !! vs_color
+
  15 !!    !! vsl_type
+
  16 !!    !! vsl_width
+
  17 !!    !! vsl_color
+
  18 !!    !! vsm_type
+
  19 !!    !! vsm_height
+
  20 !!    !! vsm_color
+
  21 !!    !! vst_font
+
  22 !!    !! vst_color
+
  23 !!    !! vsf_interior
+
  24 !!    !! vsf_style
+
  25 !!    !! vsf_color
+
  26 !!    !! vq_color
+
  32 !!    !! vswr_mode
+
  35 !!    !! vql_attributes
+
  36 !!    !! vqm_attributes
+
  37 !!    !! vqf_attributes
+
  38 !!    !! vqt_attributes
+
  39 !!    !! vst_alignment
+
 102 !!    !! vq_extnd
+
 104 !!    !! vsf_perimeter
+
 106 !!    !! vst_effects
+
 107 !!    !! vst_point
+
 108 !!    !! vsl_ends
+
 112 !!    !! vsf_udpat
+
 113 !!    !! vsl_udsty
+
 116 !!    !! vqt_extent
+
 117 !!    !! vqt_width
+
 119 !!    !! vst_load_fonts
+
 120 !!    !! vst_unload_fonts
+
 129 !!    !! vs_clip
+
 130 !!    !! vqt_name
+
 131 !!    !! vqt_fontinfo
+
 !end_table
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Memory drivers
+
 !label GDOS drivers, Memory
+
 !label Drivers, Memory
 
+
+
 A memory driver is, in principle, a screen driver for which the
+
 output does not end up in the screen memory, but in another part
+
 of the memory, and which can then be processed further there.
 
+
+
 The drivers available at present only support a monochrome bitmap,
+
 and have a logical resolution of 300dpi. Unfortunately the aspect
+
 ratio does not usually correspond to the current resolution of the
+
 screen, which has the result that circles, for instance, will be
+
 represented as ellipses.
 
+
+
 The resolution of the bitmap may be set with v_opnwk, by writing the
+
 value 1 in ptsin[0..1] for width-1 or height-1 as well as in contrl[1].
+
 After calling the function, the address of the bitmap is returned in
+
 (!nolink [contrl])[0..1]. In addition it is also possible to set the bitmap size
+
 with vq_extnd. In that case it is also possible to pass a custom
+
 buffer; for this one sets (!nolink [contrl])[3] to the value 3 and passes in
+
 intin[1..2] a pointer to the buffer.
 
+
+
 Due to greater flexibility, one should give preference to off-screen
+
 bitmaps over memory drivers.
 
+
+
 See Also: GDOS driversr ~ (!link [ASSIGN.SYS file][The make-up of the ASSIGN.SYS file])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Metafile drivers
+
 !label GDOS drivers, Metafile
+
 !label Drivers, Metafile
+
 A metafile driver saves all calls directed to it in a @{GEM ignore} metafile 
+
 which lies in the current directory of the application and has the 
+
 name (!I)GEMFILE.(!nolink [GEM])(!i) by default.
 
+
+
 If one wishes to alter the name, then directly after v_opnwk call the 
+
 function vm_filename, which can be passed a complete filename with 
+
 the desired path and name.
 
+
+
 So that other programs can depict a metafile sensibly, one should 
+
 call the functions v_meta_extents, vm_pagesize and vm_coords. 
 
+
+
 See Also:
+
 (!nl)
+
 v_meta_extents ~  vm_pagesize ~  vm_coords ~
+
 GDOS-Treiber ~ (!link [Minimum range of functions] [Minimum range of functions for metafile drivers])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Minimum range of functions for metafile drivers
 
+
+
 The following list describes the range of functions that a metafile 
+
 driver should offer as a minimum; this comes from a specification 
+
 from the Atari (!I)(!nolink [GEM]) Programmer's Guide.(!i)
 
+
+
 !begin_table [c c l]
+
 Opcode !! Subcode !! Function
+
 !hline
+
   1 !!     !! v_opnwk
+
   2 !!     !! v_clswk
+
   3 !!     !! v_clrwk
+
   4 !!     !! v_updwk
+
   5 !!     !! Escape functions:
+
     !!   1 !! vq_chcells
+
     !!   2 !! v_exit_cur
+
     !!   3 !! v_enter_cur
+
     !!  20 !! v_form_adv
+
     !!  21 !! v_output_window
+
     !!  22 !! v_clear_disp_list
+
     !!  23 !! v_bit_image
+
     !!  98 !! v_meta_extents
+
     !!  99 !! v_write_meta
+
     !! 100 !! vm_filename
+
   6 !!     !! v_pline
+
   7 !!     !! v_pmarker
+
   8 !!     !! v_gtext
+
   9 !!     !! v_fillarea
+
  11 !!     !! Output functions:
+
     !!   1 !! v_bar
+
     !!   2 !! v_arc
+
     !!   3 !! v_pieslice
+
     !!   4 !! v_circle
+
     !!   5 !! v_ellipse
+
     !!   6 !! v_ellarc
+
     !!   7 !! v_ellpie
+
     !!   8 !! v_rbox
+
     !!   9 !! v_rfbox
+
     !!  10 !! v_justified
+
  12 !!     !! vst_height
+
  13 !!     !! vst_rotation
+
  14 !!     !! vs_color
+
  15 !!     !! vsl_type
+
  16 !!     !! vsl_width
+
  17 !!     !! vsl_color
+
  18 !!     !! vsm_type
+
  19 !!     !! vsm_height
+
  20 !!     !! vsm_color
+
  21 !!     !! vst_font
+
  22 !!     !! vst_color
+
  23 !!     !! vsf_interior
+
  24 !!     !! vsf_style
+
  25 !!     !! vsf_color
+
  26 !!     !! vq_color
+
  32 !!     !! vswr_mode
+
  35 !!     !! vql_attributes
+
  36 !!     !! vqm_attributes
+
  37 !!     !! vqf_attributes
+
  38 !!     !! vqt_attributes
+
  39 !!     !! vst_alignment
+
 102 !!     !! vq_extnd
+
 103 !!     !! v_contourfill
+
 104 !!     !! vsf_perimeter
+
 106 !!     !! vst_effects
+
 107 !!     !! vst_point
+
 108 !!     !! vsl_ends
+
 112 !!     !! vsf_udpat
+
 113 !!     !! vsl_udsty
+
 114 !!     !! vr_recfl
+
 117 !!     !! vqt_width
+
 129 !!     !! vs_clip
+
 131 !!     !! vqt_fontinfo
+
 !end_table
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Plotter drivers
+
 !label GDOS drivers, Plotter
+
 !label Drivers, Plotter
 
+
+
 After a long drought, (!nolink [GDOS]) plotter drivers too have become available.
+
 So, for instance, the program (!I)DATA(!i) is supplied with an HPGL driver, 
+
 and also the (!nolink [PD]) disk number 458 of the magazine (!I)ST-Computer(!i) you will 
+
 find such a driver.
 
+
+
 More detailed information about plotter drivers is not available at 
+
 present.
 
+
+
 See Also:
+
 GDOS-Treiber ~ (!link [Minimum range of functions] [Minimum range of functions for plotter drivers])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Minimum range of functions for plotter drivers
 
+
+
 The following list describes the range of functions that a plotter 
+
 driver should offer as a minimum; this comes from a specification 
+
 from the Atari (!I)(!nolink [GEM]) Programmer's Guide.(!i)
 
+
+
 !begin_table [c c l]
+
 Opcode !! Subcode !! Function
+
 !hline
+
   1 !!    !! v_opnwk
+
   2 !!    !! v_clswk
+
   3 !!    !! v_clrwk
+
   4 !!    !! v_updwk
+
   5 !!    !! Escape functions:
+
     !!  1 !! vq_chcells
+
   6 !!    !! v_pline
+
   7 !!    !! v_pmarker
+
   8 !!    !! v_gtext
+
   9 !!    !! v_fillarea
+
  11 !!    !! Output functions:
+
     !!  1 !! v_bar
+
     !!  2 !! v_arc
+
     !!  3 !! v_pieslice
+
     !!  4 !! v_circle
+
     !!  5 !! v_ellipse
+
     !!  6 !! v_ellarc
+
     !!  7 !! v_ellpie
+
     !!  8 !! v_rbox
+
     !!  9 !! v_rfbox
+
     !! 10 !! v_justified
+
  12 !!    !! vst_height
+
  15 !!    !! vsl_type
+
  17 !!    !! vsl_color
+
  18 !!    !! vsm_type
+
  20 !!    !! vsm_color
+
  21 !!    !! vst_font
+
  22 !!    !! vst_color
+
  23 !!    !! vsf_interior
+
  24 !!    !! vsf_style
+
  25 !!    !! vsf_color
+
  35 !!    !! vql_attributes
+
  36 !!    !! vqm_attributes
+
  37 !!    !! vqf_attributes
+
  38 !!    !! vqt_attributes
+
  39 !!    !! vst_alignment
+
 102 !!    !! vq_extnd
+
 104 !!    !! vsf_perimeter
+
 107 !!    !! vst_point
+
 108 !!    !! vsl_ends
+
 116 !!    !! vqt_extent
+
 117 !!    !! vqt_width
+
 130 !!    !! vqt_name
+
 131 !!    !! vqt_fontinfo
+
 !end_table
+
 !end_node
+
 !end_node
+
+
+
+
 
 
 
 !begin_node VDI coordinate systems
 
+
+
 The (!nolink [VDI]) distinguishes two different types of coordinate systems:
 
+
+
 !begin_itemize
+
 !label Raster coordinates
+
 !label Coordinates, RC
+
 !label RC coordinates
+
 !item (!B)Raster coordinates (RC):(!b) When using this system one can use the 
+
      exact coordinate system native to the output device. For a screen 
+
      this corresponds to the available horizontal and vertical pixels.
+
      The point of origin lies in the (!I)top(!i) left corner. (!nl)
+
      The main advantage of raster coordinates is the absolutely exact 
+
      positioning, which alone enables precise work with screen 
+
      rasters (windows etc).
 
+
+
 !label Normalized coordinates
+
 !label Coordinates, Normalized
+
 !label Coordinates, NDC
+
 !label NDC coordinates
+
 !item (!B)Normalized coordinates (NDC):(!b) This system always has a maximum 
+
      resolution of 32768*32768 points. When a device driver is called 
+
      the (!nolink [VDI]) will automatically recalculate to the device's physical 
+
      coordinate system. The origin lies in the (!I)bottom(!i) left corner.
+
      For working with the NDC system a GDOS has to have been installed 
+
      - the screen driver in ROM can (!I)not(!i) handle NDC coordinates.
+
 !end_itemize
 
+
+
 The following illustration makes the difference between RC and NDC  
+
 coordinates particularly clear:
 
+
+
 !ifdest [html]
+
 !ifset [No_Bilder_Pfad]
+
 !image koords_en
+
 !else
+
 !image (!picture_path)\koords_en
+
 !endif
+
 !else
+
 !image (!picture_path)\koords_en
+
 !endif
+
+
 
 (!B)Note:(!b) In practice the NDC system is seldom used. Programs that have 
+
 to offer exact dimensioning (desktop publishing, scientific graphics) 
+
 must in any case use internally their own - finer - coordinate 
+
 representation.
 
+
+
 The use of the NDC system would mean that the coordinates would have 
+
 to be converted twice (once from the internal representation in NDC 
+
 coordinates, then to raster coordinates), which would lead to 
+
 superfluous speed losses and rounding errors.
 
+
+
 See Also: VDI fundamentals ~ Style guidelines
+
 !end_node
+
+
+
+
 
 
 
@@ -936,932 +1870,1865 @@ See Also: VDI fundamentals ~ Style guidelines
 
 
 
+
+
+
+
 !begin_node NVDI
+
 !label NVDIMac
 
+
+
 NVDI ((!B)N(!b)ew(!B)VDI(!b)) is a (!nolink [VDI]) developed by the @{I}Behne brothers@{0} which 
+
 completely replaces the original from Atari. Apart from its very high 
+
 speed, it offers the possibility of using vector fonts in the Speedo, 
+
 and TrueType format (with a special module also Type-1). NVDI is also
+
 available in a special (!I)Macintosh version(!i) (NVDIMac), and enables any 
+
 program that can output via GDOS (in connection with MagiC Mac) to also 
+
 output on Apple printers and in networks.
 
+
+
 To establish which NVDI version one is using and what function range 
+
 it offers one has to look for the NVDI cookie 'NVDI', which contains 
+
 the version number in BCD format (e.g. 0x0410 for Version 4.10).
 
+
+
 !label EdDI
+
 !label Cookie, EdDI
+
 If you want to use (!link [off-screen bitmaps][Off-screen bitmaps]), you should look for the 'EdDI'
+
 cookie (e.g. with is_EdDI). The LONGword following the ID is the 
+
 address of a dispatcher, which is called up with the function number 
+
 in register d0.w. Pure-C conventions apply for the call, i.e. the 
+
 registers d0-d2/a0-a1 and the stack are used for @{"parameter passing" LINK "Parameter passing"}, 
+
 d0-d2/a0-a1 can be altered. The function 0 returns the EdDI version 
+
 number in BCD format (e.g. 0x0110 for Version 1.10).
 
+
+
 See also:
+
 (!nl)
+
 Off-screen bitmaps ~ v_opnbm ~ v_clsbm ~
+
 VDI fundamentals ~ vq_scrninfo ~ GEM
+
+
+
+
 
 
 
 !begin_node is_EdDI
 
+
+
 (!B)(!nolink [Sample code]) for Pure-C:(!b)
 
+
+
 !begin_verbatim
+
 GLOBAL BOOLEAN is_EdDI ()
+
 {
+
     int16_t (*func)(int16_t);
 
+
+
     if (get_cookie ("EdDI", (LONG *) &func))
+
         return ((*func)(0));
+
+
 
     else return (FALSE);
 
+
+
 } /* is_EdDI */
+
 !end_verbatim
+
 !end_node
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Off-screen bitmaps
 
+
+
 It can be very useful for many applications if drawing functions can 
+
 be applied not directly to the screen, but to an invisible screen. 
+
 Such a "hidden" screen is called an off-screen bitmap.
 
+
+
 For creation of off-screen bitmaps one uses the function v_opnbm. This 
+
 can have either the size of a bitmap specified that it is to allocate,
+
 or it can be passed a bitmap. The bitmap is managed in the same format 
+
 as that of the screen, which makes fast copying between the two  
+
 possible. The function v_clsbm closes a bitmap created with (!nolink [v_opnbm]),
+
 and frees its memory if necessary.
 
+
+
 Raster operations between screen and off-screen bitmap should be made 
+
 basically in a device-specific format. If the destination of a 
+
 raster operation is specified as an off-screen bitmap with its MFDB 
+
 and if the handle belonging to this bitmap is used, then during 
+
 blitting the bitmap will be clipped according to the coordinates 
+
 set via vs_clip on this workstation. So for copying a raster from the 
+
 screen to an off-screen bitmap one should use the vdi_handle of this 
+
 bitmap.
 
+
+
 If, on the other hand, the bitmap is the source and the screen the 
+
 destination, then one should use the handle of the screen workstation, 
+
 as in that case the raster will be clipped according to the screen 
+
 coordinates. If one uses the handle of a bitmap returned by (!nolink [v_opnbm]), 
+
 and (!I)fd_addr(!i) of a MFDB contains 0, then the data of the bitmap will 
+
 be used instead.
+
+
 
 See also:   NVDI ~ (!link [GDOS][About the GDOS]) ~ Style guidelines
 
+
+
 !end_node
+
+
+
+
 
 
 
 !begin_node The OUT file format
+
 !label OUTPUT format
 
+
+
 The OUT format was developed by (!I)Digital Research(!i) and, like the
+
 (!link [XIMG][The XIMG format for pixel images])
+
 or (!link [metafile format][Metafile format]) permits data exchange between any
+
 GEM applications.
+
 More exactly, it permits control characters for text attributes to be 
+
 written to a file with the suffix ".out", which are then recognized 
+
 and taken into account by the output driver.
 
+
+
 This makes the OUT format particularly well suited for exchanging text 
+
 files with attributes between various applications. OUT files are  
+
 nothing more than ASCII files, which use the control code DC2 (ASCII 
+
 value 18) for switching between text attributes; this is followed by 
+
 a letter that describes the switching on or off of the attribute:
+
+
 
 (!B)Following control characters are defined:(!b)
 
+
+
 !begin_table [l l]
+
 Code !! Meaning
+
 !hline
+
 DC2 0 !! Bold on 
+
 DC2 1 !! Bold off
+
 DC2 2 !! Italic on
+
 DC2 3 !! Italic off
+
 DC2 4 !! Underlined on
+
 DC2 5 !! Underlined off
+
 DC2 6 !! Superscript on
+
 DC2 7 !! Superscript off
+
 DC2 8 !! Subscript on
+
 DC2 9 !! Subscript off
+
 DC2 A !! NLQ mode on
+
 DC2 B !! NLQ mode off
+
 DC2 C !! Expanded on
+
 DC2 D !! Expanded off
+
 DC2 E !! Light on
+
 DC2 F !! Light off
+
 DC2 G !! ~
+
   :   !! ~
+
   :   !! ~
+
 DC2 V !! Reserved, is ignored
+
 DC2 W !! Pica font (10 cpi)
+
 DC2 X !! Elite font (12 cpi)
+
 DC2 Y !! Condensed print
+
 DC2 Z !! Proportional print
+
 !end_table
 
+
+
 (!B)Note:(!b) Naturally one can also incorporate graphics in the output file;
+
 the syntax in this case runs:
 
+
+
 !begin_verbatim
+
 (ESC)(ESC)GEM,x,y,w,h,C:\pathname\filename.img
+
 !end_verbatim
 
+
+
 The parameters x,y,w and h here are to be specified in character units
+
 relative to the current cursor position.
 
+
+
 See also: GDOS drivers ~  v_alpha_text ~ (!link [XIMG format][The XIMG format for pixel images]) ~
+
 Metafile format
 
+
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Rasterformate
 
+
+
 For working with screens the (!link [raster functions][Raster functions]) play a special role;
+
 they are responsible for everything that has to do with movement or
+
 changes of screen clipping. Example: Scrolling within a document or
+
 the depiction of icons.
 
+
+
 Naturally, the raster functions can only perform their tasks efficien-
+
 tly if the same format is used for internal depiction as that used in
+
 video memory; otherwise the data would have to be converted for each
+
 individual call of a raster function. However, the internal structure
+
 of the video memory depends on the hardware of the graphics system
+
 in use - quite apart from the fact that the video memory need not
+
 necessarily be directly accessible to the processor.
 
+
+
 The number of bits per pixel required depends, naturally, on the
+
 number of colours that can be displayed simultaneously; for monochrome
+
 pixels 1 bit is sufficient, for 16 colours one already needs 4 bits.
+
 Depending on the video hardware in use, these bits can, of course, be
+
 arranged in completely different ways; one should not be surprised,
+
 therefore, that various formats are available for this purpose:
 
+
+
 !label Image format, Pixel-oriented
+
 !label Pixel-oriented image format
+
 (!B)Pixel-oriented format:(!b) In this case, all bits belonging to a
+
 pixel are coded together in one or more bytes. In a system using 16
+
 colours, therefore, two pixels would be saved together in one byte in
+
 each case; for 256 colours, each pixel occupies one byte.
 
+
+
 !label Image format, Plane-oriented
+
 !label Plane-oriented image format
+
 (!B)Plane-oriented format:(!b) In this case one treats the video memory
+
 as a collections of monochrome (i.e. single-coloured) image planes.
+
 To obtain the colour of a pixel, one combines the relevant bits from
+
 the individual planes to a colour value. This says nothing, of course,
+
 about how the individual planes are arranged in the video memory. A
+
 simple solution (common in the PC domain) is to store one plane after
+
 the other (sequentially) in video memory.
 
+
+
 So as not to be restricted to a given, hardware-dependent format, the
+
 (!nolink [VDI]) differentiates between the (!I)device-depedent format(!i) (which depends
+
 on the hardware), and the so-called (!I)standard format.(!i) The standard
+
 format is the same for all (!nolink [VDI]) systems, and can therefore be used any
+
 time one wants to import raster graphics from outside into the system
+
 (example: depiction of icons in a resource file). For conversion
+
 between the two fomats one can make use of the vr_trnfm function.
 
+
+
 !label Standard format of the VDI
+
 !label VDI, Standard format of the
+
 !label Device-independent format
+
 !label Format, Device-independent
+
 (!B)(!nolink [The VDI]) standard format is defines as follows:(!b)
 
+
+
 !begin_itemize
+
 !item The format is plane-oriented. Each image plane occupies a
+
       contiguous block of memory, and has the same number of image points.
+
 !item The highest bit of a 16-bit WORD represents the furthest left
+
       pixel
+
 !item Sequential words in video memory form the individual lines.
+
      The first WORD of such a line lies at the left image border;
+
      the first line of the plane codes the topmost pixel line.
+
 !end_itemize
+
+
 
 The following figure shows an example for the device-independent
+
 standard format with 3 colour planes, where each small square
+
 represents a pixel:
 
+
+
 !ifdest [html]
+
 !ifset [No_Bilder_Pfad]
+
 !image raster_en
+
 !else
+
 !image (!picture_path)\raster_en
+
 !endif
+
 !else
+
 !image (!picture_path)\raster_en
+
 !endif
+
+
 
 (!B)Warning:(!b) In the monochrome graphics modes of the ST and TT030, the
+
 device-dependent format (!I)happens to (!)(!i) correspond to the device-
+
 independent one (i.e. the standard format). This does not mean, of
+
 course, that one may therefore dispense with the use of the vr_trnfm
+
 function. As one normally has no information about the device-specific
+
 format, this reason alone forbids any direct manipulation of the
+
 video memory.
 
+
+
 !label Colour lookup table (CLUT)
+
 !label Lookup table
+
 !label CLUT
+
 As a matter of principle, the (!link [VDI][About the VDI]) works in a colour register
+
 oriented
+
 (colour lookup table or CLUT) manner. It starts off by assuming that
+
 there is a maximum number of colours that may be displayed simulta-
+
 neously, and that one can assign to these colour registers a palette
+
 of certain (relatively freely selectable) tints. As this feature is
+
 by no means self-evident, it can be inquired for via vq_extnd. There
+
 follow two examples for graphics modes (!I)without(!i) a colour lookup table:
 
+
+
 !begin_itemize
+
 !item The TT030 graphic mode 'TT-high': there are only two colour
+
       registers and two tints (black and white), which may also not
+
       be swapped.
+
 !item With True-Color graphics cards such as the Crazy-Dots-II, an
+
       'arbitrary' number of colours may be displayed simultaneously.
+
       Normally 24 bits per pixel are used for this, so that some 16
+
       million colours are available. With such a large number of
+
       colours the idea of colour registers is out of the question:
+
       The number of tints principally displayable simultaneously far
+
       exceeds the typical number of image points.
+
 !end_itemize
 
+
+
 !label Pixel value and VDI colour index
+
 !label VDI colour index and pixel value
+
 !label Colour index and pixel value, VDI
+
 (!B)There remains the question how the pixel values in video memory are
+
 related to the (!nolink [VDI]) colour indices. Answer:(!b)
 
+
+
 !begin_xlist
+
 !item [(a)]
+
 On historical grounds, the start point is that for a pixel in
+
 the (!nolink [VDI]) colour 0 (normally white) all bits are cleared, and for
+
 black image points ((!nolink [VDI]) colour 1) all bits are set. This is
+
 logical if only for the reason that by completely inverting all
+
 bits of the pixel display, white and black are swapped.
+
 !item [(b)]
+
 With the aid of the v_get_pixel function one can obtain both the
+
 (!nolink [VDI]) colour index as well as the pixel value for a given image
+
 coordinate.
+
 !end_xlist
 
+
+
 (!B)In addition, (!I)Atari(!i) and (!I)Digital Research(!i) have documented the
+
 standard assignments for 4, 8 and 16 colour palettes:(!b)
 
+
+
 !begin_itemize
+
 !item For four colours, the following apply:
 
+
+
 !begin_table [c c l l]
+
 Pixel value !! Colour index !! Colour !! Name
+
 !hline
+
 00 !! 0 !! White    !! WHITE
+
 01 !! 2 !! Red      !! RED
+
 10 !! 3 !! Green    !! GREEN
+
 11 !! 1 !! Black    !! BLACK
+
 !end_table
+
+
 
 !item bei acht Farben gilt
 
+
+
 !begin_table [c c l l]
+
 Pixel value !! Colour index !! Colour !! Name
+
 !hline
+
 000 !! 0 !! White    !! WHITE
+
 001 !! 2 !! Red      !! RED
+
 010 !! 3 !! Green    !! GREEN
+
 011 !! 6 !! Yellow   !! YELLOW
+
 100 !! 4 !! Blue     !! BLUE
+
 101 !! 7 !! Magenta  !! MAGENTA
+
 110 !! 5 !! Cyan     !! CYAN
+
 111 !! 1 !! Black    !! BLACK
+
 !end_table
+
+
 
 !item bei 16 Farben gilt
 
+
+
 !begin_table [c c l l]
+
 Pixel value !! Colour index !! Colour !! Name
+
 !hline
+
 0000 !!  0 !! White          !! WHITE
+
 0001 !!  2 !! Red            !! RED
+
 0010 !!  3 !! Green          !! GREEN
+
 0011 !!  6 !! Yellow         !! YELLOW
+
 0100 !!  4 !! Blue           !! BLUE
+
 0101 !!  7 !! Magenta        !! MAGENTA
+
 0110 !!  5 !! Cyan           !! CYAN
+
 0111 !!  8 !! Light grey     !! LWHITE
+
 1000 !!  9 !! Dark grey      !! LBLACK
+
 1001 !! 10 !! Light red      !! LRED
+
 1010 !! 11 !! Light green    !! LGREEN
+
 1011 !! 14 !! Light Yellow   !! LYELLOW
+
 1100 !! 12 !! Light Blue     !! LBLUE
+
 1101 !! 15 !! Light Magenta  !! LMAGENTA
+
 1110 !! 13 !! Light Cyan     !! LCYAN
+
 1111 !!  1 !! Black          !! BLACK
+
 !end_table
+
 !end_itemize
 
+
+
 (!B)Note:(!b) For other colour depths, (!I)no(!i) unambiguous assignments exist.
+
 As there is also no general formula for a conversion, one has to
+
 resort to the function v_get_pixel when necessary.
+
+
 
 See also: AES object colours ~ Raster functions ~ vq_scrninfo
 
+
+
 !end_node
+
+
+
+
 
 
 
 !begin_node SpeedoGDOS
+
 !label GDOS, Speedo-
 
+
+
 SpeedoGDOS belongs to the youngest generation of the GDOS family, and
+
 is currently available in Version 5.0c. Besides the features of a
+
 'normal' GDOS, it excels with the following possibilities:
 
+
+
 !begin_itemize !short
+
 !item Support for vector fonts of the formats:
+
 !begin_itemize !short
+
 !item Speedo
+
 !item TrueType
+
 !item Type1
+
 !end_itemize
+
 !item Possibilities for (!link [track][Track kerning])/(!link [pair kerning][Pair kerning]).
+
 !end_itemize
+
+
 
 To check whether SpeedoGDOS is installed it is best to inquire via
+
 the (!link [cookie jar][Cookie jar]). The program installs a cookie with the ID 'FSMC' in
+
 the boot phase.
 
+
+
 See Also:
+
 (!link [GDOS][About the GDOS]) ~ NVDI ~ Style guidelines
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Details about vector fonts
 
+
+
 When using the programs NVDI or SpeedoGDOS, high quality vector fonts
+
 (in the formats Speedo, TrueType, and Type-1) are available also under
+
 GEM. As in supporting these font technologies some subtleties have to
+
 be taken note of, the following points are dealt with in this section:
 
+
+
 !begin_itemize !short
+
 !item Monospaced fonts
+
 !item Font index and ID
+
 !item Size of vector fonts
+
 !item Height and width of vector fonts
+
 !item Kerning
+
 !item Positioning of vector text
+
 !item (!link [Differentiating vector and bitmap fonts][Vector or bitmap font?])
+
 !end_itemize
 
+
+
 See Also:
+
 vst_load_fonts ~ vst_unload_fonts
+
+
+
+
 
 
 
 !begin_node Monospaced fonts
 
 
+
+
+
 Some applications can only run with monospaced fonts or they can run faster
+
 when they recognize that a font is monospaced. The appropriate proceeding is
+
 the following one:
 
+
+
 !begin_itemize
+
 !item If an extended version of vqt_name exists (35 entries in intout), you
+
       should check the monospace-bit in (!nolink [intout])[34].
 
+
+
 !item If (!nolink [vqt_name]) only offers the information that it refers to a
+
       vector font (34 entries in intout, (!nolink [intout[33!]]) != 0), then for
+
       vector fonts one should call vqt_fontheader, and check bit 1 of
+
       FH_CLFGS.
 
+
+
 !item If the font is not a vector font and the first two points above
+
       do not apply, the character widths have to be obtained individu-
+
       ally with vqt_width and one should compare the character widths.
+
 !end_itemize
 
+
+
 If you use v_ftext to display characters of a monospaced vector font, the
+
 width of the string can not be calculated with the return values of vqt_width
+
 or vst_height but width vqt_advance32, because characters of a vector
+
 font can have fractional widths - even if the font is monospaced - and
+
 v_ftext uses these fractional width to place the characters.
 
+
+
 See Also:
+
 (!link [Vector fonts][Details about vector fonts]) ~
+
 About the VDI ~ (!link [GDOS][About the GDOS]) ~ Style guidelines ~ fix31
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Font index and ID
+
 !label Font, Index of a
 
+
+
 (!B)The index of a font(!b) is a number between 1 and the number of available fonts.
+
 Depending on the number of installed fonts, a font like "Swiss 721" has a
+
 different index (supposing that Swiss 721 is one of the installed fonts).
 
+
+
 !label Font, Font-ID of a
+
 (!B)The Font ID(!b) of a font is a fix number which is (with
+
 a few exceptions) not depending on the number of installed fonts or the used
+
 system - e.g. the id of "Swiss 721" is always 5003.
 
+
+
 Of course there are exceptions from this rule:
+
 Some TrueType and Type 1 fonts do not have an id. In this case
+
 will try zo creates a unique id based on the name.
+
 This id can depend on the ids of the other installed fonts and therefore the
+
 same font might have another id on another computer with other fonts. To avoid
+
 problems like selecting the wrong font and to facilate replacing not existing
+
 fonts, you should save the id (!I)and the name(!i) of a font.
 
 
+
+
+
 See Also:
+
 (!link [Vector fonts][Details about vector fonts]) ~  About the VDI ~
+
 (!link [GDOS][About the GDOS]) ~ Style guidelines
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Size of vector fonts
 
+
+
 Die meisten Bildschirmtreiber liefern eine Aufl”sung von ÷ 91 dpi zurck,
+
 nach der sich auch die Gr”že der Vektorfonts richtet. Da nicht bei jedem
+
 Schirm 91 dpi vorhanden sind, sollten Programme bei Textdarstellung auf dem
+
 Bildschirm (!I)nicht(!i) fest mit diesem Wert rechnen, sondern die Ausgaben
+
 von (!B)v_opnwk(!b), (!B)v_opnvwk(!b), (!B)vq_extnd(!b) und (!B)v_opnbm(!b)
+
 beachten.
 
+
+
 Andernfalls k”nnen bei abweichenden Pixelgr”žen Darstellungsfehler
+
 auftreten. Beim Ausdruck sollten die genaueren Pixelgr”žen bei
+
 (!B)(!nolink [vq_extnd])(!b) beachtet werden, damit die Textpositionierung m”glichst
+
 genau ist.
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Height and width of vector fonts
 
+
+
 You can set the height and the width of a vector font with the functions
+
 vst_arbpt32 and vst_setsize32 in 1/65536 pt (1 pt ÷ 1/72" ÷ 353æm).
 
+
+
 If the specified width or height is negative, the text is mirrored on
+
 the corresponding axis.
 
+
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Kerning
 
+
+
 Kerning is a process for manipulating spacing between characters to
+
 achieve a more consistent (better) appearance of the typeface. One
+
 can differentiate between two variants of kerning:
 
+
+
 !label Track kerning
+
 !label Kerning, Track
+
 !begin_itemize
+
 !item (!B)Track kerning:(!b) This method uses a (!I)constant offset(!i) for all
+
       characters of a font. Fonts that support track kerning normally
+
       include several offsets so that one can choose normal, tight or
+
       very tight kerning, for instance.
+
      
+
 !label Pair kerning
+
 !label Kerning, Pair
+
 !item (!B)Pair kerning:(!b) This is based on the realisation that (!I)one(!i) offset
+
       makes little sense for all characters of a font, because in many
+
       cases one can obtain an appreciably better appearance of the set
+
       type if the spacing for (!I)each pair of characters can be set
+
       individually.(!i) Fonts that support pair kernning therefore
+
       contain a table in which the optimum offset for each combination
+
       of (more exactly: for the most important) character pairs are
+
       noted.
+
 !end_itemize
 
+
+
 (!B)Note:(!b) Both track as well as pair kerning are switched off after the
+
 opening of a workstation. So to achieve better text depiction one
+
 should switch on pair kerning with vst_kern.
 
+
+
 See Also:
+
 vst_kern ~ vqt_pairkern ~ vqt_trackkern ~ vst_track_offset
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Positioning of vector text
 
+
+
 When outputting vector fonts the (!nolink [VDI]) works internally with resolution
+
 steps of 1/65536 of a pixel, to ensure precise character positioning
+
 irrespective of the output device used and its actual resolution.
 
+
+
 To output the bitmaps for individual characters, these fixed-point
+
 values are converted to pixels by adding 32768 and then dividing
+
 by 65536.
 
+
+
 !begin_itemize
+
 !item When track kerning is switched on, an offset that is obtained
+
       from vqt_trackkern is added to each character position.
+
 !item When pair kerning is switched on, an offset that is returned
+
       by vqt_pairkern is added to each character position.
+
 !end_itemize
 
+
+
 (!B)Warning:(!b) Pair/track kerning and the positioning in 1/65536 of a pixel
+
 will only be applied if v_ftext is called! With v_gtext, vector fonts
+
 behave mostly like bitmap fonts and neither kerning nor exact positio-
+
 ning are used.
 
+
+
 See Also:
+
 Pair kerning ~ Track kerning ~ (!link [fix31 format][fix31])
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Vector or bitmap font?
 
+
+
 If the set font is a vector font, then vqt_name returns 34 entries in
+
 intout and intout[33] contains a non-zero value.
 
+
+
 If, instead, (!nolink [intout])[33] is zero (or if only 33 entries are returned),
+
 then we are dealing with a bitmap font.
 
+
+
 !end_node
+
 !end_node
+
+
+
+
 
 
 
 !begin_node (!nolink [VDI]) workstations
 
+
+
 A (!I)workstation(!i) is a general term for an input or output device;
+
 this can be a screen, a printer, a plotter, a camera, a graphics
+
 tablet or one of many other devices.
 
+
+
 In order to be able to access a given (!nolink [VDI]) device one must therefore
+
 first (!I)open(!i) the workstation. Depending on the state of affairs, one
+
 will have returned either an error-message or the workstation ID
+
 (handle) of the relevant device.
 
+
+
 A set of (!I)features(!i) belong to each workstation, which are unalterable
+
 and give information about the capabilities of the device. These
+
 include, amongst others, device type, coordinate system and colour
+
 capability. Besides the data returned on opening the workstation, an
+
 extended inquiry function permits obtaining further data about a
+
 device. This allows applications to take optimum advantage of the
+
 device capabilities (for instance by adapting their screen structure
+
 to the number of displayable screen pixels).
 
+
+
 In addition to the unalterable features of a workstation, there also
+
 some that can be changed; one speaks here about (!I)attributes(!i), which
+
 describe the (!I)current state(!i) of the device. A good example is the
+
 line colour, which only has to be set once (and not perhaps for each
+
 individual call of drawing functions). The current attributes are
+
 saved by the (!nolink [VDI]) in internal structures separately for each individual
+
 workstation; thus an application can easily set different line colours
+
 for the screen and the printer, for instance. (!nolink [The VDI]) recognizes from
+
 the workstation handle which output device is meant.
+
+
 
 (!B)The following table shows some attributes with their standard values:(!b)
 
+
+
 !begin_table [l l l]
+
 Attribute !! Standard value !! Set by
+
 !hline
+
 Baseline angle      !! 0 degrees                !! vst_rotation
+
 Clipping            !! Switched off             !! vs_clip
+
 Cursor              !! Hidden                   !! v_show_c, v_hide_c
+
 Input mode          !! Request                  !! vsin_mode
+
 Fill pattern, free  !! Manufacturer's logo      !! vsf_udpat
+
 Kerning             !! Switched off             !! vst_kern
+
 Line ends           !! Rectangular              !! vsl_ends
+
 Line pattern, free  !! Continuous               !! vsl_udsty
+
 Line width          !! Nominal line width       !! vst_width
+
 Marker size         !! Nominal marker size      !! vsm_height
+
 (!link [Writing mode][Write mode])      !! Replace                  !! vswr_mode
+
 Text alignment      !! Left, baseline           !! vst_alignment
+
 Text effect         !! Normal                   !! vst_effects
+
 Perimeter           !! Visible                  !! vsf_perimeter
+
 Character height    !! Nominal character height !! vst_height
+
 !end_table
 
+
+
 !label Workstations, Virtual
+
 !label Virtual workstations
+
 An exception applies to the screen, since this must be available for
+
 several processes simultaneously. For this reason the (!nolink [VDI]) offers
+
 so-called virtual workstations, which can only ever be used together
+
 with an already opened (!I)physical(!i) screen workstation. Each virtual
+
 workstation naturally has its own set of attributes, so that the
+
 programs do not get in the way of each other during screen output.
 
+
+
 (!B)Warning:(!b) Not all features of the physical screen workstation are
+
 transferable to the virtual workstations. Keyboard and mouse still
+
 can be used only by one program at a time. The input functions may
+
 therefore be used (!I)only(!i) by the program that opened the physical
+
 screen workstation (this is normally the (!nolink [AES])).
 
+
+
 A final note: As the management of workstation attributes requires
+
 memory space, which is requested dynamically as a rule, one should
+
 never assume that the opening of a workstation will work!
 
+
+
 See Also:
+
 GDOS drivers ~ v_opnwk ~ v_opnvwk ~ vq_extnd
+
 !end_node
+
+
+
+
 
 
 
 !begin_node The XIMG format for pixel images
 
+
+
 Pixel images are stored under GEM in a standard format, the so-called
+
 bit-image (or XIMG) format. Graphics of this type are stored in a
+
 compressed form, and always have the suffix (!I)'.IMG'.(!i)
 
+
+
 The main advantage of this format is based on the fact that it is a
+
 (!nolink [GEM]) (!I)standard format(!i), which is supported by almost all applications.
+
 A bit-image file consists of a header as well as pure pixel data.
+
 This header is defined in C-notation as follows:
 
+
+
 !label XIMG-Header
+
 !begin_verbatim
+
 typedef struct
+
 {
+
    int16_t version;         /* Version number (usually 1)                 */
+
    int16_t headlen;         /* Length of header in 16-bit WORDs           */
+
    int16_t planes;          /* Number of colour planes in graphic         */
+
    int16_t pat_run;         /* Pattern length in bytes                    */
+
    int16_t pix_width;       /* Pixel width of source device in 1/1000 mm  */
+
    int16_t pix_height;      /* Pixel height of source device in 1/1000 mm */
+
    int16_t sl_width;        /* Width of a scanline in pixels              */
+
    int16_t sl_height;       /* Height of a scanline in pixels             */
+
    BYTE x_id[4];            /* Must be 'XIMG'                             */
+
    int16_t color_model;     /* Colour model: 0=RGB, 1=CYM, 2=Pantone      */
+
    RGB_LIST color_table[];  /* Colour table                               */
+
 } XIMG;
+
 !end_verbatim
+
+
 
 The whole header is arranged in the (!B)Motorola-68000 format(!b), so that
+
 on computers with an Intel CPU, WORDs and LONGwords have to have the
+
 bytes swapped. The pure pixel data always start at (!I)headlen(!i) * 2 and
+
 is stored compressed (as mentioned above).
 
+
+
 The length of the patterns lies between 1 and 8, and with most screens
+
 has a length of 2 bytes. Each scanline information is made up of two
+
 components:
 
+
+
 !begin_itemize
+
 !item A repeated portion of the following structure (in C-notation):
 
+
+
 !begin_verbatim
+
 typedef struct
+
 {
+
    int16_t sc_zero;    /* Always zero */
+
    BYTE sc_ff;         /* Always 255  */
+
    BYTE sc_cnt;        /* Number of coded image lines */
+
 } SCANLINE;
+
 !end_verbatim
+
+
 
 !item The actual image information. This is stored in three different
+
      categories line by line.
 
+
+
 !begin_xlist
+
 !label Solid runs
+
 !item [(a)]
+
 (!B)Single colour pixel sequences (solid runs)(!b) are stored as a
+
 single byte, where the high order bit determines the status of
+
 the point (i.e. 'on' or 'off'); the remaining 7 bits disclose
+
 how many bytes have to be output (i.e. the length of the run).
+
         
+
 !label Pattern runs
+
 !item [(b)]
+
 (!B)Pattern runs(!b) have 0 as the first byte, and the number of
+
 pattern repetitions as the second. The pattern length is
+
 contained in the header under (!I)pat_run.(!i) So the first two
+
 bytes are followed by eactly as many bytes as are required
+
 to represent the pattern.
+
         
+
 !begin_verbatim
+
 typedef struct
+
 {
+
    BYTE pr_zero;        /* Always zero      */
+
    BYTE pr_cnt;         /* Number of bytes  */
+
    BYTE pr_data[...];   /* Pattern data     */
+
 } PATTERNRUN;
+
 !end_verbatim
+
+
 
 !label Bit-Strings
+
 !item [c)]
+
 (!B)Image data that is hard or impossible to shorten (bit
+
 strings)(!b) is stored unchanged. Here the first byte is 0x80 and
+
 the second contains the number of bytes. This is followed by
+
 the corresponding bytes with uncompressed image data.
+
 !begin_verbatim
+
 typedef struct
+
 {
+
    BYTE bs_first;       /* Always 0x80       */
+
    BYTE bs_cnt;         /* Number of bytes   */
+
    BYTE bs_data[...];   /* Image data        */
+
 } BITSTRING;
+
 !end_verbatim
+
 !end_xlist
+
 !end_itemize
 
+
+
 There follows in each case the image data for every coded colour plane
+
 consecutively. One should ensure that one line is always coded with
+
 the full number of bytes, even if the image is effectively narrower.
+
 Thus up to seven bits of superfluous data may be present. The pixel
+
 width of the image is given in the header under (!I)sl_width.(!i)
 
+
+
 See Also:
+
 Metafile-Format ~ v_bit_image ~ (!link [OUT file format][The OUT file format])
+
 !end_node
+
 !end_node
+
+
+
+
 
 
 
 !begin_node VDI-Bindings
+
 !label Bindings des VDI
 
-!label Bindings of the VDI"
+
+
+!label Bindings of the VDI
+
 (!nolink [The VDI]) is called via a single subprogram, which is passed five
+
 parameters; these are addresses of various arrays that are used for
+
 input/output communication. To call a (!nolink [VDI]) function, the following
+
 parameter block must be populated with the addresses of the arrays
+
 described below:
 
+
+
 !label VDI parameter block
+
 !label Parameter block of the VDI
+
 !begin_verbatim
+
 typedef struct
+
 {
+
    int16_t  *contrl;    /* Pointer to contrl array */
+
    int16_t  *intin;     /* Pointer to intin array  */
+
    int16_t  *ptsin;     /* Pointer to ptsin array  */
+
    int16_t  *intout;    /* Pointer to intout array */
+
    int16_t  *ptsout;    /* Pointer to ptsout array */
+
 } VDIPB;
+
 !end_verbatim
 
+
+
 The address of this parameter block must then be stored in register
+
 d1, and additionally register d0.w must be filled with the value 0x73
+
 (115). With a  TRAP#2 system call the (!nolink [VDI]) can then be called directly.
+
 For the (!B)(!I)Pure-Assembler,(!i)(!b) for example, this could look like this:
 
+
+
 !begin_verbatim
+
         .EXPORT vdi         ; Export function
 
+
+
         .IMPORT contrl      ; Import contrl field
+
         .IMPORT intin       ; Import intin field
+
         .IMPORT ptsin       ; Import ptsin field
+
         .IMPORT intout      ; Import intout field
+
         .IMPORT ptsout      ; Import ptsout field
+
+
 
         .DATA               ; Start of the DATA segment
 
+
+
 pblock: .DC.L contrl        ; Address of the contrl arrays
+
         .DC.L intin         ; Address of the intin arrays
+
         .DC.L ptsin         ; Address of the ptsin arrays
+
         .DC.L intout        ; Address of the intout arrays
+
         .DC.L ptsout        ; Address of the ptsout arrays
 
+
+
         .CODE               ; Start of the CODE segment
+
 !end_verbatim
+
 !label vdi
+
 !begin_verbatim
+
 vdi:     MOVE.L #pblock,D1  ; Address of the parameter blocks
+
          MOVE.W #$73,D0     ; Opcode of the VDI
+
          TRAP   #2          ; Call GEM
+
          RTS                ; Exit here
 
+
+
        .END                 ; End of the module
+
 !end_verbatim
 
+
+
 There is no clear information available about which registers may be
+
 changed. In fact, however, the pertinent routines in ROM save (!I)all(!i)
+
 registers.
 
+
+
 Unlike (!nolink [GEMDOS, the VDI]) unfortunately has no documented return value
+
 for 'unknown function number'. Hence, in doubtful cases, one has to
+
 help oneself as follows:
 
+
+
 !begin_itemize
+
 !item Many properties of a driver can already be obtained via the
+
       function vq_extnd.
+
 !item Otherwise one should simply try the relevant (!nolink [VDI]) call, and then
+
       analyse the return values. This is because many functions return
+
       the set value as a result. In addition one can examine the fields
+
       contrl[2] and contrl[4] (see below) and check whether these hold
+
       the correct numbers.
+
 !end_itemize
 
+
+
 Now to the individual arrays. With each field, designated input and
+
 output actions can be carried out. The following apply:
+
+
 
 !begin_blist
 
+
+
 !label contrl
+
 !item [int16_t contrl[12!]]
+
 This field passes the function number, the number of entries, the handle
+
 of the workstation as well as the function-dependent parameters. Inputs to
+
 the (!nolink [VDI]) are entered as follows:
+
 !begin_xlist !short [contrl-7..n- =]
+
 !item [contrl[0!] =]
+
 Opcode
+
 !item [contrl[1!] =]
+
 Number of values in ptsin array
+
 !item [contrl[3!] =]
+
 Number of values in intin array
+
 !item [contrl[5!] =]
+
 Sub-opcode
+
 !item [contrl[6!] =]
+
 Workstation handle
+
 !item [contrl[7..n!] =]
+
 Depends on the function
+
 !end_xlist
+
 Outputs of the (!nolink [VDI]) are made via the following fields:
+
 !begin_xlist !short
+
 !item [contrl[2!] =]
+
 Number of values in ptsout array
+
 !item [contrl[4!] =]
+
 Number of values in intout array
+
 !item [contrl[6!] =]
+
 Workstation handle (only v_opnwk/v_opnvwk/v_opnbm)
+
 !end_xlist
+
+
 
 !label ptsin
+
 !item [int16_t ptsin[1024!]]
+
 ~
+
 !label ptsout
+
 !item [int16_t ptsout[256!]]
+
 These two fields are used to pass pairs of coordinates or dimensions in
+
 pixels (such as the width of a line, or the height of a character, for
+
 instance). The size of these fields depends on the function called.
 
+
+
 !label intin
+
 !item [int16_t intin[1024!]]
+
 ~
+
 !label intout
+
 !item [int16_t intout[512!]]
+
 These fields are required to pass values such as an index of a character or of
+
 a colour. The size of these fields depends on the function called.
+
+
 
 !end_blist
 
+
+
 (!B)When passing strings to the (!nolink [VDI]), one should note some specialties:(!b)
+
 These are passed basically via the fields intin and intout, where one
+
 WORD per character is used. This has the advantage that other codings
+
 than ASCII can be used as well, and more than 256 characters of a font
+
 may be used.
 
+
+
 As a rule the bindings work with normal C-strings, and convert them
+
 for the (!nolink [VDI]). For this the length of the strings are stored in
+
 contrl[3] or contrl[4], and no terminating NULL-byte or WORD is
+
 present. To convert a character string lying in intout to a C-string,
+
 for instance, contrl[4] elements have to be copied (and the upper 8
+
 bits cut off !) and then a NULL-byte appended.
 
+
+
 (!B)Warning:(!b) If the operating system supports threads, then it is
+
 imperative that a multithread-proof library is used.
 
+
+
 See Also:
+
 C-string to VDI-string ~  VDI-string to C-string ~
+
 AES-Bindings
+
+
+
+
 
 
 
 !begin_node VDI-string to C-string
 
+
+
 !begin_verbatim
+
 VOID vdi_str_to_c( UWORD *src, UBYTE *des, int16_t len )
+
 {
+
    while ( len > 0 )
+
    {
+
       *des++ = (UBYTE)*src++;  /* Only low byte */
+
       len--;
+
    }
+
    *des++ = 0;  /* End of string */
+
 }
+
 !end_verbatim
+
 !end_node
+
+
+
+
 
 
 
 !begin_node C-string to VDI-string
 
+
+
 !begin_verbatim
+
 int16_t c_str_to_vdi( UBYTE *src, UWORD *des )
+
 {
+
    int16_t  len;
 
+
+
    while (( *des++ = *src++ ) != 0 )
+
       len++;
+
    return (len); /* Length of the string without NULL byte */
+
 }
+
 !end_verbatim
+
 !end_node
+
 !end_node
+
