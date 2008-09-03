@@ -1,1144 +1,2288 @@
 !iflang [english]
 
+
+
 !begin_node Ssystem
+
 (!begin_liste) [Availability]
+
 !item [Name:]
+
 ØSsystemÆ - Control cookie jar, memory access and various system settings.
+
 !item [Opcode:]
+
 340 (0x0154)
+
 !item [Syntax:]
+
 int32_t Ssystem ( int16_t mode, int32_t arg1, int32_t arg2 );
 
+
+
 !item [Description:]
+
 The Ssystem call has been designed to make your life easier. Using this you
+
 can get some closer (!nolink [control]) of the system and the kernel itself.
+
 Via this call the kernel now supports e.g. an easy cookie jar management and
+
 provides a safe access to supervisor memory. It's strictly encouraged to
+
 access (!nolink [GEMDOS]) variables and system vectors via the Ssystem,
+
 because this way is considered safe for multi-user setups.
 
+
+
 (!I)arg1(!i) and (!I)arg2(!i) are LONG parameters specific to a particular
+
 mode. If a mode doesn't use a parameter, it is usually ignored, but should
+
 be set to zero for future compatibility. (!I)mode(!i) specifies a particular
+
 action as follows:
 
+
+
 !begin_xlist [S_OSNAM]
+
 !item [mode] Meaning
 
+
+
 !label S_INQUIRE
+
 !item [S_INQUIRE(0xffff)]
+
 Returns a zero if the kernel supports Ssystem. You can expect the function
+
 to be present if MiNT version at least 1.15 is detected.
 
+
+
 !label S_OSNAME
+
 !item [S_OSNAME(0x0000)]
+
 Identifies the operating system type. Returned LONGword contains a 32-bit
+
 positive number, which interpreted as an ASCII string gives a 4-character
+
 ID. For MiNT the returned value is 0x4d694e54 ('MiNT').
 
+
+
 !label S_OSXNAME
+
 !item [S_OSXNAME(0x0001)]
+
 Identifies the subtype of the operating system. If this call returns zero or
+
 a negative value, that means that no subtype is available. Otherwise the
+
 returned value, when interpreted as an ASCII string, gives a 4-character
+
 subtype ID. For FreeMiNT, being a derivative of the MiNT, the returned value
+
 is 0x46726565 ('Free').
 
+
+
 If a subtype ID is less than 4 characters long, it should be padded with
+
 zeros.
 
+
+
 !label S_OSVERSION
+
 !item [S_OSVERSION(0x0002)]
+
 Identifies the exact operating system version. Returned LONGword contains a
+
 32-bit positive version number encoded as follows:
+
 !begin_verbatim
+
 Bits   Meaning
+
 ----   -------
+
 0-7    Some printable character to 
+
        characterize the current version, e.g.
+
        0x61 (`a') if alpha release,
+
        0x62 (`b') if beta release.
+
        For official releases you will
+
        always find a value of 0 here.
+
 8-15   Patchlevel (0x55 for pl 88)
+
 16-23  Minor version number (0x0e for x.14)
+
 24-31  Major version number ($01 for 1.xx)
+
 !end_verbatim
+
 Definition of an official release: every release for which a value of 0 is
+
 returned in bits 0-7...
 
+
+
 !label S_OSHEADER
+
 !item [S_OSHEADER(0x0003)]
+
 Allows accessing the @{TOS ignore} header so as to get some information from
+
 it. Current implementation permits access to the first 256 LONGwords of the
+
 header. The address of the required LONGword, relative to the start address
+
 of the (!nolink [TOS]) header, has to be specified as (!I)arg1(!i). Only
+
 even values are allowed (bit 0 of the @{I}arg1@{0} is masked out by the
+
 kernel). A whole LONGword is returned always.
 
+
+
 !label S_OSBUILDDATE
+
 !item [S_OSBUILDDATE(0x0004)]
+
 Returns a 32-bit positive value with the build date encoded as follows:
+
 !begin_verbatim
+
 Bits   Meaning
+
 ----   -------
+
 0-15   Binary year ($07dd for 1998)
+
 16-23  Binary month ($0c for December)
+
 24-31  Binary day of the month
+
 !end_verbatim
+
+
 
 !label S_OSBUILDTIME
+
 !item [S_OSBUILDTIME(0x0005)]
+
 Returns a 32-bit positive value with the build time encoded as follows:
+
 !begin_verbatim
+
 Bits   Meaning
+
 ----   -------
+
 0-7    Binary seconds
+
 8-15   Binary minutes
+
 16-23  Binary hours
+
 24-31  Day of week
+
 !end_verbatim
+
 Day of week has 1 for Monday, 2 for Tuesday... 7 for Sunday.
 
+
+
 The call should never return a zero in these bits, but if it does, it should
+
 be interpreted as Sunday.
 
+
+
 !label S_OSCOMPILE
+
 !item [S_OSCOMPILE(0x0006)]
+
 Returns a 32-bit positive value specifying the primary CPU type the kernel
+
 has been compiled for. Encoding:
+
 !begin_verbatim
+
 Bits   Meaning
+
 ----   -------
+
 0-7    Binary minor CPU ID
+
 8-15   Binary major CPU ID
+
 16-31  Reserved for future definition
+
 !end_verbatim
+
 The major ID identifies a particular series of processors. Currently only a
+
 value of $00 is defined and it is assigned to Motorola 68k series. Other
+
 values of this field are reserved for future definition.
 
+
+
 The minor CPU ID interpretation depends on the major ID. For 68k series,
+
 values are as follows:
+
 !begin_verbatim
-$00 68000
-$0a 68010
-$14 68020
-$1e 68030
-$28 68040
-$3c 68060
+
+0x00 68000
+
+0x0a 68010
+
+0x14 68020
+
+0x1e 68030
+
+0x28 68040
+
+0x3c 68060
+
 !end_verbatim
+
 This is not the same as the (!link [_CPU][Cookie, _CPU]) cookie value. The
+
 (!nolink [_CPU]) cookie specifies the CPU physically present in the machine,
+
 while the S_OSCOMPILE indicates the processor type selected at the time when
+
 the system was compiled. In other words, running a 68000-compiled kernel
-will return a $00 here, even if the machine is running 68040 or something.
+
+will return a 0x00 here, even if the machine is running 68040 or something.
+
+
 
 !label S_OSFEATURES
+
 !item [S_OSFEATURES(0x0007)]
+
 Returns a 32-bit positive value specifying the state of kernel features.
+
 Encoding:
+
 !begin_verbatim
+
 Bits   Meaning
+
 ----   -------
+
 0      Memory protection (1 = turned on)
+
 1      Virtual memory (1 = turned on)
+
 2-31   Reserved for future usage
+
 !end_verbatim
+
 This call has an informative purpose only and you cannot toggle anything
+
 with it.
 
+
+
 !label S_GETCOOKIE
+
 !item [S_GETCOOKIE(0x0008)]
+
 Fetches required information from the cookie jar.
 
+
+
 !begin_enumerate
+
 !item If (!I)arg1(!i) is a value bigger than 65535 (0xffff), it is
+
 interpreted as a tag ID. The cookie jar is searched for such a tag, then if
+
 the tag is found, the corresponding slot value is returned, or -1 otherwise.
 
+
+
 !item If (!I)arg1(!i) is a value between 1 and 65535, it is interpreted as a
+
 slot number, not a tag ID. Then the corresponding tag ID is fetched and
+
 returned, or a value of -1 if the specified slot is free or does not exist
+
 at all (a slot number past the end of the cookie jar was specified). The
+
 first slot in the cookie jar is considered number 1.
 
+
+
 !item If (!I)arg1(!i) is equal to zero, then the cookie jar is searched for
+
 the NULL cookie, and the corresponding slot value is returned.
+
 !end_enumerate
+
 The place where the value fetched from the cookie jar will be returned is
+
 defined by (!I)arg2(!i). If this is a zero, the call returns its values in
+
 the (!nolink [GEMDOS]) return value (d0). If (!I)arg2(!i) is not a zero, it
+
 is interpreted as a pointer to a memory location where the slot tag or its
+
 value should be written to. The return value is 0 (E_OK) if everything went
+
 OK, or -1 otherwise.
 
+
+
 This behaviour (where (!I)arg2(!i) != NULL) is not implemented in MiNT
+
 versions below 1.14.8.
 
+
+
 !label S_SETCOOKIE
+
 !item [S_SETCOOKIE(0x0009)]
+
 Places a tag ID specified by (!I)arg1(!i) with the value of (!I)arg2(!i) in
+
 the cookie jar. If a slot with the specified tag ID already exists, it will
+
 be replaced with the new value. NULL-cookie is reallocated automatically and
+
 its value is adjusted. If there are no more free slots, no action is
+
 performed and ENOMEM is returned instead.
 
+
+
 S_SETCOOKIE requires root euid, EACCES is returned otherwise and no action
+
 is performed.
 
+
+
 The call refuses to place a cookie (a value of -1 is returned) 
+
 whose tag id contains a zero-byte.
 
+
+
 !label S_GETLVAL
+
 !item [S_GETLVAL(0x000a)]
+
 Fetches and returns a LONGword from the address of supervisor area specified
+
 as a 16-bit, even, unsigned integer value passed as (!I)arg1(!i). Bit 0 and
+
 bits 16-31 are masked out (ignored). The call returns a zero if the value at
+
 the specified address has to be "hidden" from reading. Currently the hidden
+
 values are the initial PC value and the initial stack pointer value stored
-at $00000000 and $00000004 respectively. Reading a hidden value may require
+
+at 0x00000000 and 0x00000004 respectively. Reading a hidden value may require
+
 root euid.
+
+
 
 If the desired address is LONGword aligned, LONGwords can be also retrieved
+
 from the supervisor area using Setexc.
 
+
+
 !label S_GETWVAL
+
 !item [S_GETWVAL(0x000b)]
+
 Fetches and returns a word from the address of supervisor area specified as
+
 a 16-bit, even, unsigned integer value passed as (!I)arg1(!i). Bit 0 and
+
 bits 16-31 are masked out (ignored). The call returns a zero if the value at
+
 the specified address has to be "hidden" from reading. Currently the hidden
+
 values are the initial PC value and the initial stack pointer value stored
-at $00000000 and $00000004 respectively. Reading a hidden value may require
+
+at 0x00000000 and 0x00000004 respectively. Reading a hidden value may require
+
 root euid.
 
+
+
 !label S_GETBVAL
+
 !item [S_GETBVAL(0x000c)]
+
 Fetches and returns a byte from the address of supervisor area specified as
+
 a 16-bit unsigned integer value passed as (!I)arg1(!i). Bits 16-31 are
+
 masked out (ignored). The call returns a zero if the value at the specified
+
 address has to be "hidden" from reading. Currently the hidden values are the
-initial PC value and the initial stack pointer value stored at $00000000 and
-$00000004 respectively. Reading a hidden value may require root euid.
+
+initial PC value and the initial stack pointer value stored at 0x00000000 and
+
+0x00000004 respectively. Reading a hidden value may require root euid.
+
+
 
 !label S_SETLVAL
+
 !item [S_SETLVAL(0x000d)]
+
 Places a LONGword value specified by (!I)arg2(!i) at address specified as
+
 16-bit integer by (!I)arg1(!i). Bit 0 and bits 16-31 of the (!I)arg1(!i) are
+
 masked out (ignored). Since this call is designed to manipulate operating
+
 system variables located within the supervisor area (first 32k), it is
+
 restricted to root euid and returns EACCES if called by an unprivileged
+
 process.
 
+
+
 !label S_SETWVAL
+
 !item [S_SETWVAL(0x000e)]
+
 Places a word value specified by (!I)arg2(!i) at address specified as 16-bit
+
 integer by (!I)arg1(!i). Bit 0 and bits 16-31 of the (!I)arg1(!i) are masked
+
 out (ignored). Since this call is designed to manipulate operating system
+
 variables located within the supervisor area (first 32k), it is restricted
+
 for root euid and returns EACCES if called by an unprivileged process.
+
+
 
 !label S_SETBVAL
+
 !item [S_SETBVAL(0x000f)]
+
 Places a byte value specified by (!I)arg2(!i) at address specified as 16-bit
+
 integer by (!I)arg1(!i). Bits 16-31 of the (!I)arg1(!i) are masked out
+
 (ignored). Since this call is designed to manipulate operating system
+
 variables located within the supervisor area (first 32k), it is restricted
+
 for root euid and returns EACCES if called by an unprivileged process.
 
+
+
 !label S_SECLEVEL
+
 !item [S_SECLEVEL(0x0010)]
+
 Resets the current security level to a value specified by (!I)arg1(!i).
+
 Valid levels are as follows:
 
+
+
 0: none of hardware specific system calls are restricted. This is a
+
 'MultiTOS compatibility' mode.
 
+
+
 1: (!nolink [BIOS]) and (!nolink [XBIOS]) calls require root privileges; any
+
 call except Supexec and Super returns EACCES if called by an unprivileged
+
 process. This does not apply to Setexc, which sends SIGSYS to the caller if
+
 a change of an exception vector was attempted.
 
+
+
 2: as above, with except that (!nolink [Supexec]) and (!nolink [Super])
+
 generates (!nolink [SIGSYS]) in order to kill the calling process.
 
+
+
 On values bigger than 2, EACCES is returned. If (!I)arg1(!i) is equal to -1,
+
 the current security level value is returned.
 
+
+
 The call absolutely needs root privileges - user processes cannot even
+
 inquire the current security level value.
 
+
+
 !label S_RUNLEVEL
+
 !item [S_RUNLEVEL(0x0011)]
+
 Reserved for future definition.
 
+
+
 !label S_TSLICE
+
 !item [S_TSLICE(0x0012)]
+
 Allows setting/interrogating the (!nolink [global]) timeslice value. Values
+
 are exactly the same as for SLICES keyword in mint.cnf. If (!I)arg1(!i) is
+
 equal to -1, the call returns the current (!nolink [global]) timeslice
+
 value.
+
+
 
 Setting the timeslice requires root privileges.
 
+
+
 !label S_FORCEFASTLOAD
+
 !item [S_FORCEFASTLOAD(0x0013)]
+
 Allows changing the interpretation of the FASTLOAD bit in the program
+
 header.
 
+
+
 On Ssystem(S_FORCEFASTLOAD, 0L, 0L); the program header bit will be used as
+
 before, this is actually equal to FASTLOAD=NO in mint.cnf.
 
+
+
 On Ssystem(S_FORCEFASTLOAD, 1L, 0L); , the program header bit will be
+
 ignored and fastload will be forced for all programs.
 
+
+
 (!I)arg1(!i) = -1 allows interrogation of the current state of this
+
 variable.
+
+
 
 You need root privileges to toggle the FASTLOAD mode.
 
+
+
 !label S_SYNCTIME
+
 !item [S_SYNCTIME(0x0014)]
+
 Allows interrogation or changing the (!nolink [global]) file-system sync
+
 time. The default value is 5 sec.
 
+
+
 If (!I)arg1(!i) is a positive value, it is interpreted as a new sync time
+
 value.
 
+
+
 If (!I)arg1(!i) is equal to -1, the current sync time value will be
+
 returned.
 
+
+
 To be able to change the file-system sync time you must have root
+
 privileges.
 
+
+
 !label S_BLOCKCACHE
+
 !item [S_BLOCKCACHE(0x0015)]
+
 A positive value of (!I)arg1(!i) ranging from 0 to 100 specifies the
+
 percentage of file-system cache to be filled with linear reads, as in the
+
 PERCENTAGE keyword in the mint.cnf file. A negative value of (!I)arg1(!i)
+
 returns the currently set percentage value.
+
+
 
 Root privileges are required to use this mode.
 
+
+
 !label S_FLUSHCACHE
+
 !item [S_FLUSHCACHE(0x0016)]
+
 Invalidates CPU cache entries. (!I)arg1(!i) is a pointer to the memory area
+
 whose cache entries should be invalidated, (!I)arg2(!i) is the size of the
+
 area in bytes. Passing -1 as (!I)arg2(!i) invalidates all cache entries. If
+
 the CPU features separate instruction and data caches, both are flushed.
 
+
+
 This call automatically recognizes caches in 68020/030/040/060 and handles
+
 them as appropriate. The 68060 branch cache is automatically invalidated
+
 too. On 68000/68010 calling this mode has no effect. This mode is in fact
+
 just an interface to the MiNT function cpush used internally by the system.
+
+
 
 Root privileges are NOT required to use this mode.
 
+
+
 !label S_CTRLCACHE
+
 !item [S_CTRLCACHE(0x0017)]
+
 Provides an universal (among 68k family members) way of controlling the CPU
+
 on-chip caches. (!I)arg1(!i), referenced as Cache Control Word (CCW), is a
+
 bit-field where each bit enables (if 1) or disables (if 0) a particular
+
 function of CPU caches. (!I)arg2(!i), referenced as Cache Control Mask
+
 (CCM), is a bit-mask where you define (by setting appropriate bits to 1)
+
 which bits of the Cache Control Word should be actually taken into account
+
 and written into the Cache Control Register (CACR). This is the
+
 (!nolink [control]) mode of the S_CTRLCACHE.
 
+
+
 In inquire mode you can pass -1 as either argument. If the CCW is -1, the
+
 call returns a LONGword reflecting the actual state of the caches.
 
+
+
 If the CCM is -1, a default bit-mask is returned, where any bit set
+
 indicates that a cache function defined by the same bit in the Cache Control
+
 Word is valid for the processor the MiNT is currently running on.
 
+
+
 If both arguments are negative, the call simply returns E_OK if it is valid
+
 at all, or ENOSYS otherwise. This is the acknowledge mode of the
+
 S_CTRLCACHE.
 
+
+
 Bits in either argument are defined as follows:
+
 !begin_verbatim
+
 0     Enable instruction cache
+
 1     Enable data cache
+
 2     Enable branch cache
+
 3     Freeze instruction cache
+
 4     Freeze data cache
+
 5     Instruction burst enable
+
 6     Data burst enable
+
 7     Enable write allocate
+
 8     Instruction cache full mode enable
+
 9     Instruction cache read/write allocate enable
+
 10    Data cache full mode enable
+
 11    Data cache read/write allocate enable
+
 12    Invalidate branch cache
+
 13    Invalidate branch cache user entries
+
 14    Enable CPUSH invalidate
+
 15    Enable store buffer
+
 16-31 Reserved for future definition
+
 !end_verbatim
+
 Note that no processor currently supports all of these functions and some
+
 (68000 and 68010) have no on-chip caches at all. To figure out what
+
 functions are valid for the actual CPU used, you should first request the
+
 default bit-mask using the inquire mode described above. Your program should
+
 save this mask, logically AND the (!I)arg2(!i) with it, then pass the result
+
 as the Cache Control Mask for a (!nolink [control]) mode call.
 
+
+
 Also note that the above bit definition does not exactly reflect the
+
 function and even position of actual bits in the physical Cache Control
+
 Register. The bits of either argument are arbitrarily assigned to particular
+
 cache functions, but their position and state are converted by the system
+
 before the Cache Control Register is written and after it is read, so that
+
 the user program can see always the same functions assigned to bits as above
+
 regardless of the physical configuration of the Cache Control Register.
 
+
+
 Since changing cache configuration is (!nolink [global]) and may severely
+
 affect system performance, root privileges are needed to use S_CTRLCACHE
+
 (!nolink [control]) mode.
 
+
+
 !label S_INITIALTPA
+
 !item [S_INITIALTPA(0x0018)]
+
 A positive non-zero value of (!I)arg1(!i) defines the default amount of
+
 memory (in bytes) allocated for TPA space, as in the INITIALMEM keyword of
+
 the mint.cnf file. A negative value allows one to interrogate the value
+
 currently set. A value of 0 is illegal and will cause the call to fail and
+
 return EBADARG. Note that even if you define a very small value, like 1 or 2
+
 bytes, the system will round this up to the smallest size of a memory block
+
 possible to allocate.
+
+
 
 Root privileges are required to use this mode.
 
+
+
 !label S_CAD
+
 !item [S_CAD(0x0019)]
+
 Reserved for future definition.
 
+
+
 !label S_CLOCKMODE
+
 !item [S_CLOCKMODE(0x0064)]
+
 S_CLOCKMODE(0x0064) S_CLOCKMODE called with an (!I)arg1(!i) of -1 inquires
+
 the kernel's notion of the hardware system clock. If the command returns a
+
 zero, the hardware clock is considered to tick in UTC; if it returns a
+
 positive non-zero value, it is considered to tick in local time. Any other
+
 positive value of (!I)arg1(!i) sets the current clock mode. On a 0 it is
+
 reset to UTC, or to local time otherwise.
 
+
+
 Although this call will never really change the setting of the hardware
+
 clock, due to the changed interpretation the clock seems to warp; don't play
+
 around too much with it.
 
+
+
 !label S_KNAME
+
 !item [S_KNAME(0x0384)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the full name and version of the system kernel. If
+
 the memory buffer is not long enough to hold the entire string, the string
+
 is truncated down to the buffer size.
 
+
+
 !label S_CNAME
+
 !item [S_CNAME(0x038e)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the full name of the compiler used to compile the
+
 system kernel. If the memory buffer is not long enough to hold the entire
+
 string, the string is truncated down to the buffer size.
+
+
 
 !label S_CVERSION
+
 !item [S_CVERSION(0x038f)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the version of the compiler used to compile the
+
 system kernel. If the memory buffer is not long enough to hold the entire
+
 string, the string is truncated down to the buffer size.
 
+
+
 !label S_CDEFINES
+
 !item [S_CDEFINES(0x0390)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written containing the compile time definitions (switches) used while
+
 compiling the system kernel. If the memory buffer is not long enough to hold
+
 the entire string, the string is truncated down to the buffer size.
+
+
 
 !label S_COPTIM
+
 !item [S_COPTIM(0x0391)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written containing the compile time optimization options used while
+
 compiling the system kernel. If the memory buffer is not long enough to hold
+
 the entire string, the string is truncated down to the buffer size.
 
+
+
 !label S_DEBUGLEVEL
+
 !item [S_DEBUGLEVEL(0x03e8)]
+
 S_DEBUGLEVEL called with an (!I)arg1(!i) of -1 inquires the kernel's current
+
 debug level. Any other positive value will set the current debug level. If
+
 it is a zero, the kernel will not output any debugging information, except
+
 for fatal error-messages. The higher the debug level, the more MiNT will
+
 spew about what it is doing.
 
+
+
 Note that special debug kernels will output more information than an
+
 ordinary distribution kernel.
+
+
 
 Root privileges are needed to change the debug level.
 
+
+
 !label S_DEBUGDEV
+
 !item [S_DEBUGDEV(0x03e9)]
+
 S_DEBUGDEV called with an (!I)arg1(!i) of -1 inquires the current
+
 (!nolink [BIOS]) device to output the debug information to. The order of
+
 defined (!nolink [BIOS]) devices is as follows:
+
 !begin_itemize !short
+
 !item  0, printer
+
 !item  1, AUX:
+
 !item  2, console (default)
+
 !item  3, MIDI
+
 !item  4, keyboard
+
 !item  5, raw screen
+
 !end_itemize
 
+
+
 Any positive value of (!I)arg1(!i), ranging from 0 to 9, will redirect the
+
 debug information output to an appropriate (!nolink [BIOS]) device. Notice
+
 however, that setting device 4 (keyboard) as a debug device does not make
+
 much sense and may produce undesired results. The system does not restrict
+
 this in any way though, just assuming that you know what you're doing.
+
+
 
 Root privileges are needed to change the debug device.
 
+
+
 !label S_TIOCMGET
+
 !item [S_TIOCMGET(0x54f8)]
+
 This mode is reserved for the internal and exclusive usage of the MiNT
+
 Library.
+
 !end_xlist
 
+
+
 Ssystem was first introduced as of MiNT version 1.14.6, but it is considered
+
 fully functional as of MiNT version 1.15.0 release.
 
+
+
 The S_OSHEADER opcode should be only used for fetching the (!nolink [TOS])
+
 version number when running MiNT versions below 1.15.0 release.
 
+
+
 The S_FLUSHCACHE, S_CTRLCACHE, S_DEBUGLEVEL and S_DEBUGDEV are supported as
+
 of MiNT version 1.15.1 release.
+
+
 
 You should never use Ssystem(S_TIOCMGET, ...); in your own programs.
 
+
+
 The Ssystem behaviour does not depend on the S_SECLEVEL settings.
 
+
+
 Any values returned by the kernel on reserved fields should be considered
+
 undocumented and no software should rely on them.
 
+
+
 It's strictly encouraged to access (!nolink [GEMDOS]) variables and system
+
 vectors via the Ssystem, because this way is considered safe for multi-user
+
 setups. For example, you can access the cookie jar pointer using the call
+
 Ssystem(S_GETLVAL, 0x05a0, NULL), though if (!nolink [TOS])-compatibility is
+
 the issue you should rather use (2, -1).
 
+
+
 Prior to any further Ssystem usage, your application should first check if
+
 the kernel supports this call. If it does, the Ssystem(-1, 0L, 0L); should
+
 return a zero.
 
+
+
 Ssystem is used and supported by the MiNT Library as of patchlevel 48.
+
+
 
 !item [(!nolink [Return]) value:]
 
+
+
 !item [Availability:]
+
 Available when a 'MiNT' cookie with a version of at least 1.15 exists.
 
+
+
 !item [Group:]
+
 System functions
 
+
+
 !item [See also:] (!link [Binding] [Bindings for Ssystem]) ~ 
+
         Tgettimeofday ~ Tsettimeofday
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings for Ssystem
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
 int32_t Ssystem ( int16_t mode, int32_t arg1, int32_t arg2 );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.l    arg2,-(sp)   ; Offset 8
+
 move.l    arg1,-(sp)   ; Offset 4
+
 move.w    mode,-(sp)   ; Offset 2
+
 move.w    #340,-(sp)   ; Offset 0
+
 trap      #1           ; GEMDOS
+
 lea       $0c(sp),sp   ; Correct stack
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
 !end_node
+
+
 
 !else
 
+
+
 !begin_node Ssystem
+
 (!begin_liste) [Beschreibung]
+
 !item [Name:]
+
 ØSsystemÆ - controlling Cookie Jar, memory access and various system settings.
+
 !item [Gemdosnummer:]
+
 340 (0x0154)
+
 !item [Deklaration:]
+
 int32_t Ssystem ( int16_t mode, int32_t arg1, int32_t arg2 );
 
+
+
 !item [Beschreibung:]
+
 The Ssystem call has been designed to make your life easier. Using this
+
 you can get some closer (!nolink [control]) on the system and the kernel itself. Via
+
 this call the kernel now supports e.g. an easy Cookie Jar management and
+
 provides a safe access to supervisor memory. It's strictly encouraged to
+
 access GEMDOS variables and system vectors via the Ssystem(), because this
+
 way is considered safe for multiuser setups.
 
+
+
 (!I)arg1(!i) and (!I)arg2(!i) are long parameters specific for a 
+
 particular mode. If a mode doesn't use a parameter, it is 
+
 usually ignored, but should be set to a zero for future compatibility. 
+
 mode specifies a particular action as follows:
 
+
+
 !begin_xlist [S_OSNAM]
+
 !item [mode] meaning
 
+
+
 !label S_INQUIRE
+
 !item [S_INQUIRE(0xffff)]
+
 Retunrs a zero if the kernel supports Ssystem. You can expect the function
+
 to be present if MiNT version at least 1.15 is detected.
 
+
+
 !label S_OSNAME
+
 !item [S_OSNAME(0x0000)]
+
 Identifies the operating system type. Returned longword contains a 
+
 32-bit positive number, which interpreted as an ASCII string gives a 
+
 4-character id. For MiNT the returned value is 0x4d694e54 
+
 ('MiNT').
 
+
+
 !label S_OSXNAME
+
 !item [S_OSXNAME(0x0001)]
+
 Identifies the subtype of the operating system. If this call 
+
 returns a zero or a negative value, that means, that no subtype is 
+
 available. Otherwise the returned value, when interpreted as an ASCII 
+
 string gives a 4-character subtype id. For FreeMiNT, being a 
+
 derivative of the MiNT, the returned value is 0x46726565 ('Free').
+
+
 
 If a subtype id is less than 4 characters long, it should be padded with zeros.
 
+
+
 !label S_OSVERSION
+
 !item [S_OSVERSION(0x0002)]
+
 Identifies the exact operating system version. Returned longword 
+
 contains a 32 bit positive version number encoded as follows: 
+
 !begin_verbatim
+
 bits  meaning
+
 ----  -------
+
 0-7   some printable character
+
       to characterize the current version,
+
       e.g.
+
       0x61 (`a') if alpha release,
+
       0x62 (`b') if beta release.
+
       For official releases you will
+
       always find a value of 0 here.
+
 8-15  patchlevel (0x55 for pl 88)
+
 16-23 minor version number (0x0e for x.14)
-24-31 major version number ($01 for 1.xx)
+
+24-31 major version number (0x01 for 1.xx)
+
 !end_verbatim
+
 Definition of an official release: every release for which in 
+
 bits 0-7 a value of 0 is returned...
 
+
+
 !label S_OSHEADER
+
 !item [S_OSHEADER(0x0003)]
+
 Allows to access the TOS header in order to get some 
+
 information from. Current implementation allows to access the first 
+
 256 longwords of the header. The address of the required longword, 
+
 relative to the begin address of the TOS header, has to be specified as 
+
 arg1. Only even values are allowed (bit 0 of the 
+
 arg1 is masked out by the kernel). Always a whole 
+
 longword is returned.
 
+
+
 !label S_OSBUILDDATE
+
 !item [S_OSBUILDDATE(0x0004)]
+
 Returns a 32 bit positive value with the build date encoded as follows:
+
 !begin_verbatim
+
 bits  meaning
+
 ----  -------
-0-15  binary year ($07dd for 1998)
-16-23 binary month ($0c for the December)
+
+0-15  binary year (0x07dd for 1998)
+
+16-23 binary month (0x0c for the December)
+
 24-31 binary day of the month 
+
 !end_verbatim
+
+
 
 !label S_OSBUILDTIME
+
 !item [S_OSBUILDTIME(0x0005)]
+
 Returns a 32 bit positive value with the build time encoded as 
+
 follows:
+
 !begin_verbatim
+
 bits  meaning
+
 ----  -------
+
 0-7   binary seconds
+
 8-15  binary minutes
+
 16-23 binary hours
+
 24-31 day of week
+
 !end_verbatim
+
 day of week has 1 for Monday, 2 for Tuesday... 7 for Sunday.
 
+
+
 The call should never return a zero in these bits, but if it 
+
 does, it should be interpreted as Sunday.
 
+
+
 !label S_OSCOMPILE
+
 !item [S_OSCOMPILE(0x0006)]
+
 Returns a 32-bit positive value specifying the primary CPU type the 
+
 kernel has been compiled for. Encoding:
+
 !begin_verbatim
+
 bits  meaning
+
 ----  -------
+
 0-7   binary minor CPU ID
+
 8-15  binary major CPU ID
+
 16-31 reserved for future definition.
+
 !end_verbatim
+
 The major ID identifies a particular series of processors. Currently 
-only a value of $00 is defined and it is assigned to Motorola 68k 
+
+only a value of 0x00 is defined and it is assigned to Motorola 68k 
+
 series. Other values of this field are reserved for future definition.
 
+
+
 The minor CPU ID interpretation depends on the major ID. For 
+
 68k series, values are as follows:
+
 !begin_verbatim
-$00 68000
-$0a 68010
-$14 68020
-$1e 68030
-$28 68040
-$3c 68060
+
+0x00 68000
+
+0x0a 68010
+
+0x14 68020
+
+0x1e 68030
+
+0x28 68040
+
+0x3c 68060
+
 !end_verbatim
+
 This is not the same as the _CPU cookie value. The 
+
 (!nolink [_CPU]) cookie specifies the CPU physically present in the 
+
 machine, while the S_OSCOMPILE indicates the processor 
+
 type selected at the time when the system was compiled. In other words, 
-running a 68000 compiled kernel will return a $00 here, even if the 
+
+running a 68000 compiled kernel will return a 0x00 here, even if the 
+
 machine is running 68040 or something.
 
+
+
 !label S_OSFEATURES
+
 !item [S_OSFEATURES(0x0007)]
+
 Returns a 32-bit positive value specifying the state of kernel 
+
 features. Encoding:
+
 !begin_verbatim
+
 bits  meaning
+
 ----  -------
+
 0     memory protection (1 = turned on)
+
 1     virtual memory (1 = turned on)
+
 2-31  reserved for future usage 
+
 !end_verbatim
+
 This call has an informative purpose only and you cannot toggle 
+
 anything with it.
 
+
+
 !label S_GETCOOKIE
+
 !item [S_GETCOOKIE(0x0008)]
+
 Fetches required information from the Cookie Jar.
 
+
+
 !begin_enumerate
+
 !item If arg1 is a value bigger than 65535 (0xffff), it is 
+
 interpreted as a tag id. The Cookie Jar is searched for such a tag, 
+
 then if the tag is found, the corresponding slot value is returned or 
+
 -1 otherwise.
 
+
+
 !item If arg1 is a value between 1 and 65535, it is 
+
 interpreted as a slot number, not a tag id.Then the corresponding tag 
+
 id is fetched and returned or a value of -1 if the specified slot is 
+
 free or does not exist at all (a slot number past the end of the Cookie 
+
 Jar was specified). The first slot in the Cookie Jar is considered 
+
 number 1.
 
+
+
 !item If arg1 is equal to a zero, then the Cookie Jar is 
+
 searched for the NULL cookie, then the corresponding slot value 
+
 is returned.
+
 !end_enumerate
+
 The place where the value fetched from the Cookie Jar will be returned 
+
 is defined by the arg2. If this is a zero, the call 
+
 returns its values in the GEMDOS return value (d0). If the 
+
 arg2 is not a zero, it is interpreted as a pointer to a 
+
 memory location, where the slot tag or its value should be written to. 
+
 The return value is 0 (E_OK) then, if everything went OK, or -1 
+
 otherwise.
 
+
+
 This behaviour (where arg2 != NULL) is not implemented in MiNT versions
+
 below 1.14.8.
 
+
+
 !label S_SETCOOKIE
+
 !item [S_SETCOOKIE(0x0009)]
+
 Places a tag id specified by the arg1 with the value of 
+
 the arg2 in the Cookie Jar. If a slot with the specified 
+
 tag id already exists, it will be replaced with the new value. 
+
 NULL cookie is reallocated automatically and its value is 
+
 adjusted. If there are no more free slots, no action is performed and 
+
 ENOMEM is returned instead.
 
+
+
 S_SETCOOKIE requires root euid, EACCES is returned otherwise and no action
+
 is performed.
 
+
+
 The call refuses to place a cookie (a value of -1 is returned) whose tag ID
+
 contains a zero-byte.
 
+
+
 !label S_GETLVAL
+
 !item [S_GETLVAL(0x000a)]
+
 Fetches and returns a LONGword from the address of supervisor area specified
+
 as a 16-bit, even, unsigned integer value passed as (!I)arg1(!i). Bit 0 and
+
 bits 16-31 are masked out (ignored). The call returns a zero if the value at
+
 the specified address has to be "hidden" from reading. Currently the hidden
+
 values are the initial PC value and the initial stack pointer value stored
-at $00000000 and $00000004 respectively. Reading a hidden value may require
+
+at 0x00000000 and 0x00000004 respectively. Reading a hidden value may require
+
 root euid.
+
+
 
 If the desired address is LONGword aligned, LONGwords can be also retrieved
+
 from the supervisor area using Setexc.
 
+
+
 !label S_GETWVAL
+
 !item [S_GETWVAL(0x000b)]
+
 Fetches and returns a word from the address of supervisor area specified as
+
 a 16-bit, even, unsigned integer value passed as (!I)arg1(!i). Bit 0 and
+
 bits 16-31 are masked out (ignored). The call returns a zero if the value at
+
 the specified address has to be "hidden" from reading. Currently the hidden
+
 values are the initial PC value and the initial stack pointer value stored
-at $00000000 and $00000004 respectively. Reading a hidden value may require
+
+at 0x00000000 and 0x00000004 respectively. Reading a hidden value may require
+
 root euid.
 
+
+
 !label S_GETBVAL
+
 !item [S_GETBVAL(0x000c)]
+
 Fetches and returns a byte from the address of supervisor area specified as
+
 a 16-bit unsigned integer value passed as (!I)arg1(!i). Bits 16-31 are
+
 masked out (ignored). The call returns a zero if the value at the specified
+
 address has to be "hidden" from reading. Currently the hidden values are the
-initial PC value and the initial stack pointer value stored at $00000000 and
-$00000004 respectively. Reading a hidden value may require root euid.
+
+initial PC value and the initial stack pointer value stored at 0x00000000 and
+
+0x00000004 respectively. Reading a hidden value may require root euid.
+
+
 
 !label S_SETLVAL
+
 !item [S_SETLVAL(0x000d)]
+
 Places a LONGword value specified by (!I)arg2(!i) at address specified as
+
 16-bit integer by (!I)arg1(!i). Bit 0 and bits 16-31 of the (!I)arg1(!i) are
+
 masked out (ignored). Since this call is designed to manipulate operating
+
 system variables located within the supervisor area (first 32k), it is
+
 restricted to root euid and returns EACCES if called by an unprivileged
+
 process.
 
+
+
 !label S_SETWVAL
+
 !item [S_SETWVAL(0x000e)]
+
 Places a word value specified by (!I)arg2(!i) at address specified as 16-bit
+
 integer by (!I)arg1(!i). Bit 0 and bits 16-31 of the (!I)arg1(!i) are masked
+
 out (ignored). Since this call is designed to manipulate operating system
+
 variables located within the supervisor area (first 32k), it is restricted
+
 for root euid and returns EACCES if called by an unprivileged process.
+
+
 
 !label S_SETBVAL
+
 !item [S_SETBVAL(0x000f)]
+
 Places a byte value specified by (!I)arg2(!i) at address specified as 16-bit
+
 integer by (!I)arg1(!i). Bits 16-31 of the (!I)arg1(!i) are masked out
+
 (ignored). Since this call is designed to manipulate operating system
+
 variables located within the supervisor area (first 32k), it is restricted
+
 for root euid and returns EACCES if called by an unprivileged process.
 
+
+
 !label S_SECLEVEL
+
 !item [S_SECLEVEL(0x0010)]
+
 Resets the current security level to a value specified by (!I)arg1(!i).
+
 Valid levels are as follows:
 
+
+
 0: none of hardware specific system calls are restricted. This is a
+
 'MultiTOS compatibility' mode.
 
+
+
 1: (!nolink [BIOS]) and (!nolink [XBIOS]) calls require root privileges; any
+
 call except Supexec and Super returns EACCES if called by an unprivileged
+
 process. This does not apply to Setexc, which sends SIGSYS to the caller if
+
 a change of an exception vector was attempted.
 
+
+
 2: as above, with except that (!nolink [Supexec]) and (!nolink [Super])
+
 generates (!nolink [SIGSYS]) in order to kill the calling process.
 
+
+
 On values bigger than 2, EACCES is returned. If (!I)arg1(!i) is equal to -1,
+
 the current security level value is returned.
 
+
+
 The call absolutely needs root privileges - user processes cannot even
+
 inquire the current security level value.
 
+
+
 !label S_RUNLEVEL
+
 !item [S_RUNLEVEL(0x0011)]
+
 Reserved for future definition.
 
+
+
 !label S_TSLICE
+
 !item [S_TSLICE(0x0012)]
+
 Allows setting/interrogating the (!nolink [global]) timeslice value. Values
+
 are exactly the same as for SLICES keyword in mint.cnf. If (!I)arg1(!i) is
+
 equal to -1, the call returns the current (!nolink [global]) timeslice
+
 value.
+
+
 
 Setting the timeslice requires root privileges.
 
+
+
 !label S_FORCEFASTLOAD
+
 !item [S_FORCEFASTLOAD(0x0013)]
+
 Allows changing the interpretation of the FASTLOAD bit in the program
+
 header.
 
+
+
 On Ssystem(S_FORCEFASTLOAD, 0L, 0L); the program header bit will be used as
+
 before, this is actually equal to FASTLOAD=NO in mint.cnf.
 
+
+
 On Ssystem(S_FORCEFASTLOAD, 1L, 0L); , the program header bit will be
+
 ignored and fastload will be forced for all programs.
 
+
+
 (!I)arg1(!i) = -1 allows interrogation of the current state of this
+
 variable.
+
+
 
 You need root privileges to toggle the FASTLOAD mode.
 
+
+
 !label S_SYNCTIME
+
 !item [S_SYNCTIME(0x0014)]
+
 Allows interrogation or changing the (!nolink [global]) file-system sync
+
 time. The default value is 5 sec.
 
+
+
 If (!I)arg1(!i) is a positive value, it is interpreted as a new sync time
+
 value.
 
+
+
 If (!I)arg1(!i) is equal to -1, the current sync time value will be
+
 returned.
 
+
+
 To be able to change the file-system sync time you must have root
+
 privileges.
 
+
+
 !label S_BLOCKCACHE
+
 !item [S_BLOCKCACHE(0x0015)]
+
 A positive value of (!I)arg1(!i) ranging from 0 to 100 specifies the
+
 percentage of file-system cache to be filled with linear reads, as in the
+
 PERCENTAGE keyword in the mint.cnf file. A negative value of (!I)arg1(!i)
+
 returns the currently set percentage value.
+
+
 
 Root privileges are required to use this mode.
 
+
+
 !label S_FLUSHCACHE
+
 !item [S_FLUSHCACHE(0x0016)]
+
 Invalidates CPU cache entries. (!I)arg1(!i) is a pointer to the memory area
+
 whose cache entries should be invalidated, (!I)arg2(!i) is the size of the
+
 area in bytes. Passing -1 as (!I)arg2(!i) invalidates all cache entries. If
+
 the CPU features separate instruction and data caches, both are flushed.
 
+
+
 This call automatically recognizes caches in 68020/030/040/060 and handles
+
 them as appropriate. The 68060 branch cache is automatically invalidated
+
 too. On 68000/68010 calling this mode has no effect. This mode is in fact
+
 just an interface to the MiNT function cpush used internally by the system.
+
+
 
 Root privileges are NOT required to use this mode.
 
+
+
 !label S_CTRLCACHE
+
 !item [S_CTRLCACHE(0x0017)]
+
 Provides an universal (among 68k family members) way of controlling the CPU
+
 on-chip caches. (!I)arg1(!i), referenced as Cache Control Word (CCW), is a
+
 bit-field where each bit enables (if 1) or disables (if 0) a particular
+
 function of CPU caches. (!I)arg2(!i), referenced as Cache Control Mask
+
 (CCM), is a bit-mask where you define (by setting appropriate bits to 1)
+
 which bits of the Cache Control Word should be actually taken into account
+
 and written into the Cache Control Register (CACR). This is the
+
 (!nolink [control]) mode of the S_CTRLCACHE.
 
+
+
 In inquire mode you can pass -1 as either argument. If the CCW is -1, the
+
 call returns a LONGword reflecting the actual state of the caches.
 
+
+
 If the CCM is -1, a default bit-mask is returned, where any bit set
+
 indicates that a cache function defined by the same bit in the Cache Control
+
 Word is valid for the processor the MiNT is currently running on.
 
+
+
 If both arguments are negative, the call simply returns E_OK if it is valid
+
 at all, or ENOSYS otherwise. This is the acknowledge mode of the
+
 S_CTRLCACHE.
 
+
+
 Bits in either argument are defined as follows:
+
 !begin_verbatim
+
 0     Enable instruction cache
+
 1     Enable data cache
+
 2     Enable branch cache
+
 3     Freeze instruction cache
+
 4     Freeze data cache
+
 5     Instruction burst enable
+
 6     Data burst enable
+
 7     Enable write allocate
+
 8     Instruction cache full mode enable
+
 9     Instruction cache read/write allocate enable
+
 10    Data cache full mode enable
+
 11    Data cache read/write allocate enable
+
 12    Invalidate branch cache
+
 13    Invalidate branch cache user entries
+
 14    Enable CPUSH invalidate
+
 15    Enable store buffer
+
 16-31 Reserved for future definition
+
 !end_verbatim
+
 Note that no processor currently supports all of these functions and some
+
 (68000 and 68010) have no on-chip caches at all. To figure out what
+
 functions are valid for the actual CPU used, you should first request the
+
 default bit-mask using the inquire mode described above. Your program should
+
 save this mask, logically AND the (!I)arg2(!i) with it, then pass the result
+
 as the Cache Control Mask for a (!nolink [control]) mode call.
 
+
+
 Also note that the above bit definition does not exactly reflect the
+
 function and even position of actual bits in the physical Cache Control
+
 Register. The bits of either argument are arbitrarily assigned to particular
+
 cache functions, but their position and state are converted by the system
+
 before the Cache Control Register is written and after it is read, so that
+
 the user program can see always the same functions assigned to bits as above
+
 regardless of the physical configuration of the Cache Control Register.
 
+
+
 Since changing cache configuration is (!nolink [global]) and may severely
+
 affect system performance, root privileges are needed to use S_CTRLCACHE
+
 (!nolink [control]) mode.
 
+
+
 !label S_INITIALTPA
+
 !item [S_INITIALTPA(0x0018)]
+
 A positive non-zero value of (!I)arg1(!i) defines the default amount of
+
 memory (in bytes) allocated for TPA space, as in the INITIALMEM keyword of
+
 the mint.cnf file. A negative value allows one to interrogate the value
+
 currently set. A value of 0 is illegal and will cause the call to fail and
+
 return EBADARG. Note that even if you define a very small value, like 1 or 2
+
 bytes, the system will round this up to the smallest size of a memory block
+
 possible to allocate.
+
+
 
 Root privileges are required to use this mode.
 
+
+
 !label S_CAD
+
 !item [S_CAD(0x0019)]
+
 Reserved for future definition.
 
+
+
 !label S_CLOCKMODE
+
 !item [S_CLOCKMODE(0x0064)]
+
 S_CLOCKMODE(0x0064) S_CLOCKMODE called with an (!I)arg1(!i) of -1 inquires
+
 the kernel's notion of the hardware system clock. If the command returns a
+
 zero, the hardware clock is considered to tick in UTC; if it returns a
+
 positive non-zero value, it is considered to tick in local time. Any other
+
 positive value of (!I)arg1(!i) sets the current clock mode. On a 0 it is
+
 reset to UTC, or to local time otherwise.
 
+
+
 Although this call will never really change the setting of the hardware
+
 clock, due to the changed interpretation the clock seems to warp; don't play
+
 around too much with it.
 
+
+
 !label S_KNAME
+
 !item [S_KNAME(0x0384)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the full name and version of the system kernel. If
+
 the memory buffer is not long enough to hold the entire string, the string
+
 is truncated down to the buffer size.
 
+
+
 !label S_CNAME
+
 !item [S_CNAME(0x038e)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the full name of the compiler used to compile the
+
 system kernel. If the memory buffer is not long enough to hold the entire
+
 string, the string is truncated down to the buffer size.
+
+
 
 !label S_CVERSION
+
 !item [S_CVERSION(0x038f)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written identifying the version of the compiler used to compile the
+
 system kernel. If the memory buffer is not long enough to hold the entire
+
 string, the string is truncated down to the buffer size.
 
+
+
 !label S_CDEFINES
+
 !item [S_CDEFINES(0x0390)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written containing the compile time definitions (switches) used while
+
 compiling the system kernel. If the memory buffer is not long enough to hold
+
 the entire string, the string is truncated down to the buffer size.
+
+
 
 !label S_COPTIM
+
 !item [S_COPTIM(0x0391)]
+
 (!I)arg1(!i) and (!I)arg2(!i) specify the address and length in bytes,
+
 respectively, of a memory buffer where a NULL-terminated ASCII string will
+
 be written containing the compile time optimization options used while
+
 compiling the system kernel. If the memory buffer is not long enough to hold
+
 the entire string, the string is truncated down to the buffer size.
 
+
+
 !label S_DEBUGLEVEL
+
 !item [S_DEBUGLEVEL(0x03e8)]
+
 S_DEBUGLEVEL called with an (!I)arg1(!i) of -1 inquires the kernel's current
+
 debug level. Any other positive value will set the current debug level. If
+
 it is a zero, the kernel will not output any debugging information, except
+
 for fatal error-messages. The higher the debug level, the more MiNT will
+
 spew about what it is doing.
 
+
+
 Note that special debug kernels will output more information than an
+
 ordinary distribution kernel.
+
+
 
 Root privileges are needed to change the debug level.
 
+
+
 !label S_DEBUGDEV
+
 !item [S_DEBUGDEV(0x03e9)]
+
 S_DEBUGDEV called with an (!I)arg1(!i) of -1 inquires the current
+
 (!nolink [BIOS]) device to output the debug information to. The order of
+
 defined (!nolink [BIOS]) devices is as follows:
+
 !begin_itemize !short
+
 !item  0, printer
+
 !item  1, AUX:
+
 !item  2, console (default)
+
 !item  3, MIDI
+
 !item  4, keyboard
+
 !item  5, raw screen
+
 !end_itemize
 
+
+
 Any positive value of (!I)arg1(!i), ranging from 0 to 9, will redirect the
+
 debug information output to an appropriate (!nolink [BIOS]) device. Notice
+
 however, that setting device 4 (keyboard) as a debug device does not make
+
 much sense and may produce undesired results. The system does not restrict
+
 this in any way though, just assuming that you know what you're doing.
+
+
 
 Root privileges are needed to change the debug device.
 
+
+
 !label S_TIOCMGET
+
 !item [S_TIOCMGET(0x54f8)]
+
 This mode is reserved for the internal and exclusive usage of the MiNT
+
 Library.
+
 !end_xlist
 
+
+
 Ssystem was first introduced as of MiNT version 1.14.6, but it is considered
+
 fully functional as of MiNT version 1.15.0 release.
 
+
+
 The S_OSHEADER opcode should be only used for fetching the (!nolink [TOS])
+
 version number when running MiNT versions below 1.15.0 release.
 
+
+
 The S_FLUSHCACHE, S_CTRLCACHE, S_DEBUGLEVEL and S_DEBUGDEV are supported as
+
 of MiNT version 1.15.1 release.
+
+
 
 You should never use Ssystem(S_TIOCMGET, ...); in your own programs.
 
+
+
 The Ssystem behaviour does not depend on the S_SECLEVEL settings.
 
+
+
 Any values returned by the kernel on reserved fields should be considered
+
 undocumented and no software should rely on them.
 
+
+
 It's strictly encouraged to access (!nolink [GEMDOS]) variables and system
+
 vectors via the Ssystem, because this way is considered safe for multi-user
+
 setups. For example, you can access the cookie jar pointer using the call
+
 Ssystem(S_GETLVAL, 0x05a0, NULL), though if (!nolink [TOS])-compatibility is
+
 the issue you should rather use (2, -1).
 
+
+
 Prior to any further Ssystem usage, your application should first check if
+
 the kernel supports this call. If it does, the Ssystem(-1, 0L, 0L); should
+
 return a zero.
+
+
 
 Ssystem is used and supported by the MiNT Library as of patchlevel 48.
 
+
+
 !item [Ergebnis:]
 
+
+
 !item [VerfÅgbar:]
+
 Available when a 'MiNT' cookie with a version of at least 1.15 exists.
 
+
+
 !item [Gruppe:]
+
 Systemfunktionen
 
+
+
 !item [Querverweis:] (!link [Binding] [Bindings fÅr Ssystem]) ~ 
+
 				Tgettimeofday ~ Tsettimeofday
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings fÅr Ssystem
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
 int32_t Ssystem ( int16_t mode, int32_t arg1, int32_t arg2 );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.l    arg2,-(sp)   ; Offset 8
+
 move.l    arg1,-(sp)   ; Offset 4
+
 move.w    mode,-(sp)   ; Offset 2
+
 move.w    #340,-(sp)   ; Offset 0
+
 trap      #1           ; GEMDOS aufrufen
+
 lea       $0c(sp),sp   ; Stack korrigieren
+
 !end_verbatim
+
 (!ende_liste)
-!end_node
+
 !end_node
 
+!end_node
+
+
+
 !endif
+

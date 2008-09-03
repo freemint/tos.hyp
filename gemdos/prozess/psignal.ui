@@ -1,197 +1,394 @@
 !iflang [english]
 
+
+
 !begin_node Psignal
+
 (!begin_liste) [Availability]
+
 !item [Name:]
+
 ØPsignalÆ - Alter manner of signal handling.
+
 !item [Opcode:]
+
 274
+
 !item [Syntax:]
+
 int32_t Psignal ( int16_t sig, int32_t handler );
 
+
+
 !item [Description:]
+
 The function Psignal alters the action to be taken when the signal
+
 (!I)sig(!i) arrives. The parameter (!I)handler(!i) can assume 3 possible
+
 values:
+
 !begin_xlist !short [handler]
+
 !item [handler]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [0]
+
 The signal will be answered with the default action
+
 !item [1]
+
 The signal will be ignored by the process; if currently present, it will be
+
 deleted
+
 !end_xlist
+
 Any other value will be interpreted as the address of a user function that
+
 will be called when the signal (!I)sig(!i) appears. This function is passed
+
 a LONG value (via the stack) that corresponds to the signal number. In this
+
 way it is possible to use the signal-handler for several signals.
 
+
+
 While a signal is being processed, it cannot be sent again. Furthermore, one
+
 should note that (in contrast to some Unix versions) the signal handling
+
 before the execution of the handler is not reset to the default handler.
 
+
+
 The signal-handler must either be terminated with RTS ((!B)R(!b)eturn
+
 (!B)T(!b)o (!B)S(!b)ender), or Psigreturn called to indicate that the signal
+
 handling has been concluded. Following this, the blocking of the signal will
+
 be lifted. (!nolink [Psigreturn]) additionally performs some internal
+
 mopping up in the kernel, necessary in case the signal-handler is not
+
 terminated (longjump).
 
+
+
 Signal-handlers can make any (!nolink [BIOS]), (!nolink [XBIOS]) and
+
 (!nolink [GEMDOS]) calls. (!nolink [AES]) or (!nolink[VDI]) calls on the
+
 other hand are not permitted. However this does not apply in MagiC; here
+
 one needs to heed several differences.
 
+
+
 A Psigaction call has the side effect that the signal will be unmasked (i.e.
+
 released). In this way a process, while handling a signal, can reset it and
+
 then send it to itself again - for instance to suspend itself while a signal
+
 for job-(!nolink [control]) is processed. The signal handling is secured
+
 against Pfork/Pvfork.
 
+
+
 (!nolink [Signals]) that are ignored by a process will also be ignored by
+
 its child after a Pexec call. Additionally, signals that are intercepted by
+
 a signal-handler will be reset in the child process to the default value.
 
+
+
 !item [(!nolink [Return]) value:]
+
 The function returns the old value of the signal-handler. This is either 0,
+
 1 or the address of the handler.
 
+
+
 Im case of error, the following results are returned:
+
 !begin_xlist !short [ERANGE:]
+
 !item [EACCDN:]
+
 Signal cannot be intercepted by the user
+
 !item [ERANGE:]
+
 (!I)sig(!i) is an invalid signal
+
 !end_xlist
 
+
+
 !item [Availability:]
+
 This function is available under all MiNT versions integrated with MultiTOS
+
 and (!nolink [MagiC]) as of Version 4.50.
 
+
+
 !item [Group:]
+
 Process Functions
 
+
+
 !item [See also:] (!link [Binding] [Bindings for Psignal]) ~ Pkill  ~
-          Psigaction ~  Psigblock ~  Psigreturn ~ Signale
+
+          Psigaction ~  Psigblock ~  Psigreturn ~ Signals
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings for Psignal
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
 int32_t Psignal ( int16_t sig, int32_t handler );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.l    handler,-(sp)  ; Offset 4
+
 move.w    sig,-(sp)      ; Offset 2
+
 move.w    #274,-(sp)     ; Offset 0
+
 trap      #1             ; GEMDOS
+
 addq.l    #8,sp          ; Correct stack
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
 !end_node
+
+
 
 !else
 
+
+
 !begin_node Psignal
+
 (!begin_liste) [Beschreibung]
+
 !item [Name:]
+
 ØPsignalÆ - Art der Signalbehandlung verÑndern.
+
 !item [Gemdosnummer:]
+
 274
+
 !item [Deklaration:]
+
 int32_t Psignal ( int16_t sig, int32_t handler );
 
+
+
 !item [Beschreibung:]
+
 Die Funktion Ñndert die Art und Weise, wie auf das Signal (!I)sig(!i)
+
 reagiert werden soll. Der Parameter (!I)handler(!i) kann 3 verschiedene
+
 Werte annehmen:
+
 !begin_xlist !short [handler]
+
 !item [handler]
+
 Bedeutung
+
 !item [~]
+
 ~
+
 !item [0]
+
 Das Signal wird mit der Default-Aktion beantwortet.
+
 !item [1]
+
 Das Signal wird ignoriert. Liegt es gerade an, so wird es gelîscht.
+
 !end_xlist
+
 Jeder andere Wert wird als die Adresse einer Benutzerfunktion interpretiert,
+
 die beim Auftreten des Signals (!I)sig(!i) aufgerufen wird. Dieser Funktion
+
 wird (Åber den Stack) ein Long-Wert Åbergeben, welcher der Signalnummer
+
 entspricht. Auf diese Art ist es mîglich, den Signal-Handler fÅr mehrere
+
 Signale zu benutzen.
 
+
+
 Solange ein Signal bearbeitet wird, kann es nicht erneut gesendet werden. Zu
+
 beachten ist ferner, daû (im Gegensatz zu einigen Unix-Versionen) das
+
 Signal-Handling vor der AusfÅhrung des Handlers nicht auf den
+
 Default-Handler zurÅckgesetzt wird.
 
+
+
 Der Signalhandler muû entweder mit RTS (Return to Sender) beendet werden,
+
 oder Psigreturn aufrufen, um anzuzeigen, daû die Signalbehandlung
+
 abgeschlossen ist. Anschlieûend wird die Blockierung des Signals aufgehoben.
+
 (!nolink [Psigreturn]) fÅhrt zusÑtzlich einige interne SÑuberungen des Kernels durch,
+
 die notwendig sind, falls der Signal-Handler nicht beendet wird (longjump).
 
+
+
 Signalhandler kînnen beliebige BIOS, XBIOS und GEMDOS Aufrufe machen. AES-
+
 oder VDI-Aufrufe sind hingegen nicht gestattet.  Dies gilt jedoch nicht in
+
 MagiC; hier gibt es einige Unterschiede zu beachten.
 
+
+
 Ein Aufruf von Psignal hat den Nebeneffekt, daû das Signal demaskiert (d.h.
+
 freigegeben) wird. So kann ein Prozess beim Abarbeiten eines Signals dieses
+
 zurÅcksetzen und es sich erneut zusenden, um sich beispielsweise selbst zu
+
 suspendieren, wÑhrend ein Signal fÅr Job-Control bearbeitet wird. Die
+
 Signalbearbeitung ist gegenÅber Pfork/Pvfork abgesichert.
 
+
+
 Signale, die von einem Prozess ignoriert werden, werden auch vom Child nach
+
 einem Pexec-Aufruf ignoriert. Auûerdem werden Signale, die von einem
+
 Signal-Handler abgefangen werden, im Child-Prozess auf den Defaultwert
+
 zurÅckgesetzt.
 
+
+
 !item [Ergebnis:]
+
 Die Funktion liefert den alten Wert des Signal-Handlers zurÅck. Dies ist
+
 entweder 0, 1 oder die Adresse des Handlers.
 
+
+
 Im Fehlerfall werden folgende Werte zurÅckgeliefert:
+
 !begin_xlist !short [ERANGE:]
+
 !item [EACCDN:]
+
 das Signal kann nicht abgefangen werden.
+
 !item [ERANGE:]
+
 (!I)sig(!i) ist kein gÅltiges Signal.
+
 !end_xlist
 
+
+
 !item [VerfÅgbar:]
+
 This function is available under all MiNT versions integrated with MultiTOS
+
 and (!nolink [MagiC]) since Version 4.50
 
+
+
 !item [Gruppe:]
+
 Prozessfunktionen
 
+
+
 !item [Querverweis:] (!link [Binding] [Bindings fÅr Psignal]) ~ Pkill  ~
+
 					Psigaction ~  Psigblock ~  Psigreturn ~ Signale
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings fÅr Psignal
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
 int32_t Psignal ( int16_t sig, int32_t handler );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.l    handler,-(sp)  ; Offset 4
+
 move.w    sig,-(sp)      ; Offset 2
+
 move.w    #274,-(sp)     ; Offset 0
+
 trap      #1             ; GEMDOS aufrufen
+
 addq.l    #8,sp          ; Stack korrigieren
+
 !end_verbatim
+
 (!ende_liste)
-!end_node
+
 !end_node
 
+!end_node
+
+
+
 !endif
+
