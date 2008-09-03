@@ -1,338 +1,676 @@
 !iflang [english]
 
+
+
 !begin_node Threads in MagiC
 
+
+
 The concept of threads enables a sort of parallel working (!I)within(!i) an
+
 application, and has been known for some time in operating systems
+
 such as OS/2, MacOS or UNIX. In contrast to normal multitasking, it
+
 is possible for (!I)several(!i) threads to belong to a program (or process).
+
 In (!nolink [MagiC]) threads are supported from version 4.50 (01.04.96) onwards,
+
 and are implemented as an application, i.e. a thread under (!nolink [MagiC])
+
 posseses its own application ID. The concept here is based on that
+
 of Sun Solaris 2.x.
+
+
 
 This section describes the following points:
 
+
+
 !begin_itemize !short
+
 !item (!link [Creation of a thread][Threads, Creation of])
+
 !item (!link [Ending a thread] [Threads, Ending of])
+
 !item Threads and signals
+
 !item Threads and AES calls
+
 !item Threads and VDI calls
+
 !item (!link [Apportionment of resources] [Apportionment of resources with threads])
+
 !end_itemize
 
+
+
 See Also: About the GEMDOS ~
+
 Process functions  ~
+
 (!link [Example][Threads, Example for])
+
+
+
 
 
 !begin_node Threads and signals
 
+
+
 If a process is paused with the signal SIGSTOP or similar then all
+
 threads are paused as well; with SIGCONT all threads are reawakened.
+
 When terminating a program with SIGTERM, SIGKILL etc. all threads
+
 are terminated too.
 
+
+
 The signal handling will be taken over entirely by the main thread,
+
 i.e. the one that was started with Pexec. This means that during the
+
 processing of a signal-handler only the main thread will be paused,
+
 and at Psigreturn one will jump back to it.
 
+
+
 If more than one thread is mucking about with the signal mask then
+
 oddities can occur if the old signal mask is not restored in the
+
 correct order. For instance:
 
+
+
 !begin_verbatim
+
 Thread A rescues the old mask
+
 Thread A alters the mask
+
 Thread B rescues the old mask
+
 Thread A restores the old mask
+
 Thread B restores the old mask
+
 !end_verbatim
 
+
+
 This alters the signal mask in an unwanted manner. A clean solution
+
 would be to give each thread its (!I)own(!i) signal mask and OR-combine all
+
 masks of all threads for the (!I)effective(!i) signal mask. If this becomes
+
 necessary the author has said he will alter the kernel appropriately.
 
+
+
 See Also: Threads in MagiC ~ Signals ~ shel_write ~
+
 Process functions
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Threads and AES calls
 
+
+
 In the development of users' own programs, it is imperative that a
+
 multithread-safe library is used. The standard libraries of, say,
+
 (!I)Pure-C(!i) are largely unusable in this respect. In particular one must
+
 ensure that each thread is assigned its own global field. Hence the
+
 following functions are affected:
 
+
+
 !begin_itemize !short
+
 !item appl_init
+
 !item rsrc_free
+
 !item rsrc_gaddr
+
 !item rsrc_load
+
 !item rsrc_rcfix
+
 !item rsrc_saddr
+
 !end_itemize
 
+
+
 (!B)Note:(!b) The original MagiC documentation contains examples for
+
 multithread-capable (!nolink [AES]) functions, on whose structure one may orient
+
 oneself. One should also note that the name of a thread is (!I)invalid(!i) on
+
 the (!nolink [AES plane]), i.e. it (!I)cannot(!i) be found with appl_find or
+
 appl_search.
 
+
+
 See Also: (!nl)
+
 Threads and VDI calls ~ Process functions ~ AES bindings ~ Signals
+
 !end_node
+
+
+
 
 
 !include magic\threads\vdi.u
 
 
+
+
+
 !begin_node Apportionment of resources with threads
 
+
+
 In MagiC, threads run in the same process, but possess their own
+
 application ID, and so are a self-contained task. The following table
+
 gives an overview of the resources that a thread possesses itself, or
+
 uses from the main program.
 
+
+
 !begin_table [l l]
+
 Threads possess !! The main program uses
+
 !hline
+
 ù User stack               !! ù File handles
+
 ù Supervisor stack         !! ù Basepage
+
 ù Application ID         !! ù Memory blocks
+
 ù Resource files        !! ù Current directories, current drive
+
 ù Menu bar               !! ù Process ID (PID)
+
 ù Desktop background     !! ù Domain (MiNT/(!nolink [TOS]))
+
 ù Window                 !! ù umask
+
 ù Message queue           !! ù Current (!nolink [DTA])
+
 ù Mouse pointer              !! ù Malloc flags
+
 ù Possibly VT52 window (selectable) !! ù Command line and environment
+
 ù etv_term vector         !! ù Signal-handler and -mask
+
 ù Semaphores              !! ù Possibly VT52 window (selectable)
+
 !end_table
 
+
+
 (!B)Note:(!b) As one can see, a thread thereby receives its (!I)own(!i) AP_TERM
+
 message. When using resource files, one should pay attention to the
+
 fact that the thread may use its own global field if necessary.
 
+
+
 One should also note that any memory that the thread may allocate
+
 belongs to the process, and at termination of the thread is (!I)not(!i)
+
 freed automatically; the same applies to opened files, which are
+
 only closed on termination of the program; if necessary, this must
+
 be undertaken by the thread.
+
+
 
 (!B)Warning:(!b) It is imperative to note that:
 
+
+
 !begin_itemize
+
 !item No DTA is used, as the functions Fsfirst, Fsnext, Fsetdta and
+
      Fgetdta are (!I)not(!i) multithread-safe
+
 !item Accesses to file handles are synchronized by suitable methods.
+
      Two threads may not access the same file simultaneously
+
 !end_itemize
 
+
+
 The function Psemaphore is already prepared for threads, and can be
+
 used both for synchronization between processes as well as between
+
 several threads of a process. On termination of a thread, all the
+
 semaphores blocked by this will be released again automatically.
 
+
+
 If possible, only the main thread should execute a Pexec at present,
+
 but not subsidiary threads. Theoretically this is permitted, however,
+
 namely when no other thread or the main thread has called (!nolink [Pexec]),
+
 and the main thread does not terminate itself.
 
+
+
 The problem lies, simply, in the fact that at present the jump-back
-addresses with @{"Pexec" ignore} are stored not in the running process but in the
+
+addresses with (!nolink [Pexec]) are stored not in the running process but in the
+
 parent, and the parent of the process started by the thread becomes
+
 invalid.
 
+
+
 If a thread performs the function Pterm, then at present only this
+
 thread is terminated. One should note also that a thread may start
+
 other programs with shel_write (in parallel), and wait on their
+
 termination.
 
-See Also:
+
+
+See Also: (!nl)
+
 Threads and AES calls ~ Threads and VDI calls ~
+
 Process functions  ~ About the GEMDOS
+
 !end_node
+
+
 
 !include magic\threads\example.ui
 
+
+
 !end_node
+
+
 
 !else
 
+
+
 !begin_node Threads in MagiC
 
+
+
 Das Konzept der Threads erm”glicht Quasi-Parallelit„t (!I)innerhalb(!i)
+
 einer Anwendung, und ist unter Betriebssystemen wie OS/2, MacOS oder UNIX
+
 schon l„nger bekannt. Im Gegensatz zum normalen Multitasking k”nnen dabei
+
 (!I)mehrere(!i) Threads zu einem Programm (bzw. Prozess) geh”ren. In MagiC
+
 werden Threads ab der Version 4.50 (01.04.96) untersttzt, und sind als
+
 Applikation implementiert, d.h. ein Thread besitzt unter (!nolink [MagiC]) eine eigene
+
 Applikations-ID. Das Konzept lehnt sich dabei an das von Sun Solaris 2.x an.
+
+
 
 Dieser Abschnitt beschreibt die folgenden Punkte:
 
+
+
 !begin_itemize !short
+
 !item (!link [Erstellen eines Threads][Threads, Erzeugen von])
+
 !item (!link [Beenden eines Threads] [Threads, Beenden von])
+
 !item (!link [Signale und Threads] [Threads und Signale])
+
 !item Threads und AES-Aufrufe
+
 !item Threads und VDI-Aufrufe
+
 !item (!link [Verteilung der Resourcen] [Verteilung der Resourcen bei Threads])
+
 !end_itemize
 
+
+
 Querverweis: GEMDOS ~
+
 Prozessfunktionen  ~
+
 (!link [Beispiel-Code][Threads, Beispiel-Code zu])
+
+
+
 
 
 !begin_node Threads und Signale
 
+
+
 Beim Zusammenspiel von (!nolink [Threads]) und Signalen ist folgendes zu beachten:
+
 wird ein Prozess (z.B. per (!nolink [SIGSTOP])) angehalten, so werden auch alle
+
 zugeh”rigen Threads angehalten; durch das (!nolink [SIGCONT])-Signal k”nnen alle Threads
+
 wieder aufgeweckt werden. Falls ein Prozess per SIGTERM oder SIGKILL beendet
+
 wird, werden auch alle betroffenen Threads automatisch terminiert.
 
+
+
 Die Signalbehandlung wird immer nur vom Haupt-Thread bernommen; dies ist
+
 derjenige, der mit Pexec gestartet worden ist. W„hrend der Abarbeitung eines
+
 Signalhandlers wird deshalb auch nur der Haupt-Thread angehalten, und bei
+
 einem Aufruf von Psigreturn in diesen zurckgesprungen.
 
+
+
 (!B)Achtung:(!b) Falls mehr als ein Thread die Signalmaske manipuliert, kann
+
 es zu Unstimmigkeiten kommen, falls die Maske nicht in der richtigen
+
 Reihenfolge wieder zurckgesetzt wird. Beispiel:
 
+
+
 !begin_verbatim
+
 Thread-A rettet alte Maske
+
 Thread-A „ndert Maske
+
 Thread-B rettet alte Maske
+
 Thread-A restauriert alte Maske
+
 Thread-B restauriert alte Maske
+
 !end_verbatim
 
+
+
 In diesem Fall wird die Signalmaske ungewollt ver„ndert. Eine L”sung dieses
+
 Problems besteht darin, jedem Thread eine (!I)eigene(!i) Signalmaske
+
 zuzuteilen, und als (!I)effektive(!i) Signalmaske die Masken aller Threads
+
 durch eine Oder-Verknpfung zu verbinden. M”glicherweise wird das in einer
+
 sp„teren Version von MagiC tats„chlich der Fall sein.
 
+
+
 Querverweis: Threads in MagiC ~   Signale ~  shel_write ~
+
 Prozessfunktionen
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Threads und AES-Aufrufe
 
+
+
 Bei der Entwicklung von eigenen Programmen muss unbedingt darauf geachtet
+
 werden, da eine Multithread-sichere Bibliothek verwendet wird. Die
+
 Standardbibliotheken von (!I)Pure-C(!i) etwa sind in weiten Teilen
+
 diesbezglich unbrauchbar. Es muss inbesondere darauf geachtet werden, da
+
 jeder Thread sein eigenes global-Feld erh„lt. Betroffen sind daher die
+
 folgenden Funktionen:
 
+
+
 !begin_itemize !short
+
 !item appl_init
+
 !item rsrc_free
+
 !item rsrc_gaddr
+
 !item rsrc_load
+
 !item rsrc_rcfix
+
 !item rsrc_saddr
+
 !end_itemize
 
+
+
 (!B)Hinweis:(!b) Die original MagiC Dokumentation enth„lt Beispiele fr
+
 Multithread f„hige AES-Funktionen, an deren Aufbau man sich orientieren
+
 kann. Beachtet werden sollte noch, da der Name eines Threads auf (!nolink [AES-Ebene])
+
 (!I)ungltig(!i) ist, d.h. er kann (!I)nicht(!i) per appl_find oder
+
 appl_search gefunden werden.
 
+
+
 Querverweis: (!nl)
+
 Threads und VDI-Aufrufe ~  Prozessfunktionen ~
+
 AES-Bindings       ~       Signale
+
 !end_node
+
+
+
 
 
 !include magic\threads\vdi.u
 
 
+
+
+
 !begin_node Verteilung der Resourcen bei Threads
 
+
+
 In MagiC laufen Threads auf demselben Prozess, besitzen jedoch eine eigene
+
 Applikations-ID, und sind somit eine selbstst„ndige Task. Die folgende
+
 Tabelle gibt eine šbersicht ber die Resourcen, die ein Thread selbst
+
 besitzt, bzw. vom Hauptprogramm benutzt.
 
+
+
 !begin_table [l l]
+
 Threads besitzen !! vom Hauptprogramm wird benutzt
+
 !hline
+
 ù Userstack               !! ù Dateihandles
+
 ù Supervisor-Stack         !! ù Basepage
+
 ù Applikations-ID         !! ù Speicherbl”cke
+
 ù Resource-Dateien        !! ù aktuelles Laufwerk/Verzeichnisse
+
 ù Menzeile               !! ù Prozess-ID (PID)
+
 ù Desktop-Hintergrund     !! ù Domain (MiNT bzw. TOS)
+
 ù Fenster                 !! ù umask
+
 ù Message Queue           !! ù aktuelle (!nolink [DTA])
+
 ù Mauszeiger              !! ù Malloc-Flags
+
 ù VT52-Fenster (optional) !! ù Kommandozeile und Environment
+
 ù etv_term-Vektor         !! ù Signal-Handler und -maske
+
 ù Semaphoren              !! ù VT52-Fenster (optional)
+
 !end_table
 
+
+
 (!B)Hinweis:(!b) Wie man sieht erh„lt ein Thread damit z.B. eine
+
 (!I)eigene(!i) AP_TERM Nachricht. Bei der Verwendung von Resource-Dateien
+
 ist darauf zu achten, da ggfs. ein eigenes global-Feld benutzt wird.
 
+
+
 Zu beachten ist ferner, da Speicher, den der Thread alloziert, dem Prozess
+
 geh”rt, und bei Beendigung des Threads (!I)nicht(!i) automatisch freigegeben
+
 wird; gleiches gilt fr ge”ffnete Dateien, die erst bei der
+
 Programmbeendigung geschlossen werden. Dies muss deshalb ggfs. vom Thread
+
 bernommen werden.
+
+
 
 (!B)Achtung:(!b) Es ist unbedingt zu beachten, da
 
+
+
 !begin_itemize
+
 !item keine DTA verwendet wird, da die Funktionen Fsfirst, Fsnext, Fsetdta
+
       und Fgetdta (!I)nicht(!i) Multithread-sicher sind.
+
 !item Zugriffe auf Dateihandles mit geeigneten Methoden synchronisiert
+
       werden. Es drfen nicht zwei Threads gleichzeitig auf dieselbe Datei
+
       zugreifen.
+
 !end_itemize
 
+
+
 Die Funktion Psemaphore ist bereits fr Threads ausgelegt, und kann sowohl
+
 zur Synchronisation zwischen Prozessen als auch zwischen mehreren Threads
+
 eines Prozesses verwendet werden. Beim Beenden eines Threads werden alle von
+
 diesem blockierten Semaphoren automatisch freigegeben.
 
+
+
 Nach M”glichkeit sollte z.Zt. nur der Haupt-Thread ein Pexec ausfhren,
+
 nicht jedoch nebenl„ufige Threads. Theoretisch ist dies jedoch erlaubt, und
+
 zwar dann, wenn kein anderer Thread oder der Haupt-Thread (!nolink [Pexec]) aufgerufen
+
 hat, und der Haupt-Thread sich nicht beendet.
 
+
+
 Das Problem liegt ganz einfach darin, da z.Zt. Rcksprungadressen bei (!nolink [Pexec])
+
 nicht im laufenden Prozess sondern im Parent abgelegt werden, und der Parent
+
 des vom Thread gestarteten Prozesses ungltig wird.
 
+
+
 Falls ein Thread die Funktion Pterm ausfhrt, so wird z.Zt. nur dieser
+
 Thread beendet. Angemerkt werden soll auch noch, da ein Thread andere
+
 Programme per shel_write (parallel) starten, und auf deren Beendigung warten
+
 kann.
 
+
+
 Querverweis:
+
 Threads und AES-Aufrufe  ~ Threads und VDI-Aufrufe ~
+
 Prozessfunktionen        ~ GEMDOS
+
 !end_node
+
+
 
 !include magic\threads\example.ui
 
+
+
 !end_node
 
+
+
 !endif
+
