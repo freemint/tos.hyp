@@ -1,284 +1,565 @@
 # Quelle: Quelltexte des Pakets misc_def.s und drvintst.s, drvin.txt
 
+
+
 !iflang [english]
 
 
+
+
+
 !begin_node Bconmap
+
 (!begin_liste) [Availability]
 
+
+
 !item [Name:]
+
 ØSelect serial portÆ - Select a default port.
 
+
+
 !item [Opcode:]
+
 44
 
+
+
 !item [Syntax:]
+
 int32_t Bconmap( int16_t devno );
 
+
+
 !item [Description:]
+
 The (!nolink [XBIOS]) routine Bconmap selects one of the serial
+
 ports for Bios output. In addition one can inquire
+
 for a pointer to the BCONMAP structure, with which one
+
 can query for the highest (!nolink [BIOS]) device number and also
+
 install new device drivers. (!I)devno(!i) can assume the
+
 following values:
+
 !begin_table [r|l]
+
 devno !! Meaning
+
 !hline
+
 -402 !! Remove device / RSVF list (HSMODA)
+
 -401 !! Append entry  (HSMODA)
+
 -400 !! Overwrite selected entry (HSMODA)
+
 -2 !! Return pointer to BCONMAP structure
+
 -1 !! Only inquire current channel
+
 0 !! Test whether Bconmap is present
+
 6 !! ST-compatible RS-232 port
+
 7 !! SCC Channel B
+
 8 !! TTMFP RS-232 port
+
 9 !! SCC Channel A
+
 >10 !! Own driver
+
 !end_table
+
 The function affects both the (!nolink [BIOS]) vector table in
+
 the (!link [system variables][The system variables]), as well as the behaviour
+
 of the functions (!nolink [Rsconf]) and (!nolink [Iorec]).
 
+
+
 (!B)HSMODA(!b) (!nl)
+
 These functions are only present if the HSMODA package
+
 is (!nolink [installed]).
 
+
+
 (!U)int32_t Bconmap((int16_t)-400, (int16_t)dev_nr, (int32_t)ptr_to_6_longs)(!u) (!nl)
+
 The constant MAPT_OVE is defined as -400. This function serves for
+
 overwriting already existing MAPTAB entries. (!I)dev_nr(!i) is a
+
 device number from 6 upwards that already has to exist in MAPTAB,
+
 otherwise the error-code -15 EUNDEV will be returned. (!I)ptr_to_6_longs(!i)
+
 points to a structure that corresponds to a MAPTAB entry. This structure
+
 will be copied to the corresponding place in the MAPTAB. If the addressed
+
 device is the one currently set by Bconmap for AUX, then the newly
+
 hooked-in routines will also be copied to xco* and into the current
+
 Rsconf and Iorec cells. This function serves only for hooking in
+
 MagiC-friendly routines. If successful, the device number to which the entry
+
 refers will be returned, i.e. (!I)dev_nr.(!i)
 
+
+
 To install devices on the (!nolink [BIOS]) numbers that are permanently
+
 assigned to a computer, one should always use MAPT_OVE. For the ST this
+
 pertains for instance to  number 6, for a MegaSTE to numbers 6 to 8 and for
+
 a TT030 to numbers 6 to 9.
 
+
+
 (!U)int32_t Bconmap((int16_t)-401, (int32_t)ptr_to_6_longs)(!u) (!nl)
+
 The constant MAPT_APP is defined as -401. This function serves for
+
 appending a channel to the MAPTAB or for writing to an empty channel.
+
 (!I)ptr_to_6_longs(!i) points to a structure that corresponds to a
+
 MAPTAB entry. The return is either the channel number selected by this
+
 function for the entry, or the error-code -12 EGENRL if there is no room
+
 for a MAPTAB augmentation. Here it cannot happen that the vectors are
+
 transferred immediately to xco*, as a previously absent channel,
+
 or one in use, can not have been set as AUX.
 
+
+
 MAPT_APP searches for the first free channel after those (!nolink [BIOS])
+
 numbers that are permanently assigned to a computer and can therefore only
+
 be used for installing additional devices.
 
+
+
 (!U)int32_t Bconmap((int16_t)-402, (int16_t) dev_nr, (int32_t)ptr_to_listentry)(!u) (!nl)
+
 The constant MAPT_DEL is defined as -402. This function serves for deleting
+
 a device from the MAPTAB and for unhooking a RSVF list from the RSVF daisy
+
 chain.
 
+
+
 (!I)dev_nr(!i) is either the (!nolink [BIOS]) channel number of the
+
 device to be removed from the MAPTAB, or -1 for doing nothing. The
+
 corresponding MAPTAB entry is cleared by entering special dummy-routine
+
 pointers that point to the assembler command RTS. The Iorec pointer entry
+
 is set to 0. If the deleted channel was also set as the (!nolink [BIOS]) AUX
+
 device, then (!nolink [BIOS]) AUX will be reset as number 6, even if number
+
 6 has just been deleted.
 
+
+
 (!I)ptr_to_listentry(!i) is either the pointer to the RSVF list to be unhooked,
+
 or 0 for doing nothing. The pointer must refer to the start of a list, which is
+
 then removed completely, even if it contains more than one interface object and
+
 end or daisy-chain object.
+
+
 
 MAPT_DEL returns 1 if successful, or -1 in case of error.
 
-!item [(!nolink [Return]) Value:]
+
+
+!item [(!nolink [Return]) value:]
+
 (!nolink [Bconmap]) returns the old setting. If (!I)devno(!i) equals -2,
+
 then the function returns a pointer to BCONMAP.
 
-!item [Group:]
-Interface programming
+
 
 !item [Availability:]
+
 According to Atari one should test one's (!nolink [TOS]) version
+
 for the presence of Bconmap in the following manner:
+
 !begin_verbatim
+
 WORD has_bconmap ( VOID )
+
 {
+
    return (0L == Bconmap (0));
+
 }
+
 !end_verbatim
 
-!item [See Also:]
+
+
+!item [Group:]
+
+Interface programming
+
+
+
+!item [See also:]
+
 (!link [Binding] [Bindings for Bconmap]) ~ Bconout ~ Bconin ~ Bcostat ~
+
 Bconstat ~ Iorec   ~  Rsconf
 
+
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings for Bconmap
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
  #include <tos.h>
 
+
+
 int32_t Bconmap( int16_t devno );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.w    devno,-(sp)  ; Offset 2
+
 move.w    #44,-(sp)    ; Offset 0
+
 trap      #14          ; Call XBIOS
+
 addq.l    #4,sp        ; Correct stack
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
 !end_node
+
+
+
 
 
 !else
 
 
+
+
+
 !begin_node Bconmap
+
 (!begin_liste) [Beschreibung]
 
+
+
 !item [Name:]
+
 ØSelect serial portÆ - wÑhlt eine Default-Schnittstelle aus.
 
+
+
 !item [Xbiosnummer:]
+
 44
 
+
+
 !item [Deklaration:]
+
 int32_t Bconmap( int16_t devno );
 
+
+
 !item [Beschreibung:]
+
 Die XBIOS-Routine Bconmap wÑhlt eine der seriellen Schnittstellen fÅr die
+
 Biosausgabe aus. DarÅber hinaus kann ein Zeiger auf die BCONMAP-Struktur
+
 abgefragt werden, Åber die man die maximale (!nolink [BIOS]) GerÑtenummer
+
 abfragen und auûerdem neue GerÑtetreiber installieren kann. (!I)devno(!i)
+
 kann die folgenden Werte annehmen:
+
 !begin_table [r|l]
+
 devno !! Bedeutung
+
 !hline
+
 -402 !! device / RSVF-list remove (HSMODA)
+
 -401 !! Eintrag anhÑngen  (HSMODA)
+
 -400 !! ausgewÑhlten Eintrag Åberschreiben (HSMODA)
+
 -2 !! Zeiger auf (!nolink [BCONMAP])-Struktur liefern
+
 -1 !! nur aktuellen Kanal abfragen
+
 0 !! Test, ob Bconmap vorhanden ist
+
 6 !! ST-kompatibler RS232-Port
+
 7 !! SCC Kanal B
+
 8 !! TTMFP RS232-Port
+
 9 !! SCC Kanal A
+
 >10 !! eigene Treiber
+
 !end_table
+
 Die Funktion beeinfluût sowohl die (!nolink [BIOS])-Vektortabelle in den
+
 (!link [Systemvariablen][Die Systemvariablen]), als auch das Verhalten der
+
 Funktionen (!nolink [Rsconf]) und (!nolink [Iorec]).
 
 
+
+
+
 (!B)HSMODA(!b) (!nl)
+
 Diese Funktionen sind nur vorhanden falls das Paket HSMODA installiert ist.
 
+
+
 (!U)int32_t Bconmap((int16_t)-400, (int16_t)dev_nr, (int32_t)ptr_to_6_longs)(!u) (!nl)
+
 Die Konstante MAPT_OVE wird als -400 definiert. Diese Funktion dient dem
+
 öberschreiben bereits existierender MAPTAB-EintrÑge. (!I)dev_nr(!i) ist eine
+
 GerÑtenummer ab 6 aufwÑrts, die in der (!nolink [MAPTAB]) bereits existieren mu·,
+
 andernfalls wird der Fehlercode -15 EUNDEV zurÅckgegeben. (!I)ptr_to_6_longs(!i)
+
 zeigt auf eine Struktur, die einem (!nolink [MAPTAB])-Eintrag entspricht. Diese
+
 Struktur wird auf den entsprechenden Platz in der (!nolink [MAPTAB]) kopiert. Ist das
+
 angesprochende GerÑt das aktuell per Bconmap fÅr AUX eingestellte, so
+
 werden die eben eingehÑngten Routinen auch nach xco* und in die aktuellen
+
 Rsconf und Iorec-Zellen kopiert. Diese Funktion dient nur zum EinhÑngen
+
 MagiC-freundlicher Routinen. Als Erfolgsmeldung wird die GerÑtenummer
+
 zurÅckgegeben, auf die der Eintrag erfolgte, also (!I)dev_nr.(!i)
 
+
+
 Um GerÑte auf den BIOS-Nummern zu installieren, die fest zu einem Computer
+
 gehîren, ist immer MAPT_OVE zu benutzen. FÅr den ST betrifft das z.B. #6,
+
 beim MegaSTE #6 bis #8 und beim TT #6 bis #9.
 
+
+
 (!U)int32_t Bconmap((int16_t)-401, (int32_t)ptr_to_6_longs)(!u) (!nl)
+
 Die Konstante MAPT_APP wird als -401 definiert. Diese Funktion dient dem
+
 AnfÅgen eines Kanals an die MAPTAB oder dem Beschreiben eines leeren
+
 Kanals. (!I)ptr_to_6_longs(!i) zeigt auf eine Struktur, die einem
+
 (!nolink [MAPTAB])-Eintrag entspricht. RÅckmeldung ist entweder die von
+
 dieser Funktion fÅr den Eintrag gewÑhlte Kanalnummer, oder der Fehlercode
+
 -12 EGENRL, falls kein Platz fÅr eine MAPTAB-Vergrî·erung ist. Hier kann
+
 es nicht vorkommen, das die Vektoren sofort nach xco* Åbertragen werden,
+
 da ein bisher nicht vorhandener oder belegter Kanal nicht als AUX
+
 eingestellt sein kann.
 
+
+
 MAPT_APP sucht sich den ersten freien Kanal hinter den fest zum Computer
+
 gehîrenden BIOS-Nummern und kann deshalb nur zum Installieren zusÑtzlicher
+
 GerÑte benutzt werden.
 
+
+
 (!U)int32_t Bconmap((int16_t)-402, (int16_t)dev_nr, (int32_t)ptr_to_listentry)(!u) (!nl)
+
 Die Konstante MAPT_DEL wird als -402 definiert. Diese Funktion dient zum
+
 Lîschen eines GerÑtes aus der MAPTAB und zum AushÑngen einer RSVF-Liste
+
 aus der RSVF-Verkettung.
 
+
+
 (!I)dev_nr(!i) ist entweder die BIOS-Kanalnummer des aus der (!nolink [MAPTAB]) zu
+
 entfernenden GerÑtes oder -1 fÅr Nichtstun. Der entsprechende
+
 (!nolink [MAPTAB])-Eintrag wird freigeben indem spezielle Dummy-Routinenzeiger
+
 eingetragen werden, die auf den Assemblerbefehl RTS zeigen. Der
+
 Iorec-Zeiger-Eintrag wird auf 0 gesetzt. Ist der gelîschte Kanal auch als
+
 BIOS-AUX-Device eingestellt gewesen, so wird BIOS-AUX auf Nummer 6
+
 umgestellt, auch wenn gerade Nummer 6 gelîscht wurde.
 
+
+
 ptr_to_listentry ist entweder der Zeiger auf die auszuhÑngende RSVF-Liste
+
 oder 0 fÅr Nichtstun. Der Zeiger muû auf den Anfang einer Liste verweisen,
+
 die daraufhin komplett entfernt wird, auch wenn sie mehr als ein
+
 Schnittstellenobjekt und End- oder Verkettungsobjekt enthÑlt.
+
+
 
 Im Erfolgsfall gibt MAPT_DEL 1 zurÅck, im Fehlerfall -1.
 
 
+
+
+
 !item [Ergebnis:]
+
 (!nolink [Bconmap]) liefert die alte Einstellung. Falls (!I)devno(!i) gleich
+
 -2 ist liefert die Funktion einen Zeiger auf BCONMAP zurÅck.
 
-!item [Gruppe:]
-Schnittstellenprogrammierung
+
 
 !item [VerfÅgbar:]
+
 Laut Atari sollte man seine TOS-Version folgendermaûen auf
+
 das Vorhandensein von Bconmap testen:
+
 !begin_verbatim
+
 WORD has_bconmap ( VOID )
+
 {
+
    return (0L == Bconmap (0));
+
 }
+
 !end_verbatim
+
+
+
+!item [Gruppe:]
+
+Schnittstellenprogrammierung
+
 
 
 !item [Querverweis:]
+
 (!link [Binding] [Bindings fÅr Bconmap]) ~ Bconout ~ Bconin ~ Bcostat ~
+
 Bconstat ~ Iorec   ~  Rsconf
 
+
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings fÅr Bconmap
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
  #include <tos.h>
 
+
+
 int32_t Bconmap( int16_t devno );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.w    devno,-(sp)  ; Offset 2
+
 move.w    #44,-(sp)    ; Offset 0
+
 trap      #14          ; XBIOS aufrufen
+
 addq.l    #4,sp        ; Stack korrigieren
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
 !end_node
+
+
+
 
 
 !endif

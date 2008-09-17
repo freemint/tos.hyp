@@ -1,278 +1,555 @@
 !iflang [english]
 
+
+
 !begin_node Floprate
+
 (!begin_liste) [Availability]
 
+
+
 !item [Name:]
+
 ØFloppy rateÆ - Read or set the seek rate of a floppy drive.
 
+
+
 !item [Opcode:]
+
 41
 
+
+
 !item [Syntax:]
+
 int16_t Floprate( int16_t devno, int16_t newrate );
 
+
+
 !item [Description:]
+
 The (!nolink [XBIOS]) routine Floprate returns or sets the
+
 current seek rate. The following apply:
+
 !begin_xlist [Parameter]
+
 !item [Parameter]
+
 Meaning
+
 !item [devno]
+
 Drive number:
+
 !begin_table [l l l]
+
 0 !! = !! Drive A:
+
 1 !! = !! Drive B: etc
+
 !end_table
+
 !item [newrate]
+
 !begin_table [r l l]
+
 -1 !! = !! Do not alter seek rate
+
 0 !! = !! Seek rate of  6ms
+
 1 !! = !! Seek rate of 12ms
+
 2 !! = !! Seek rate of  2ms
+
 3 !! = !! Seek rate of  3ms
+
 !end_table
+
 !end_xlist
+
 !label Floppy, Timeout of the
+
 !label Timeout of the floppy
 
+
+
 (!B)Note:(!b)
+
 As of MagiC 3, one can additionally use
+
 Floprate (-1, newrate) to set the (!B)timeout(!b) for the
+
 floppy; a value of 300 means 1.5 seconds) this is the
+
 value that is set by default at booting).
 
+
+
 With older ROM-(!nolink [TOS]) versions one has to use the
+
 previously undocumented system variables:
 
+
+
 !begin_table [c|c|c]
+
 (!nolink [TOS])-Version !! Drive A: !! Drive B:
+
 !hline
+
 1.00 !! 0x0a08 !! 0xa0c
+
 1.02 !! 0x0a4e !! 0xa52
+
 !end_table
+
 For portable setting one can use the following
+
 (!link [sample routine][Seekrate for all TOS versions]).
 
-!item [(!nolink [Return]) Value:]
+
+
+!item [(!nolink [Return]) value:]
+
 The function returns the prior seek rate for the drive.
 
-!item [Group:]
-Drive functions
+
 
 !item [Availability:]
+
 The function is only available as of (!nolink [TOS]) 1.04.
 
-!item [See Also:]
+
+
+!item [Group:]
+
+Drive functions
+
+
+
+!item [See also:]
+
 (!link [Binding] [Bindings for Floprate]) ~ Flopwr ~ Floprd ~ Flopver ~
+
 Flopfmt
 
+
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings for Floprate
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
  #include <tos.h>
 
+
+
 int16_t Floprate( int16_t devno, int16_t newrate );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.w    newrate,-(sp) ; Offset 4
+
 move.w    devno,-(sp)   ; Offset 2
+
 move.w    #41,-(sp)     ; Offset 0
+
 trap      #14           ; Call XBIOS
+
 addq.l    #6,sp         ; Correct stack
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
+
 
 !begin_node Seekrate for all TOS versions
+
 !ignore_index
 
+
+
 !begin_verbatim
+
 /* Portable setting of the floppy seek rate for all TOS versions
+
    (except RAM-TOS 1.00).
+
    Parameters: As for the XBIOS function "Floprate" */
 
+
+
 int16_t SeekRate ( int16_t devno, int16_t newrate )
+
 {
+
   int32_t stack;
+
   int16_t version;
+
   OSHEADER *sys;
 
+
+
   /* Get pointer to OS-header */
+
   stack = Super (0L);
+
   sys = *((OSHEADER **) 0x4f2);
+
   version = sys->os_version;
+
   Super ((void *)stack);
 
+
+
   /* With newer TOS simply call "Floprate"  */
+
   if ( version >= 0x0104 )
+
     return Floprate ( devno, newrate );
+
   else
+
   {
+
     /* otherwise calculate pointer to internal GEMDOS variables */
+
     int16_t *sk, merk;
 
+
+
     if ( version == 0x0102 )
+
       sk = (int16_t *) 0x0a4e;
+
     else
+
       sk = (int16_t *) 0x0a08;
 
+
+
     /* Drive B: 2 int16_t follows */
+
     if ( devno ) sk = &(sk[2]);
 
+
+
     merk = *sk;
+
     /* enter value only if not -1 */
+
     if ( newrate != -1 ) *sk = newrate;
 
+
+
     /* always return old value */
+
     return merk;
+
   }
+
 }
+
 !end_verbatim
-!end_node
 
 !end_node
+
+
+
+!end_node
+
+
 
 !else
 
+
+
 !begin_node Floprate
+
 (!begin_liste) [Beschreibung]
 
+
+
 !item [Name:]
+
 ØFloppy rateÆ - liest oder setzt die seek rate eines Floppylaufwerks.
 
+
+
 !item [Xbiosnummer:]
+
 41
 
+
+
 !item [Deklaration:]
+
 int16_t Floprate( int16_t devno, int16_t newrate );
 
+
+
 !item [Beschreibung:]
+
 Die XBIOS-Routine Floprate liefert bzw. setzt die aktuelle Seekrate. Es
+
 gilt:
+
 !begin_xlist [Parameter]
+
 !item [Parameter]
+
 Bedeutung
+
 !item [devno]
+
 Laufwerksnummer
+
 !begin_table [l l l]
+
 0 !! = !! Laufwerk-A
+
 1 !! = !! Laufwerk-B usw.
+
 !end_table
+
 !item [newrate]
+
 !begin_table [r l l]
+
 -1 !! = !! Seekrate nicht verÑndern
+
 0 !! = !! Rate von  6ms
+
 1 !! = !! Rate von 12ms
+
 2 !! = !! Rate von  2ms
+
 3 !! = !! Rate von  3ms
+
 !end_table
+
 !end_xlist
+
 !label Floppy, Timeout der
+
 !label Timeout der Floppy
 
+
+
 (!B)Hinweis:(!b)
+
 Ab MagiC 3 kann darÅberhinaus per Floprate (-1, newrate) der (!B)Timeout(!b)
+
 fÅr die Floppy eingestellt werden; ein Wert von 300 bedeutet 1,5 Sekunden
+
 (dies ist der Wert, der beim Booten per Default eingestellt ist).
 
+
+
 Bei Ñlteren ROM-TOS-Versionen muû man die vorher undokumentierten Systemvariablen
+
 verwenden:
+
 !begin_table [c|c|c]
+
 TOS-Version !! Laufwerk A !! Laufwerk B
+
 !hline
+
 1.00 !! 0x0a08 !! 0xa0c
+
 1.02 !! 0x0a4e !! 0xa52
+
 !end_table
+
 Zum portablen Setzen kann man die folgende
+
 (!link [Beispielroutine][Seekrate fÅr alle TOS-Versionen]) nutzen.
 
+
+
 !item [Ergebnis:]
+
 Die Funktion liefert die vorherige Seekrate als Ergebnis.
 
-!item [Gruppe:]
-Laufwerksfunktionen
+
 
 !item [VerfÅgbar:]
+
 Die Funktion steht erst ab TOS 1.04 zur VerfÅgung.
 
+
+
+!item [Gruppe:]
+
+Laufwerksfunktionen
+
+
+
 !item [Querverweis:]
+
 (!link [Binding] [Bindings fÅr Floprate]) ~ Flopwr ~ Floprd ~ Flopver ~
+
 Flopfmt
 
+
+
 (!ende_liste)
+
+
+
 
 
 !begin_node Bindings fÅr Floprate
+
 !ignore_index
+
 (!begin_liste) [Assembler:]
+
 !item [C:]
+
  #include <tos.h>
 
+
+
 int16_t Floprate( int16_t devno, int16_t newrate );
+
 !item [Assembler:]
+
 !begin_verbatim
+
 move.w    newrate,-(sp) ; Offset 4
+
 move.w    devno,-(sp)   ; Offset 2
+
 move.w    #41,-(sp)     ; Offset 0
+
 trap      #14           ; XBIOS aufrufen
+
 addq.l    #6,sp         ; Stack korrigieren
+
 !end_verbatim
+
 (!ende_liste)
+
 !end_node
+
+
 
 !begin_node Seekrate fÅr alle TOS-Versionen
+
 !ignore_index
 
+
+
 !begin_verbatim
+
 /* Portables Setzen der Floppy-Seekrate fÅr alle TOS-Versionen
+
    (auûer RAM-TOS 1.00).
+
    Parameter: genau wie bei XBIOS-Funktion "Floprate()" */
 
+
+
 int16_t SeekRate ( int16_t devno, int16_t newrate )
+
 {
+
   int32_t stack;
+
   int16_t version;
+
   OSHEADER *sys;
 
+
+
   /* Zeiger auf OS-Header holen */
+
   stack = Super (0L);
+
   sys = *((OSHEADER **) 0x4f2);
+
   version = sys->os_version;
+
   Super ((void *)stack);
 
+
+
   /* bei neuem TOS einfach "Floprate()" aufrufen */
+
   if ( version >= 0x0104 )
+
     return Floprate ( devno, newrate );
+
   else
+
   {
+
     /* sonst Zeiger auf interne GEMDOS-Variablen
+
        berechnen */
+
     int16_t *sk, merk;
 
+
+
     if ( version == 0x0102 )
+
       sk = (int16_t *) 0x0a4e;
+
     else
+
       sk = (int16_t *) 0x0a08;
 
+
+
     /* Laufwerk B: 2 int16_t dahinter */
+
     if ( devno ) sk = &(sk[2]);
 
+
+
     merk = *sk;
+
     /* Wert nur bei ungleich -1 eintragen */
+
     if ( newrate != -1 ) *sk = newrate;
 
+
+
     /* alten Wert immer zurÅckliefern */
+
     return merk;
+
   }
+
 }
+
 !end_verbatim
-!end_node
 
 !end_node
+
+
+
+!end_node
+
+
 
 !endif
