@@ -1,4206 +1,2118 @@
 !iflang [english]
 
-
-
 !begin_node About the GEMDOS
 
-
-
 The (!nolink [GEMDOS]) is, apart from the hardware-dependent
-
 (!nolink [BIOS]) and (!nolink [XBIOS]), the actual operating system of the
-
 Atari and its functions form the highest level of (!nolink [TOS]). The
-
 functions are called via the 680X0 Trap #1. The operating system functions
-
 can be easily divided into categories by the first letter of the function
-
 name:
 
 !begin_xlist [˘ Characterwise input/output ] !short
-
 !item [˘ File functions]             (F...)
-
 !item [˘ Date and Time]              (T...)
-
 !item [˘ Process functions]          (P...)
-
 !item [˘ Memory management]          (M...)
-
 !item [˘ System functions]           (S...)
-
 !item [˘ Directory functions]        (D...)
-
 !item [˘ Character input/output]     (C...)
-
 !end_xlist
 
 Under MagiC, (!nolink [GEMDOS]) is reentrant (as of MagiC 3.0 this applies
-
 even for the file-system!). This is visible, for instance, by alert boxes of
-
 the type "Data in Drive A: may be damaged" being movable - because memory
-
 has to be demanded for this, which does not work under
-
 (Multi)(!nolink [TOS]), as a file operation in (!nolink [GEMDOS]) is being
-
 handled at the same time.
 
-
-
 !label MiNT-compatible functions
-
 With the appearance of MiNT, the (!nolink [GEMDOS]) was extended by many
-
-functions. These new functions however do not have to be present only when
-
-MiNT is installed: (!nolink [MagiC]) as of Version 3.0 possesses some
-
-MiNT-compatible functions; also MetaDOS drivers with corresponding
-
-functionality have been spotted. For this reason it is imperative that
-
-interrogation for the MiNT cookie should be removed from all programs. The
-
-presence of a (!nolink [GEMDOS]) function can be recognized by the fact that
-
-the function does (!I)not(!i) return the value EINVFN.
-
-
+functions. Also (!nolink [MagiC]) as of Version 3.0 possesses some
+MiNT-compatible functions and MetaDOS drivers with corresponding
+functionality have been spotted.
 
 !label GEMDOS, Parameter passing in
-
 !label Parameter passing in GEMDOS
-
 The (!nolink [GEMDOS]) receives its parameters on the stack; for this, the
-
 last argument from the parameter list is stored as the first on the stack.
-
 Function results are returned in processor register d0. Only the registers
-
 d3-d7 and a3-a7 are saved, all others will be altered by the call.
 
-
-
 See Also: (!nl)
-
 (!link [XFS-concept in MagiC][MagiC's XFS-concept]) ~
-
 (!link [Background-DMA][The background-DMA of MagiC])  ~
-
 (!link [Program format][GEMDOS, Program format under]) ~
-
 (!link [Function list][GEMDOS function list])
-
-
 
 !end_node
 
 
-
-
-
 !include gemdos\filesys.u
-
-
-
 
 
 !begin_node GEMDOS error-messages
 
-
-
 Errors are reported by (!nolink [GEMDOS]) as negative LONG values. The
-
 following list contains all known error-messages:
 
 
-
-
-
 !begin_xlist !short [No. Name]
-
 !item [No. Name]
-
 Meaning
-
 !item [~]
-
 ~
 
-
-
 !label E_OK
-
 !item [~~0 E_OK]
-
 OK. No error has arisen
 
-
-
 !label EINVFN
-
 !item [-32 EINVFN]
-
 Unknown function number
 
-
-
 !label EFILNF
-
 !item [-33 EFILNF]
-
 File not found
 
-
-
 !label EPTHNF
-
 !item [-34 EPTHNF]
-
 Directory (folder) not found
 
-
-
 !label ENHNDL
-
 !item [-35 ENHNDL]
-
 No more handles available
 
-
-
 !label EACCDN
-
 !item [-36 EACCDN]
-
 Access denied
 
-
-
 !label EIHNDL
-
 !item [-37 EIHNDL]
-
 Invalid file handle
 
-
-
 !label ENSMEM
-
 !item [-39 ENSMEM]
-
 Insufficient memory
 
-
-
 !label EIMBA
-
 !item [-40 EIMBA]
-
 Invalid memory block address
 
-
-
 !label EDRIVE
-
 !item [-46 EDRIVE]
-
 Invalid drive specification
 
-
-
 !label ECWD
-
 !item [-47 ECWD]
-
 Current directory cannot be deleted
 
-
-
 !label ENSAME
-
 !item [-48 ENSAME]
-
 Files on different logical drives
 
-
-
 !label ENMFIL
-
 !item [-49 ENMFIL]
-
 No more files can be opened
 
-
-
 !label ELOCKED
-
 !item [-58 ELOCKED]
-
 Segment of a file is protected (network)
 
-
-
 !label ENSLOCK
-
 !item [-59 ENSLOCK]
-
 Invalid lock removal request
 
-
-
 !label ERANGE
-
 !item [-64 ERANGE]
-
 File pointer in invalid segment (see also FreeMiNT message -88)
 
-
-
 !label EINTRN
-
 !item [-65 EINTRN]
-
 Internal error of (!nolink [GEMDOS])
 
-
-
 !label EPLFMT
-
 !item [-66 EPLFMT]
-
 Invalid program load format
 
-
-
 !label EGSBF
-
 !item [-67 EGSBF]
-
 Allocated memory block could not be enlarged
 
-
-
 !label EBREAK
-
 !item [-68 EBREAK]
-
 Program termination by Control-C
 
-
-
 !label EXCPT
-
 !item [-69 EXCPT]
-
 68000 exception (bombs)
 
-
-
 !label EPTHOV
-
 !item [-70 EPTHOV]
-
 Path overflow
 
-
-
 !label ELOOP
-
 !item [-80 ELOOP]
-
 Endless loop with symbolic links
 
-
-
 !label EPIPE
-
 !item [-81 EPIPE]
-
 Write to broken pipe.
-
 !end_xlist
-
-
 
 Under FreeMiNT there are a few more error-messages, or values were adapted.
 
-
-
 !begin_xlist !short [Nr. EPROTONOSUPPORT ]
-
 !item [Nr. Name]
-
 Meaning
-
 !item [~]
-
 ~
 
-
-
 !label EERROR
-
 !item [~~-1 EERROR]
-
 Generic error
 
-
-
 !label EBUSY
-
 !item [~~-2 EBUSY]
-
 Resource busy
 
-
-
 !label EUKCMD
-
 !item [~~-3 EUKCMD]
-
 Unknown command
 
-
-
 !label ECRC
-
 !item [~~-4 ECRC]
-
 CRC error
 
-
-
 !label EBADR
-
 !item [~~-5 EBADR]
-
 Bad request
 
-
-
 !label ESPIPE
-
 !item [~~-6 ESPIPE]
-
 Illegal seek
 
-
-
 !label EMEDIUMTYPE
-
 !item [~~-7 EMEDIUMTYPE]
-
 Wrong medium type
 
-
-
 !label ESECTOR
-
 !item [~~-8 ESECTOR]
-
 Sector not found
 
-
-
 !label EWRITE
-
 !item [~-10 EWRITE]
-
 Write fault
 
-
-
 !label EGENERIC
-
 !item [~-12 EGENERIC]
-
 General mishap
 
-
-
 !label EROFS
-
 !item [~-13 EROFS]
-
 Write protected
 
-
-
 !label ECHMEDIA
-
 !item [~-14 ECHMEDIA]
-
 Media change
 
-
-
 !label ENODEV
-
 !item [~-15 ENODEV]
-
 No such device
 
-
-
 !label EBADSEC
-
 !item [~-16 EBADSEC]
-
 Bad sectors found
 
-
-
 !label ENOMEDIUM
-
 !item [~-17 ENOMEDIUM]
-
 No medium found
 
-
-
 !label ESRCH
-
 !item [~-20 ESRCH]
-
 No such process
 
-
-
 !label ECHILD
-
 !item [~-21 ECHILD]
-
 No child processes
 
-
-
 !label EDEADLK
-
 !item [~-22 EDEADLK]
-
 Resource deadlock would occur
 
-
-
 !label ENOTBLK
-
 !item [~-23 ENOTBLK]
-
 Block device required
 
-
-
 !label EISDIR
-
 !item [~-24 EISDIR]
-
 Is a directory
 
-
-
 !label EINVAL
-
 !item [~-25 EINVAL]
-
 Invalid argument
 
-
-
 !label EFTYPE
-
 !item [~-26 EFTYPE]
-
 Inappropriate file type or format
 
-
-
 !label EILSEQ
-
 !item [~-27 EILSEQ]
-
 Illegal byte sequence
 
-
-
 !label ENOSYS
-
 !item [~-32 ENOSYS]
-
 Function not implemented
 
-
-
 !label ENOENT
-
 !item [~-33 ENOENT]
-
 No such file or directory
 
-
-
 !label ENOTDIR
-
 !item [~-34 ENOTDIR]
-
 Not a directory
 
-
-
 !label EMFILE
-
 !item [~-35 EMFILE]
-
 Too many open files
 
-
-
 !label EACCES
-
 !item [~-36 EACCES]
-
 Permission denied
 
-
-
 !label EBADF
-
 !item [~-37 EBADF]
-
 Bad file descriptor
 
-
-
 !label EPERM
-
 !item [~-38 EPERM]
-
 Operation not permitted
 
-
-
 !label ENOMEM
-
 !item [~-39 ENOMEM]
-
 Cannot allocate memory
 
-
-
 !label EFAULT
-
 !item [~-40 EFAULT]
-
 Bad address
 
-
-
 !label ENXIO
-
 !item [~-46 ENXIO]
-
 No such device or address
 
-
-
 !label EXDEV
-
 !item [~-48 EXDEV]
-
 Cross-device link
 
-
-
 !label ENMFILES
-
 !item [~-49 ENMFILES]
-
 No more matching file names
 
-
-
 !label ENFILE
-
 !item [~-50 ENFILE]
-
 File table overflow
 
-
-
 !item [~-58 ELOCKED]
-
 Locking conflict
 
-
-
 !item [~-59 ENSLOCK]
-
 No such lock
 
-
-
 !label EBADARG
-
 !item [~-64 EBADARG]
-
 Bad argument
 
-
-
 !label EINTERNAL
-
 !item [~-65 EINTERNAL]
-
 Internal error
 
-
-
 !label ENOEXEC
-
 !item [~-66 ENOEXEC]
-
 Invalid executable file format
 
-
-
 !label ESBLOCK
-
 !item [~-67 ESBLOCK]
-
 Memory block growth failure
 
-
-
 !item [~-68 EBREAK]
-
 Aborted by user
 
-
-
 !item [~-69 EXCPT]
-
 Terminated with bombs
 
-
-
 !label ETXTBSY
-
 !item [~-70 ETXTBSY]
-
 Text file busy
 
-
-
 !label EFBIG
-
 !item [~-71 EFBIG]
-
 File too big
 
-
-
 !item [~-80 ELOOP]
-
 Too many symbolic links, possibly endless loop
 
-
-
 !item [~-81 EPIPE]
-
 Broken pipe
 
-
-
 !label EMLINK
-
 !item [~-82 EMLINK]
-
 Too many links
 
-
-
 !label ENOTEMPTY
-
 !item [~-83 ENOTEMPTY]
-
 Directory not empty
 
-
-
 !label EEXIST
-
 !item [~-85 EEXIST]
-
 File exists
 
-
-
 !label ENAMETOOLONG
-
 !item [~-86 ENAMETOOLONG]
-
 Name too long
 
-
-
 !label ENOTTY
-
 !item [~-87 ENOTTY]
-
 Not a TTY
 
-
-
 !item [~-88 ERANGE]
-
 Range error
 
-
-
 !label EDOM
-
 !item [~-89 EDOM]
-
 Domain error
 
-
-
 !label EIO
-
 !item [~-90 EIO]
-
 I/O error
 
-
-
 !label ENOSPC
-
 !item [~-91 ENOSPC]
-
 No space left on device
 
-
-
 !item [~-92]     reserved for TraPatch
-
 !item [~-93]     reserved for TraPatch
-
 !item [~-94]     reserved for TraPatch
-
 !item [~-95]     reserved for TraPatch
-
 !item [~-96]     reserved for TraPatch
-
 !item [~-97]     reserved for TraPatch
-
 !item [~-98]     reserved for TraPatch
-
 !item [~-99]     reserved for TraPatch
 
-
-
 !label EPROCLIM
-
 !item [-100 EPROCLIM]
-
 Too many processes for user
 
-
-
 !label EUSERS
-
 !item [-101 EUSERS]
-
 Too many users
 
-
-
 !label EDQUOT
-
 !item [-102 EDQUOT]
-
 Quota exceeded
 
-
-
 !label ESTALE
-
 !item [-103 ESTALE]
-
 Stale NFS file handle
 
-
-
 !label EREMOTE
-
 !item [-104 EREMOTE]
-
 Object is remote
 
-
-
 !label EBADRPC
-
 !item [-105 EBADRPC]
-
 RPC struct is bad
 
-
-
 !label ERPCMISMATCH
-
 !item [-106 ERPCMISMATCH]
-
 RPC version wrong
 
-
-
 !label EPROGUNAVAIL
-
 !item [-107 EPROGUNAVAIL]
-
 RPC program not available
 
-
-
 !label EPROGMISMATCH
-
 !item [-108 EPROGMISMATCH]
-
 RPC program version wrong
 
-
-
 !label EPROCUNAVAIL
-
 !item [-109 EPROCUNAVAIL]
-
 RPC bad procedure for program
 
-
-
 !label ENOLCK
-
 !item [-110 ENOLCK]
-
 No locks available
 
-
-
 !label EAUTH
-
 !item [-111 EAUTH]
-
 Authentication error
 
-
-
 !label ENEEDAUTH
-
 !item [-112 ENEEDAUTH]
-
 Need authenticator
 
-
-
 !label EBACKGROUND
-
 !item [-113 EBACKGROUND]
-
 Inappropriate operation for background process
 
-
-
 !label EBADMSG
-
 !item [-114 EBADMSG]
-
 Not a data message
 
-
-
 !label EIDRM
-
 !item [-115 EIDRM]
-
 Identifier removed
 
-
-
 !label EMULTIHOP
-
 !item [-116 EMULTIHOP]
-
 Multihop attempted
 
-
-
 !label ENODATA
-
 !item [-117 ENODATA]
-
 No data available
 
-
-
 !label ENOLINK
-
 !item [-118 ENOLINK]
-
 Link has been severed
 
-
-
 !label ENOMSG
-
 !item [-119 ENOMSG]
-
 No message of desired type
 
-
-
 !label ENOSR
-
 !item [-120 ENOSR]
-
 Out of streams resources
 
-
-
 !label ENOSTR
-
 !item [-121 ENOSTR]
-
 Device not a stream
 
-
-
 !label EOVERFLOW
-
 !item [-122 EOVERFLOW]
-
 Value too large for defined data type
 
-
-
 !label EPROTO
-
 !item [-123 EPROTO]
-
 Protocol error
 
-
-
 !label ETIME
-
 !item [-124 ETIME]
-
 Timer expired
 
-
-
 !label E2BIG
-
 !item [-125 E2BIG]
-
 Argument list too long
 
-
-
 !label ERESTART
-
 !item [-126 ERESTART]
-
 Interrupted system call should be
 
-
-
 !label ECHRNG
-
 !item [-127 ECHRNG]
-
 Channel number out of range
 
-
-
 !label EINTR
-
 !item [-128 EINTR]
-
 Interrupted function call
 
-
-
 !label ESNDLOCKED
-
 !item [-129 ESNDLOCKED]
-
 Sound system is already locked
 
-
-
 !label ESNDNOTLOCK
-
 !item [-130 ESNDNOTLOCK]
-
 Sound system is not locked
 
-
-
 !label EL2NSYNC
-
 !item [-131 EL2NSYNC]
-
 Level 2 not synchronized
 
-
-
 !label EL3HLT
-
 !item [-132 EL3HLT]
-
 Level 3 halted
 
-
-
 !label EL3RST
-
 !item [-133 EL3RST]
-
 Level 3 reset
 
-
-
 !label ELNRNG
-
 !item [-134 ELNRNG]
-
 Link number out of range
 
-
-
 !label EUNATCH
-
 !item [-135 EUNATCH]
-
 Protocol driver not attached
 
-
-
 !label ENOCSI
-
 !item [-136 ENOCSI]
-
 No CSI structure available
 
-
-
 !label EL2HLT
-
 !item [-137 EL2HLT]
-
 Level 2 halted
 
-
-
 !label EBADE
-
 !item [-138 EBADE]
-
 Invalid exchange
 
-
-
 !label EXFULL
-
 !item [-139 EXFULL]
-
 Exchange full
 
-
-
 !label ENOANO
-
 !item [-140 ENOANO]
-
 No anode
 
-
-
 !label EBADRQC
-
 !item [-141 EBADRQC]
-
 Invalid request code
 
-
-
 !label EBADSLT
-
 !item [-142 EBADSLT]
-
 Invalid slot
 
-
-
 !label EBFONT
-
 !item [-143 EBFONT]
-
 Bad font file format
 
-
-
 !label ENONET
-
 !item [-144 ENONET]
-
 Machine is not on the network
 
-
-
 !label ENOPKG
-
 !item [-145 ENOPKG]
-
 Package is not (!nolink [installed]).
 
-
-
 !label EADV
-
 !item [-146 EADV]
-
 Advertise error
 
-
-
 !label ESRMNT
-
 !item [-147 ESRMNT]
-
 Srmount error
 
-
-
 !label ECOMM
-
 !item [-148 ECOMM]
-
 Communication error on send
 
-
-
 !label EDOTDOT
-
 !item [-149 EDOTDOT]
-
 RFS specific error
 
-
-
 !label ELIBACC
-
 !item [-150 ELIBACC]
-
 Cannot access a needed shared library
 
-
-
 !label ELIBBAD
-
 !item [-151 ELIBBAD]
-
 Accessing a corrupted shared library
 
-
-
 !label ELIBSCN
-
 !item [-152 ELIBSCN]
-
 lib section in a.out corrupted
 
-
-
 !label ELIBMAX
-
 !item [-153 ELIBMAX]
-
 Attempting to link too many shared libraries
 
-
-
 !label ELIBEXEC
-
 !item [-154 ELIBEXEC]
-
 Cannot exec a shared library directly
 
-
-
 !label ESTRPIPE
-
 !item [-155 ESTRPIPE]
-
 Streams pipe error
 
-
-
 !label EUCLEAN
-
 !item [-156 EUCLEAN]
-
 Structure needs cleaning
 
-
-
 !label ENOTNAM
-
 !item [-157 ENOTNAM]
-
 Not a XENIX named type file
 
-
-
 !label ENAVAIL
-
 !item [-158 ENAVAIL]
-
 No XENIX semaphores available
 
-
-
 !label EREMOTEIO
-
 !item [-159 EREMOTEIO]
-
 Remote I/O error
 
-
-
 !label EMOUNT
-
 !item [-200 EMOUNT]
-
 Mount point crossed (indicator)
 
-
-
 !label ENOTSOCK
-
 !item [-300 ENOTSOCK]
-
 Socket operation on non-socket
 
-
-
 !label EDESTADDRREQ
-
 !item [-301 EDESTADDRREQ]
-
 Destination address required
 
-
-
 !label EMSGSIZE
-
 !item [-302 EMSGSIZE]
-
 Message too long
 
-
-
 !label EPROTOTYPE
-
 !item [-303 EPROTOTYPE]
-
 Protocol wrong type for socket
 
-
-
 !label ENOPROTOOPT
-
 !item [-304 ENOPROTOOPT]
-
 Protocol not available
 
-
-
 !label EPROTONOSUPPORT
-
 !item [-305 EPROTONOSUPPORT]
-
 Protocol not supported
 
-
-
 !label ESOCKTNOSUPPORT
-
 !item [-306 ESOCKTNOSUPPORT]
-
 Socket type not supported
 
-
-
 !label EOPNOTSUPP
-
 !item [-307 EOPNOTSUPP]
-
 Operation not supported
 
-
-
 !label EPFNOSUPPORT
-
 !item [-308 EPFNOSUPPORT]
-
 Protocol family not supported
 
-
-
 !label EAFNOSUPPORT
-
 !item [-309 EAFNOSUPPORT]
-
 Address family not supported by protocol
 
-
-
 !label EADDRINUSE
-
 !item [-310 EADDRINUSE]
-
 Address already in use
 
-
-
 !label EADDRNOTAVAIL
-
 !item [-311 EADDRNOTAVAIL]
-
 Cannot assign requested address
 
-
-
 !label ENETDOWN
-
 !item [-312 ENETDOWN]
-
 Network is down
 
-
-
 !label ENETUNREACH
-
 !item [-313 ENETUNREACH]
-
 Network is unreachable
 
-
-
 !label ENETRESET
-
 !item [-314 ENETRESET]
-
 Network dropped connection because of reset
 
-
-
 !label ECONNABORTED
-
 !item [-315 ECONNABORTED]
-
 Software caused connection abort
 
-
-
 !label ECONNRESET
-
 !item [-316 ECONNRESET]
-
 Connection reset by peer
 
-
-
 !label EISCONN
-
 !item [-317 EISCONN]
-
 Socket is already connected
 
-
-
 !label ENOTCONN
-
 !item [-318 ENOTCONN]
-
 Socket is not connected
 
-
-
 !label ESHUTDOWN
-
 !item [-319 ESHUTDOWN]
-
 Cannot send after shutdown
 
-
-
 !label ETIMEDOUT
-
 !item [-320 ETIMEDOUT]
-
 Connection timed out
 
-
-
 !label ECONNREFUSED
-
 !item [-321 ECONNREFUSED]
-
 Connection refused
 
-
-
 !label EHOSTDOWN
-
 !item [-322 EHOSTDOWN]
-
 Host is down
 
-
-
 !label EHOSTUNREACH
-
 !item [-323 EHOSTUNREACH]
-
 No route to host
 
-
-
 !label EALREADY
-
 !item [-324 EALREADY]
-
 Operation already in progress
 
-
-
 !label EINPROGRESS
-
 !item [-325 EINPROGRESS]
-
 Operation now in progress
 
-
-
 !label EAGAIN
-
 !item [-326 EAGAIN]
-
 Operation would block
 
-
-
 !label EWOULDBLOCK
-
 !item [-326 EWOULDBLOCK]
-
 see EAGAIN
 
-
-
 !label ENOBUFS
-
 !item [-327 ENOBUFS]
-
 No buffer space available
 
-
-
 !label ETOOMANYREFS
-
 !item [-328 ETOOMANYREFS]
-
 Too many references
-
-
 
 !end_xlist
 
-
-
 See also:
-
 (!link [Error-messages in MagiC][Special error-messages in MagiC]) ~
-
 BIOS error-messages
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Pipes, Test for
 
-
-
 To test whether (!link [pipes] [Pipes]) are present, one can proceed as
-
 follows:
 
-
-
 !begin_itemize
-
 !item Is Drive U present?
-
 !item Is there a directory PIPE there?
-
 !item Are files created there really pipes, i.e. does Fxattr after a Fcreate
-
 return the type PIPE?
-
 !end_itemize
-
 !end_node
-
-
-
 
 
 !begin_node The program flags
-
 !label Flags of a program
 
-
-
 With program flags one is dealing with a bit-vector within the program
-
 header, which is built up as follows:
 
-
-
 !begin_xlist !short [11-22]
-
 !item [Bits]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [~~~0]
-
 (!B)Fastload flag.(!b) If this bit is set, then the stack will not be
-
 cleared, but only the BSS segment preinitialized.
-
 !item [~~~1]
-
 If this bit is set, then the program may be loaded into the fast alternate
-
 RAM
-
 !item [~~~2]
-
 If this bit is set, memory requests via Malloc may be allocated from
-
 alternate RAM
-
 !item [~~~3]
-
 Reserved, should be NULL
-
-
 
 !label Memory protection
-
 !label Protection, Memory
-
 !label Memory protection, Modes for
-
 !item [~4-7]
-
 (!B)Memory protection mode(!b)
-
 !label Memory protection, Private
-
 !begin_xlist [3 = Nur lesbar]
-
 !item [0 = Privat]
-
 (!nl)
-
 Only the process itself, and the operating system, may access the memory
-
 !label Memory protection, Global
-
  !item [1 = Global]
-
 (!nl)
-
 The memory is completely unprotected and hence all programs can access it
-
 !label Memory protection, Super
-
 !item [2 = (!nolink [Super])]
-
 (!nl)
-
 The memory can be accessed by all processes that run in supervisor-mode
-
 !label Memory protection, Read only
-
 !item [3 = Read only]
-
 (!nl)
-
 Any process can read from the memory; but writing is only permitted by the
-
 process itself, as well as the operating system
-
 !end_xlist
-
-
 
 !item [8-11]
-
 Reserved, should be NULL
 
-
-
 !label Shared text
-
 !item [~~12]
-
 (!B)Shared text(!b).If this bit is set, then the TEXT segment of the program
-
 may be (!I)shared.(!i) If such a program is launched three times, for
-
 instance, then 3 different DATA and BSS segments exist, but only a common
-
 TEXT segment. (!B)Warning:(!b) The bit should only be set if the program
-
 does not perform any absolute accesses to the DATA or BSS segments.
 
-
-
 !item [13-27]
-
 Reserved, should be NULL.
 
-
-
 !label TPA size field
-
 !label Size field of the TPA
-
 !item [28-31]
-
 (!B)TPA size field(!b). Here one can specify in steps of 128 kbyte the
-
 maximum amount of memory to be allocated to the program from alternate RAM
-
 if the computer has more ST-RAM then alternate RAM. The 16 possible value
-
 represent allocations between 128 kbyte and 2 Mbyte.
-
 !end_xlist
 
-
-
-See also: (!link [Program header][The program format]) ~
-
-Program launch and TPA
-
+See also:
+(!link [Program header][The program format]) ~ Program launch and TPA
 !end_node
-
-
-
 
 
 !begin_node The program format
-
 !label GEMDOS, Program format under
-
 A program file under (!nolink [GEMDOS]) consists of the following segments:
 
-
-
 !begin_itemize !short
-
 !item Header
-
 !item TEXT, DATA and BSS segment
-
 !item Symbol table (optional)
-
 !item Relocation table (optional)
-
 !end_itemize
 
-
-
 (!B)The header is built up as follows:(!b)
-
 !label PH
-
 !label Program header
-
 !label Header of a program
-
 !begin_verbatim
-
 typedef struct
-
 {
-
    WORD  ph_branch;        /* Branch to start of the program  */
-
                            /* (must be 0x601a!)               */
 
-
-
    LONG  ph_tlen;          /* Length of the TEXT segment      */
-
    LONG  ph_dlen;          /* Length of the DATA segment      */
-
    LONG  ph_blen;          /* Length of the BSS segment       */
-
    LONG  ph_slen;          /* Length of the symbol table      */
-
    LONG  ph_res1;          /* Reserved, should be 0           */
-
    LONG  ph_prgflags;      /* Program flags                   */
-
    WORD  ph_absflag;       /* 0 = Relocation info present     */
-
 } PH;
-
 !end_verbatim
-
 !label Symbol table
-
 A symbol table in (!I)Digital Research format(!i) consists of a series of 14
-
 byte long entries, made up of the symbol name (maximum 8 bytes; any shorter
-
 names are terminated with a 0!), a 2 byte long symbol type and the actual
-
 symbol value (4 bytes). The supported symbol types are summarized in the
-
 following table:
 
-
-
 !begin_table [l|l]
-
 Value !! Symbol type
-
 !hline
-
 0x0100 !! In the BSS
-
 0x0200 !! In program text
-
 0x0280 !! Start of an object module
-
 0x02c0 !! Start of a library
-
 0x0400 !! In DATA segment
-
 0x0800 !! External
-
 0x1000 !! Register
-
 0x2000 !! Globales Symbol
-
 0x4000 !! Equated
-
 0x8000 !! Defined
-
 !end_table
-
 !label Relocation table
-
 Many development systems (e.g. Pure-C) however use their own (usually more
-
 efficient) symbol format. As programs under (!nolink [TOS]) may be loaded at
-
 any arbitrary location in working memory (and must be capable of running
-
 there), a program file normally contains a (!I)relocation table,(!i) with
-
 whose aid the addresses specified in the program code can be recalculated to
-
 the segments actually allocated.
 
-
-
 Whether relocation information is present or not can be gathered from the
-
 element (!I)ph_absflag(!i) of the program header (see above). Basically only
-
 a relocation of 32-bit values (i.e. addresses) is possible; prior to
-
 (!nolink [GEMDOS]) Version 0.15 (or (!nolink [TOS]) Version 1.04) the
-
 relocation information was limited to a maximum of 32 kbytes.
 
-
-
 The relocation table itself starts with a 32-bit value which marks the
-
 offset of the first value to be relocated (!I)relative(!i) to the start of
-
 the TEXT segment. Single bytes are then used for all following offsets.
-
 (!B)To be able to handle offsets greater than 255 correctly, one proceeds as
-
 follows:(!b) If a 1 is found as an offset (this is not possible due to the
-
 characteristics of the MC-680x0 processor family) then the value 254 is
-
 added automatically to the offset. For very large offsets this procedure can
-
 of course be repeated. Incidentally, an (!I)empty(!i) relocation table is
-
 flagged with a LONG value of 0.
 
-
-
-See also: Fcntl ~ ARHEADER ~ OHEADER ~ OSHEADER  ~ PSETFLAGS
-
+See also:
+Fcntl ~ ARHEADER ~ OHEADER ~ OSHEADER  ~ PSETFLAGS
 !end_node
-
-
-
 
 
 !begin_node Program launch and TPA
-
 !label TPA and Program launch
-
 !label Transient Program Area
 
-
-
 At the launch of a program it is very important to return surplus memory to
-
 the operating system with Mshrink, as otherwise there will be no memory
-
 available for other processes.
 
-
-
 A compiler normally takes over this task automatically; an assembler
-
 programmer, however, has to perform this task himself. The corresponding
-
 routine may look something like the following:
 
-
-
 !begin_verbatim
-
             .text
 
-
-
             move.l    4(sp),a0      ; Pointer to BASEPAGE
-
             lea       mystack,sp    ; Set stack pointer
-
             move.l    #$100,d0      ; Length of basepage
-
             add.l     $c(a0),d0     ; Length of the TEXT segment
-
             add.l     $14(a0),d0    ; Length of the DATA segment
-
             add.l     $1c(a0),d0    ; Length of the BSS segment
-
             move.l    d0,-(sp)      ; Return to the stack
-
             move.l    a0,-(sp)      ; Basepage address to stack
-
             clr.w     -(sp)         ; Fill parameter
-
             move.w    #$4a,-(sp)    ; Mshrink
-
             trap      #1            ; Call GEMDOS
-
             lea       $c(sp),sp     ; Correct stack
-
             jsr       main          ; Call main program
-
             move.w    d0,-(sp)      ; Return value of the program
-
             move.w    #$4c,-(sp)    ; Pterm
-
             trap      #1            ; Call GEMDOS
-
-
 
             .bss
 
-
-
             .ds.l     2000          ; 8000 bytes stack
-
 mystack:    .ds.l     2
-
 !end_verbatim
 
-
-
 (!B)In plain language:(!b) The required memory space is calculated by adding
-
 together the length of the basepage, the TEXT, the DATA and the BSS
-
 segments, as well as the stack (if necessary). All the required information
-
 resides in the basepage, whose address is passed as a parameter on the stack
-
 (4(sp)). The calculated value is then the number of bytes to which the TPA
-
 (Transient Program Area, memory range of a program) can be shrunk to.
 
-
-
 (!B)After execution of this procedure, the TPA of a program then has the
-
 following form:(!b)
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image tpa_en
-
 !else
-
 !image (!picture_path)\tpa_en
-
 !endif
-
 !else
-
 !image (!picture_path)\tpa_en
-
 !endif
-
-
 
 The memory released in this way can now be used by (!nolink [GEMDOS]) for
-
 other purposes: perhaps for launching further programs, or to satisfy memory
-
 allocations via Malloc or Mxalloc.
 
-
-
 !label TSR programs
-
 !label Terminate and Stay Resident
-
 For a TSR program ((!B)T(!b)erminate and (!B)S(!b)tay (!B)R(!b)esident) too
-
 the required memory space can be found by the above method; the only
-
 difference is that programs of this type do (!I)not(!i) terminate themselves
-
 with (!nolink [Pterm]) but with Ptermres, and with this anchor themselves
-
 resident in memory.
 
-
-
-See also: BASEPAGE ~ Memory management
-
+See also:
+BASEPAGE ~ Memory management
 !end_node
-
-
-
 
 
 !include gemdos\signale.u
 
-
-
 !begin_node gemdos-trap
-
 !label gemdos
-
 (!begin_liste) [Return value:]
 
 !item [Name:]
-
 ØgemdosÆ - Execute (!nolink [GEMDOS])-trap.
 
 !item [Declaration:]
-
 LONG gemdos ( VOID , ... );
 
 !item [Description:]
-
 The routine gemdos performs a TRAP #1 call. The parameters depend on the
-
 particular (!nolink [GEMDOS]) function in each case.
 
 !item [Return value:]
-
 The function returns a value of the data type LONG.
 
 !item [See also:]
-
 bios ~ xbios ~ GEMDOS ~ (!link [Dispatcher][Dispatcher, GEMDOS])
-
 (!ende_liste)
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node Das GEMDOS
 
-
-
-Das (!nolink [GEMDOS]) ist, abgesehen von den hardware-abhÑngigen BIOS und XBIOS, das
-
-eigentliche Betriebssystem des Atari. Seine Funktionen werden Åber den
-
-680X0-Trap #1 aufgerufen. Die Betriebssystemfunktionen lassen sich sehr
-
-leicht aufgrund des ersten Buchstabens des Funktionsnamens in Kategorien
-
-einteilen:
+Das (!nolink [GEMDOS]) ist, abgesehen von den hardware-abhÑngigen BIOS und
+XBIOS, das eigentliche Betriebssystem des Atari. Seine Funktionen werden
+Åber den 680X0-Trap #1 aufgerufen. Die Betriebssystemfunktionen lassen sich
+sehr leicht aufgrund des ersten Buchstabens des Funktionsnamens in
+Kategorien einteilen:
 
 !begin_xlist [˘ Zeichenweise Ein-/Ausgabe ] !short
-
 !item [˘ Dateifunktionen]            (F...)
-
 !item [˘ Datum und Uhrzeit]          (T...)
-
 !item [˘ Prozessfunktionen]          (P...)
-
 !item [˘ Speicherverwaltung]         (M...)
-
 !item [˘ Systemfunktionen]           (S...)
-
 !item [˘ Verzeichnisfunktionen]      (D...)
-
 !item [˘ Zeichenweise Ein-/Ausgabe]  (C...)
-
 !end_xlist
 
-(!nolink [GEMDOS]) arbeitet unter MagiC reentrant (ab MagiC 3.0 gilt dies sogar fÅr das
-
-Dateisystem!). Sichtbar ist dies z.B. daran, daû Altertboxen des Typs
-
-"Daten auf Disk A: defekt" verschiebbar sind - hierzu muû nÑmlich Speicher
-
-angefordert werden, was unter (Multi)TOS nicht funktioniert, da gerade eine
-
-Dateioperation im (!nolink [GEMDOS]) abgearbeitet wird.
-
-
+(!nolink [GEMDOS]) arbeitet unter MagiC reentrant (ab MagiC 3.0 gilt dies
+sogar fÅr das Dateisystem!). Sichtbar ist dies z.B. daran, daû Altertboxen
+des Typs "Daten auf Disk A: defekt" verschiebbar sind - hierzu muû nÑmlich
+Speicher angefordert werden, was unter (Multi)TOS nicht funktioniert, da
+gerade eine Dateioperation im (!nolink [GEMDOS]) abgearbeitet wird.
 
 !label MiNT-kompatible Funktionen
-
-Mit dem Erscheinen von MiNT wurde das (!nolink [GEMDOS]) um viele Funktionen erweitert.
-
-Die neuen Funktionen mÅssen jedoch nicht nur dann vorhanden sein, wenn MiNT
-
-installiert ist: (!nolink [MagiC]) besitzt ab Version 3.0 MiNT-kompatible Funktionen,
-
-und auch MetaDOS-Treiber mit entsprechender FunktionalitÑt sind schon
-
-gesichtet worden. Aus diesem Grund sollten Abfragen auf den MiNT-Cookie
-
-unbedingt aus allen Programmen entfernt werden. Das Vorhandensein einer
-
-(!nolink [GEMDOS])-Funktion wird daran erkannt, daû als Funktionsergebnis (!I)nicht(!i)
-
-der Wert EINVFN zurÅckgeliefert wird.
-
-
+Mit dem Erscheinen von MiNT wurde das (!nolink [GEMDOS]) um viele Funktionen
+erweitert. Auch (!nolink [MagiC]) besitzt ab Version 3.0 MiNT-kompatible
+Funktionen und es sind schon MetaDOS-Treiber mit entsprechender
+FunktionalitÑt gesichtet worden.
 
 !label GEMDOS, ParameterÅbergabe im
-
 !label ParameterÅbergabe im GEMDOS
+Das (!nolink [GEMDOS]) nimmt seine Parameter auf dem Stack entgegen; dabei
+wird das letzte Argument aus der Parameterliste als erstes auf dem Stack
+abgelegt. Funktionsergebnisse werden im Prozessorregister d0
+zurÅckgeliefert. Nur die Register d3-d7 und a3-a7 werden gerettet, alle
+anderen werden durch den Aufruf verÑndert.
 
-Das (!nolink [GEMDOS]) nimmt seine Parameter auf dem Stack entgegen; dabei wird das
-
-letzte Argument aus der Parameterliste als erstes auf dem Stack abgelegt.
-
-Funktionsergebnisse werden im Prozessorregister d0 zurÅckgeliefert. Nur die
-
-Register d3-d7 und a3-a7 werden gerettet, alle anderen werden durch den
-
-Aufruf verÑndert.
-
-
-
-Querverweis: (!nl)
-
+Querverweis:(!nl)
 (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~
-
 (!link [Hintergrund-DMA][Der Hintergrund-DMA von MagiC])  ~
-
 (!link [Programmformat][GEMDOS, Programmformat unter]) ~
-
 (!link [Funktionsliste][GEMDOS-Funktionsliste])
 
-
-
 !end_node
-
-
-
 
 
 !include gemdos\filesys.u
 
 
-
-
-
 !begin_node GEMDOS-Fehlermeldungen
 
-
-
 Fehler werden von GEMDOS als negative LONG-Werte gemeldet. Die folgende
-
 Liste enthÑlt alle bekannten Fehlermeldungen:
 
 
-
-
-
 !begin_xlist !short [Nr. Bezeichnung]
-
 !item [Nr. Bezeichnung]
-
 Bedeutung
-
 !item [~]
-
 ~
-
-
 
 !label E_OK
-
 !item [~~0 E_OK]
-
 Ok. Kein Fehler aufgetreten.
 
-
-
 !label EINVFN
-
 !item [-32 EINVFN]
-
 Unbekannte Funktionsnummer.
 
-
-
 !label EFILNF
-
 !item [-33 EFILNF]
-
 Datei nicht gefunden.
 
-
-
 !label EPTHNF
-
 !item [-34 EPTHNF]
-
 Verzeichnis (Ordner) nicht gefunden.
 
-
-
 !label ENHNDL
-
 !item [-35 ENHNDL]
-
 Keine Datei-Handles mehr verfÅgbar.
 
-
-
 !label EACCDN
-
 !item [-36 EACCDN]
-
 Zugriff nicht erlaubt.
 
-
-
 !label EIHNDL
-
 !item [-37 EIHNDL]
-
 Datei-Handle war nicht korrekt.
 
-
-
 !label ENSMEM
-
 !item [-39 ENSMEM]
-
 Speicher reicht nicht aus.
 
-
-
 !label EIMBA
-
 !item [-40 EIMBA]
-
 Adresse des Speicherblocks ungÅltig.
 
-
-
 !label EDRIVE
-
 !item [-46 EDRIVE]
-
 Laufwerksbezeichnung ungÅltig.
 
-
-
 !label ECWD
-
 !item [-47 ECWD]
-
 Aktuelles Verzeichnis kann nicht gelîscht werden.
 
-
-
 !label ENSAME
-
 !item [-48 ENSAME]
-
 Dateien auf versch. logischen Laufwerken.
 
-
-
 !label ENMFIL
-
 !item [-49 ENMFIL]
-
 Es kînnen keine Dateien mehr geîffnet werden.
 
-
-
 !label ELOCKED
-
 !item [-58 ELOCKED]
-
 Bereich einer Datei ist geschÅtzt (Netzwerk).
 
-
-
 !label ENSLOCK
-
 !item [-59 ENSLOCK]
-
 Angegebenes Locking existiert nicht.
 
-
-
 !label ERANGE
-
 !item [-64 ERANGE]
-
 Dateizeiger in ungÅltigem Bereich. (siehe auch FreeMiNT Meldung -88)
 
-
-
 !label EINTRN
-
 !item [-65 EINTRN]
-
 Interner Fehler des (!nolink [GEMDOS]).
 
-
-
 !label EPLFMT
-
 !item [-66 EPLFMT]
-
 UngÅltiges Programm-Format.
 
-
-
 !label EGSBF
-
 !item [-67 EGSBF]
-
 Allozierter Speicherblock konnte nicht vergrîûert werden.
 
-
-
 !label EBREAK
-
 !item [-68 EBREAK]
-
 Programm-Abbruch durch Control-C.
 
-
-
 !label EXCPT
-
 !item [-69 EXCPT]
-
 68000er Exception (Bomben).
 
-
-
 !label EPTHOV
-
 !item [-70 EPTHOV]
-
 Pfad öberlauf.
 
-
-
 !label ELOOP
-
 !item [-80 ELOOP]
-
 Zu tief verschachtelte symbolische Links, evtl. Endlosschleife.
 
-
-
 !label EPIPE
-
 !item [-81 EPIPE]
-
 Write to broken pipe.
-
 !end_xlist
-
-
 
 Unter FreeMiNT sind einige Fehlermeldungen mehr vorhanden bzw. wurden die Werte
-
 angepasst.
 
-
-
 !begin_xlist !short [Nr. EPROTONOSUPPORT ]
-
 !item [Nr. Bezeichnung]
-
 Bedeutung
-
 !item [~]
-
 ~
 
-
-
 !label EERROR
-
 !item [~~-1 EERROR]
-
 Generic error.
 
-
-
 !label EBUSY
-
 !item [~~-2 EBUSY]
-
 Resource busy.
 
-
-
 !label EUKCMD
-
 !item [~~-3 EUKCMD]
-
 Unknown command.
 
-
-
 !label ECRC
-
 !item [~~-4 ECRC]
-
 CRC error.
 
-
-
 !label EBADR
-
 !item [~~-5 EBADR]
-
 Bad request.
 
-
-
 !label ESPIPE
-
 !item [~~-6 ESPIPE]
-
 Illegal seek.
 
-
-
 !label EMEDIUMTYPE
-
 !item [~~-7 EMEDIUMTYPE]
-
 Wrong medium type.
 
-
-
 !label ESECTOR
-
 !item [~~-8 ESECTOR]
-
 Sector not found.
 
-
-
 !label EWRITE
-
 !item [~-10 EWRITE]
-
 Write fault.
 
-
-
 !label EGENERIC
-
 !item [~-12 EGENERIC]
-
 General mishap.
 
-
-
 !label EROFS
-
 !item [~-13 EROFS]
-
 Write protected.
 
-
-
 !label ECHMEDIA
-
 !item [~-14 ECHMEDIA]
-
 Media change.
 
-
-
 !label ENODEV
-
 !item [~-15 ENODEV]
-
 No such device.
 
-
-
 !label EBADSEC
-
 !item [~-16 EBADSEC]
-
 Bad sectors found.
 
-
-
 !label ENOMEDIUM
-
 !item [~-17 ENOMEDIUM]
-
 No medium found.
 
-
-
 !label ESRCH
-
 !item [~-20 ESRCH]
-
 No such process.
 
-
-
 !label ECHILD
-
 !item [~-21 ECHILD]
-
 No child processes.
 
-
-
 !label EDEADLK
-
 !item [~-22 EDEADLK]
-
 Resource deadlock would occur.
 
-
-
 !label ENOTBLK
-
 !item [~-23 ENOTBLK]
-
 Block device required.
 
-
-
 !label EISDIR
-
 !item [~-24 EISDIR]
-
 Is a directory.
 
-
-
 !label EINVAL
-
 !item [~-25 EINVAL]
-
 Invalid argument.
 
-
-
 !label EFTYPE
-
 !item [~-26 EFTYPE]
-
 Inappropriate file type or format.
 
-
-
 !label EILSEQ
-
 !item [~-27 EILSEQ]
-
 Illegal byte sequence.
 
-
-
 !label ENOSYS
-
 !item [~-32 ENOSYS]
-
 Function not implemented.
 
-
-
 !label ENOENT
-
 !item [~-33 ENOENT]
-
 No such file or directory.
 
-
-
 !label ENOTDIR
-
 !item [~-34 ENOTDIR]
-
 Not a directory.
 
-
-
 !label EMFILE
-
 !item [~-35 EMFILE]
-
 Too many open files.
 
-
-
 !label EACCES
-
 !item [~-36 EACCES]
-
 Permission denied.
 
-
-
 !label EBADF
-
 !item [~-37 EBADF]
-
 Bad file descriptor.
 
-
-
 !label EPERM
-
 !item [~-38 EPERM]
-
 Operation not permitted.
 
-
-
 !label ENOMEM
-
 !item [~-39 ENOMEM]
-
 Cannot allocate memory.
 
-
-
 !label EFAULT
-
 !item [~-40 EFAULT]
-
 Bad address.
 
-
-
 !label ENXIO
-
 !item [~-46 ENXIO]
-
 No such device or address.
 
-
-
 !label EXDEV
-
 !item [~-48 EXDEV]
-
 Cross-device link.
 
-
-
 !label ENMFILES
-
 !item [~-49 ENMFILES]
-
 No more matching file names.
 
-
-
 !label ENFILE
-
 !item [~-50 ENFILE]
-
 File table overflow.
 
-
-
 !item [~-58 ELOCKED]
-
 Locking conflict.
 
-
-
 !item [~-59 ENSLOCK]
-
 No such lock.
 
-
-
 !label EBADARG
-
 !item [~-64 EBADARG]
-
 Bad argument.
 
-
-
 !label EINTERNAL
-
 !item [~-65 EINTERNAL]
-
 Internal error.
 
-
-
 !label ENOEXEC
-
 !item [~-66 ENOEXEC]
-
 Invalid executable file format.
 
-
-
 !label ESBLOCK
-
 !item [~-67 ESBLOCK]
-
 Memory block growth failure.
 
-
-
 !item [~-68 EBREAK]
-
 Aborted by user.
 
-
-
 !item [~-69 EXCPT]
-
 Terminated with bombs.
 
-
-
 !label ETXTBSY
-
 !item [~-70 ETXTBSY]
-
 Text file busy.
 
-
-
 !label EFBIG
-
 !item [~-71 EFBIG]
-
 File too big.
 
-
-
 !item [~-80 ELOOP]
-
 Too many symbolic links.
 
-
-
 !item [~-81 EPIPE]
-
 Broken pipe.
 
-
-
 !label EMLINK
-
 !item [~-82 EMLINK]
-
 Too many links.
 
-
-
 !label ENOTEMPTY
-
 !item [~-83 ENOTEMPTY]
-
 Directory not empty.
 
-
-
 !label EEXIST
-
 !item [~-85 EEXIST]
-
 File exists.
 
-
-
 !label ENAMETOOLONG
-
 !item [~-86 ENAMETOOLONG]
-
 Name too long.
 
-
-
 !label ENOTTY
-
 !item [~-87 ENOTTY]
-
 Not a tty.
 
-
-
 !item [~-88 ERANGE]
-
 Range error.
 
-
-
 !label EDOM
-
 !item [~-89 EDOM]
-
 Domain error.
 
-
-
 !label EIO
-
 !item [~-90 EIO]
-
 I/O error
 
-
-
 !label ENOSPC
-
 !item [~-91 ENOSPC]
-
 No space left on device.
 
-
-
 !item [~-92]     reserved for TraPatch.
-
 !item [~-93]     reserved for TraPatch.
-
 !item [~-94]     reserved for TraPatch.
-
 !item [~-95]     reserved for TraPatch.
-
 !item [~-96]     reserved for TraPatch.
-
 !item [~-97]     reserved for TraPatch.
-
 !item [~-98]     reserved for TraPatch.
-
 !item [~-99]     reserved for TraPatch.
 
-
-
 !label EPROCLIM
-
 !item [-100 EPROCLIM]
-
 Too many processes for user.
 
-
-
 !label EUSERS
-
 !item [-101 EUSERS]
-
 Too man y users.
 
-
-
 !label EDQUOT
-
 !item [-102 EDQUOT]
-
 Quota exceeded.
 
-
-
 !label ESTALE
-
 !item [-103 ESTALE]
-
 Stale NFS file handle.
 
-
-
 !label EREMOTE
-
 !item [-104 EREMOTE]
-
 Object is remote.
 
-
-
 !label EBADRPC
-
 !item [-105 EBADRPC]
-
 RPC struct is bad.
 
-
-
 !label ERPCMISMATCH
-
 !item [-106 ERPCMISMATCH]
-
 RPC version wrong.
 
-
-
 !label EPROGUNAVAIL
-
 !item [-107 EPROGUNAVAIL]
-
 RPC program not available.
 
-
-
 !label EPROGMISMATCH
-
 !item [-108 EPROGMISMATCH]
-
 RPC program version wrong.
 
-
-
 !label EPROCUNAVAIL
-
 !item [-109 EPROCUNAVAIL]
-
 RPC bad procedure for program.
 
-
-
 !label ENOLCK
-
 !item [-110 ENOLCK]
-
 No locks available.
 
-
-
 !label EAUTH
-
 !item [-111 EAUTH]
-
 Authentication error.
 
-
-
 !label ENEEDAUTH
-
 !item [-112 ENEEDAUTH]
-
 Need authenticator.
 
-
-
 !label EBACKGROUND
-
 !item [-113 EBACKGROUND]
-
 Inappropriate operation for background process.
 
-
-
 !label EBADMSG
-
 !item [-114 EBADMSG]
-
 Not a data message.
 
-
-
 !label EIDRM
-
 !item [-115 EIDRM]
-
 Identifier removed.
 
-
-
 !label EMULTIHOP
-
 !item [-116 EMULTIHOP]
-
-   Multihop attempted.
-
-
+Multihop attempted.
 
 !label ENODATA
-
 !item [-117 ENODATA]
-
-   No data available.
-
-
+No data available.
 
 !label ENOLINK
-
 !item [-118 ENOLINK]
-
-   Link has been severed.
-
-
+Link has been severed.
 
 !label ENOMSG
-
 !item [-119 ENOMSG]
-
-   No message of desired type.
-
-
+No message of desired type.
 
 !label ENOSR
-
 !item [-120 ENOSR]
-
-   Out of streams resources.
-
-
+Out of streams resources.
 
 !label ENOSTR
-
 !item [-121 ENOSTR]
-
-   Device not a stream.
-
-
+Device not a stream.
 
 !label EOVERFLOW
-
 !item [-122 EOVERFLOW]
-
-   Value too large for defined data type.
-
-
+Value too large for defined data type.
 
 !label EPROTO
-
 !item [-123 EPROTO]
-
-   Protocol error.
-
-
+Protocol error.
 
 !label ETIME
-
 !item [-124 ETIME]
-
-   Timer expired.
-
-
+Timer expired.
 
 !label E2BIG
-
 !item [-125 E2BIG]
-
-   Argument list too long.
-
-
+Argument list too long.
 
 !label ERESTART
-
 !item [-126 ERESTART]
-
-   Interrupted system call should be
-
-
+Interrupted system call should be
 
 !label ECHRNG
-
 !item [-127 ECHRNG]
-
-   Channel number out of range.
-
-
+Channel number out of range.
 
 !label EINTR
-
 !item [-128 EINTR]
-
-   Interrupted function call.
-
-
+Interrupted function call.
 
 !label ESNDLOCKED
-
 !item [-129 ESNDLOCKED]
-
-   Sound system is already locked.
-
-
+Sound system is already locked.
 
 !label ESNDNOTLOCK
-
 !item [-130 ESNDNOTLOCK]
-
-   Sound system is not locked.
-
-
+Sound system is not locked.
 
 !label EL2NSYNC
-
 !item [-131 EL2NSYNC]
-
-   Level 2 not synchronized.
-
-
+Level 2 not synchronized.
 
 !label EL3HLT
-
 !item [-132 EL3HLT]
-
-   Level 3 halted.
-
-
+Level 3 halted.
 
 !label EL3RST
-
 !item [-133 EL3RST]
-
-   Level 3 reset.
-
-
+Level 3 reset.
 
 !label ELNRNG
-
 !item [-134 ELNRNG]
-
-   Link number out of range.
-
-
+Link number out of range.
 
 !label EUNATCH
-
 !item [-135 EUNATCH]
-
-   Protocol driver not attached.
-
-
+Protocol driver not attached.
 
 !label ENOCSI
-
 !item [-136 ENOCSI]
-
-   No CSI structure available.
-
-
+No CSI structure available.
 
 !label EL2HLT
-
 !item [-137 EL2HLT]
-
-   Level 2 halted.
-
-
+Level 2 halted.
 
 !label EBADE
-
 !item [-138 EBADE]
-
-   Invalid exchange.
-
-
+Invalid exchange.
 
 !label EXFULL
-
 !item [-139 EXFULL]
-
-   Exchange full.
-
-
+Exchange full.
 
 !label ENOANO
-
 !item [-140 ENOANO]
-
-   No anode.
-
-
+No anode.
 
 !label EBADRQC
-
 !item [-141 EBADRQC]
-
-   Invalid request code.
-
-
+Invalid request code.
 
 !label EBADSLT
-
 !item [-142 EBADSLT]
-
-   Invalid slot.
-
-
+Invalid slot.
 
 !label EBFONT
-
 !item [-143 EBFONT]
-
-   Bad font file format.
-
-
+Bad font file format.
 
 !label ENONET
-
 !item [-144 ENONET]
-
-   Machine is not on the network.
-
-
+Machine is not on the network.
 
 !label ENOPKG
-
 !item [-145 ENOPKG]
-
-   Package is not installed.
-
-
+Package is not installed.
 
 !label EADV
-
 !item [-146 EADV]
-
-   Advertise error.
-
-
+Advertise error.
 
 !label ESRMNT
-
 !item [-147 ESRMNT]
-
-   Srmount error.
-
-
+Srmount error.
 
 !label ECOMM
-
 !item [-148 ECOMM]
-
-   Communication error on send.
-
-
+Communication error on send.
 
 !label EDOTDOT
-
 !item [-149 EDOTDOT]
-
-   RFS specific error.
-
-
+RFS specific error.
 
 !label ELIBACC
-
 !item [-150 ELIBACC]
-
-   Cannot access a needed shared library.
-
-
+Cannot access a needed shared library.
 
 !label ELIBBAD
-
 !item [-151 ELIBBAD]
-
-   Accessing a corrupted shared library.
-
-
+Accessing a corrupted shared library.
 
 !label ELIBSCN
-
 !item [-152 ELIBSCN]
-
-  .lib section in a.out corrupted.
-
-
+.lib section in a.out corrupted.
 
 !label ELIBMAX
-
 !item [-153 ELIBMAX]
-
-   Attempting to link too many shared libraries.
-
-
+Attempting to link too many shared libraries.
 
 !label ELIBEXEC
-
 !item [-154 ELIBEXEC]
-
-   Cannot exec a shared library directly.
-
-
+Cannot exec a shared library directly.
 
 !label ESTRPIPE
-
 !item [-155 ESTRPIPE]
-
-   Streams pipe error.
-
-
+Streams pipe error.
 
 !label EUCLEAN
-
 !item [-156 EUCLEAN]
-
-   Structure needs cleaning.
-
-
+Structure needs cleaning.
 
 !label ENOTNAM
-
 !item [-157 ENOTNAM]
-
-   Not a XENIX named type file.
-
-
+Not a XENIX named type file.
 
 !label ENAVAIL
-
 !item [-158 ENAVAIL]
-
-   NO XENIX semaphores available.
-
-
+NO XENIX semaphores available.
 
 !label EREMOTEIO
-
 !item [-159 EREMOTEIO]
-
-   Remote I/O error.
-
-
+Remote I/O error.
 
 !label EMOUNT
-
 !item [-200 EMOUNT]
-
-   Mount point crossed (indicator)
-
-
+Mount point crossed (indicator)
 
 !label ENOTSOCK
-
 !item [-300 ENOTSOCK]
-
-   Socket operation on non-socket.
-
-
+Socket operation on non-socket.
 
 !label EDESTADDRREQ
-
 !item [-301 EDESTADDRREQ]
-
-   Destination address required.
-
-
+Destination address required.
 
 !label EMSGSIZE
-
 !item [-302 EMSGSIZE]
-
-   Message too long.
-
-
+Message too long.
 
 !label EPROTOTYPE
-
 !item [-303 EPROTOTYPE]
-
-   Protocol wrong type for socket.
-
-
+Protocol wrong type for socket.
 
 !label ENOPROTOOPT
-
 !item [-304 ENOPROTOOPT]
-
-   Protocol not available.
-
-
+Protocol not available.
 
 !label EPROTONOSUPPORT
-
 !item [-305 EPROTONOSUPPORT]
-
-   Protocol not supported.
-
-
+Protocol not supported.
 
 !label ESOCKTNOSUPPORT
-
 !item [-306 ESOCKTNOSUPPORT]
-
-   Socket type not supported.
-
-
+Socket type not supported.
 
 !label EOPNOTSUPP
-
 !item [-307 EOPNOTSUPP]
-
-   Operation not supported.
-
-
+Operation not supported.
 
 !label EPFNOSUPPORT
-
 !item [-308 EPFNOSUPPORT]
-
-   Protocol family not supported.
-
-
+Protocol family not supported.
 
 !label EAFNOSUPPORT
-
 !item [-309 EAFNOSUPPORT]
-
-   Address family not supported by protocol.
-
-
+Address family not supported by protocol.
 
 !label EADDRINUSE
-
 !item [-310 EADDRINUSE]
-
-   Address already in use
-
-
+Address already in use
 
 !label EADDRNOTAVAIL
-
 !item [-311 EADDRNOTAVAIL]
-
-   Cannot assign requested address.
-
-
+Cannot assign requested address.
 
 !label ENETDOWN
-
 !item [-312 ENETDOWN]
-
-   Network is down.
-
-
+Network is down.
 
 !label ENETUNREACH
-
 !item [-313 ENETUNREACH]
-
-   Network is unreachable.
-
-
+Network is unreachable.
 
 !label ENETRESET
-
 !item [-314 ENETRESET]
-
-   Network dropped conn. because of reset.
-
-
+Network dropped conn. because of reset.
 
 !label ECONNABORTED
-
 !item [-315 ECONNABORTED]
-
-   Software caused connection abort.
-
-
+Software caused connection abort.
 
 !label ECONNRESET
-
 !item [-316 ECONNRESET]
-
-   Connection reset by peer.
-
-
+Connection reset by peer.
 
 !label EISCONN
-
 !item [-317 EISCONN]
-
-   Socket is already connected.
-
-
+Socket is already connected.
 
 !label ENOTCONN
-
 !item [-318 ENOTCONN]
-
-   Socket is not connected.
-
-
+Socket is not connected.
 
 !label ESHUTDOWN
-
 !item [-319 ESHUTDOWN]
-
-   Cannot send after shutdown.
-
-
+Cannot send after shutdown.
 
 !label ETIMEDOUT
-
 !item [-320 ETIMEDOUT]
-
-   Connection timed out.
-
-
+Connection timed out.
 
 !label ECONNREFUSED
-
 !item [-321 ECONNREFUSED]
-
-   Connection refused.
-
-
+Connection refused.
 
 !label EHOSTDOWN
-
 !item [-322 EHOSTDOWN]
-
-   Host is down.
-
-
+Host is down.
 
 !label EHOSTUNREACH
-
 !item [-323 EHOSTUNREACH]
-
-   No route to host.
-
-
+No route to host.
 
 !label EALREADY
-
 !item [-324 EALREADY]
-
-   Operation already in progress.
-
-
+Operation already in progress.
 
 !label EINPROGRESS
-
 !item [-325 EINPROGRESS]
-
-   Operation now in progress.
-
-
+Operation now in progress.
 
 !label EAGAIN
-
 !item [-326 EAGAIN]
-
-   Operation would block.
-
-
+Operation would block.
 
 !label EWOULDBLOCK
-
 !item [-326 EWOULDBLOCK]
-
-   siehe EAGAIN
-
-
+siehe EAGAIN
 
 !label ENOBUFS
-
 !item [-327 ENOBUFS]
-
-   No buffer space available.
-
-
+No buffer space available.
 
 !label ETOOMANYREFS
-
 !item [-328 ETOOMANYREFS]
-
-   Too many references.
-
-
+Too many references.
 
 !end_xlist
 
-
-
-Querverweis: (!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~
-
+Querverweis:
+(!link [Fehlermeldungen in MagiC][Spezielle Fehlermeldungen von MagiC]) ~
 (!link [BIOS und XBIOS Fehlermeldungen][BIOS Fehlermeldungen])
 
-
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Pipes, Test auf
 
-
-
 Um zu testen ob Pipes vorhanden sind, kann man wie folgt
-
 vorgehen:
 
-
-
 !begin_itemize
-
 !item Ist Laufwerk U vorhanden?
-
 !item Gibt es dort ein Verzeichnis PIPE?
-
-!item Sind dort erstellte Dateien wirklich (!nolink [Pipes]), d.h. liefert Fxattr nach
-
-einem Fcreate den Typ PIPE zurÅck?
-
+!item Sind dort erstellte Dateien wirklich (!nolink [Pipes]), d.h. liefert
+Fxattr nach einem Fcreate den Typ PIPE zurÅck?
 !end_itemize
-
 !end_node
-
-
-
 
 
 !begin_node Die Programmflags
-
 !label Flags eines Programms
 
-
-
 Bei den Programmflags handelt es sich um einen Bitvektor innerhalb des
-
 Programmheaders, der wie folgt aufgebaut ist:
 
-
-
 !begin_xlist !short [11-22]
-
 !item [Bits]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [~~~0]
-
 (!B)Fastload-Flag(!b). Wenn dieses Bit gesetzt ist, wird der Heap nicht
-
 gelîscht, sondern lediglich das BSS-Segment vorinitialisiert.
-
 !item [~~~1]
-
 Wenn dieses Bit gesetzt ist, darf das Programm in das schnelle Alternate-RAM
-
 geladen werden.
-
 !item [~~~2]
-
 Wenn dieses Bit gesetzt ist, dÅrfen Speicheranforderungen per Malloc aus dem
-
 Alternate-RAM bedient werden.
-
 !item [~~~3]
-
 reserviert, sollte Null sein.
-
-
 
 !label Memory-Protection
-
 !label Protection, Memory-
-
 !label Speicherschutz, Modi beim
-
 !item [~4-7]
-
 (!B)Speicherschutz-Modus(!b)
-
 !label Speicherschutz, Privat-
-
 !label Memory-Protection, Private-
-
 !begin_xlist [3 = Nur lesbar]
-
 !item [0 = Privat]
-
 (!nl)
-
 Nur der Prozess selbst, und das Betriebssystem kann auf den Speicher
-
 zugreifen.
-
 !label Speicherschutz, Global-
-
 !label Memory-Protection, Global-
-
  !item [1 = Global]
-
 (!nl)
-
 Der Speicher ist vîllig ungeschÅtzt, und daher kann von allen Programmen auf
-
 diesen zugegriffen werden.
-
 !label Speicherschutz, Super-
-
 !label Memory-Protection, Super-
-
 !item [2 = (!nolink [Super])]
-
 (!nl)
-
 Auf den Speicher kann von allen Prozessen zugegriffen werden, die im
-
 Supervisor-Modus arbeiten.
-
 !label Speicherschutz, nur lesbar
-
 !label Memory-Protection, nur lesbar
-
 !item [3 = Nur lesbar]
-
 (!nl)
-
 Jeder Prozess kann aus dem Speicher lesen; das Schreiben ist jedoch nur dem
-
 Prozess selbst, sowie dem Betriebssystem erlaubt.
-
 !end_xlist
-
-
 
 !item [8-11]
-
 reserviert, sollte Null sein.
-
-
 
 !label Shared-Text
-
 !item [~~12]
-
 (!B)Shared-Text(!b). Wenn dieses Bit gesetzt ist, darf das Text-Segment des
-
 Programms (!I)geshared(!i) werden. Wenn ein derartiges Programm
-
 beispielsweise 3-mal gestartet wird, dann existieren 3 verschiedene DATA-
-
 und BSS-Segmente, aber nur ein gemeinsames Text-Segment. (!B)Achtung:(!b)
-
 Das Bit sollte nur gesetzt werden, wenn das Programm keine absoluten
-
 Zugriffe auf das DATA- oder BSS-Segment durchfÅhrt.
 
-
-
 !item [13-27]
-
 reserviert, sollte Null sein.
 
-
-
 !label TPA-Grîûenfeld
-
 !label Grîûenfeld der TPA
-
 !item [28-31]
-
 (!B)TPA-Grîûenfeld(!b). Hier kann in Schritten zu 128 Kbyte festgelegt
-
 werden, wieviel Speicher aus dem Alternate-RAM dem Programm maximal
-
 zugeteilt werden soll, wenn der Rechner Åber mehr ST-RAM als Alternate-RAM
-
 verfÅgt. Die 16 mîglichen Werte stehen fÅr Angaben zwischen 128 Kbyte und
-
 2MByte.
-
 !end_xlist
 
-
-
-Querverweis: (!link [Programmheader][GEMDOS, Programmformat unter]) ~ Programmstart und TPA
-
+Querverweis:
+(!link [Programmheader][GEMDOS, Programmformat unter]) ~
+Programmstart und TPA
 !end_node
-
-
-
 
 
 !begin_node Das Programmformat
-
 !label GEMDOS, Programmformat unter
-
 Eine Programmdatei besteht unter GEMDOS aus den folgenden Komponenten:
 
-
-
 !begin_itemize !short
-
 !item Header
-
 !item Text-, DATA- und BSS-Segment
-
 !item Symboltabelle (optional)
-
 !item Relokationstabelle (optional)
-
 !end_itemize
 
-
-
 (!B)Der Header ist dabei wie folgt aufgebaut:(!b)
-
 !label PH
-
 !label Programmheader
-
 !label Header eines Programms
-
 !begin_verbatim
-
 typedef struct
-
 {
-
    WORD  ph_branch;        /* Branch zum Anfang des Programms  */
-
                            /* (muû 0x601a sein!)               */
 
-
-
    LONG  ph_tlen;          /* LÑnge  des TEXT - Segments       */
-
    LONG  ph_dlen;          /* LÑnge  des DATA - Segments       */
-
    LONG  ph_blen;          /* LÑnge  des BSS  - Segments       */
-
    LONG  ph_slen;          /* LÑnge  der Symboltabelle         */
-
    LONG  ph_res1;          /* reserviert, sollte 0 sein        */
-
    LONG  ph_prgflags;      /* Programmflags                    */
-
    WORD  ph_absflag;       /* 0 = Relozierungsinf. vorhanden   */
-
 } PH;
-
 !end_verbatim
-
 !label Symboltabelle
-
 Eine Symboltabelle im (!I)Digital-Research-Format(!i) besteht aus jeweils 14
-
 Bytes langen EintrÑgen, die aus dem Symbolnamen (maximal 8 Bytes; lediglich
-
 kÅrzere Namen sind mit einer 0 abgeschlossen!), einem 2 Bytes langen
-
 Symboltyp und dem eigentlichen Symbolwert (4 Bytes) bestehen. Die
-
 unterstÅtzten Symboltypen sind in der folgenden Tabelle zusammengefaût:
 
-
-
 !begin_table [l|l]
-
 Wert !! Symboltyp
-
 !hline
-
 0x0100 !! in der BSS
-
 0x0200 !! im Programmtext
-
 0x0280 !! Start eines Objektmoduls
-
 0x02c0 !! Start einer Library
-
 0x0400 !! im DATA-Bereich
-
 0x0800 !! External
-
 0x1000 !! Register
-
 0x2000 !! Globales Symbol
-
 0x4000 !! Equated
-
 0x8000 !! Defined
-
 !end_table
-
 !label Relokationstabelle
-
 Viele Entwicklungssysteme (z.B. Pure-C) benutzen allerdings ein eigenes
-
 (i.d.R. leistungsfÑhigeres) Symbolformat. Da Programme unter TOS an eine
-
 beliebige Stelle des Arbeitsspeichers geladen werden kînnen (und dort
-
 ablauffÑhig sein mÅssen), enthÑlt eine Programmdatei normalerweise eine
-
 (!I)Relokationstabelle(!i), mit deren Hilfe die im Programmcode angegebenen
-
-(!nolink [Adressen]) auf die tatsÑchlich zugewiesenen Bereiche umgerechnet werden
-
+(!nolink [Adressen]) auf die tatsÑchlich zugewiesenen Bereiche umgerechnet
+werden
 kînnen.
 
-
-
 Ob Relokations-Informationen vorhanden sind oder nicht, kann der Komponente
-
 (!I)ph_absflag(!i) des Programmheaders (s.o.) entnommen werden. Es ist
-
-grundsÑtzlich nur eine Relozierung von 32-Bit-Werten (d.h. (!nolink [Adressen]))
-
-mîglich; vor GEMDOS-Version 0.15 (bzw. TOS-Version 1.04) durften die
-
-Relozierungsinformationen nur maximal 32 Kbyte umfassen.
-
-
+grundsÑtzlich nur eine Relozierung von 32-Bit-Werten (d.h.
+(!nolink [Adressen])) mîglich; vor GEMDOS-Version 0.15 (bzw. TOS-Version
+1.04) durften die Relozierungsinformationen nur maximal 32 Kbyte umfassen.
 
 Die Relokationstabelle selbst beginnt mit einem 32-Bit-Wert, welcher den
-
 Offset des ersten zu relozierenden Wertes (!I)relativ(!i) zum Beginn des
-
 Textsegmentes markiert. FÅr alle folgenden Offsets werden dann einzelne
-
 Bytes benutzt. (!B)Um auch AbstÑnde grîûer als 255 korrekt handhaben zu
-
 kînnen, wird dabei wie folgt verfahren:(!b) Wird als Offset eine 1 gefunden
-
 (dies ist aufgrund der Charakteristika der MC-680x0 Prozessorfamilie
-
 unmîglich), wird automatisch zum Offset der Wert 254 addiert. FÅr besonders
-
 groûe AbstÑnde kann dieser Vorgang natÅrlich auch wiederholt werden. Eine
-
 (!I)leere(!i) Relokationstabelle wird Åbrigens durch einen Long-Wert von 0
-
 gekennzeichnet.
 
-
-
-Querverweis: Fcntl ~  (!link [ARHEADER][Archivheader (ARHEADER)]) ~  OHEADER ~
-
+Querverweis:
+Fcntl ~  (!link [ARHEADER][Archivheader (ARHEADER)]) ~  OHEADER ~
 OSHEADER  ~ PSETFLAGS
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Programmstart und TPA
-
 !label TPA und Programmstart
-
 !label Transient Program Area
 
-
-
 Zu Beginn eines Programms ist es sehr wichtig ÅberflÅssigen Speicher per
-
 Mshrink an das Betriebssystem zurÅckzugeben, da anderenfalls kein
-
 Speicherplatz mehr fÅr andere Prozesse zur VerfÅgung steht.
 
-
-
 Ein Compiler Åbernimmt diese Aufgabe normalerweise automatisch; als
-
 Assembler-Programmierer muss man diese Prozedur jedoch selbst durchfÅhren.
-
 Die entsprechende Routine kînnte wie folgt aussehen:
 
-
-
 !begin_verbatim
-
             .text
 
-
-
             move.l    4(sp),a0      ; Zeiger auf BASEPAGE
-
             lea       mystack,sp    ; Stack-Pointer setzen
-
             move.l    #$100,d0      ; LÑnge der Basepage
-
             add.l     $c(a0),d0     ; LÑnge des Text-Segments
-
             add.l     $14(a0),d0    ; LÑnge des Data-Segments
-
             add.l     $1c(a0),d0    ; LÑnge des BSS-Segments
-
             move.l    d0,-(sp)      ; Ergebnis auf dem Stack
-
             move.l    a0,-(sp)      ; Basepage-Adresse auf Stack
-
             clr.w     -(sp)         ; FÅllparameter
-
             move.w    #$4a,-(sp)    ; Mshrink
-
             trap      #1            ; GEMDOS aufrufen
-
             lea       $c(sp),sp     ; Stack korrigieren
-
             jsr       main          ; Hauptprogramm aufrufen
-
             move.w    d0,-(sp)      ; Return-Wert des Programms
-
             move.w    #$4c,-(sp)    ; Pterm
-
             trap      #1            ; GEMDOS aufrufen
-
-
 
             .bss
 
-
-
             .ds.l     2000          ; 8000 Bytes Stack
-
 mystack:    .ds.l     2
-
 !end_verbatim
 
-
-
 (!B)Im Klartext:(!b) Der benîtigte Speicherplatzbedarf wird errechnet, indem
-
 die LÑnge der Basepage, des Text-, Data- und BSS-Segments sowie ggfs. des
-
 Stacks aufaddiert werden. Alle notwendigen Angaben befinden sich in der
-
 Basepage, deren Adresse als Parameter auf dem Stack (4(sp)) mitgeteilt
-
 wird. Der errechnete Wert ist dann die Anzahl der Bytes, auf die die TPA
-
 (Transient Program Area, Speicherbereich eines Programms) geschrumpft werden
-
 kann.
 
-
-
 (!B)Nach AusfÅhrung dieser Prozedur besitzt die TPA eines Programms dann
-
 die folgende Gestalt:(!b)
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image tpa
-
 !else
-
 !image (!picture_path)\tpa
-
 !endif
-
 !else
-
 !image (!picture_path)\tpa
-
 !endif
-
-
 
 Der so freigegebene Speicherplatz kann nun vom GEMDOS fÅr andere Zwecke
-
 genutzt werden: etwa zum Starten weiterer Programme, oder um
-
 Speicheranforderungen per Malloc bzw. Mxalloc zu befriedigen.
 
-
-
 !label TSR-Programme
-
 !label Terminate and Stay Resident
-
 Auch bei einem TSR-Programm (Terminate and Stay Resident) kann der benîtigte
-
 Speicherplatz nach der oben angegebenen Methode berechnet werden; der
-
 einzige Unterschied ist, daû Programme dieser Art sich (!I)nicht(!i) per
-
 (!nolink [Pterm]) sondern per Ptermres beenden, und sich dadurch resident im Speicher
-
 verankern.
 
-
-
-Querverweis: (!link [BASEPAGE][PD]) ~ Speicherverwaltung
-
+Querverweis:
+(!link [BASEPAGE][PD]) ~ Speicherverwaltung
 !end_node
-
-
-
 
 
 !include gemdos\signale.u
 
-
-
 !begin_node gemdos-Trap
-
 !label gemdos
-
 (!begin_liste) [Beschreibung]
 
 !item [Name:]
-
 ØgemdosÆ - (!nolink [GEMDOS])-Trap ausfÅhren.
 
 !item [Deklaration:]
-
 LONG gemdos ( VOID , ... );
 
 !item [Beschreibung:]
-
 Die Routine gemdos fÅhrt einen TRAP #1 durch. Die
-
 Åbergebenen Parameter hÑngen von der jeweiligen
-
 (!nolink [GEMDOS])-Funktion ab.
 
 !item [Ergebnis:]
-
 Die Funktion liefert als Ergebnis einen Wert vom
-
 Datentyp LONG.
 
-!item [Querverweis:] bios ~ xbios ~ GEMDOS ~ (!link [Dispatcher][GEMDOS-Dispatcher])
-
+!item [Querverweis:]
+bios ~ xbios ~ GEMDOS ~ (!link [Dispatcher][GEMDOS-Dispatcher])
 (!ende_liste)
-
 !end_node
-
-
 
 !endif
 
-
-
 !include gemdos\file\file.u
-
 !include gemdos\datetime\datetime.u
-
 !include gemdos\prozess\prozess.u
-
 !include gemdos\memory\memory.u
-
 !include gemdos\network\network.u
-
 !include gemdos\system\system.u
-
 !include gemdos\dir\dir.u
-
 !include gemdos\chrinout\chrinout.u
 
-
-
 !include gemdos\argv.u
-
 !include gemdos\tekbios.u
-
 !include gemdos\gemdos_f.u
-
 !include gemdos/structures/structures.u
-
