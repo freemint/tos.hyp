@@ -1,923 +1,1846 @@
 !iflang [english]
 
+
+
 !begin_node vr_transfer_bits
+
+
 
 (!begin_liste) [Availability]
 
+
+
 !item [Name:]
+
 ØTransfer bitmapÆ - Combine two bitmaps.
 
+
+
 !item [Opcode:]
+
 170 (Sub-Opcode 0)
 
+
+
 !item [Syntax:]
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm, GCBITMAP *dst_bm,
+
                        RECT16 *src_rect, RECT16 *dst_rect, int16_t mode );
 
+
+
 !item [Description:]
+
 The call vr_transfer_bit combines two bitmaps, using scaling if required.
 
 
+
+
+
 !begin_xlist !short [dst_rect]
+
 !item [Parameter]
+
 Meaning
+
 !item [~]
+
 ~
+
 !item [handle]
+
 Workstation identifier
 
+
+
 !item [src_bm]
+
 Source bitmap
 
+
+
 !item [dst_bm]
+
 Destination bitmap
 
+
+
 !item [src_rect]
+
 Source rectangle
 
+
+
 !item [dst_rect]
+
 Destination rectangle
 
+
+
 !item [mode]
+
 Transfer function mode
+
+
 
 !end_xlist
 
 
+
+
+
 The function vr_transfer_bit combines the source bitmap(!I)src_bm(!i) with
+
 the destination bitmap (!I)dst_bm(!i), where (!I)mode(!i) specifies the
+
 transfer function. The source rectangle is passed in (!I)src_rect(!i) and the
+
 destination rectangle in (!I)dst_rect.(!i) The coordinates here are specified
+
 (as for all other (!nolink [VDI]) functions) as discrete values.
 
+
+
 If the source and destination rectangles do not have the same size,
+
 vr_transfer_bit will scale the source bitmap. For reductions, the bitmap data
+
 will be inter!-polated if the source contains direct colour values (16 or
+
 32 bit) or if the output takes place with dithering.
 
+
+
 If the source and destination bitmaps do not have the same pixel format or the
+
 same colour depth, the source data is transformed automatically into the
+
 destination format (the source bitmap will remain unchanged, of course).
 
+
+
 If (!I)src_bm(!i) or (!I)dst_bm(!i) is 0, then the bitmap of the workstation
+
 (!I)handle(!i) is used as source or destination of the operation respectively.
+
 For output to the screen a program should pass 0 for (!I)dst_bm(!i) in any case
+
 and not try to build up its own bitmap description. Clipping is applied only for
+
 the destination bitmap (and that only if the destination bitmap is the
+
 bitmap of the workstation).
+
+
+
 
 
 (!B)Transfer modes(!b)
 
+
+
 In the following list the constants for the transfer modes passed in
+
 (!I)mode(!i) are defined. In the comments the type of operation is specified
+
 in symbolic notation ('src' is the source pixel, 'dst' is the destination
+
 pixel, 'bg_col' is the pixel value of the background colour, 'hilite_col' is
+
 the pixel value of the colour used for emphasis):
 
+
+
 !begin_verbatim
+
 /* Logical transfer modes */
+
 #define T_LOGIC_COPY         0  /* dst = src;                      */
+
 #define T_LOGIC_OR           1  /* dst = src OR dst;               */
+
 #define T_LOGIC_XOR          2  /* dst = src XOR dst;              */
+
 #define T_LOGIC_AND          3  /* dst = src AND dst;              */
+
 #define T_LOGIC_NOT_COPY     4  /* dst = ( NOT src );              */
+
 #define T_LOGIC_NOT_OR       5  /* dst = ( NOT src ) OR dst;       */
+
 #define T_LOGIC_NOT_XOR      6  /* dst = ( NOT src ) XOR dst;      */
+
 #define T_LOGIC_NOT_AND      7  /* dst = ( NOT src ) AND dst;      */
 
+
+
 /* Drawing modes */
+
 #define T_REPLACE            32 /* dst = src;                      */
+
 #define T_TRANSPARENT        33 /* if ( src != bg_col ) dst = src; */
+
 #define T_HILITE             34 /* if ( src != bg_col )            */
+
                                 /* {                               */
+
                                 /*    if ( dst == bg_col )         */
+
                                 /*       dst = hilite_col;         */
+
                                 /*    else if ( dst == hilite_col )*/
+
                                 /*       dst = bg_col;             */
+
                                 /* }                               */
+
 #define T_REVERS_TRANSPARENT 35 /* if ( src == bg_col ) dst = src; */
+
 !end_verbatim
+
+
 
 (!B)Note:(!b) In the arithmetic transfer modes, source and destination are not
+
 combined according to their pixel values, but their (RGB) colour values are
+
 added or subtracted depending on their combination, ...
 
+
+
 In the symbolic description below, 'RGB( x )' is the RGB colour value of a pixel
+
 and 'PIXELVALUE( rgb )' is the pixel value of a RGB colour value. 'MAX( rgb_a,
+
 rgb_b )' returns the maximum components of two RGB colour values; 'MIN( rgb_a,
+
 rgb_b )' similarly returns the minimum components. 'max_rgb' is a maximum RGB
+
 colour value, 'min_rgb' is a minimum RGB colour value. 'weighting' is a value
+
 between 0 and 1.0 which specifies the mixing of source and destination colours.
 
+
+
 !begin_verbatim
+
 /* Arithmetic transfer modes */
+
 #define T_BLEND           64 /* Mix source and destination colour */
+
                              /* rgb = RGB( src ) * weighting );   */
+
                              /* rgb += RGB( dst ) * (1-weighting));*/
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_ADD             65 /* Add source and destination colour */
+
                              /* rgb = RGB( src ) + RGB( dst )     */
+
                              /* if ( rgb > max_rgb )              */
+
                              /*    rgb = max_rgb;                 */
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_ADD_OVER        66 /* Add source and destination colour,*/
+
                              /* do not catch overflows            */
+
                              /* rgb = RGB( src ) + RGB( dst )     */
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_SUB             67 /* Subtract source from destination  */
+
                              /* colour                            */
+
                              /* rgb = RGB( dst ) - RGB( src )     */
+
                              /* if ( rgb < min_rgb )              */
+
                              /*    rgb = min_rgb;                 */
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_MAX             69 /* Maximum RGB components            */
+
                              /* rgb = MAX(RGB( dst ), RGB( src )) */
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_SUB_OVER        70 /* Subtract source from destination  */
+
                              /* colour, do not catch overflows    */
+
                              /* rgb = RGB( dst ) - RGB( src )     */
+
                              /* dst = PIXELWERT( rgb );           */
+
 #define T_MIN             71 /* Minimum RGB components            */
+
                              /* rgb = MIN(RGB( dst ), RGB( src )) */
+
                              /* dst = PIXELWERT( rgb );           */
+
 !end_verbatim
 
+
+
 Furthermore, for all transfer modes one can affect the type of combination by
+
 the addition of one of the following constants:
 
+
+
  #define T_COLORIZE        16    /* Colourize source   */
+
  #define T_DITHER_MODE     128   /* Dither source data */
+
+
 
 (!B)Dithering(!b)
 
+
+
 'T_DITHER_MODE' leads to the use of an error-diffusion function if the
+
 destination bitmap has 256 or fewer colours (furthermore, interpolation will be
+
 performed for reductions in this case so that the details in the reduced
+
 image are not lost completely).
 
+
+
 If the source and destination palette are equal (or the source palette is a
+
 subset of the system colour palette), NVDI (automatically) uses a faster
+
 transfer function internally without dithering.
 
+
+
 (!B)Colourizing(!b)
+
 !begin_itemize
+
 !item  If a logical mode is called with 'T_COLORIZE', the type of colourizing
+
 applied depends on the mode:
+
 !begin_verbatim
+
 T_LOGIC_COPY
 
+
+
 For all set bits in the colour value depict the
+
 background colour and for all cleared bits the
+
 foreground colour:
+
 rgb = (( NOT RGB( src )) & RGB( fg_col )) OR
+
       ( RGB( src ) AND RGB( bg_col ));
+
 dst = PIXELWERT( rgb );
+
+
 
 T_LOGIC_NOT_COPY
 
+
+
 For all set bits in the colour value depict the
+
 foreground colour and for all cleared bits the
+
 background colour:
+
 rgb = ( RGB( src ) & RGB( fg_col )) OR
+
       ((( NOT RGB( src )) AND RGB( bg_col ));
+
 dst = PIXELWERT( rgb );
+
+
 
 T_LOGIC_OR
 
+
+
 Everywhere that source bits are set, ( src AND
+
 fg_col ) will be depicted in the destination:
+
 dst = ( src AND fg_col ) OR (( NOT src ) AND dst );
+
+
 
 T_LOGIC_NOT_OR
 
+
+
 Everywhere that source bits are cleared,
+
 ((NOT src ) AND fg_col ) will be depicted in
+
 the destination:
+
 dst = (( NOT src ) AND fg_col ) OR ( src AND dst );
 
+
+
 T_LOGIC_XOR
+
 T_LOGIC_NOT_XOR
+
+
 
 The XOR combination ignores the colourizing.
 
+
+
 T_LOGIC_AND
 
+
+
 Everywhere that source bits are cleared,
+
 (( NOT src ) AND bg_col ) will be depicted in the
+
 destination:
+
 dst = ((NOT src ) AND bg_col ) OR ( src AND dst );
+
+
 
 T_LOGIC_NOT_AND
 
+
+
 Everywhere that source bits are set, ( src AND
+
 bg_col ) will be depicted in the destination:
+
 dst = ( src AND bg_col ) OR ((NOT src ) AND dst );
+
 !end_verbatim
+
+
+
 
 
 !item  For the modes T_REPLACE, T_TRANSPARENT, T_HILITE and T_REVERS_TRANSPARENT
+
 the colourizing does not act in a binary manner on the colour or pixel values,
+
 but the colour values are scaled instead. The following sample shows how a
+
 colour value is colourized; 'bg_col', 'fg_col', 'src' and 'dst'
+
 are RGB colour values (between 0 and 65535):
 
+
+
 !begin_verbatim
+
 red_range = bg_col.red - fg_col.red;
+
 green_range = bg_col.green - fg_col.green;
+
 blue_range = bg_col.blue - fg_col.blue;
 
+
+
 dst.red = fg_col.red + ( src_color.red * red_range / 65535 );
+
 dst.green = fg_col.green + ( src_color.green * green_range / 65535 );
+
 dst.blue = fg_col.blue + ( src_color.blue * blue_range / 65535 );
+
 !end_verbatim
 
+
+
 (!B)Note:(!b) At present, colourizing in the modes T_REPLACE, T_TRANSPARENT,
+
 T_HILITE and T_REVERS_TRANSPARENT is suppored only for source bitmaps with up
+
 to 256 colours. For source bitmaps with 16- or 32-bit depths there is at present
+
 no support for colourizing in these modes.
+
+
 
 !item The arithmetic transfer modes do not support any colourizing.
 
+
+
 !end_itemize
+
+
+
 
 
 (!B)Bitmaps(!b)
 
+
+
 Instead of an antiquated MFDB, this function expects a GCBITMAP structure for
+
 describing the bitmaps.
 
+
+
 If 'ctab' is 0L, the system colour table corresponding to the bit-depth will be
+
 used for the call (if the bitmap has more than 8 bits per pixel, i.e. uses
+
 direct colour values, 'ctab' can also be set to 0).
 
+
+
 Source bitmaps do not require an inverse colour table; here 'itab' can be set
+
 to 0L. For a self-managed destination bitmap one must request a reference to an
+
 inverse colour table from the (!nolink [VDI]) (and at some later stage also
+
 release it again).
+
+
 
 (!B)Simplified special cases(!b)
 
+
+
 So that bitmaps in screen format can be copied in as uncomplicated a way as with
+
 vro_cpyfm without having to request a colour table and a reference to an inverse
+
 colour table, there are some simplified special cases for vr_transfer_bits:
+
 !begin_itemize
 
+
+
 !item If the source does not have a colour table (0L), the colour table of the
+
 device will be used if this has the same bit-depth. If this is not the
+
 case, the system colour table for the bit-depth of the source will be used.
 
+
+
 !item If the destination does not have an (inverse) colour table, the (inverse)
+
 colour table of the device will be used if this has the same bit-depth. If this is
+
 not the case, the system colour table for the bit!-depth of the destination will
+
 be used, and an additional inverse colour table will be built up internally for
+
 the call. This means that is is imperative that destination bitmaps that have no
+
 inverse colour table have the same bit-depth as the device belonging
+
 to the (!nolink [VDI]) handle.
+
 !end_itemize
 
+
+
 (!B)Note:(!b) It is recommended that for bitmaps outside of the screen,
+
 v_open_bm or v_opnbm is used to create a bitmap by the (!nolink [VDI]), so that
+
 one does not have to look after the management of colour tables and inverse
+
 colour tables in this case.
+
+
+
+
 
 
 
 (!B)Pixel formats(!b)
 
+
+
 To be able to convert bitmaps between various bit!-depths and pixel formats,
+
 vr_transfer_bit requires a description of the pixel format, which is contained
+
 in the structure element 'px_format' of GCBITMAP. The build-up of this bit-vector
+
 is described in the following list; however, programmers may find the
+
 pre-defined formats to be of primary interest:
 
 
+
+
+
 !begin_verbatim
+
 /* Constants for pixel formats */
+
 #define  PX_1COMP    0x01000000L /* Pixel consists of one used component: Colour index */
+
 #define  PX_3COMP    0x03000000L /* Pixel consists of three used components, e.g. RGB */
+
 #define  PX_4COMP    0x04000000L /* Pixel consists of four used components, e.g. CMYK */
+
 #define  PX_REVERSED 0x00800000L /* Pixel will be output in reverse byte order */
+
 #define  PX_xFIRST   0x00400000L /* Unused bits lie before the used ones (viewed in Motorola format) */
+
 #define  PX_kFIRST   0x00200000L /* K lies before CMY (viewed in Motorola format) */
+
 #define  PX_aFIRST   0x00100000L /* Alpha channel lies before the colour bits (viewed in Motorola format) */
+
 #define  PX_PACKED   0x00020000L /* Bits are stored sequentially */
+
 #define  PX_PLANES   0x00010000L /* Bits are distributed over several planes (order: 0, 1, ..., n) */
+
 #define  PX_IPLANES  0x00000000L /* Bits are distributed over several words (order: 0, 1, ..., n) */
+
 #define  PX_USES1    0x00000100L /* 1 bit of the pixel is used */
+
 #define  PX_USES2    0x00000200L /* 2 bits of the pixel are used */
+
 #define  PX_USES3    0x00000300L /* 3 bits of the pixel are used */
+
 #define  PX_USES4    0x00000400L /* 4 bits of the pixel are used */
+
 #define  PX_USES8    0x00000800L /* 8 bits of the pixel are used */
+
 #define  PX_USES15   0x00000f00L /* 15 bits of the pixel are used */
+
 #define  PX_USES16   0x00001000L /* 16 bits of the pixel are used */
+
 #define  PX_USES24   0x00001800L /* 24 bits of the pixel are used */
+
 #define  PX_USES32   0x00002000L /* 32 bits of the pixel are used */
+
 #define  PX_USES48   0x00003000L /* 48 bits of the pixel are used */
+
 #define  PX_1BIT     0x00000001L /* Pixel consists of 1 bit */
+
 #define  PX_2BIT     0x00000002L /* Pixel consists of 2 bits */
+
 #define  PX_3BIT     0x00000003L /* Pixel consists of 3 bits */
+
 #define  PX_4BIT     0x00000004L /* Pixel consists of 4 bits */
+
 #define  PX_8BIT     0x00000008L /* Pixel consists of 8 bits */
+
 #define  PX_16BIT    0x00000010L /* Pixel consists of 16 bits */
+
 #define  PX_24BIT    0x00000018L /* Pixel consists of 24 bits */
+
 #define  PX_32BIT    0x00000020L /* Pixel consists of 32 bits */
+
 #define  PX_48BIT    0x00000030L /* Pixel consists of 48 bits */
+
 #define  PX_CMPNTS   0x0f000000L /* Mask for number of pixel components */
+
 #define  PX_FLAGS    0x00f00000L /* Mask for various flags */
+
 #define  PX_PACKING  0x00030000L /* Mask for pixel format */
+
 #define  PX_USED     0x00003f00L /* Mask for number of used bits */
+
 #define  PX_BITS     0x0000003fL /* Mask for number of bits per pixel */
+
 /* Pixel formats for ATARI graphics */
+
 #define  PX_ATARI1  ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_ATARI2  ( PX_IPLANES + PX_1COMP + PX_USES2 + PX_2BIT )
+
 #define  PX_ATARI4  ( PX_IPLANES + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_ATARI8  ( PX_IPLANES + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_FALCON15( PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 /* Pixel formats for Mac */
+
 #define  PX_MAC1    ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_MAC4    ( PX_PACKED + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_MAC8    ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_MAC15   ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_MAC32   ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* Pixel formats for graphics cards */
+
 #define  PX_VGA1    ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_VGA4    ( PX_PLANES + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_VGA8    ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_VGA15   ( PX_REVERSED + PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_VGA16   ( PX_REVERSED + PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 #define  PX_VGA24   ( PX_REVERSED + PX_PACKED + PX_3COMP + PX_USES24 + PX_24BIT )
+
 #define  PX_VGA32   ( PX_REVERSED + PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 #define  PX_MATRIX16( PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 #define  PX_NOVA32  ( PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* Pixel formats for printers */
+
 #define  PX_PRN1    ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_PRN8    ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_PRN32   ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* Preferred (fast) pixel formats for bitmaps */
+
 #define  PX_PREF1   ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_PREF2   ( PX_PACKED + PX_1COMP + PX_USES2 + PX_2BIT )
+
 #define  PX_PREF4   ( PX_PACKED + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_PREF8   ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_PREF15  ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_PREF32  ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )!end_verbatim
+
 !end_verbatim
 
+
+
 For programs that create (or load) bitmaps themselves and want to output them to
+
 the screen afterwards, the last-named formats PX_PREFx are specially recommended,
+
 as - if the screen uses a different pixel format - they can be converted with
+
 less effort than some of the other formats.
 
 
-!item [(!nolink [Return]) Value:]
+
+
+
+!item [(!nolink [Return]) value:]
+
 The function does not return a result.
 
+
+
 !item [Availability:]
+
 As of NVDI 5.00.
 
+
+
 If the driver offers the new rasterizing functions, then bit 1 will be set in
+
 (!I)work_out[30](!i) in the extended parameters of vq_extnd.
 
+
+
 !item [Group:]
+
 Raster functions
 
+
+
 !item [See Also:]
+
 (!link [Binding] [Bindings for vr_transfer_bits])
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Bindings for vr_transfer_bits
+
 !ignore_index
+
+
 
 (!begin_liste) [GEM-Arrays]
 
+
+
 !item [C:]
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm, GCBITMAP *dst_bm,
+
                        RECT16 *src_rect, RECT16 *dst_rect, int16_t mode );
+
 !item [Binding:]
+
 !begin_verbatim
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm,
+
                        GCBITMAP *dst_bm, RECT16 *src_rect,
+
                        RECT16 *dst_rect, int16_t mode )
+
 {
+
    intin[o] = mode;
+
    intin[1] = 0;
+
    intin[2] = 0;
+
    intin[3] = 0;
 
+
+
    ptsin[0..3] = src_rect; 
+
    ptsin[4..7] = dst_rect; 
 
+
+
    contrl[0] = 170;
+
    contrl[1] = 4;
+
    contrl[3] = 4;
+
    contrl[5] = 0;
+
    contrl[6] = handle;
+
    contrl[7..8] = src_bm;
+
    contrl[9..10] = dst_bm;
+
    contrl[11..12] = 0;
 
+
+
    vdi ();
+
 }
+
 !end_verbatim
 
+
+
 !item [GEM-Arrays:]
+
 !begin_table [l l l]
+
 Address !! Element !! Contents
+
 !hline
+
 contrl    !! contrl[0]    !! 170   # Function opcode
+
 contrl+2  !! contrl[1]    !! 4     # Entry in ptsin
+
 contrl+4  !! contrl[2]    !! 0     # Entry in ptsout
+
 contrl+6  !! contrl[3]    !! 4     # Entry in intin
+
 contrl+8  !! contrl[4]    !! 0     # Entry in intout
+
 contrl+10 !! contrl[5]    !! 0     # Sub-opcode
+
 contrl+12 !! contrl[6]    !! handle
+
 contrl+14 !! contrl[7..8]    !! src_bm
+
 contrl+18 !! contrl[9..10]    !! dst_bm
+
 contrl+22 !! contrl[11..12]    !! 0
+
 intin     !! intin[0] !! mode
+
 intin+2   !! intin[1] !! 0
+
 intin+4   !! intin[2] !! 0
+
 ptsin     !! ptsin[0..3] !! src_rect
+
 ptsin+8   !! ptsin[4..7] !! dst_rect
+
 !end_table
 
+
+
 (!ende_liste)
+
 !end_node
+
+
 
 !else
 
+
+
 !begin_node vr_transfer_bits
+
+
 
 (!begin_liste) [Beschreibung]
 
+
+
 !item [Name:]
+
 ØTransfer BitmapÆ - VerknÅpft zweier Bitmaps
 
+
+
 !item [VDI-Nummer:]
+
 170 (Unterfunktion 0)
 
+
+
 !item [Deklaration:]
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm, GCBITMAP *dst_bm,
+
                        RECT16 *src_rect, RECT16 *dst_rect, int16_t mode );
 
+
+
 !item [Beschreibung:]
+
 The call vr_transfer_bit combines two bitmaps, using scaling if required.
 
 
+
+
+
 !begin_xlist !short [dst_rect]
+
 !item [Parameter]
+
 Bedeutung
+
 !item [~]
+
 ~
+
 !item [handle]
+
 Kennung der Workstation
 
+
+
 !item [src_bm]
+
 Quellbitmap
 
+
+
 !item [dst_bm]
+
 Zielbitmap
 
+
+
 !item [src_rect]
+
 Quellrechteck
 
+
+
 !item [dst_rect]
+
 Zielrechteck
 
+
+
 !item [mode]
+
 Modus der Transferfunktion
+
+
 
 !end_xlist
 
 
+
+
+
 Die Funktion TRANSFER BITMAP verknÅpft die Quellbitmap
+
 (!I)src_bm(!i) mit der Zielbitmap (!I)dst_bm(!i), wobei (!I)mode(!i)
+
 die Transferfunktion angibt. Das Quellrechteck wird in
+
 (!I)src_rect(!i) und das Zielrechteck in (!I)dst_rect(!i)
+
 Åbergeben. Die Koordinaten werden dabei (wie bei allen anderen
+
 VDI-Funktionen) als diskrete Werte angegeben.
 
+
+
 Wenn das Quell- und das Zielrechteck nicht die gleichen
+
 Ausmaûe haben, skaliert TRANSFER BITMAP die Quellbitmap.
+
 Bei Verkleinerungen werden die Bitmapdaten interpoliert, wenn
+
 die Quelle direkte Farbwerte enthÑlt (16 oder 32 Bit) oder wenn
+
 die Ausgabe mit Dithern erfolgt.
 
+
+
 Falls die Quell- und die Zielbitmap nicht das gleiche Pixelformat
+
 oder die gleiche Farbtiefe haben, werden die Quelldaten automatisch in
+
 das Zielformat umgesetzt (die Quellbitmap bleibt dabei natÅrlich
+
 unverÑndert).
 
+
+
 Wenn (!I)src_bm(!i) oder (!I)dst_bm(!i) 0 ist, wird als Quelle
+
 bzw. Ziel der Operation die Bitmap der Workstation(!I)handle(!i)
+
 benutzt. Bei Ausgaben auf dem Bildschirm sollte ein Programm auf jeden
+
 Fall 0 fÅr(!I)dst_bm(!i) Åbergeben und nicht versuchen,
+
 eine eigene Bitmapbeschreibung aufzubauen. Clipping erfolgt nur
+
 fÅr die Zielbitmap (und das nur, wenn die Zielbitmap die Bitmap
+
 der Workstation ist).
+
+
+
 
 
 (!B)Transfermodi(!b)
 
+
+
 In der folgenden Liste sind die Konstanten fÅr die in
+
 (!I)mode(!i) Åbergebenen Transfermodi definiert. In den
+
 Kommentaren ist dabei die Art der Operation in symbolischer
+
 Schreibweise aufgefÅhrt (src ist das Quellpixel,
+
 dst ist das Zielpixel, bg_col ist der Pixelwert der
+
 Hintergrundfarbe, hilite_col ist der Pixelwert der Farbe
+
 fÅr Hervorhebungen):
 
+
+
 !begin_verbatim
+
 /* logische Transfermodi */
+
 #define T_LOGIC_COPY         0  /* dst = src;                      */
+
 #define T_LOGIC_OR           1  /* dst = src OR dst;               */
+
 #define T_LOGIC_XOR          2  /* dst = src XOR dst;              */
+
 #define T_LOGIC_AND          3  /* dst = src AND dst;              */
+
 #define T_LOGIC_NOT_COPY     4  /* dst = ( NOT src );              */
+
 #define T_LOGIC_NOT_OR       5  /* dst = ( NOT src ) OR dst;       */
+
 #define T_LOGIC_NOT_XOR      6  /* dst = ( NOT src ) XOR dst;      */
+
 #define T_LOGIC_NOT_AND      7  /* dst = ( NOT src ) AND dst;      */
 
+
+
 /* Zeichenmodi */
+
 #define T_REPLACE            32 /* dst = src;                      */
+
 #define T_TRANSPARENT        33 /* if ( src != bg_col ) dst = src; */
+
 #define T_HILITE             34 /* if ( src != bg_col )            */
+
                                 /* {                               */
+
                                 /*    if ( dst == bg_col )         */
+
                                 /*       dst = hilite_col;         */
+
                                 /*    else if ( dst == hilite_col )*/
+
                                 /*       dst = bg_col;             */
+
                                 /* }                               */
+
 #define T_REVERS_TRANSPARENT 35 /* if ( src == bg_col ) dst = src; */
+
 !end_verbatim
+
+
 
 Hinweis: Bei den arithmetischen Transfermodi werden Quelle
+
 und Ziel nicht anhand ihres Pixelwerts verknÅpft, sondern ihre
+
 (RGB-) Farbwerte werden je nach VerknÅpfung addiert oder
+
 subtrahiert, ...
 
+
+
 In der symbolischen Beschreibung ist RGB( x ) der RGB-Farbwert
+
 eines Pixels und PIXELWERT( rgb ) ist der Pixelwert eines
+
 RGB-Farbwerts. MAX( rgb_a, rgb_b ) liefert die maximalen Komponenten
+
 zweier RGB- Farbwerte; MIN( rgb_a, rgb_b ) liefert dementsprechend die
+
 minimalen Komponenten zurÅck. <max_rgb> ist ein maximaler
+
 RGB-Farbwert, <min_rgb> ist ein minimaler RGB-Farbwert.
+
 <Gewichtung> ist ein Wert zwischen 0 und 1.0, der die Mischung
+
 von Quell- und Zielfarbe angibt.
 
+
+
 !begin_verbatim
+
 /* arithmetische Transfermodi */
+
 #define T_BLEND           64 /* Quell- und Zielfarbe mischen     */
+
                              /* rgb = RGB( src ) * Gewichtung ); */
+
                              /* rgb += RGB( dst ) * (1-Gewichtung));*/
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_ADD             65 /* Quell- und Zielfarbe addieren    */
+
                              /* rgb = RGB( src ) + RGB( dst )    */
+
                              /* if ( rgb > max_rgb )             */
+
                              /*    rgb = max_rgb;                */
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_ADD_OVER        66 /* Quell- und Zielfarbe addieren,   */
+
                              /* Åberlauf nicht abfangen          */
+
                              /* rgb = RGB( src ) + RGB( dst )    */
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_SUB             67 /* Quell- von Zielfarbe subtrahieren   */
+
                              /* rgb = RGB( dst ) - RGB( src )    */
+
                              /* if ( rgb < min_rgb )             */
+
                              /*    rgb = min_rgb;                */
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_MAX             69 /* maximale RGB-Komponenten         */
+
                              /* rgb = MAX(RGB( dst ), RGB( src ))*/
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_SUB_OVER        70 /* Quell- von Zielfarbe subtrahieren,  */
+
                              /* Åberlauf nicht abfangen          */
+
                              /* rgb = RGB( dst ) - RGB( src )    */
+
                              /* dst = PIXELWERT( rgb );          */
+
 #define T_MIN             71 /* minimale RGB-Komponenten         */
+
                              /* rgb = MIN(RGB( dst ), RGB( src ))*/
+
                              /* dst = PIXELWERT( rgb );          */
+
 !end_verbatim
 
+
+
 FÅr alle Transfermodi kann man auûerdem durch Addition
+
 einer der beiden folgenden Konstanten die Art der VerknÅpfung
+
 beeinflussen.
 
+
+
  #define T_COLORIZE        16    /* Quelle einfÑrben */ (!nl)
+
  #define T_DITHER_MODE     128   /* Quelldaten dithern */
+
+
 
 (!B)Dithern(!b)
 
+
+
 <T_DITHER_MODE> fÅhrt dazu, daû eine
+
 Fehlerverteilungsfunktion benutzt wird, wenn die Zielbitmap 256 oder
+
 weniger Farben hat (auûerdem wird bei Verkleinerungen in diesem
+
 Fall interpoliert, damit die Details in der Verkleinerung nicht
+
 vollkommen verloren gehen).
 
+
+
 Falls die Quell- und Zielpalette gleich sind (oder die
+
 Quellpalette eine Untermenge der Systemfarbpalette ist), verwendet
+
 NVDI intern (automatisch) eine schnellere Transferfunktion ohne
+
 Dither.
 
+
+
 (!B)EinfÑrbung(!b)
+
 !begin_itemize
+
 !item  Wenn ein logischer Modus mit <T_COLORIZE> aufgerufen wird,
+
 erfolgt die Art der EinfÑrbung abhÑngig vom Modus:
+
 !begin_verbatim
+
 T_LOGIC_COPY
 
+
+
 Blende bei allen gesetzen Bits im Farbwert die
+
 Hintergrundfarbe ein und bei allen gelîschten Bits
+
 die Vordergrundfarbe:
+
 rgb = (( NOT RGB( src )) & RGB( fg_col )) OR
+
       ( RGB( src ) AND RGB( bg_col ));
+
 dst = PIXELWERT( rgb );
+
+
 
 T_LOGIC_NOT_COPY
 
+
+
 Blende bei allen gesetzen Bits im Farbwert die
+
 Vordergrundfarbe ein und bei allen gelîschten Bits die
+
 Hintergrundfarbe:
+
 rgb = ( RGB( src ) & RGB( fg_col )) OR
+
       ((( NOT RGB( src )) AND RGB( bg_col ));
+
 dst = PIXELWERT( rgb );
+
+
 
 T_LOGIC_OR
 
+
+
 Åberall dort, wo Quellbits gesetzt sind, wird beim Ziel
+
 ( src AND fg_col) eingeblendet:
+
 dst = ( src AND fg_col ) OR (( NOT src ) AND dst );
+
+
 
 T_LOGIC_NOT_OR
 
+
+
 Åberall dort, wo Quellbits gelîscht sind, wird beim Ziel
+
 ((NOT src ) AND fg_col) eingeblendet:
+
 dst = (( NOT src ) AND fg_col ) OR ( src AND dst );
 
+
+
 T_LOGIC_XOR
+
 T_LOGIC_NOT_XOR
+
+
 
 Die XOR-VerknÅpfung ignoriert die EinfÑrbung.
 
+
+
 T_LOGIC_AND
 
+
+
 Åberall dort, wo Quellbits gelîscht sind, wird beim Ziel
+
 ((NOT src ) AND bg_col) eingeblendet:
+
 dst = ((NOT src ) AND bg_col ) OR ( src AND dst );
+
+
 
 T_LOGIC_NOT_AND
 
+
+
 Åberall dort, wo Quellbits gesetzt sind, wird beim Ziel
+
 ( src AND bg_col) eingeblendet:
+
 dst = ( src AND bg_col ) OR ((NOT src ) AND dst );
+
 !end_verbatim
+
+
+
 
 
 !item  Bei den Modi T_REPLACE, T_TRANSPARENT, T_HILITE und
+
 T_REVERS_TRANSPARENT wirkt die EinfÑrbung nicht binÑr auf
+
 die Farb- oder Pixelwerte, sondern die Farbwerte werden skaliert. Das
+
 folgende Beispiel zeigt, wie ein Farbwert eingefÑrbt wird;
+
 <bg_col>, <fg_col>, <src> und <dst> sind
+
 RGB-Farbwerte (zwischen 0 und 65535):
 
+
+
 !begin_verbatim
+
 red_range = bg_col.red - fg_col.red;
+
 green_range = bg_col.green - fg_col.green;
+
 blue_range = bg_col.blue - fg_col.blue;
 
+
+
 dst.red = fg_col.red + ( src_color.red * red_range / 65535 );
+
 dst.green = fg_col.green + ( src_color.green * green_range / 65535 );
+
 dst.blue = fg_col.blue + ( src_color.blue * blue_range / 65535 );
+
 !end_verbatim
 
+
+
 Hinweis: Momentan wird die EinfÑrbung in den Modi
+
 T_REPLACE, T_TRANSPARENT, T_HILITE und T_REVERS_TRANSPARENT nur
+
 fÅr Quellbitmaps mit bis zu 256 Farben unterstÅtzt. FÅr
+
 Quellbitmaps mit 16 oder 32 Bit wird in diesen Modi zur Zeit keine
+
 EinfÑrbung unterstÅtzt.
 
+
+
 !item Die arithmetischen Transfermodi unterstÅtzen keine
+
 EinfÑrbung.
+
 !end_itemize
+
+
+
 
 
 (!B)Bitmaps(!b)
 
+
+
 Statt eines antiquierten MFDBs erwartet diese Funktion eine
+
 GCBITMAP-Struktur, um die Bitmaps zu beschreiben.
 
 
+
+
+
 Wenn <ctab> 0L ist, wird die der Bittiefe entsprechende
+
 Systemfarbtabelle fÅr den Aufruf benutzt (wenn die Bitmap mehr
+
 als 8 Bit pro Pixel hat, d.h. direkte Farbwerte benutzt, kann
+
 <ctab> ebenfalls auf 0L gesetzt werden).
 
+
+
 Quellbitmaps benîtigen keine inverse Farbtabelle, hier kann
+
 <itab> auf 0L gesetzt werden. Bei einer selbst verwalteten
+
 Zielbitmap muû man vom VDI eine Referenz auf eine inverse
+
 Farbtabelle anfordern (und irgendwann spÑter auch wieder
+
 freigeben).
+
+
 
 (!B)Vereinfachte SonderfÑlle(!b)
 
+
+
 Damit Bitmaps im Format des Bildschirms auch ohne Anforderung
+
 einer Farbtabelle und einer Referenz auf eine inverse Farbtabelle
+
 Ñhnlich unkompliziert wie bei vro_cpyfm kopiert werden
+
 kînnen, gibt es einige vereinfachte SonderfÑlle bei
+
 vr_transfer_bits:
+
 !begin_itemize
 
+
+
 !item Wenn die Quelle keine Farbtabelle hat (0L), wird die Farbtabelle
+
 des GerÑts genommen, wenn dieses die gleiche Bittiefe hat. Ist
+
 das nicht der Fall, wird die Systemfarbtabelle fÅr die Bittiefe
+
 der Quelle benutzt.
 
+
+
 !item Wenn das Ziel keine (inverse) Farbtabelle hat (0L), wird die
+
 (inverse) Farbtabelle des GerÑts genommen, wenn dieses die
+
 gleiche Bittiefe hat. Ist das nicht der Fall, wird die
+
 Systemfarbtabelle fÅr die Bittiefe des Ziels benutzt und fÅr
+
 den Aufruf wird extra intern eine inverse Farbtabelle
+
 aufgebaut. D.h. Zielbitmaps sollten, wenn sie keine inverse
+
 Farbtabelle haben, umbedingt die gleiche Bittiefe wie das zum
+
 VDI-Handle gehîrende GerÑt haben.
+
 !end_itemize
 
+
+
 Hinweis: Es empfiehlt sich, fÅr Bitmaps
+
 auûerhalb des Bildschirms mit v_open_bm oder v_opnbm eine
+
 Bitmap vom (!nolink [VDI]) erzeugen zu lassen, da man sich in diesem Fall nicht um
+
 die Verwaltung von Farbtabellen und inversen Farbtabellen kÅmmern
+
 muû.
+
+
+
+
 
 
 
 (!B)Pixelformate(!b)
 
+
+
 Um Bitmaps zwischen verschiedenen Bittiefen und Pixelformaten
+
 wandeln zu kînnen, benîtigt TRANSFER BITMAP eine
+
 Beschreibung des Pixelformats, die im Strukturelement
+
 <px_format> enthalten ist. Der Aufbau dieses Bitvektors wird in
+
 der folgenden Liste beschrieben; fÅr Programmierer dÅrften
+
 aber vor allem die vordefinierten Formate interessant sein:
 
 
+
+
+
 !begin_verbatim
+
 /* Konstanten fÅr Pixelformate */
+
 #define  PX_1COMP    0x01000000L /* Pixel besteht aus einer benutzten Komponente: Farbindex */
+
 #define  PX_3COMP    0x03000000L /* Pixel besteht aus drei benutzten Komponenten, z.B. RGB */
+
 #define  PX_4COMP    0x04000000L /* Pixel besteht aus vier benutzten Komponenten, z.B. CMYK */
+
 #define  PX_REVERSED 0x00800000L /* Pixel wird in umgekehrter Bytereihenfolge ausgegeben */
+
 #define  PX_xFIRST   0x00400000L /* unbenutzte Bits liegen vor den benutzen (im Motorola-Format betrachtet) */
+
 #define  PX_kFIRST   0x00200000L /* K liegt vor CMY (im Motorola-Format betrachtet) */
+
 #define  PX_aFIRST   0x00100000L /* Alphakanal liegen vor den Farbbits (im Motorola-Format betrachtet) */
+
 #define  PX_PACKED   0x00020000L /* Bits sind aufeinanderfolgend abgelegt */
+
 #define  PX_PLANES   0x00010000L /* Bits sind auf mehrere Ebenen verteilt (Reihenfolge: 0, 1, ..., n) */
+
 #define  PX_IPLANES  0x00000000L /* Bits sind auf mehrere Worte verteilt (Reihenfolge: 0, 1, ..., n) */
+
 #define  PX_USES1    0x00000100L /* 1 Bit des Pixels wird benutzt */
+
 #define  PX_USES2    0x00000200L /* 2 Bit des Pixels werden benutzt */
+
 #define  PX_USES3    0x00000300L /* 3 Bit des Pixels werden benutzt */
+
 #define  PX_USES4    0x00000400L /* 4 Bit des Pixels werden benutzt */
+
 #define  PX_USES8    0x00000800L /* 8 Bit des Pixels werden benutzt */
+
 #define  PX_USES15   0x00000f00L /* 15 Bit des Pixels werden benutzt */
+
 #define  PX_USES16   0x00001000L /* 16 Bit des Pixels werden benutzt */
+
 #define  PX_USES24   0x00001800L /* 24 Bit des Pixels werden benutzt */
+
 #define  PX_USES32   0x00002000L /* 32 Bit des Pixels werden benutzt */
+
 #define  PX_USES48   0x00003000L /* 48 Bit des Pixels werden benutzt */
+
 #define  PX_1BIT     0x00000001L /* Pixel besteht aus 1 Bit */
+
 #define  PX_2BIT     0x00000002L /* Pixel besteht aus 2 Bit */
+
 #define  PX_3BIT     0x00000003L /* Pixel besteht aus 3 Bit */
+
 #define  PX_4BIT     0x00000004L /* Pixel besteht aus 4 Bit */
+
 #define  PX_8BIT     0x00000008L /* Pixel besteht aus 8 Bit */
+
 #define  PX_16BIT    0x00000010L /* Pixel besteht aus 16 Bit */
+
 #define  PX_24BIT    0x00000018L /* Pixel besteht aus 24 Bit */
+
 #define  PX_32BIT    0x00000020L /* Pixel besteht aus 32 Bit */
+
 #define  PX_48BIT    0x00000030L /* Pixel besteht aus 48 Bit */
+
 #define  PX_CMPNTS   0x0f000000L /* Maske fÅr Anzahl der Pixelkomponenten */
+
 #define  PX_FLAGS    0x00f00000L /* Maske fÅr diverse Flags */
+
 #define  PX_PACKING  0x00030000L /* Maske fÅr Pixelformat */
+
 #define  PX_USED     0x00003f00L /* Maske fÅr Anzahl der benutzten Bits */
+
 #define  PX_BITS     0x0000003fL /* Maske fÅr Anzahl der Bits pro Pixel */
+
 /* Pixelformate fÅr ATARI-Grafik */
+
 #define  PX_ATARI1   ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_ATARI2   ( PX_IPLANES + PX_1COMP + PX_USES2 + PX_2BIT )
+
 #define  PX_ATARI4   ( PX_IPLANES + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_ATARI8   ( PX_IPLANES + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_FALCON15 ( PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 /* Pixelformate fÅr Mac */
+
 #define  PX_MAC1     ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_MAC4     ( PX_PACKED + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_MAC8     ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_MAC15    ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_MAC32    ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* Pixelformate fÅr Grafikkarten */
+
 #define  PX_VGA1     ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_VGA4     ( PX_PLANES + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_VGA8     ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_VGA15    ( PX_REVERSED + PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_VGA16    ( PX_REVERSED + PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 #define  PX_VGA24    ( PX_REVERSED + PX_PACKED + PX_3COMP + PX_USES24 + PX_24BIT )
+
 #define  PX_VGA32    ( PX_REVERSED + PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 #define  PX_MATRIX16 ( PX_PACKED + PX_3COMP + PX_USES16 + PX_16BIT )
+
 #define  PX_NOVA32   ( PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* Pixelformate fÅr Drucker */
+
 #define  PX_PRN1     ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_PRN8     ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_PRN32    ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 /* bevorzugte (schnelle) Pixelformate fÅr Bitmaps */
+
 #define  PX_PREF1    ( PX_PACKED + PX_1COMP + PX_USES1 + PX_1BIT )
+
 #define  PX_PREF2    ( PX_PACKED + PX_1COMP + PX_USES2 + PX_2BIT )
+
 #define  PX_PREF4    ( PX_PACKED + PX_1COMP + PX_USES4 + PX_4BIT )
+
 #define  PX_PREF8    ( PX_PACKED + PX_1COMP + PX_USES8 + PX_8BIT )
+
 #define  PX_PREF15   ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES15 + PX_16BIT )
+
 #define  PX_PREF32   ( PX_xFIRST + PX_PACKED + PX_3COMP + PX_USES24 + PX_32BIT )
+
 !end_verbatim
 
+
+
 FÅr Programme, die selber Bitmaps erzeugen (oder laden) und
+
 anschlieûend auf dem Bildschirm ausgeben wollen, sind besonders
+
 die zuletzte angegeben Formate PX_PREFx zu empfehlen, da sie
+
 bei einem anderen Pixelformat des Bidlschirms mit geringerem Aufwand
+
 als einige andere Formate gewandelt werden kînnen.
 
 
+
+
+
 !item [Ergebnis:]
+
 Die Funktion liefert kein Ergebnis.
 
+
+
 !item [VerfÅgbar:]
+
 ab NVDI 5.00
 
+
+
 Wenn der Treiber die neuen Rasterfunktionen
+
 anbietet, ist bei den erweiterten Parametern von vq_extnd in
+
 work_out[30] Bit 1 gesetzt.
 
+
+
 !item [Gruppe:]
+
 Rasterfunktionen
 
+
+
 !item [Querverweis:]
+
 (!link [Binding] [Bindings fÅr vr_transfer_bits])
 
+
+
 (!ende_liste)
+
 !end_node
+
+
+
+
 
 
 
 !begin_node Bindings fÅr vr_transfer_bits
+
 !ignore_index
+
+
 
 (!begin_liste) [Umsetzung]
 
+
+
 !item [C:]
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm, GCBITMAP *dst_bm,
+
                        RECT16 *src_rect, RECT16 *dst_rect, int16_t mode );
+
 !item [Umsetzung:]
+
 !begin_verbatim
+
 void vr_transfer_bits( int16_t handle, GCBITMAP *src_bm,
+
                        GCBITMAP *dst_bm, RECT16 *src_rect,
+
                        RECT16 *dst_rect, int16_t mode )
+
 {
+
    intin[o] = mode;
+
    intin[1] = 0;
+
    intin[2] = 0;
+
    intin[3] = 0;
 
+
+
    ptsin[0..3] = src_rect; 
+
    ptsin[4..7] = dst_rect; 
 
+
+
    contrl[0] = 170;
+
    contrl[1] = 4;
+
    contrl[3] = 4;
+
    contrl[5] = 0;
+
    contrl[6] = handle;
+
    contrl[7..8] = src_bm;
+
    contrl[9..10] = dst_bm;
+
    contrl[11..12] = 0;
 
+
+
    vdi ();
+
 }
+
 !end_verbatim
 
+
+
 !item [GEM-Arrays:]
+
 !begin_table [l l l]
+
 Adresse !! Feldelement !! Belegung
+
 !hline
+
 contrl    !! contrl[0]    !! 170   # Opcode der Funktion
+
 contrl+2  !! contrl[1]    !! 4     # EintrÑge in ptsin
+
 contrl+4  !! contrl[2]    !! 0     # EintrÑge in ptsout
+
 contrl+6  !! contrl[3]    !! 4     # EintrÑge in intin
+
 contrl+8  !! contrl[4]    !! 0     # EintrÑge in intout
+
 contrl+10 !! contrl[5]    !! 0     # Sub-Opcode
+
 contrl+12 !! contrl[6]    !! handle
+
 contrl+14 !! contrl[7..8]    !! src_bm
+
 contrl+18 !! contrl[9..10]    !! dst_bm
+
 contrl+22 !! contrl[11..12]    !! 0
+
 intin     !! intin[0] !! mode
+
 intin+2   !! intin[1] !! 0
+
 intin+4   !! intin[2] !! 0
+
 ptsin     !! ptsin[0..3] !! src_rect
+
 ptsin+8   !! ptsin[4..7] !! dst_rect
+
 !end_table
 
+
+
 (!ende_liste)
+
 !end_node
 
+
+
 !endif
+
