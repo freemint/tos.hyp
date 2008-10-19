@@ -1,1771 +1,890 @@
 !iflang [english]
 
 
-
 !begin_node Signals
 
-
-
 The "signal" concept, originating from the U*NIX world, is also available in
-
 the operating systems MultiTOS (actually the underlying MiNT) and MagiC (as
-
 of Version 4.50). Signals can be thought of as natural number messages that
-
 represent a given exception condition. They are comparable to an interrupt
-
 or a CPU exception, but with the difference that they deal with a pure
-
 (!I)software(!i) implementation.
-
-
 
 (!B)Each process possesses:(!b)
 
-
-
 !begin_itemize
-
 !item A bit-vector of the pending signal. This describes those signals that
-
 are still waiting to be processed, perhaps because they are currently
-
 blocked by the signal mask, or because the process is in a state where it
-
 cannot process signals.
-
 !item A signal mask. This 32-bit value defines those signals that are
-
 currently blocked as a bit-vector; if, say, bit 30 is set in this vector,
-
 then the signal SIGUSR2 is blocked. The signal mask is not just impacted
-
 explicitly (i.e. by system calls) but also (!I)implicitly(!i) by other
-
 processes. During the processing of a signal, for instance, it is blocked,
-
 yet others may occur. After the signal has been processed it is released
-
 again and any signals waiting can then be processed. One should note that
-
 some signals (e.g. SIGKILL, SIGSTOP, SIGCONT) can (!I)not(!i) be masked.
-
 !item A table in the form struct sigaction.
-
 !end_itemize
 
-
-
 At a Pexec the signal mask and the pending value (see above) of the child
-
 process will be zeroed. The element (!I)sa_handler(!i) of the sigaction
-
 structure is inherited, during which a non-0 or 1 value is always set to 0.
-
 The elements (!I)sa_mask(!i) and (!I)sa_flags(!i) of the structure are
-
 zeroed.
 
-
-
 Most signals can be caught by a program (perhaps to call up a given routine
-
 on receipt), ignored, or also blocked. Blocked signals will be ignored until
-
 the blockade is lifted again. (!B)Re terminology:(!b) One says that a signal
-
 is (!I)sent(!i) to a process when the exception that is represented by the
-
 signal occurs, or the signal is sent by another process via Pkill. On the
-
 other hand a signal is (!I)caught(!i) by a process when the corresponding
-
 process awakes and starts the actions matching the signal. One should note
-
 that the signal handling takes up time: Between sending a signal and the
-
 execution of the matching action a considerable period of time may pass.
 
-
-
 !label Signals, List of
-
 In total there are 31 possible signals (0 to 30) available, not all of which
-
 however have been assigned a fixed meaning. The following list describes (as
-
 far as known) all possible signals in the form: Signal number, Name of the
-
 signal, Meaning of the signal for the receiving process. (!B)Unless
-
 explicitly noted otherwise, the default action on the receipt of a signal
-
 is the killing (termination) of the receiving process(!b).
 
-
-
 !begin_xlist !short [Number SIGVTALRM]
-
 !item [Number Name]
-
 Meaning
-
 !item [~]
-
 ~
 
-
-
 !label SIGNULL
-
 !item [~~~0~~ SIGNULL]
-
 Null: This signal has no default action, because strictly speaking it is not
-
 really a signal at all. Together with Pkill it can be used, however, to test
-
 for the existence of a child process. The signal can (!I)not(!i) be masked
-
 or caught.
 
-
-
 !label SIGHUP
-
 !item [~~~1~~ SIGHUP]
-
 Hang up: Is normally sent when the terminal with which a process is
-
 connected is no longer valid. After receiving this signal the process should
-
 make no further output to the terminal. In MagiC the VT52 will send the
-
 signal when a terminal window has been closed.
 
-
-
 !label SIGINT
-
 !item [~~~2~~ SIGINT]
-
 Interrupt: Is usually sent when the user presses the key combination ^C to
-
 interrupt a process. This signal is used by later versions of
-
 (!nolink [MagiC]) in place of previous ways of handling ^C.
 
-
-
 !label SIGQUIT
-
 !item [~~~3~~ SIGQUIT]
-
 Quit: Generally this is sent when the user presses the key combination ^\.
-
 This signal should be 'harder' than SIGINT, and at present is not sent by
-
 (!nolink [MagiC]) or VT52.
-
-
 
 !label SIGILL
-
 !item [~~~4~~ SIGILL]
-
 Illegal instruction: Corresponds to the exception vector of the same name of
-
 the 68k processor. The signal should (!I)not(!i) be caught. In MiNT the
-
 signal can be caught, i.e. the vector will be diverted for almost every
-
 process. In (!nolink [MagiC]) however this does not work at present, so that
-
 here 8 bombs will always appear.
 
-
-
 !label SIGTRAP
-
 !item [~~~5~~ SIGTRAP]
-
 Trap: Corresponds to the 'Trace' exception vector of the 68k processor, and
-
 is sent after each instruction is executed with the system in single-step
-
 'trace' mode. This signal should be caught only by (!B)debuggers(!b). In
-
 MiNT the signal can be caught, i.e. the vector will be diverted for almost
-
 every process. In (!nolink [MagiC]) however this does not work at present,
-
 so that here 9 bombs will always appear.
 
-
-
 !label SIGABRT
-
 !item [~~~6~~ SIGABRT]
-
 Abort: Is normally used by the library function abort in ANSI C, and should
-
 (!I)not(!i) be caught. This signal is not sent by the operating system
-
 itself.
 
-
-
 !label SIGPRIV
-
 !item [~~~7~~ SIGPRIV]
-
 Privilege violation: Corresponds to the exception vector of the same name of
-
 the 68k processor, when a process tries to execute an instruction in
-
 user-mode that may be executed only in supervisor-mode. The signal should
-
 (!I)not(!i) be caught. In MiNT, however, this is possible, so that the
-
 exception vector will be diverted for almost every process. But in
-
 (!nolink [MagiC]) this does not work at present, so that here 8 bombs will
-
 always appear.
 
-
-
 !label SIGFPE
-
 !item [~~~8~~ SIGFPE]
-
 Floating point exception: The default action consists of ignoring the
-
 signal. It corresponds to the 68k exception vector 'Division by zero' or a
-
 floating point exception. The signal may be ignored or caught. In MiNT the
-
 signal may be caught, so the vector will be diverted for almost every
-
 process. In (!nolink [MagiC]) however this does not work at present.
 
-
-
 !label SIGKILL
-
 !item [~~~9~~ SIGKILL]
-
 Kill: Forcibly terminates the receiving process. The signal cannot be masked
-
 or caught; therefore this signal should only be sent if SIGTERM failed. The
-
 signal is not presently sent by MagiC itself.
 
-
-
 !label SIGBUS
-
 !item [~~10~~ SIGBUS]
-
 Bus error: Corresponds to the exception vector of the same name of the 68k
-
 processor. The signal should (!I)not(!i) be ignored or caught. In MiNT the
-
 signal may be caught, i.e. the exception vector will be diverted for almost
-
 every process. In (!nolink [MagiC]) however this does not work at present,
-
 so that 2 bombs will always appear. In MiNT, SIGBUS, SIGSEGV and SIGPRIV are
-
 reset to the default routine of the system on first receipt of the signals,
-
 so that a (!I)double(!i) bus/address/privilege error always kills the
-
 process.
 
-
-
 !label SIGSEGV
-
 !item [~~11~~ SIGSEGV]
-
 Segmentation violation: Corresponds to an 'address error' exception vector
-
 of the 68k processor. The signal should (!I)not(!i) be caught or ignored. In
-
 MiNT the signal may be caught, i.e. the exception vector will be diverted
-
 for almost every process. In (!nolink [MagiC]) however this does not work at
-
 present, so 3 bombs always appear.
 
-
-
 !label SIGSYS
-
 !item [~~12~~ SIGSYS]
-
 Bad system call: Sent when an argument to a system call is bad or out of
-
 range and the call does not have means to report the error. Is not sent by
-
 (!nolink [MagiC]) at present.
 
-
-
 !label SIGPIPE
-
 !item [~~13~~ SIGPIPE]
-
 Pipe error: Is sent when an attempt is made to write to a pipe that no
-
 longer exists or has no readers, and can be masked in Drag&Drop protocol,
-
 for instance. This signal is not sent by (!nolink [MagiC]) at present.
 
-
-
 !label SIGALRM
-
 !item [~~14~~ SIGALRM]
-
 Alarm: Is used by MiNT for Talarm, and serves for handling timeouts, for
-
 instance. In (!nolink [MagiC]) this signal is not sent at present.
 
-
-
 !label SIGTERM
-
 !item [~~15~~ SIGTERM]
-
 Terminate: Standard request for the process to clean up and exit; sent by
-
 MiNT, for instance, when deleting a program file in the U:\PROC directory.
-
 At present ignored by (!nolink [MagiC]).
 
-
-
 !label SIGURG
-
 !item [~~16~~ SIGURG]
-
 This signal is currently not defined.
 
-
-
 !label SIGSTOP
-
 !item [~~17~~ SIGSTOP]
-
 Stop: The default action serves to suspend the receiving process. The signal
-
 can (!I)not(!i) be blocked, caught or ignored. In (!nolink [MagiC]) it
-
 causes all threads of a process to be paused. When paused, no mouse or
-
 keyboard clicks are lost in (!nolink [MagiC]); on a restart of the process
-
 with SIGCONT all the corresponding messages will be evaluated.
 
-
-
 !label SIGTSTP
-
 !item [~~18~~ SIGTSTP]
-
 Terminal stop: The default action is suspension of the receiving process
-
 until a SIGCONT is caught. The signal corresponds to SIGSTOP, and is usually
-
 initiated by the user pressing the key combination ^Z. It can (!I)not(!i) be
-
 masked or caught. The signal is not sent by (!nolink [MagiC]) and VT52 at
-
 present.
 
-
-
 !label SIGCONT
-
 !item [~~19~~ SIGCONT]
-
 Continue: The default action is to resume the process that was previously
-
 suspended with SIGSTOP or Pause. Though the signal cannot be masked or
-
 ignored, one can install a handling routine for this signal. In
-
 (!nolink [MagiC]) all threads will be awakened that were paused with a
-
 (!nolink [Pause]) or SIGSTOP call.
 
-
-
 !label SIGCHLD
-
 !item [~~20~~ SIGCHLD]
-
 Child terminated: The default action is to ignore the signal. It is sent to
-
 the parent process both on termination as well as pausing of a child
-
 process. In MiNT one can arrange that this signal is sent only on
-
 termination, and in addition one can determine which child process was
-
 affected. As (!nolink [MagiC]) until now only knows the waiting Pexec (i.e.
-
 the parent waits until the child terminates), this signal does not exist
-
 there. Processes that are created with shel_write are (!I)not(!i) real child
-
 processes, but fully independent ones; in such cases one therefore has to
-
 wait for the arrival of a CH_EXIT message.
 
-
-
 !label SIGTTIN
-
 !item [~~21~~ SIGTTIN]
-
 Terminal input error: The default action consists of pausing the receiving
-
 process. As a rule, a process is attempting to read from a terminal in a
-
 process group that does not belong to it. This signal is not sent by
-
 (!nolink [MagiC]) or VT52 at present.
-
-
 
 !label SIGTTOU
-
 !item [~~22~~ SIGTTOU]
-
 Terminal output error: The default action consists of pausing the receiving
-
 process. As a rule, a process is attempting to output to a terminal in a
-
 process group that does not belong to it. This signal is not sent by
-
 (!nolink [MagiC]) or VT52 at present.
 
-
-
 !label SIGIO
-
 !item [~~23~~ SIGIO]
-
 I/O possible: Sent to show that input/output is possible on a file
-
 descriptor.
 
-
-
 !label SIGXCPU
-
 !item [~~24~~ SIGXCPU]
-
 Exhaustion of CPU limit: The calculation time contingent set by Psetlimit or
-
 by the extended shel_write modes has elapsed. As the limitation of CPU time
-
 is not yet implemented in (!nolink [MagiC]), this signal is not sent at
-
 present under this OS.
 
-
-
 !label SIGXFSZ
-
 !item [~~25~~ SIGXFSZ]
-
 File size limit exceeded: Sent to a process if it tries to modify a file in
-
 a way that makes it exceed the maximum file size limit of the process.
 
-
-
 !label SIGVTALRM
-
 !item [~~26~~ SIGVTALRM]
-
 Time limit expired: Sent to a process that has exceeded its maximum time
-
 limit.
 
-
-
 !label SIGPROF
-
 !item [~~27~~ SIGPROF]
-
 Profiling time expired: Sent to a process to tell it that its profiling time
-
 has expired.
 
-
-
 !label SIGWINCH
-
 !item [~~28~~ SIGWINCH]
-
 Window changed: The default action is to ignore the signal. Normally it is
-
 sent if the size of the terminal (i.e. number of lines or columns) has
-
 altered. A program that is running in a terminal window can then reconfigure
-
 itself to match the new size of the window. For obtaining the current window
-
 size one can use in MiNT Fcntl Opcodes, which however are not yet
-
 implemented in (!nolink [MagiC]). Hence the signal is currently not sent by
-
 (!nolink [MagiC]) or VT52.
 
-
-
 !label SIGUSR1
-
 !item [~~29~~ SIGUSR1]
-
 User-defined:
 
-
-
 !label SIGUSR2
-
 !item [~~30~~ SIGUSR2]
-
 User-defined: These two signals may be sent by user programs. As a process
-
 is killed by default on receipt of this signal, it should only be sent if
-
 the receiver is known.
-
 !end_xlist
 
-
-
 See also: (!nl)
-
 Signal-handler in MagiC ~ Process functions ~
-
 (!link[Sample code][Sample code for signals]) ~ Psigaction ~
-
 Psignal ~ Pkill ~ (!link [Test for pipes][Pipes, Test for])
 
 
-
-
-
-!begin_node Signal-handler in MagiC
-
-
+!begin_node Signal-handler in (!nolink [MagiC])
 
 As MagiC's signal-handlers differ somewhat from those in MiNT or in
-
 MultiTOS, we will deal here with the most important differences and
-
 features. First of all it must be realised that in (!nolink [MagiC]),
-
 (!link [AES][About the AES]) and (!link [VDI][About the VDI]) calls from within a
-
 signal-handler are (!I)permitted(!i) (quite in contrast to MiNT).
 
-
-
 A signal-handler runs in user-mode and employs the user stack of the main
-
 thread, while this sleeps. In MiNT the supervisor stack of the process is
-
 used. Hence, according to the MiNT documentation, the nesting of signals
-
 more than 4 deep makes a process crash due to stack overflow. In
-
 (!nolink [MagiC]) each signal-handler is its (!I)own(!i) thread  with its
-
 (!I)own(!i) supervisor stack, so that the worst that can happen is the
-
 extremely rare case of user stack overflow. However, if too little memory is
-
 available for a new thread when handling a signal, then an "Out of internal
-
 memory" alert will appear, and one should terminate a program as soon as
-
 possible. (!nolink [MagiC]) requires about 7 kb of memory for handling each
-
 signal.
 
-
-
 In (!nolink [MagiC]), the same applies for signals as for threads (a
-
 signal-handler is a thread), i.e. the corresponding system libraries have to
-
 be (!I)reentrant.(!i) However, there is a complication because the main
-
 thread is halted while processing the signal. So if the main thread has set
-
 a signal (wind_update for example), a deadlock occurs if the signal-handler
-
 also wants to set these signals. Furthermore, in (!nolink [MagiC]) a process
-
 may be interrupted at almost any point ((!nolink [MagiC]) is reentrant, even
-
 DOS is interruptible), so that the main thread may in some cases block
-
 important areas of the system (files, directories, semaphores). Due to this
-
 it is possible that certain files cannot be deleted or opened, for instance.
 
-
-
 With normal termination of a signal-handler all semaphores blocked by the
-
 handler are released automatically. Furthermore, windows, screen background
-
 and menu bar of the signal-handler will be released if appropriate. Note
-
 that a signal-handler has its own (!nolink [AES]) message-queue, i.e.
-
 evnt_message and appl_write should be used with care.
 
-
-
 On Psigreturn the semaphores of all signal-handlers as well as those of the
-
 main thread will be released. However the windows, screen background and
-
 menu bar of the signal-handler will not be released. Though this would not
-
 have been much of a problem, it may not be necessary in practice.
-
 (!nolink [Psigreturn]) restores the supervisor stack of the main thread,
-
 i.e. a setjmp/longjmp mechanism only needs to set the USP. This is not
-
 sufficiently documented in the MiNT documentation, and also works only if
-
 the main thread is waiting via a (!nolink [GEMDOS]) call. If (!nolink [AES])
-
 comes into play, MultiTOS crashes! Hence (!nolink [Psigreturn]) should be
-
 avoided if possible. (!nolink [Psigreturn]) in (!nolink [MagiC]) is not of
-
 the type VOID as in MiNT, but of the type LONG. If the function is called
-
 from a non-signal-handler, (!nolink [Psigreturn]) returns the value EACCDN,
-
 otherwise E_OK. If (!nolink [Psigreturn]) has returned E_OK, then (as in
-
 MiNT) under (!I)no circumstances(!i) should the handling procedure be
-
 terminated in the normal way via rts, because the jump-back address on the
-
 user stack is invalid after execution of (!nolink [Psigreturn]).
 
-
-
 A problem exists in (!nolink [MagiC]) with the existing versions of VT52. A
-
 signal-handler (!I)cannot(!i) yet perform keyboard scans in VT52; the keys
-
 will not be received. This may alter in a later version, however.
 
-
-
-See also: Process functions ~ Signals ~ (!link [Threads][Threads in MagiC])
-
+See also:
+Process functions ~ Signals ~ (!link [Threads][Threads in MagiC])
 !end_node
-
-
-
-
 
 !begin_node Sample code for signals
 
-
-
 The first program installs a signal-handler for the two signals SIGUSR1 and
-
 SIGUSR2. With that one can test the nesting of both (!nolink [signals]), if
-
 both are sent consecutively. The program should run in VT52 or in MINIWIN.
-
 If one presses  Ctrl-Alt-Esc during the "for()" delay loop, one can see that
-
 (!nolink [MagiC]) creates its own thread for each signal-handler. This has
-
 the advantage that under (!nolink [MagiC]) no events (mouse, timer, ...)
-
 will be lost while a signal is being processed.
 
-
-
 !begin_verbatim
-
 ------------------------------ snip --------------------------
-
 #include <tos.h>
-
 #include <stdio.h>
-
-
 
 void cdecl handler(long signr)
-
 {
-
     long i;
 
-
-
     printf("Handler: Signal %ld received.\n", signr);
-
     Cconws("Wait...");
-
     for (i = 0; i < 7000000L; i++)
-
         ;
-
     Cconws("...OK\r\n");
-
 }
-
-
 
 int main( void )
-
 {
-
     long ret;
 
-
-
     printf("My ProcID is %d.\n", Pgetpid());
-
     ret = (long) Psignal(SIGUSR1, handler);
-
     printf("Psignal => %ld\n", ret);
-
     ret = (long) Psignal(SIGUSR2, handler);
-
     printf("Psignal => %ld\n", ret);
-
     Cconin();
-
     return(0);
-
 }
-
 ------------------------------ snap --------------------------
-
 !end_verbatim
 
-
-
 The second program shows the treatment of the Psigreturn call. Under MiNT
-
 this program only works if one doesn't use any (!nolink [AES]) calls
-
 (evnt_keybd or evnt_multi), but uses, say, Cconin. This means that the
-
 following program works under (!nolink [MagiC]) but crashes under MultiTOS
-
 (MiNT 1.08+(!nolink [AES]) 4.1). The problem lies probably in the
-
 restoration of the supervisor stack (system stack pointer), where MultiTOS
-
 fails due to the non-homogenous concept (!nolink [AES])<->MiNT.
 
-
-
 !begin_verbatim
-
 ------------------------------ snip ---------------------------
-
 #include <tos.h>
-
 #include <aes.h>
-
 #include <setjmp.h>
-
 #include <tosdefs.h>
-
 #include <stdio.h>
-
-
 
 jmp_buf env;
 
-
-
 void cdecl handler(long signr)
-
 {
-
     printf("Handler: Signal %ld received.\n", signr);
-
     Cconws("Perform Psigreturn()\r\n");
-
     Psigreturn();
-
     longjmp(env, 1);
-
 }
-
-
 
 int main( void )
-
 {
-
     long ssp;
 
-
-
     appl_init();
-
     printf("My ProcID is %d.\n", Pgetpid());
-
     Psignal(SIGUSR1, handler);
 
-
-
     if  (setjmp(env))
-
         Cconws("Coming from longjmp.\r\n");
-
     else    Cconws("Coming from setjmp.\r\n");
-
     ssp = Super(0L);
-
     Super((void *) ssp);
-
     printf("ssp = 0%08lx\n", ssp);
-
     evnt_keybd();
-
     return(0);
-
 }
-
 !end_verbatim
 
-
-
-See also: Signals ~ Process functions ~ GEMDOS
-
+See also:
+Signals ~ Process functions ~ GEMDOS
 !end_node
-
 !end_node
-
 
 
 !else
 
 
-
 !begin_node Signale
 
-
-
 Das aus der U*NIX-Welt stammende Signal-Konzept steht auch unter den
-
 Betriebssystemen MultiTOS und MagiC (ab Version 4.50) zur VerfÅgung. Signale
-
 kînnen als natÅrliche Zahlen aufgefaût werden, die einen bestimmten
-
 Ausnahmezustand (Exception) reprÑsentieren. Sie sind mit einem Interrupt
-
 oder einer CPU-Exception vergleichbar, mit dem Unterschied jedoch, daû es
-
 sich um eine reine (!I)Software(!i)-Implementation handelt.
-
-
 
 (!B)Jeder Prozess besitzt:(!b)
 
-
-
 !begin_itemize
-
 !item einen Bitvektor der wartenden Signale (pending Signals). Dieser
-
 beschreibt diejenigen Signale, die noch auf ihre Bearbeitung warten, weil
-
 sie z.B. gerade durch die Signalmaske gesperrt sind, oder weil der Prozess
-
 in einem Zustand ist, in dem er keine Signale bearbeiten kann.
-
 !item eine Signalmaske. Dieser 32bit-Wert definiert als Bitvektor diejenigen
-
 Signale, die momentan gesperrt sind; wenn in diesem Vektor z.B. Bit-30
-
 gesetzt ist, ist das Signal SIGUSR2 gesperrt. Die Signalmaske wird nicht
-
 nur explizit (d.h. durch Systemaufrufe), sondern auch (!I)implizit(!i) durch
-
 andere VorgÑnge beeinfluût. WÑhrend der Abarbeitung eines Signals ist dieses
-
 z.B. gesperrt, andere kînnen jedoch noch auftreten. Nach der Bearbeitung des
-
 Signals wird dieses wieder freigegeben und damit evtl. eine weitere
-
 Signalbehandlung ausgelîst. Beachtet werden muss, daû einige Signale (z.B.
-
 SIGKILL, SIGSTOP, SIGCONT) (!I)nicht(!i) maskiert werden kînnen.
-
 !item eine Tabelle der Form struct sigaction
-
 !end_itemize
 
-
-
 Bei einem Pexec werden die Signalmaske und der pending-Wert (s.o.) des
-
 Child-Prozesses auf Null gesetzt. Die Komponente (!I)sa_handler(!i) der
-
 sigaction Struktur wird vererbt, wobei ein Wert ungleich 0 oder 1 immer auf
-
 0 gesetzt wird. Die Komponenten (!I)sa_mask(!i) und (!I)sa_flags(!i) der
-
 Struktur werden auf den Wert Null gesetzt.
 
-
-
 Die meisten Signale kînnen von einem Programm abgefangen, (um etwa beim
-
 Eintreffen eine bestimmte Routine aufzurufen) ignoriert, oder auch blockiert
-
 werden. Blockierte Signale werden solange nicht berÅcksichtigt, bis die
-
 Blockade wieder aufgehoben wird. (!B)Zur Terminologie:(!b) Man sagt, daû ein
-
 Signal zu einem Prozess (!I)geschickt(!i) wird, wenn die das Signal
-
 reprÑsentierende Exception auftritt, oder wenn das Signal per Pkill von
-
 einem anderen Prozess gesendet wird. Ein Signal wurde hingegen an einen
-
 Prozess (!I)Åberbracht(!i), wenn der entsprechende Prozess aufwacht, und die
-
 fÅr das Signal passenden Aktionen einleitet. Zu beachten ist, daû das
-
 SignalHandling nicht zeitlos geschieht: Zwischen dem Abschicken eines
-
 Signals, und der Aufnahme der dazu passenden Aktionen kann evtl. ein
-
 betrÑchtlicher Zeitraum verstreichen.
 
-
-
 !label Signale, Liste der
-
 Insgesamt stehen 31 mîgliche Signale (0 bis 30) zur VerfÅgung, denen aber
-
 noch nicht allen eine feste Bedeutung zugewiesen ist. Die folgende Liste
-
 beschreibt (soweit bekannt) alle mîglichen Signale in der Form:
-
 Signalnummer, Name des Signals, Bedeutung des Signals fÅr den empfangenden
-
 Prozess. (!B)Sofern nicht ausdrÅcklich anders beschrieben, besteht die
-
 Default Aktion beim Eintreffen eines Signals in der Terminierung des
-
 empfangenden Prozesses(!b).
 
-
-
 !begin_xlist !short [Nummer SIGVTALRM]
-
 !item [Nummer Name]
-
 Bedeutung
-
 !item [~]
-
 ~
 
-
-
 !label SIGNULL
-
 !item [~~~0~~ SIGNULL]
-
 Null: Dieses Signal besitzt keine Defaultaktion, da es streng genommen gar
-
 kein Signal ist. Zusammen mit Pkill kann es jedoch benutzt werden, um die
-
 Existenz eines Prozesses zu testen. Das Signal kann (!I)nicht(!i) maskiert
-
 oder abgefangen werden.
 
-
-
 !label SIGHUP
-
 !item [~~~1~~ SIGHUP]
-
 Hang Up: Wird normalerweise verschickt, wenn ein Terminal, mit dem ein
-
 Prozess verbunden ist, nicht mehr gÅltig ist. Nach Erhalt dieses Signals
-
 sollte der Prozess keine Ausgaben mehr auf das Terminal machen. In MagiC
-
 wird der VT52 das Signal verschicken, wenn ein Terminalfenster geschlossen
-
 wurde.
 
-
-
 !label SIGINT
-
 !item [~~~2~~ SIGINT]
-
 Interrupt: Wird i.a. verschickt, wenn der Benutzer die Tastenkombination ^C
-
 betÑtigt. Dieses Signal wird von zukÅnftigen Versionen (!nolink [MagiC])
-
 statt der bisherigen ^C-Behandlung benutzt.
 
-
-
 !label SIGQUIT
-
 !item [~~~3~~ SIGQUIT]
-
 Quit: Wird i.a. verschickt, wenn der Benutzer die Tastenkombination ^\
-
 betÑtigt. Das Signal soll 'hÑrter' als SIGINT sein, und wird z.Zt. noch
-
 nicht von (!nolink [MagiC]) bzw. VT52 verschickt.
 
-
-
 !label SIGILL
-
 !item [~~~4~~ SIGILL]
-
 Illegal instruction: Entspricht dem gleichnamigen Exceptionvektor des
-
 68K-Prozessors. Das Signal sollte (!I)nicht(!i) abgefangen werden. In MiNT
-
 kann das Signal abgefangen werden, d.h. der Vektor wird praktisch fÅr jeden
-
 Prozess umgebogen. In (!nolink [MagiC]) funktioniert das jedoch z.Zt. noch nicht, so daû
-
 hier immer 8 Bomben erscheinen.
 
-
-
 !label SIGTRAP
-
 !item [~~~5~~ SIGTRAP]
-
 Trap: Entspricht dem Exceptionvektor 'Trace' des 68K-Prozessors und wird
-
 nach jeder Anweisung gesendet, wenn das System im Einzelschritt 'trace'
-
 Modus lÑuft. Dieses Signal sollte nur von (!B)Debuggern(!b) abgefangen
-
 werden. In MiNT kann das Signal abgefangen werden, d.h. der Vektor wird
-
 praktisch fÅr jeden Prozess umgebogen. In (!nolink [MagiC]) funktioniert das
-
 z.Zt. jedoch noch nicht, d.h. es erscheinen immer 9 Bomben.
 
-
-
 !label SIGABRT
-
 !item [~~~6~~ SIGABRT]
-
 Abort: Wird normalerweise von der Bibliotheksfunktion abort() in ANSI C
-
 verwendet, und sollte (!I)nicht(!i) abgefangen werden. Dieses Signal wird
-
 nicht vom Betriebssystem selbst verschickt.
 
-
-
 !label SIGPRIV
-
 !item [~~~7~~ SIGPRIV]
-
 Privilege Violation: Entspricht dem gleichnamigen Exceptionvektor im
-
 68K-Prozessor, wenn ein Prozess versucht, eine Anweisung im User-Mode
-
 auszufÅhren, die nur im Supervisor Mode ausgefÅhrt werden darf. Dieses
-
 Signal sollte nicht abgefangen werden; in MiNT ist dies jedoch mîglich, so
-
 daû der Exceptionvektor praktisch fÅr jeden Prozess umgebogen wird. In
-
 (!nolink [MagiC]) funktioniert das z.Zt. jedoch noch nicht, d.h. es
-
 erscheinen immer 8 Bomben.
 
-
-
 !label SIGFPE
-
 !item [~~~8~~ SIGFPE]
-
 Floating Point Exception: Die Default-Aktion besteht darin, das Signal zu
-
 ignorieren. Es entspricht dem 68k-Execptionvektor 'Division durch Null' oder
-
 eine Floating Point Exception. Das Signal kann ignoriert oder abgefangen
-
 werden. In MiNT kann das Signal abgefangen werden, so daû der Vektor
-
 praktisch fÅr jeden Prozess umgebogen wird. In (!nolink [MagiC]) ist dies
-
 z.Zt. noch nicht mîglich.
 
-
-
 !label SIGKILL
-
 !item [~~~9~~ SIGKILL]
-
 Kill: Terminiert den empfangenden Prozess. Das Signal kann nicht maskiert
-
 bzw. abgefangen werden; deshalb sollte dieses Signal erst dann verschickt
-
 werden, wenn SIGTERM erfolglos war. Das Signal wird von MagiC selbst z.Zt.
-
 noch nicht verschickt.
 
-
-
 !label SIGBUS
-
 !item [~~10~~ SIGBUS]
-
 Bus Error: Entspricht dem gleichnamigen Exceptionvektor des 68K-Prozessors.
-
 Das Signal sollte (!I)nicht(!i) ignoriert oder abgefangen werden. In MiNT
-
 kann das Signal abgefangen werden, d.h. der Exceptionvektor wird praktisch
-
 fÅr jeden Prozess umgebogen; in (!nolink [MagiC]) geht das z.Zt. jedoch noch nicht, so
-
 daû immer 2 Bomben erscheinen. In MiNT werden SIGBUS, SIGSEGV und SIGPRIV
-
 beim ersten Eintreffen des Signals auf die Defaultroutine des Systems
-
 zurÅckgesetzt, so daû ein (!I)doppelter(!i) Bus-/Adreû-/Privilegfehler den
-
 Prozess immer beendet.
 
-
-
 !label SIGSEGV
-
 !item [~~11~~ SIGSEGV]
-
 Segmentation violation: Entspricht dem Exceptionvektor 'Adressfehler' des
-
 68K-Prozessors. Das Signal sollte (!I)nicht(!i) abgefangen oder ignoriert
-
 werden. In MiNT kann das Signal abgefangen werden, d.h. der Exceptionvektor
-
 wird praktisch fÅr jeden Prozess umgebogen. In (!nolink [MagiC]) geht das jedoch z.Zt.
-
 noch nicht, d.h. es erscheinen immer 3 Bomben.
 
-
-
 !label SIGSYS
-
 !item [~~12~~ SIGSYS]
-
 Bad System Call: Wird verschickt, wenn ein Parameter fÅr ein Systemaufruf
-
 ungÅltig ist bzw. den erlaubten Wertebereich Åberschreitet und der Aufruf
-
 selbst keinen Fehler meldet. Wird von (!nolink [MagiC]) z.Zt. noch nicht
-
 verschickt.
-
-
 
 !label SIGPIPE
-
 !item [~~13~~ SIGPIPE]
-
 Pipe Error: Wird beim Versuch verschickt, in eine nicht mehr existierende
-
 Pipe zu schreiben, und kann z.B. beim Drag&Drop-Protokoll maskiert werden.
-
 Dieses Signal wird z.Zt. von (!nolink [MagiC]) noch nicht verschickt.
 
-
-
 !label SIGALRM
-
 !item [~~14~~ SIGALRM]
-
 Alarm: Wird von MiNT fÅr Talarm verwendet, und dient z.B. zum Behandeln von
-
 Time-Outs. In (!nolink [MagiC]) wird dieses Signal z.Zt. noch nicht verschickt.
 
-
-
 !label SIGTERM
-
 !item [~~15~~ SIGTERM]
-
 Terminate: Standardsignal zum Beenden eines Prozesses; es wird von MiNT z.B.
-
 beim Lîschen einer Programmdatei im Verzeichnis U:\PROC verschickt, von
-
 (!nolink [MagiC]) z.Zt. jedoch noch ignoriert.
 
-
-
 !label SIGURG
-
 !item [~~16~~ SIGURG]
-
 Dieses Signal ist z.Zt. noch nicht definiert.
 
-
-
 !label SIGSTOP
-
 !item [~~17~~ SIGSTOP]
-
 Stop: Die Default-Aktion besteht darin, den empfangenden Prozess anzuhalten.
-
 Das Signal kann (!I)nicht(!i) blockiert bzw. abgefangen werden. In MagiC
-
 werden dabei sÑmtliche Threads eines Prozesses angehalten. Im gestoppten
-
 Zustand gehen in (!nolink [MagiC]) keinerlei Maus- bzw. Tastaturklicks verloren; beim
-
 Fortfahren des Prozesses per SIGCONT werden die entsprechenden Nachrichten
-
 ausgewertet.
 
-
-
 !label SIGTSTP
-
 !item [~~18~~ SIGTSTP]
-
 Terminal Stop: Die Default-Aktion besteht darin, den empfangenden Prozess
-
 anzuhalten. Das Signal entspricht SIGSTOP, und wird i.a. vom Benutzer durch
-
 DrÅcken der Tastenkombination ^Z ausgelîst. Es kann (!I)nicht(!i) maskiert
-
 bzw. abgefangen werden. Das Signal wird z.Zt. noch nicht von (!nolink [MagiC]) und VT52
-
 verschickt.
 
-
-
 !label SIGCONT
-
 !item [~~19~~ SIGCONT]
-
 Continue: Die Default-Aktion besteht darin, den empfangenen (und vorher
-
 durch SIGSTOP oder Pause gestoppten) Prozess wieder aufzuwecken. Obwohl das
-
 Signal nicht maskiert bzw. ignoriert werden kann, kann eine
-
 Behandlungsroutine fÅr das Signal installiert werden. In (!nolink [MagiC]) werden
-
 sÑmtliche Threads aufgeweckt, die durch einen Aufruf von (!nolink [Pause]) bzw. SIGSTOP
-
 angehalten worden sind.
 
-
-
 !label SIGCHLD
-
 !item [~~20~~ SIGCHLD]
-
 Child Terminated: Die Default-Aktion besteht darin, das Signal zu
-
 ignorieren. Es wird sowohl beim Terminieren als auch beim Anhalten eines
-
 Prozesses an den Parent-Prozess verschickt. In MiNT kann festgelegt werden,
-
 daû dieses Signal nur beim Terminieren verschickt wird, und darÅber hinaus
-
 auch festgestellt werden, welcher Child-Prozess betroffen war. Da (!nolink [MagiC])
-
 bisher nur das wartende Pexec kennt (d.h. der Parent wartet so lange, bis
-
 der Child terminiert), gibt es das Signal hier noch nicht. Die durch
-
 shel_write erzeugten Prozesse sind (!I)keine(!i) richtigen Childs, sondern
-
 vîllig unabhÑngige Prozesse; in diesen FÑllen muss daher auf das Eintreffen
-
 der Nachricht CH_EXIT gewartet werden.
 
-
-
 !label SIGTTIN
-
 !item [~~21~~ SIGTTIN]
-
 Terminal Input-Error: Die Default-Aktion besteht darin, den empfangenden
-
 Prozess anzuhalten. In der Regel versucht ein Prozess von einem Terminal zu
-
 lesen, das ihm nicht gehîrt. Von (!nolink [MagiC]) bzw. VT52 wird das Signal z.Zt. noch
-
 nicht verschickt.
 
-
-
 !label SIGTTOU
-
 !item [~~22~~ SIGTTOU]
-
 Terminal Output-Error: Die Default-Aktion besteht darin, den empfangenden
-
 Prozess anzuhalten. In der Regel versucht ein Prozess Ausgaben auf ein
-
 Terminal vorzunehmen, das ihm nicht gehîrt. Von (!nolink [MagiC]) bzw. VT52 wird das
-
 Signal z.Zt. noch nicht verschickt.
-
-
 
 !label SIGIO
-
 !item [~~23~~ SIGIO]
-
 I/O possible: Eine Ein-/Ausgabe fÅr eine Dateikennung ist mîglich.
 
-
-
 !label SIGXCPU
-
 !item [~~24~~ SIGXCPU]
-
 Exhaustion of CPU-Limit: Das per Psetlimit bzw. durch die erweiterten
-
 shel_write-Modi festgelegte Rechenzeit-Kontingent ist abgelaufen. Da die
-
 Begrenzung der Rechenzeit in MagiC bisher nicht implementiert ist, wird das
-
 Signal z.Zt. noch nicht verschickt.
 
-
-
 !label SIGXFSZ
-
 !item [~~25~~ SIGXFSZ]
-
 File size limit exceeded: Wird verschickt wenn eine Datei auf eine Weise
-
 verÑndert wird, die die maximale Grîûe einer Datei, die dem Prozess erlaubt
-
 ist, Åberschritten wird.
 
-
-
 !label SIGVTALRM
-
 !item [~~26~~ SIGVTALRM]
-
 Time limit expired: Wird an einen Prozess geschickt, der seine maximale CPU
-
 Zeit Åberschritten hat.
 
-
-
 !label SIGPROF
-
 !item [~~27~~ SIGPROF]
-
 Profiling time expired: Wird an einen Prozess geschickt, um ihm mitzuteilen,
-
 daû seine maximale Profiling Zeit Åberschritten ist.
 
-
-
 !label SIGWINCH
-
 !item [~~28~~ SIGWINCH]
-
 Window-Changed: Die Default-Aktion besteht darin, das Signal zu ignorieren.
-
 Es wird normalerweise verschickt, wenn sich die Terminalgrîûe (d.h. die
-
 Anzahl der Zeilen bzw. Spalten) verÑndert hat. Ein Programm daû im
-
 Terminalfenster ablÑuft, kann sich nun entsprechend neu konfigurieren. Zur
-
 Ermittlung der aktuellen Fenstergrîûe gibt es in MiNT Fcntl-Opcodes, die in
-
 (!nolink [MagiC]) bisher jedoch noch nicht implementiert sind. Das Signal wird daher
-
 z.Zt. noch nicht von MagiC bzw. VT52 verschickt.
 
-
-
 !label SIGUSR1
-
 !item [~~29~~ SIGUSR1]
-
 User-Defined:
 
-
-
 !label SIGUSR2
-
 !item [~~30~~ SIGUSR2]
-
 User-Defined: Diese zwei Signale dÅrfen durch Benutzerprogramme verschickt
-
 werden. Da ein Prozess beim Empfangen dieses Signals per Default terminiert
-
 wird, sollte es nur verschickt werden, wenn der EmpfÑnger bekannt ist.
-
 !end_xlist
 
-
-
 Querverweis: (!nl)
-
 Signalhandler in MagiC ~ Prozessfunktionen ~
-
 (!link [Beispielcode][Beispielcode zu Signalen]) ~ Psigaction ~ Psignal ~
-
 Pkill ~ (!link [Test auf Pipes][Pipes, Test auf])
 
-
-
-
-
-!begin_node Signalhandler in MagiC
-
-
+!begin_node Signalhandler in (!nolink MagiC])
 
 Da sich Signalhandler in MagiC etwas von denen in MiNT bzw. MultiTOS
-
 unterscheiden, wird an dieser Stelle auf die wichtigsten Unterschiede bzw.
-
 Eigenschaften eingegangen. ZunÑchst einmal muss festgestellt werden, daû
-
 in (!nolink [MagiC]) AES- und VDI-Aufrufe aus einem Signalhandler heraus (!I)erlaubt(!i)
-
 sind (ganz im Gegensatz zu MiNT).
 
-
-
 Ein Signalhandler lÑuft im Usermodus und verwendet den Userstack des
-
 Haupt-Threads, der solange schlÑft. In MiNT wird der Supervisor-Stack des
-
 Prozesses verwendet. Daher schieût laut MiNT-Dokumentation die
-
 Verschachtelung von Signalen ab 4 StÅck einen Prozeû wegen StapelÅberlaufs
-
 ab. In (!nolink [MagiC]) ist jeder Signalhandler ein (!I)eigener(!i) Thread mit
-
 (!I)eigenem(!i) Supervisor-Stack, es kann also lediglich der extrem
-
 unwahrscheinliche Fall des Userstack-öberlaufs eintreten. Wenn jedoch zur
-
 Behandlung eines Signals zuwenig Speicher fÅr einen neuen Thread zur
-
 VerfÅgung steht, wird eine Alertbox "System hat keinen freien Speicher mehr"
-
 ausgegeben, und  es sollte schleunigst ein Programm beendet werden. FÅr jede
-
 Signalbehandlung benîtigt (!nolink [MagiC]) ca. 7k Speicherplatz.
 
-
-
 FÅr Signale gilt in (!nolink [MagiC]) das gleiche wie fÅr Threads (ein Signalhandler ist
-
 ein Thread), d.h. die entsprechenden Systembibliotheken mÅssen
-
 (!I)reentrant(!i) sein. Es kommt jedoch noch erschwerend hinzu, daû der
-
 Haupt-Thread wÑhrend der Abarbeitung des Signals angehalten wird. Wenn also
-
 der Haupt-Thread eine Semaphore (Stichwort: wind_update) gesetzt hat,
-
 ensteht ein Deadlock, wenn der Signalhandler diese Semaphore ebenfalls
-
 setzen will. Weiterhin kann ein Prozeû in (!nolink [MagiC]) an beinahe beliebiger Stelle
-
 unterbrochen werden ((!nolink [MagiC]) ist reentrant, sogar DOS ist unterbrechbar), so
-
 daû der Haupt-Thread u.U. wichtige Bereiche des Systems sperrt (Dateien,
-
 Verzeichnisse, Semaphoren). Daher kann es z.B. vorkommen, daû bestimmte
-
 Dateien nicht gelîscht oder geîffnet werden kînnen.
 
-
-
 Beim normalen Beenden eines Signalhandlers werden alle von dem Handler
-
 gesperrten Semaphoren automatisch freigegeben. Weiterhin werden ggf.
-
 Fenster, Bildschirmhintergrund und MenÅleiste des Signalhandlers
-
 freigegeben. Man beachte, daû ein Signalhandler eine eigene AES
-
 Message-Queue besitzt, d.h. evnt_message und appl_write sind mit Vorsicht
-
 zu verwenden.
 
-
-
 Bei Psigreturn werden die Semaphoren aller Signalhandler als auch die des
-
 Haupt-Thread freigegeben. Nicht freigegeben werden jedoch Fenster,
-
 Bildschirmhintergrund und MenÅleiste der Signalhandler. Das wÑre zwar kein
-
 groûes Problem gewesen, dÅrfte aber in der Praxis nicht notwendig sein.
-
 (!nolink [Psigreturn]) restauriert den Supervisor-Stack des Haupt-Thread, d.h. ein
-
 setjmp/longjmp-Mechanismus braucht nur den USP zu setzen. Dies ist in der
-
 MiNT-Dokumentation nicht ausreichend dokumentiert und funktioniert auch
-
 nur dann, wenn der Haupt-Thread per GEMDOS-Aufruf wartet. Kommt (!nolink [AES]) ins
-
 Spiel, stÅrzt MultiTOS ab. (!nolink [Psigreturn]) sollte daher nach Mîglichkeit
-
 vermieden werden. (!nolink [Psigreturn]) ist in (!nolink [MagiC]) nicht vom Typ VOID wie in MiNT,
-
 sondern vom Typ LONG. Wenn die Funktion von einem Nicht-Signalhandler
-
 aufgerufen wird, liefert (!nolink [Psigreturn]) den Wert EACCDN zurÅck, sonst E_OK. Hat
-
 (!nolink [Psigreturn]) E_OK geliefert, sollte (wie in MiNT) auf (!I)keinen(!i) Fall die
-
 Behandlungs-Prozedur normal per rts beendet werden, weil die
-
 RÅcksprungadresse auf dem Userstack nach der AusfÅhrung von (!nolink [Psigreturn])
-
 ungÅltig ist.
 
-
-
 Ein Problem existiert in (!nolink [MagiC]) mit den bisherigen Versionen von VT52. Ein
-
 Signalhandler kann noch (!I)keine(!i) Tastaturabfragen im VT52 durchfÅhren;
-
 die Tasten werden noch nicht empfangen. Dies wird sich in einer spÑteren
-
 Version jedoch noch Ñndern.
 
-
-
-Querverweis: Prozessfunktionen ~ Signale ~
-
-(!link [Threads][Threads in MagiC])
-
+Querverweis:
+Prozessfunktionen ~ Signale ~ (!link [Threads][Threads in MagiC])
 !end_node
-
-
-
-
 
 !begin_node Beispielcode zu Signalen
 
-
-
 Das erste Programm installiert einen Signalhandler fÅr die beiden Signale
-
 SIGUSR1 und SIGUSR2. Damit kann man die Verschachtelung der beiden (!nolink [Signale])
-
 testen, wenn beide hintereinander verschickt werden. Das Programm sollte im
-
 VT52 bzw. im MINIWIN laufen. Wenn man wÑhrend der "for()" Warteschleife
-
 Ctrl-Alt-Esc betÑtigt, erkennt man, daû MagiC fÅr jeden Signalhandler einen
-
 eigenen Thread erstellt. Das hat den Vorteil, daû unter (!nolink [MagiC]) keine
-
 Ereignisse (Maus, Timer, ...) verlorengehen kînnen, wÑhrend ein Signal
-
 bearbeitet wird.
 
-
-
 !begin_verbatim
-
 ------------------------------ schnipp --------------------------
-
 #include <tos.h>
-
 #include <stdio.h>
-
-
 
 void cdecl handler(long signr)
-
 {
-
     long i;
 
-
-
     printf("handler: Signal %ld empfangen.\n", signr);
-
     Cconws("warte...");
-
     for (i = 0; i < 7000000L; i++)
-
         ;
-
     Cconws("...OK\r\n");
-
 }
-
-
 
 int main( void )
-
 {
-
     long ret;
 
-
-
     printf("Meine ProcID ist %d.\n", Pgetpid());
-
     ret = (long) Psignal(SIGUSR1, handler);
-
     printf("Psignal => %ld\n", ret);
-
     ret = (long) Psignal(SIGUSR2, handler);
-
     printf("Psignal => %ld\n", ret);
-
     Cconin();
-
     return(0);
-
 }
-
 ------------------------------ schnipp --------------------------
-
 !end_verbatim
 
-
-
 Das zweite Programm zeigt die Behandlung des Psigreturn()-Aufrufs. Unter
-
 MiNT funktioniert dieses Programm nur, wenn man keine AES-Aufrufe
-
 (evnt_keybd() oder evnt_multi()) verwendet, sondern z.B. Cconin() verwendet.
-
 D.h. das folgende Programm funktioniert unter (!nolink [MagiC]) und stÅrzt unter
-
 MultiTOS (MiNT 1.08+(!nolink [AES]) 4.1) ab. Das Problem liegt wahrscheinlich an der
-
 Restauration des Supervisor-Stacks (Systemstapelzeiger), dabei versagt
-
 MultiTOS wegen des inhomogenen Konzepts (!nolink [AES])<->MiNT.
 
-
-
 !begin_verbatim
-
 ------------------------------ schnipp --------------------------
-
 #include <tos.h>
-
 #include <aes.h>
-
 #include <setjmp.h>
-
 #include <tosdefs.h>
-
 #include <stdio.h>
-
-
 
 jmp_buf env;
 
-
-
 void cdecl handler(long signr)
-
 {
-
     printf("handler: Signal %ld empfangen.\n", signr);
-
     Cconws("Mache Psigreturn()\r\n");
-
     Psigreturn();
-
     longjmp(env, 1);
-
 }
-
-
 
 int main( void )
-
 {
-
     long ssp;
 
-
-
     appl_init();
-
     printf("Meine ProcID ist %d.\n", Pgetpid());
-
     Psignal(SIGUSR1, handler);
 
-
-
     if  (setjmp(env))
-
         Cconws("komme von longjmp.\r\n");
-
     else    Cconws("komme von setjmp.\r\n");
-
     ssp = Super(0L);
-
     Super((void *) ssp);
-
     printf("ssp = 0%08lx\n", ssp);
-
     evnt_keybd();
-
     return(0);
-
 }
-
 !end_verbatim
 
-
-
-Querverweis: Signale ~ Prozessfunktionen ~ GEMDOS
-
+Querverweis:
+Signale ~ Prozessfunktionen ~ GEMDOS
 !end_node
-
 !end_node
-
 
 
 !endif
