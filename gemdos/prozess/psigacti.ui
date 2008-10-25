@@ -1,430 +1,233 @@
 !iflang [english]
 
 
-
 !begin_node Psigaction
-
 (!begin_liste) [Availability]
-
 !item [Name:]
-
 ØPsigactionÆ - Set default action for a specified signal.
 
 !item [Opcode:]
-
 311
 
 !item [Syntax:]
-
 int32_t Psigaction ( int16_t sig, struct sigaction *act, struct sigaction *oact );
 
-
-
 !item [Description:]
-
 The function Psigaction alters the response to the signal (!I)sig(!i). The
-
 parameter (!I)act(!i) for this is either NULL, or points to a sigaction
-
 structure that describes the behaviour of the signal handling. The following
-
 applies for the component (!I)sa_handler(!i):
 
 !begin_xlist !short [sa_handler]
-
 !item [sa_handler]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [0]
-
 On arrival of the signal the default action for the signal will be executed
-
 !item [1]
-
 The signal (!I)sig(!i) will be ignored; If it currently present, it will be
-
 deleted
-
 !end_xlist
 
 Any other value of (!I)sa_handler(!i) is interpreted as an address of a
-
 function that will be called when the signal occurs. This function is passed
-
 a LONG value via the stack that corresponds to the relevant signal number.
-
 In this way it is possible to use the signal-handler for several signals.
 
-
-
 While a signal is being processed, it cannot be sent again. Furthermore, one
-
 should note that (in contrast to some Unix versions) the signal handling
-
 before the execution of the handler is not reset to the default handler.
 
-
-
 The signal-handler must either be terminated with RTS ((!B)R(!b)eturn
-
 (!B)T(!b)o (!B)S(!b)ender), or Psigreturn called to indicate that the
-
 signal handling has been concluded. Following this, the blocking of the
-
 signal will be lifted.(!nolink [Psigreturn]) additionally performs some
-
 internal mopping up in the kernel, necessary in case the signal-handler is
-
 not terminated (longjump).
 
-
-
 Signal-handlers can make any (!nolink [BIOS]), (!nolink [XBIOS]) and
-
 (!nolink [GEMDOS]) calls. (!nolink [AES]) or (!nolink [VDI]) calls on the
-
 other hand are not permitted. However this does not apply in MagiC; here
-
 one needs to heed several differences.
 
-
-
 A Psigaction call has the side effect that the signal will be unmasked (i.e.
-
 released). In this way a process, while handling a signal, can reset it and
-
 then send it to itself again - for instance to suspend itself while a signal
-
 for job-(!nolink [control]) is processed. The signal handling is secured
-
 against Pfork/Pvfork.
 
-
-
 (!nolink [Signals]) that are ignored by a process will also be ignored by
-
 its child after a Pexec call. Additionally, signals that are intercepted by
-
 a signal-handler will be reset in the child process to the default value.
 
-
-
 The component (!I)sa_flags(!i) of the sigaction structure defines an
-
 additional, signal-specific behaviour: If (!I)sig(!i) is the signal SIGCHLD,
-
 and the SA_NOCLDSTOP bit is set in (!I)sa_flags(!i), then SIGCHLD is sent to
-
 the process only when one of its children terminates (and not just when a
-
 child is suspended by a job-(!nolink [control]) signal).
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function can return the following results:
 
 !begin_xlist !short [ERANGE:]
-
 !item [E_OK~ :]
-
 No error has arisen
-
 !item [EACCDN:]
-
 Signal cannot be intercepted by the user
-
 !item [ERANGE:]
-
 (!I)sig(!i) is an invalid signal
-
 !end_xlist
 
-
-
 !item [Availability:]
-
 Available when a 'MiNT' cookie with a version of at least 0.95 exists,
-
 and (!nolink [MagiC]) as of Version 4.50.
 
-
-
 !item [Group:]
-
 Process functions
 
-
-
-!item [See Also:] (!link [Binding] [Bindings for Psigaction]) ~ 
-
-          Pkill ~ Psigblock ~ Psignal ~ Psigreturn ~ Signals
-
+!item [See Also:]
+(!link [Binding] [Bindings for Psigaction]) ~ Pkill ~ Psigblock ~ Psignal ~
+Psigreturn ~ Signals
 (!ende_liste)
-
-
-
 
 
 !begin_node Bindings for Psigaction
-
 !ignore_index
-
 (!begin_liste) [Assembler:]
-
 !item [C:]
-
 int32_t Psigaction ( int16_t sig, struct sigaction *act, struct sigaction *oact );
 
 !item [Assembler:]
-
 !begin_verbatim
-
 pea       oact         ; Offset 8
-
 pea       act          ; Offset 4
-
 move.w    sig,-(sp)    ; Offset 2
-
 move.w    #311,-(sp)   ; Offset 0
-
 trap      #1           ; GEMDOS
-
 lea       $C(sp),sp    ; Correct stack
-
 !end_verbatim
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
 
 
 !else
 
 
-
 !begin_node Psigaction
-
 (!begin_liste) [Beschreibung]
-
 !item [Name:]
-
 ØPsigactionÆ - Art der Signalbehandlung verÑndern.
 
 !item [Gemdosnummer:]
-
 311
 
 !item [Deklaration:]
-
 int32_t Psigaction ( int16_t sig, struct sigaction *act, struct sigaction *oact );
 
-
-
 !item [Beschreibung:]
-
 Die Funktion Ñndert die Art und Weise, wie auf das Signal (!I)sig(!i)
-
 reagiert werden soll. Der Parameter (!I)act(!i) ist dabei entweder NULL,
-
 oder zeigt auf eine sigaction-Struktur, die das Verhalten des
-
 Signal-Handlings beschreibt. FÅr die Komponente (!I)sa_handler(!i) gilt
-
 dabei:
 
 !begin_xlist !short [sa_handler]
-
 !item [sa_handler]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [0]
-
 beim Eintreffen des Signals wird die Default-Aktion fÅr das Signal
-
 ausgefÅhrt.
-
 !item [1]
-
 das Signal (!I)sig(!i) wird ignoriert. Liegt es gerade an, so wird es
-
 gelîscht.
-
 !end_xlist
 
 Jeder andere Wert von (!I)sa_handler(!i) wird als die Adresse einer Funktion
-
 interpretiert, die beim Auftreten des Signals aufgerufen wird. öber den
-
 Stack wird dieser Funktion ein Long-Wert Åbergeben, der der jeweiligen
-
 Signalnummer entspricht. Auf diese Art und Weise ist es mîglich, den
-
 Signal-Handler fÅr mehrere Signale zu benutzen.
 
-
-
 Solange ein Signal bearbeitet wird, kann es nicht erneut gesendet werden. Zu
-
 beachten ist ferner, daû (im Gegensatz zu einigen Unix-Versionen) das
-
 Signal-Handling vor der AusfÅhrung des Handlers nicht auf den
-
 Default-Handler zurÅckgesetzt wird.
 
-
-
 Der Signalhandler muû entweder mit RTS (Return to Sender) beendet werden,
-
 oder Psigreturn aufrufen, um anzuzeigen, daû die Signalbehandlung
-
 abgeschlossen ist. Anschlieûend wird die Blockierung des Signals aufgehoben.
-
 (!nolink [Psigreturn]) fÅhrt zusÑtzlich einige interne SÑuberungen des Kernels durch,
-
 die notwendig sind, falls der Signal-Handler nicht beendet wird (longjump).
 
-
-
 Signalhandler kînnen beliebige BIOS, XBIOS und GEMDOS Aufrufe machen. AES-
-
 oder VDI-Aufrufe sind hingegen nicht gestattet. Dies gilt jedoch nicht in
-
 MagiC; hier gibt es einige Unterschiede zu beachten.
 
-
-
 Ein Aufruf von Psigaction hat den Nebeneffekt, daû das Signal demaskiert
-
 (d.h. freigegeben) wird. So kann ein Prozess beim Abarbeiten eines Signals
-
 dieses zurÅcksetzen und es sich erneut zusenden, um sich beispielsweise
-
 selbst zu suspendieren, wÑhrend ein Signal fÅr Job-Control bearbeitet wird.
-
 Die Signalbearbeitung ist gegenÅber Pfork/Pvfork abgesichert.
 
-
-
 (!nolink [Signale]), die von einem Prozess ignoriert werden, werden auch vom Child nach
-
 einem Pexec-Aufruf ignoriert. Auûerdem werden Signale, die von einem
-
 Signal-Handler abgefangen werden, im Child-Prozess auf den Defaultwert
-
 zurÅckgesetzt.
 
-
-
 Die Komponente (!I)sa_flags(!i) der sigaction-Struktur definiert ein
-
 zusÑtzliches, Signal-spezifisches Verhalten. Wenn (!I)sig(!i) das Signal
-
 SIGCHLD ist, und in (!I)sa_flags(!i) das SA_NOCLDSTOP Bit gesetzt ist, wird
-
 SIGCHLD dem Prozess nur dann gesendet, wenn einer seiner Childs terminiert
-
 (und eben nicht dann, wenn ein Child durch ein Job-Control-Signal
-
 suspendiert wird).
 
-
-
 !item [Ergebnis:]
-
 Die Funktion kann folgende RÅckgabewerte liefern:
 
 !begin_xlist !short [ERANGE:]
-
 !item [E_OK~ :]
-
 kein Fehler aufgetreten.
-
 !item [EACCDN:]
-
 Signal kann vom Benutzer nicht abgefangen werden.
-
 !item [ERANGE:]
-
 (!I)sig(!i) ist kein gÅltiges Signal.
-
 !end_xlist
 
-
-
 !item [VerfÅgbar:]
-
-Available when a 'MiNT' cookie with a version of at least 0.95 exists
-
-and (!nolink [MagiC]) since version 4.50.
-
-
+VerfÅgbar, wenn ein 'MiNT' Cookie mit einer Versionsnummer von mindestens
+0.95 existiert und in (!nolink [MagiC]) ab Version 4.50.
 
 !item [Gruppe:]
-
 Prozessfunktionen
 
-
-
-!item [Querverweis:] (!link [Binding] [Bindings fÅr Psigaction]) ~ 
-
-					Pkill ~ Psigblock ~ Psignal ~ Psigreturn ~ Signale
-
+!item [Querverweis:]
+(!link [Binding] [Bindings fÅr Psigaction]) ~ Pkill ~ Psigblock ~ Psignal ~
+Psigreturn ~ Signale
 (!ende_liste)
-
-
-
 
 
 !begin_node Bindings fÅr Psigaction
-
 !ignore_index
-
 (!begin_liste) [Assembler:]
-
 !item [C:]
-
 int32_t Psigaction ( int16_t sig, struct sigaction *act, struct sigaction *oact );
 
 !item [Assembler:]
-
 !begin_verbatim
-
 pea       oact         ; Offset 8
-
 pea       act          ; Offset 4
-
 move.w    sig,-(sp)    ; Offset 2
-
 move.w    #311,-(sp)   ; Offset 0
-
 trap      #1           ; GEMDOS aufrufen
-
 lea       $C(sp),sp    ; Stack korrigieren
-
 !end_verbatim
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
 
 
 !endif
-
