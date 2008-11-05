@@ -1,1428 +1,714 @@
 !iflang [english]
 
 
-
-
-
 !begin_node Dcntl
-
 (!begin_liste) [Availability]
-
 !item [Name:]
-
 ØDcntlÆ - Execute a file-system-specific operation on a file or a directory.
 
-
-
 !item [Opcode:]
-
 304
 
-
-
 !item [Syntax:]
-
 int32_t Dcntl ( int16_t cmd, int8_t *name, int32_t arg );
 
-
-
 !item [Description:]
-
 The function Dcntl executes the command (!I)cmd(!i) on the file or the
-
 directory (!I)name(!i). Details depend on the file-system to which
-
 (!I)name(!i) refers. The meaning of the parameter (!I)arg(!i) is in turn
-
 dependent on (!I)cmd(!i).
-
-
 
 Normally the Dcntl call is supported by the file-systems U:\\ and U:\DEV.
 
-
-
 (!B)The unified file-system U:\ knows the following commands:(!b)
-
 !begin_xlist [KER_SETWBACK (0x0300)]
-
 !item [Command]
-
 Description
-
 !item [~]
-
 ~
-
 !label FS_INSTALL
-
 !item [FS_INSTALL (0xf001)]
-
 Installs a new file-system
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Must be U:\
-
 !item [arg:]
-
 Pointer to fs_descr structure
-
 !end_xlist
-
-
 
 !label FS_MOUNT
-
 !item [FS_MOUNT (0xf002)]
-
 Mounts an already existing file-system in the unified system U:\
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name under which one can access the file-system
-
 !item [arg:]
-
 Pointer to (!nolink [fs_descr]) structure
-
 !end_xlist
-
-
 
 !label FS_UNMOUNT
-
 !item [FS_UNMOUNT (0xf003)]
-
 Unmounts a file-system (!nolink [installed]) by FS_MOUNT 
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name under which the file-system was mounted
-
 !item [arg:]
-
 Pointer to (!nolink [fs_descr]) structure
-
 !end_xlist
-
-
 
 !label FS_UNINSTALL
-
 !item [FS_UNINSTALL (0xf004)]
-
 Removes a file-system completely from the kernel. This command is only
-
 allowed if no further references to the file-system exist, so that any
-
 mounts have been revoked, for instance.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 U:\\
-
 !item [arg:]
-
 Pointer to (!nolink [fs_descr]) structure
-
 !end_xlist
 
-
-
 !item [FUTIME (0x4603)]
-
 Is the complement to the Fcntl function of the same name. It is supported by
-
 MiNT as well as DOS-XFS in MagiC. A pointer to a mutimbuf structure is
-
 passed as a parameter.
 
-
-
 !label KER_GETINFO
-
 !label MX_KER_GETINFO
-
 !item [KER_GETINFO (0x0100)]
-
 Obtains a pointer to the kernel functions of (!nolink [MagiC]). The
-
 parameters (!I)name(!i) and (!I)arg(!i) must have NULL-values. The return is
-
 a pointer to a MX_KERNEL structure. (*)
-
-
 
 As of (!nolink [MagiC]) 6: MX_KER_GETINFO (0x6d00) (1)
 
-
-
 !label KER_DOSLIMITS
-
 !label MX_KER_DOSLIMITS
-
 !item [KER_DOSLIMITS (0x0101)]
-
 Invites the kernel of (!nolink [MagiC]) to obtain the limits for FAT
-
 file-systems. The parameter (!I)name(!i) and (!I)arg(!i) must be set to
-
 NULL. The return is a pointer to a pointer to a MX_DOSLIMITS structure; this
-
 can therefore be diverted to one's own structure if a new driver is
-
 (!nolink [installed]). This opcode is normally used only by hard disk
-
 drivers (such as HDDRIVER). (*)
-
-
 
 As of (!nolink [MagiC]) 6: MX_KER_DOSLIMITS (0x6d01) (1)
 
-
-
 !label KER_INTMAVAIL
-
 !item [KER_INTMAVAIL (0x102)]
-
 ~
 
-
-
 !label KER_INTGARBC
-
 !item [KER_INTGARBC (0x103)]
-
 These functions exist in versions of (!nolink [MagiC]) prior to Version
-
 4.01, and are converted to Sconfig calls to avoid conflicts with drivers
-
 that have problems with unknown opcodes (*).
 
-
-
 !label KER_DRVSTAT
-
 !label MX_KER_DRVSTAT
-
 !item [KER_DRVSTAT (0x0104)]
-
 Obtains simple information about a drive. The following apply:
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Is ignored
-
 !item [arg:]
-
 Pointer to two int16_ts.
-
 !end_xlist
-
 The first int16_t here must hold a NULL, into the second a drive number from
-
 0..25 (A..Z) will be written. The possible return values for this opcode
-
 are:
-
 !begin_xlist !short [ELOCKED :]
-
 !item [EDRIVE :]
-
 Invalid drive number
-
 !item [ELOCKED :]
-
 Drived locked at present
-
 !end_xlist
-
 A value of 0 or >0 indicates that the drive is at present mounted or not
-
 mounted respectively. This opcode is only available from the
-
 (!nolink [MagiC]) Version of 09.09.95 onwards (*).
-
-
 
 As of (!nolink [MagiC]) 6: MX_KER_DRVSTAT (0x6d04) (1)
 
-
-
 !label KER_XFSNAME
-
 !label MX_KER_XFSNAME
-
 !item [KER_XFSNAME (0x0105)]
-
 Obtains the name of the driver that is responsible for a given directory.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Pathname (not filename!)
-
 !item [arg:]
-
 Pointer to a buffer at least 9 characters long which has to lie at an even
-
 address.
-
 !end_xlist
-
 A return value < 0 denotes no error; otherwise the name of the driver will
-
 be stored in the specified buffer; at present the following driver names are
-
 known:
-
 !begin_xlist !short [(c) "MMAC_HFS":]
-
 !item [(a) "DOS_XFS":]
-
 Old DOS-XFS
-
 !item [(b) "VDOS_XFS":]
-
 DOS-XFS with VFAT
-
 !item [(c) "MMAC_HFS":]
-
 MagiCMac-HFS
-
 !end_xlist
-
 This opcode is only available from the (!nolink [MagiC]) Version of
-
 15.06.1996 onwards (*).
-
-
 
 As of (!nolink [MagiC]) 6: MX_KER_XFSNAME (0x6d05) (1)
 
-
-
 !label KER_INSTXFS
-
 !label MX_KER_INSTXFS
-
 !item [KER_INSTXFS (0x0200)]
-
 Invites the kernel of (!nolink [MagiC]) to install an XFS (*)
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 NULL-pointer
-
 !item [arg:]
-
 Driver to install
-
 !end_xlist
-
-
 
 As of (!nolink [MagiC]) 6: MX_KER_INSTXFS (0x6d02) (1)
 
-
-
 !label KER_SETWBACK
-
 !item [KER_SETWBACK (0x0300)]
-
 Invites the kernel of (!nolink [MagiC]) to configure the WriteBack. As of
-
 (!nolink [MagiC]) Version 4.01, this opcode was converted to a Sconfig call,
-
 to prevent conflicts with drivers that have problems with unknown
-
 opcodes (*).
 
-
-
 !label DFS_GETINFO
-
 !label MX_DFS_GETINFO
-
 !item [DFS_GETINFO (0x1100)]
-
 Obtains a pointer to the DOS_XFS functions of (!nolink [MagiC]). The
-
 parameters (!I)name(!i) and (!I)arg(!i) must have NULL-values. The return is
-
 a pointer to a ??? structure. (*)
-
-
 
 As of (!nolink [MagiC]) 6: MX_DFS_GETINFO (0x6d40) (1)
 
-
-
 !label DFS_INSTDFS
-
 !label MX_DFS_INSTDFS
-
 !item [DFS_INSTDFS (0x1200)]
-
 Installs a DFS under MagiC (*).
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 NULL-pointer
-
 !item [arg:]
-
 Driver to install
-
 !end_xlist
-
 !item [CDROMEJECT (0x4309)]
-
 Takes charge of ejection of media.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Path of the medium to be ejected
-
 !item [arg:]
-
 NULL
-
 !end_xlist
-
 The ejection function is supported for all drives that are accessed via an
-
 XHDI-compatible driver, as well as for Macintosh volumes (under MagiCMac).
-
-
 
 As of (!nolink [MagiC]) 6: MX_DFS_INSTDFS (0x6d41) (1)
 
-
-
 !label VFAT_CNFDFLN
-
 !item [VFAT_CNFDFLN (0x5600)]
-
 Configures a VFAT file-system
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 U:\\
-
 !item [arg:]
-
 Bit-vector that determines which drives permit long filenames
-
 !end_xlist
-
 The setting only becomes active on mounting a file-system, so that already
-
 mounted file-systems can (!I)not(!i) be affected by it. This opcode is only
-
 available from the (!nolink [MagiC]) Version of 02.01.96 onwards. (*).
 
-
-
 !label VFAT_CNFLN
-
 !item [VFAT_CNFLN (0x5601)]
-
 Serves for the configuration of a VFAT file-system. More exactly: Determines
-
 whether a mounted drive supports long filenames, or not. With this opcode
-
 therefore one can (!I)supplant(!i) the default value set by VFAT_CNFDFLN. So
-
 that the change becomes visible to the user, a SH_WDRAW message should be
-
 sent to the system shell. This opcode is only available as of the
-
 (!nolink [MagiC]) Version of 02.01.96 (*).
 
-
-
 !label PROC_CREATE
-
 !item [PROC_CREATE (0xcc00)]
-
 This function is reserved in (!nolink [MagiC]) for future use (*). It is no
-
 longer used as of (!nolink [MagiC]) 6.
-
 !end_xlist
-
-
 
 (!B)The file-system U:\DEV knows the following commands:(!b)
-
 !begin_xlist [DEV_M_INSTALL (0xcd00)]
-
 !item [Command]
-
 Description
-
 !item [~]
-
 ~
-
 !label DEV_INSTALL
-
 !item [DEV_INSTALL (0xde02)]
-
 Installs a new driver for a device.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Complete pathname of the driver
-
 !item [arg:]
-
 Pointer to dev_descr structure
-
 !end_xlist
-
 The device (!nolink [installed]) in this way may only be accessed via
-
 (!nolink [GEMDOS]) operations.
 
-
-
 !label DEV_M_INSTALL
-
 !label MX_DEV_INSTALL
-
 !item [DEV_M_INSTALL (0xcd00)]
-
 Corresponds to DEV_INSTALL and has to be used in (!nolink [MagiC]) due to
-
 the incompatible driver format to MultiTOS. (*)
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Complete pathname of the driver
-
 !item [arg:]
-
 Pointer to MX_DDEV structure
-
 !end_xlist
-
-
 
 As of (!nolink [MagiC]) 6: MX_DEV_INSTALL (0x6d20) (1)
 
-
-
 !label DEV_NEWTTY
-
 !item [DEV_NEWTTY (0xde00)]
-
 Installs drivers for a new (!nolink [BIOS]) terminal
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name of the terminal (in the form 'U:\DEV\DEVNAME')
-
 !item [arg:]
-
 (!nolink [BIOS]) device number of the terminal
-
 !end_xlist
 
-
-
 The (!nolink [BIOS]) must have been informed about the device via Bconmap,
-
 else any attempt to access the device will be punished with EUNDEV.
-
-
 
 !label DEV_NEWBIOS
-
 !item [DEV_NEWBIOS (0xde01)]
-
 Installs a driver for a new (!nolink [BIOS]) non-terminal device (devices
-
 that must have their data transmitted raw, such as SCSI devices).
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Complete name of the device
-
 !item [arg:]
-
 Associated (!nolink [BIOS]) device number
-
 !end_xlist
-
-
 
 The (!nolink [BIOS]) must have been informed about the device via Bconmap,
-
 else any attempt to access the device will be punished with EUNDEV.
-
 !end_xlist
 
-
-
 (!B)Note:(!b) The opcodes marked with (*) here are only available under
-
 MagiC, all others only under MiNT or MultiTOS. Exceptions: The opcodes
-
 FUTIME and CDROMEJECT are avaiable both under MiNT/MultiTOS as well as under
-
 (!nolink [MagiC]).
 
-
-
 (1): Unfortunately there were collisions between (!nolink [MagiC]) and the
-
 Minix-XFS for MiNT. Hence (!nolink [MagiC]) as of Version 6 contains new
-
 codes, though the old ones are still supported. The new codes have 0x6d in
-
 the upper WORD; this ID is reserved for (!nolink [MagiC]).
 
-
-
 !item [(!nolink [Return]) value:]
-
 The return value depends on the desired operation and the underlying
-
 file-system. With a value >= 0 everything was successful. An exception is
-
 the value for DEV_INSTALL, which either points to an information structure
-
 of the kernel, or else has the value 0.
-
-
 
 For an invalid opcode, EINVFN will be returned.
 
-
-
 !item [Availability:]
-
 Available when a 'MiNT' cookie with a version of at least 0.90 exists, and
-
 MagiC as of Version 3.0.
-
  
-
 !item [Group:]
-
 Directory functions
 
-
-
 !item [See also:]
-
 (!link [Binding] [Bindings for Dcntl]) ~
-
 (!link [XFS-concept in MagiC][MagiC's XFS-concept]) ~ Bconmap ~ Fcntl ~
-
  MagiC ~ Metaioctl
-
 (!ende_liste)
-
-
-
 
 
 !begin_node Bindings for Dcntl
-
 !ignore_index
-
 (!begin_liste) [Assembler:]
-
 !item [C:]
-
 int32_t Dcntl ( int16_t cmd, int8_t *name, int32_t arg );
 
-
-
 !item [Assembler:]
-
 !begin_verbatim
-
 move.l    arg,-(sp)    ; Offset 8
-
 pea       name         ; Offset 4
-
 move.w    cmd,-(sp)    ; Offset 2
-
 move.w    #304,-(sp)   ; Offset 0
-
 trap      #1           ; GEMDOS
-
 lea       $C(sp),sp    ; Correct stack
-
 !end_verbatim
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
-
 
 
 !else
 
 
-
-
-
 !begin_node Dcntl
-
 (!begin_liste) [Beschreibung]
-
 !item [Name:]
-
 ØDcntlÆ - fÅhrt eine Filesystem spezifische Operation auf einer Datei bzw.
-
 einem Verzeichnis durch.
 
-
-
 !item [Gemdosnummer:]
-
 304
 
-
-
 !item [Deklaration:]
-
 int32_t Dcntl ( int16_t cmd, int8_t *name, int32_t arg );
 
-
-
 !item [Beschreibung:]
-
 Die Funktion fÅhrt das Kommando (!I)cmd(!i) auf dem File bzw. Verzeichnis
-
 (!I)name(!i) aus. Einzelheiten sind vom Filesystem abhÑngig, auf das sich
-
 (!I)name(!i) bezieht. Die Bedeutung des Parameters (!I)arg(!i) ist wiederum
-
 von (!I)cmd(!i) abhÑngig.
 
-
-
 StandardmÑûig wird der Dcntl-Aufruf von den Filesystemen U:\\ und U:\DEV
-
 unterstÅtzt.
 
-
-
 (!B)Das Unified-Filesystem U:\ kennt die folgenden Kommandos:(!b)
-
 !begin_xlist [KER_SETWBACK (0x0300)]
-
 !item [Kommando]
-
 Beschreibung
-
 !item [~]
-
 ~
 
-
-
 !label FS_INSTALL
-
 !item [FS_INSTALL (0xf001)]
-
 installiert ein neues Filesystem
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 U:\
-
 !item [arg:]
-
 Zeiger auf fs_descr Struktur
-
 !end_xlist
-
-
 
 !label FS_MOUNT
-
 !item [FS_MOUNT (0xf002)]
-
 Bindet ein bereits existierendes Filesystem in das Unified-System U:\ ein.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name unter dem auf das Filesystem zugegriffen werden kann.
-
 !item [arg:]
-
 Zeiger auf (!nolink [fs_descr]) Struktur
-
 !end_xlist
-
-
 
 !label FS_UNMOUNT
-
 !item [FS_UNMOUNT (0xf003)]
-
 entfernt ein per FS_MOUNT eingehÑngtes System.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name unter dem das Filesystem eingebunden wurde.
-
 !item [arg:]
-
 Zeiger auf fs_descr Struktur
-
 !end_xlist
-
-
 
 !label FS_UNINSTALL
-
 !item [FS_UNINSTALL (0xf004)]
-
 Entfernt ein Filesystem vollstÑndig aus dem Kernel. Dieser Befehl ist nur
-
 erlaubt, wenn keine weiteren Verweise auf das Filesystem existieren, also
-
 beispielsweise etwaige Mounts rÅckgÑngig gemacht wurden.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 U:\\
-
 !item [arg:]
-
 Zeiger auf (!nolink [fs_descr]) Struktur
-
 !end_xlist
 
-
-
 !item [FUTIME (0x4603)]
-
 Ist das Pendant zur gleichnamigen Fcntl()-Funktion. Sie wird von MiNT sowie
-
 vom DOS-XFS in MagiC unterstÅtzt. Als Parameter wird ein Zeiger auf eine
-
 mutimbuf-Struktur Åbergeben.
 
-
-
 !label KER_GETINFO
-
 !label MX_KER_GETINFO
-
 !item [KER_GETINFO (0x0100)]
-
 Ermittelt einen Zeiger auf die Kernelfunktionen von (!nolink [MagiC]). Bei
-
 den Parametern (!I)name(!i) und (!I)arg(!i) muss es sich um NULL-Werte
-
 handeln. ZurÅckgeliefert wird ein Zeiger auf eine MX_KERNEL-Struktur. (*)
-
-
 
 Ab (!nolink [MagiC]) 6: MX_KER_GETINFO (0x6d00) (1)
 
-
-
 !label KER_DOSLIMITS
-
 !label MX_KER_DOSLIMITS
-
 !item [KER_DOSLIMITS (0x0101)]
-
 Fordert den Kernel von (!nolink [MagiC]) auf, die Limits fÅr
-
 FAT-Dateisysteme zu ermitteln. Die Parameter (!I)name(!i) und (!I)arg(!i)
-
 mÅssen auf NULL gesetzt werden. ZurÅckgeliefert wird ein Zeiger auf einen
-
 Zeiger auf eine MX_DOSLIMITS Struktur; dieser kann daher auf eine eigene
-
 Struktur umgebogen werden, falls ein neuer Treiber installiert wird. Dieser
-
 Opcode wird normalerweise nur von Festplattentreibern (wie dem HDDRIVER)
-
 verwendet. (*)
-
-
 
 Ab (!nolink [MagiC]) 6: MX_KER_DOSLIMITS (0x6d01) (1)
 
-
-
 !label KER_INTMAVAIL
-
 !item [KER_INTMAVAIL (0x102)]
-
 ~
 
-
-
 !label KER_INTGARBC
-
 !item [KER_INTGARBC (0x103)]
-
 Diese Funktionen existierten vor der Version 4.01 von (!nolink [MagiC]), und
-
 wurden auf Sconfig-Aufrufe umgesetzt, um Konflikte mit Treibern zu
-
 vermeiden, die Probleme mit unbekannten Opcodes besitzen (*).
 
-
-
 !label KER_DRVSTAT
-
 !label MX_KER_DRVSTAT
-
 !item [KER_DRVSTAT (0x0104)]
-
 Ermittelt einfache Informationen Åber ein Laufwerk. Es gilt:
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 wird ignoriert
-
 !item [arg:]
-
  Zeiger auf zwei int16_ts.
-
 !end_xlist
-
-
 
 Das erste int16_t muss dabei eine Null enthalten, in das zweite wird eine
-
 Laufwerksnummer von 0..25 (A..Z) geschrieben. Die mîglichen RÅckgabewerte
-
 fÅr diesen Opcode lauten:
-
 !begin_xlist !short [ELOCKED :]
-
 !item [EDRIVE :]
-
 ungÅltige Laufwerksnummer
-
 !item [ELOCKED :]
-
 Laufwerk z.Zt. gesperrt
-
 !end_xlist
 
-
-
 Ein Wert von 0 bzw. >0 zeigt an, daû das Laufwerk z.Zt. gemounted bzw. nicht
-
 gemounted ist. Dieser Opcode steht erst ab der (!nolink [MagiC])-Version vom
-
 09.09.95 zur VerfÅgung (*).
-
-
 
 Ab (!nolink [MagiC]) 6: MX_KER_DRVSTAT (0x6d04) (1)
 
-
-
 !label KER_XFSNAME
-
 !label MX_KER_XFSNAME
-
 !item [KER_XFSNAME (0x0105)]
-
 Ermittelt den Namen des Treibers, welcher fÅr ein bestimmtes Verzeichnis
-
 zustÑndig ist.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Pfadname (kein Dateiname!)
-
 !item [arg:]
-
 Zeiger auf einen mindestens 9 Zeichen groûen Puffer, der an einer geraden
-
 Adresse liegen muss.
-
 !end_xlist
-
 Ein RÅckgabewert < 0 kennzeichnet einen Fehler; ansonsten wird im
-
 angegebenen Puffer der Name des Treibers abgelegt; z.Zt. sind folgende
-
 Treibernamen bekannt:
-
 !begin_xlist !short [(c) "MMAC_HFS":]
-
 !item [(a) "DOS_XFS":]
-
 altes DOS-XFS
-
 !item [(b) "VDOS_XFS":]
-
 DOS-XFS mit VFAT
-
 !item [(c) "MMAC_HFS":]
-
 MagiCMac-HFS
-
 !end_xlist
-
-
 
 Dieser Opcode steht erst ab der MagiC-Version vom 15.06.1996 zur
-
 VerfÅgung (*).
-
-
 
 Ab (!nolink [MagiC]) 6: MX_KER_XFSNAME (0x6d05) (1)
 
-
-
 !label KER_INSTXFS
-
 !label MX_KER_INSTXFS
-
 !item [KER_INSTXFS (0x0200)]
-
 Fordert den Kernel von (!nolink [MagiC]) auf, ein XFS zu installieren. (*)
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 NULL-Zeiger
-
 !item [arg:]
-
 einzubindender Treiber
-
 !end_xlist
-
-
 
 Ab (!nolink [MagiC]) 6: MX_KER_INSTXFS (0x6d02) (1)
 
-
-
 !label KER_SETWBACK
-
 !item [KER_SETWBACK (0x0300)]
-
 Fordert den Kernel von (!nolink [MagiC]) auf, den WriteBack zu
-
 konfigurieren. Ab (!nolink [MagiC])-Version 4.01 wurde dieser Opcode auf
-
 einen Sconfig-Aufruf umgesetzt, um Konflikte mit Treibern zu vermeiden, die
-
 Probleme mit unbekannten Opcodes besitzen (*).
 
-
-
 !label DFS_GETINFO
-
 !label MX_DFS_GETINFO
-
 !item [DFS_GETINFO (0x1100)]
-
 Ermittelt einen Zeiger auf die DOS_XFS-Funktionen von (!nolink [MagiC]). Bei
-
 den Parametern (!I)name(!i) und (!I)arg(!i) muss es sich um NULL-Werte
-
 handeln. ZurÅckgeliefert wird ein Zeiger auf eine ???-Struktur. (*)
-
-
 
 Ab (!nolink [MagiC]) 6: MX_DFS_GETINFO (0x6d40) (1)
 
-
-
 !label DFS_INSTDFS
-
 !label MX_DFS_INSTDFS
-
 !item [DFS_INSTDFS (0x1200)]
-
 Installiert ein DFS unter MagiC (*).
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 NULL-Zeiger
-
 !item [arg:]
-
 einzubindender Treiber
-
 !end_xlist
-
 !item [CDROMEJECT (0x4309)]
-
 öbernimmt das Auswerfen von Medien.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Pfad des auszuwerf. Mediums
-
 !item [arg:]
-
 NULL
-
 !end_xlist
-
 Die Auswurffunktion wird fÅr alle Laufwerke unterstÅtzt, die Åber einen
-
 XHDI-kompatiblen Treiber angesprochen werden, sowie fÅr Macintosh Volumes
-
 (unter MagiCMac).
-
-
 
 Ab (!nolink [MagiC]) 6: MX_DFS_INSTDFS (0x6d41) (1)
 
-
-
 !label VFAT_CNFDFLN
-
 !item [VFAT_CNFDFLN (0x5600)]
-
 Konfiguriert ein VFAT-Dateisystem.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 U:\\
-
 !item [arg:]
-
 Bitvektor der festlegt, bei welchen Laufwerken lange Dateinamen zugelassen
-
 werden.
-
 !end_xlist
-
-
 
 Die Einstellung wird erst beim mounten eines Dateisystems aktiv, daher
-
 kînnen bereits gemountete Dateisysteme mit diesem Befehl (!I)nicht(!i)
-
 beeinfluût werden. Dieser Opcode steht erst ab der (!nolink [MagiC])-Version
-
 vom 02.01.96 zur VerfÅgung. (*).
 
-
-
 !label VFAT_CNFLN
-
 !item [VFAT_CNFLN (0x5601)]
-
 Dient der Konfiguration eines VFAT-Dateisystems. Genauer: Legt fest, ob ein
-
 gemountetes Laufwerk lange Dateinamen unterstÅtzt, oder nicht. Mit diesem
-
 Opcode kann also der per VFAT_CNFDFLN festgelegte Defaultwert
-
 (!I)Åberladen(!i) werden. Damit die Umstellung fÅr den Benutzer sichtbar
-
 wird, sollte eine SH_WDRAW-Nachricht an die System-Shell geschickt werden.
-
 Dieser Opcode steht erst ab der MagiC-Version vom 02.01.96 zur
-
 VerfÅgung (*).
 
-
-
 !label PROC_CREATE
-
 !item [PROC_CREATE (0xcc00)]
-
 Diese Funktion ist in (!nolink [MagiC]) fÅr zukÅnftige Zwecke
-
 reserviert (*). Sie wird ab MagiC 6 nicht mehr verwendet.
-
 !end_xlist
-
-
 
 (!B)Das Filesystem U:\DEV kennt folgende Kommandos:(!b)
-
 !begin_xlist [DEV_M_INSTALL (0xcd00)]
-
 !item [Kommando]
-
 Beschreibung
-
 !item [~]
-
 ~
 
-
-
 !label DEV_INSTALL
-
 !item [DEV_INSTALL (0xde02)]
-
 installiert einen neuen Treiber fÅr ein GerÑt.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 vollstÑndiger Pfadname des Treibers
-
 !item [arg:]
-
 Zeiger auf dev_descr-Struktur
-
 !end_xlist
-
 Auf das so installierte GerÑt, darf nur Åber GEMDOS Operationen zugegriffen
-
 werden.
 
-
-
 !label DEV_M_INSTALL
-
 !label MX_DEV_INSTALL
-
 !item [DEV_M_INSTALL (0xcd00)]
-
 entspricht DEV_INSTALL und muû aufgrund des inkompatiblen Treiberformates zu
-
 MultiTOS in (!nolink [MagiC]) benutzt werden. (*)
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 vollst. Pfadname des Treibers
-
 !item [arg:]
-
 Zeiger auf MX_DDEV-Struktur
-
 !end_xlist
-
-
 
 Ab (!nolink [MagiC]) 6: MX_DEV_INSTALL (0x6d20) (1)
 
-
-
 !label DEV_NEWTTY
-
 !item [DEV_NEWTTY (0xde00)]
-
 installiert Treiber fÅr ein neues BIOS Terminal
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 Name des Terminals (in der Form 'U:\DEV\DEVNAME')
-
 !item [arg:]
-
 (!nolink [BIOS]) GerÑtenummer des Terminals
-
 !end_xlist
 
-
-
 (!nolink [Das BIOS]) muû per Bconmap Åber das GerÑt informiert worden sein,
-
 anderenfalls wird jeder Versuch auf das GerÑt zuzugreifen mit EUNDEV
-
 bestraft.
-
-
 
 !label DEV_NEWBIOS
-
 !item [DEV_NEWBIOS (0xde01)]
-
 installiert einen Treiber fÅr ein neues BIOS nicht-Terminal GerÑt.
-
 !begin_xlist !short [name:]
-
 !item [name:]
-
 vollstÑndiger Name des GerÑts
-
 !item [arg:]
-
 zugehîrige (!nolink [BIOS]) GerÑtenummer
-
 !end_xlist
-
 (!nolink [Das BIOS]) muû per Bconmap Åber das GerÑt informiert worden sein,
-
 anderenfalls wird jeder Versuch auf das GerÑt zuzugreifen mit EUNDEV
-
 bestraft.
-
 !end_xlist
-
 (!B)Hinweis:(!b) Die mit (*) gekennzeichneten Opcodes stehen dabei nur unter
-
 MagiC, alle anderen nur unter MiNT bzw. MultiTOS zur VerfÅgung. Ausnahmen:
-
 Die Opcodes FUTIME und CDROMEJECT stehen sowohl unter MiNT/MultiTOS als auch
-
 unter MagiC zur VerfÅgung.
 
-
-
 (1):  Leider gab es Kollisionen zwischen MagiC und dem Minix-XFS fÅr 
-
 MiNT. Daher enthÑlt (!nolink [MagiC]) ab der Version 6 neue Codes, die alten
-
 werden aber noch unterstÅtzt. Die neuen Codes haben ein 0x6d im oberen Word,
-
 diese Kennung ist fÅr MagiC reserviert.
 
-
-
 !item [Ergebnis:]
-
 Der RÅckgabewert ist abhÑngig von der gewÅnschten Operation und dem zugrunde
-
 liegenden Filesystem. Bei einem Wert >= 0 ist alles erfolgreich verlaufen.
-
 Eine Ausnahme ist der Wert bei DEV_INSTALL, welcher entweder auf eine
-
 Informationsstruktur des Kernels zeigt, oder aber den Wert 0 besitzt.
-
-
 
 Bei einem ungÅltigen Opcode wird EINVFN zurÅckgeliefert.
 
-
-
 !item [VerfÅgbar:]
-
 VerfÅgbar, wenn ein 'MiNT' Cookie mit einer Versionsnummer von mindestens
-
 0.90 existiert und in MagiC ab Version 3.0.
-
  
-
 !item [Gruppe:]
-
 Verzeichnisfunktionen
 
-
-
 !item [Querverweis:]
-
 (!link [Binding] [Bindings fÅr Dcntl]) ~
-
 (!link [XFS-Konzept in MagiC][Das XFS-Konzept von MagiC]) ~ Bconmap ~
-
 Fcntl ~ MagiC ~ Metaioctl
-
 (!ende_liste)
-
-
-
 
 
 !begin_node Bindings fÅr Dcntl
-
 !ignore_index
-
 (!begin_liste) [Assembler:]
-
 !item [C:]
-
 int32_t Dcntl ( int16_t cmd, int8_t *name, int32_t arg );
 
-
-
 !item [Assembler:]
-
 !begin_verbatim
-
 move.l    arg,-(sp)    ; Offset 8
-
 pea       name         ; Offset 4
-
 move.w    cmd,-(sp)    ; Offset 2
-
 move.w    #304,-(sp)   ; Offset 0
-
 trap      #1           ; GEMDOS aufrufen
-
 lea       $C(sp),sp    ; Stack korrigieren
-
 !end_verbatim
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
-
 
 
 !endif
-
