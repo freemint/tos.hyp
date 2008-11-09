@@ -1,998 +1,499 @@
 !begin_node The System Vectors
 
-
-
 As the system variables and vectors represent the lowest level of
-
 the operating system, application programs should access these only
-
 when absolutely necessary. (!B)Explicitly:(!b)
 
-
-
 !begin_itemize !short
-
 !item Do not alter any system variables that may not be altered.
-
 !item Do not use any system variables if a function of the operating
-
       system could be called instead (Example: Mfpint).
-
 !end_itemize
-
-
 
 The following list contains all system vectors of (!nolink [TOS ignore]):
 
-
-
 !begin_xlist [LONG $___]
-
 !item [vector]
-
 Description
 
-
-
 !label Vector, SSP-
-
 !label Reset: SSP vector
-
 !item [LONG $000]
-
 (!B)Reset: SSP(!b)
-
 (!nl)
-
 This and the following memory cells contain a mirror image of the first eight
-
 bytes of the ROM. At a reset the value stored here is loaded into the supervisor
-
 stack pointer (though this is not meaningful; the 'real' stack is only
-
 (!nolink [installed]) later by the (!nolink [BIOS]).
 
-
-
 !label Vector, PC
-
 !label Reset: PC vector
-
 !item [LONG $004]
-
 (!B)Reset: PC(!b)
-
 (!nl)
-
 At a reset the value found here is loaded into the program counter (PC). So one
-
 finds here the address that is jumped to on a reset.
 
-
-
 !label Vector, Bus error
-
 !label Bus Error vector
-
 !item [LONG $008]
-
 (!B)Bus Error vector(!b)
-
 (!nl)
-
 Exception vector 2: Two bomblets
-
 (!nl)
-
 Bus errors arise when one attempts to access regions of memory to which access is
-
 not permitted. In supervisor mode this really can be only nonexistent memory areas.
-
 In user mode this can also happen in attempting to access hardware registers or
-
 regions below $800.
 
-
-
 Normally this vector points to the (!nolink [TOS]) routine for the
-
 display of bombs (in this case just two).
 
-
-
 !label Vector, Address error
-
 !label Address Error vector
-
 !item [LONG $00c]
-
 (!B)Address Error vector(!b)
-
 (!nl)
-
 Exception vector 3: Three bomblets
-
 (!nl)
-
 The 68000 and 68010 can access odd addresses only byte by byte. This exception
-
 is triggered if one nevertheless attempts a word or longword access (program
-
 counters or stack pointers too may contain no odd addresses).
 
-
-
 !label Vector, Illegal instruction
-
 !label Illegal Instruction Error vector
-
 !item [LONG $010]
-
 (!B)Illegal Instruction Error vector(!b)
-
 (!nl)
-
 Exception vector 4: Four bomblets
-
 (!nl)
-
 An attempt was made to perform an illegal instruction. This vector is altered by
-
 many debuggers for using for break-points.
 
-
-
 !label Vector, Division by zero
-
 !label Division by Zero Error vector
-
 !item [LONG $014]
-
 (!B)Division by Zero Error vector(!b)
-
 (!nl)
-
 Exception vector 5: No bomblets
-
 (!nl)
-
 Division was by 0 during a DIV command. Normally this vector points to an RTE
-
 instruction; that's why there are no bomblets.
 
-
-
 !label Vector, CHK instruction
-
 !label CHK Instruction Exception vector
-
 !item [LONG $018]
-
 (!B)CHK Instruction Exception vector(!b)
-
 (!nl)
-
 Exception vector 6: An exception was created by a CHK instruction.
 
-
-
 !label Vector, TRAPV-
-
 !label TRAPV Instruction Exception vector
-
 !item [LONG $01c]
-
 (!B)TRAPV Instruction Exception vector(!b)
-
 (!nl)
-
 Exception vector 7: An exception was created by a TRAPV instruction.
 
-
-
 !label Vector, Privilege violation
-
 !label Privilege Violation Exception vector
-
 !item [LONG $020]
-
 (!B)Privilege Violation Exception vector(!b)
-
 (!nl)
-
 Exception vector 8:
-
 (!nl)
-
 An attempt was made to execute an instruction that is permitted only in
-
 supervisor mode. On an Atari TT, the (!nolink [BIOS ignore]) tests whether
-
 the corresponding instruction was a 'move sr,...': unlike on 68000s, this
-
 instruction is permitted only in supervisor mode on the TT. If this is
-
 the case, the (!nolink [BIOS ignore]) will substitute the instruction
-
 'move ccr,...' and attempt to keep the program running.
 
-
-
 !label Vector, Trace
-
 !label Trace, Vector for
-
 !item [LONG $024]
-
 (!B)Trace Exception vector(!b)
-
 (!nl)
-
 Exception vector 9: If the trace bit is set in the status register, the address
-
 specified here is jumped to after every instruction.
 
-
-
 !label Vector, Line-A
-
 !label Line-A, Vector for
-
 !item [LONG $028]
-
 (!B)Line-A-Vector(!b)
-
 (!nl)
-
 Exception vector 10: An attempt was made to execute an instruction that
-
 contained the value '$A' in the top four bits. At present this vector is
-
 used for the co-called Line-A routines.
 
-
-
 !label Vector, Line-F
-
 !label Line-F, Vector for
-
 !item [LONG $02c]
-
 (!B)Line-F Exception vector(!b)
-
 (!nl)
-
 Exception vector 11: An attempt was made to execute an instruction that
-
 contained the value '$F' in the top four bits. It is used up to
-
 (!nolink [TOS]) 1.04 by GEM, and is intended actually for the programmming
-
 of a floating point unit (FPU).
 
-
-
 !item [LONG $030]
-
 (!B)Reserved(!b)
-
-
 
 !item [~~~~:]
-
 Exception vectors 12-23
 
-
-
 !item [LONG $05C]
-
 (!B)Reserved(!b)
 
-
-
 !label Vector, Spurious interrupt
-
 !label Spurious Interrupt, Vector for
-
 !item [LONG $060]
-
 (!B)Spurious Interrupt vector(!b)
-
 (!nl)
-
 Exception vector 24: Occurs if an interrupt has been triggered but the cause
-
 of it could not be ascertained.
 
-
-
 !label Vector, Auto (Level-1)
-
 !label Auto-vector Interrupt, Level 1
-
 !item [LONG $064]
-
 (!B)Auto-vector Interrupt, Level 1(!b)
-
 (!nl)
-
 Unused
-
-
 
 !label Vector, Auto (Level-2)
-
 !label Auto-vector Interrupt, Level 2
-
 !item [LONG $068]
-
 (!B)Auto-vector Interrupt, Level 2(!b)
-
 (!nl)
-
 Points to the handler for horizontal blanking.
 
-
-
 !label Vector, Auto (Level-3)
-
 !label Auto-vector Interrupt, Level 3
-
 !item [LONG $06c]
-
 (!B)Auto-vector Interrupt, Level 3(!b)
-
 (!nl)
-
 Unused
-
-
 
 !label Vector, Auto (Level-4)
-
 !label Auto-Vector Interrupt, Level 4
-
 !item [LONG $070]
-
 (!B)Auto-Vector Interrupt, Level 4(!b)
-
 (!nl)
-
 Points to the handler for vertical blanking.
 
-
-
 !label Vector, Auto (Level-5)
-
 !label Auto-Vector interrupt, Level 5
-
 !item [LONG $074]
-
 (!B)Auto-Vector Interrupt, Level 5(!b)
-
 (!nl)
-
 Unused
-
-
 
 !label Vector, Auto (Level-6)
-
 !label uto-Vector interrupt, Level 6
-
 !item [LONG $078]
-
 (!B)AAuto-Vector Interrupt, Level 6(!b)
-
 (!nl)
-
 Points to the handler for MFP interrupts.
 
-
-
 !label Vector, Auto (Level-7)
-
 !label Auto-Vector interrupt, Level 7
-
 !item [LONG $07c]
-
 (!B)Auto-Vector Interrupt, Level 7(!b)
-
 (!nl)
-
 Unused
 
-
-
 !label Vector, TRAP#0
-
 !label TRAP#0, Vector for
-
 !item [LONG $080]
-
 (!B)TRAP#0(!b)
-
 (!nl)
-
 Exception vector 32
-
 (!nl)
-
 Vector for the 'TRAP #0' instruction. As it is not used by the operating
-
 system, it throws bomblets.
 
-
-
 !label Vector, TRAP#1
-
 !label TRAP#1, Vector for
-
 !label GEMDOS Dispatcher
-
 !label Dispatcher, GEMDOS
-
 !item [LONG $084]
-
 (!B)TRAP#1(!b)
-
 (!nl)
-
 Exception vector 33
-
 (!nl)
-
 Vector for the 'TRAP #1' instruction. Points to the Dispatcher for the GEMDOS
-
 functions.
 
-
-
 !label Vector, TRAP#2
-
 !label TRAP#2, Vector for
-
 !label AES-TRAP
-
 !label VDI-TRAP
-
 !item [LONG $088]
-
 (!B)TRAP#2(!b)
-
 (!nl)
-
 Exception vector 34
-
 (!nl)
-
 Vector for the 'TRAP #2 instruction'. Is used by the AES and VDI.
 
-
-
 !item [LONG $08c - LONG $0b0]
-
 (!B)TRAP#3 - TRAP#12(!b)
-
 (!nl)
-
 xception vectors 35-44. Throws a corresponding number of bomblets, as they
-
 are not used currently by the operating system. However, there are external
-
 extensions that use these traps:
-
-
 
 !begin_xlist [LONG $___]
 
-
-
 !label Vector, TRAP#3
-
 !label TRAP#3, Vector for
-
 !label Omega-Color-CAD
-
 !item [LONG $08c]
-
 (!B)TRAP#3(!b)
-
 (!nl)
-
 Exception vector 35
-
 (!nl)
-
 Is used only by Omega-Color-CAD, otherise without function.
 
-
-
 !label Vector, TRAP#4
-
 !label Exception vector 36
-
 !label SuperCharger
-
 !item [LONG $090]
-
 (!B)TRAP#4(!b)
-
 (!nl)
-
 Exception-Vector 36
-
 (!nl)
-
 The MS-DOS Emulator SuperCharger use the Trap #4 for his Toolbox.
 
-
-
 !label Vector, TRAP#5
-
 !label TRAP#5, Vector for
-
 !label Wind-XES
-
 !item [LONG $094]
-
 (!B)TRAP#5(!b)
-
 (!nl)
-
 Exception vector 37
-
 (!nl)
-
 Is used by Wind-XES. It is a modular accessory/(!nolink [control]) panel that lets you
-
 load in .WNX ("winks") applications which run concurrently under its
-
 environment.
 
-
-
 !label Vector, TRAP#8
-
 !label TRAP#8, Vector for
-
 !label Cubase MROS
-
 !item [LONG $0a0]
-
 (!B)TRAP#8(!b)
-
 (!nl)
-
 Exception vector 40
-
 (!nl)
-
 Cubase MROS from Steinberg use this trap.
 
-
-
 !label Vector, TRAP#10
-
 !label TRAP#10, Vector for
-
 !label TapeBIOS
-
 !item [LONG $0a8]
-
 (!B)TRAP#10(!b)
-
 (!nl)
-
 Exception vector 42
-
 (!nl)
-
 Is used by TapeBIOS. Serves for controlling a BandDrive at the ASCI-bus of
-
 the Atari.
-
 !end_xlist
-
-
 
 !label Vector, TRAP#13
-
 !label TRAP#13, Vector for
-
 !label BIOS Dispatcher
-
 !label Dispatcher, BIOS
-
 !item [LONG $0b4]
-
 (!B)TRAP#13(!b)
-
 (!nl)
-
 Exception vector 45: Vector for the 'TRAP #13' instruction.
-
 Points to the Dispatcher for the (!nolink [BIOS]) functions.
 
-
-
 !label Vector, TRAP#14
-
 !label TRAP#14, Vector for
-
 !label XBIOS Dispatcher
-
 !label Dispatcher, XBIOS
-
 !item [LONG $0b8]
-
 (!B)TRAP#14(!b)
-
 (!nl)
-
 Exception vector 46: Vector for the 'TRAP #14' instruction.
-
 Points to the Dispatcher for the (!nolink [XBIOS]) functions.
 
-
-
 !label Vector, TRAP#15
-
 !label TRAP#15, Vector for
-
 !item [LONG $0bc]
-
 (!B)TRAP#15(!b)
-
 (!nl)
-
 Not used by the operating system. NVDI and its print
-
 (!nolink [monitor]) make use of this vector.
 
-
-
 !item [LONG $0c0]
-
 (!B)reserves(!b)
 
-
-
 !item [~~~~:]
-
 Exception vectors 48-63.
 
-
-
 !item [LONG $0fc]
-
 (!B)Reserved(!b)
 
-
-
 !label Vector, BUSY interrupt
-
 !label BUSY interrupt, Vector for
-
 !label Interrupt, BUSY
-
 !item [LONG $100]
-
 (!B)BUSY Interrupt vector(!b)
-
 (!nl)
-
 ST-MFP interrupt #0. Is triggered by the parallel port. Normally not used.
 
-
-
 !label Vector, DCD interrupt
-
 !label DCD interrupt, Vector for
-
 !label Interrupt, DCD
-
 !item [LONG $104]
-
 (!B)DCD-Interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #1. Is triggered by the serial port
-
 (Carrier detect). Normally unused.
 
-
-
 !label Vector, CTS interrupt
-
 !label CTS interrupt, Vector for
-
 !label Interrupt, CTS
-
 !item [LONG $108]
-
 (!B)CTS-Interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #2. Is triggered by the serial port
-
 (Clear to send). Normally unused.
 
-
-
 !label Vector, GPU-Done
-
 !label GPU Done, Vector for
-
 !item [LONG $10c]
-
 (!B)GPU Done vector(!b)
-
 (!nl)
-
 ST-MFP interrupt #3. Can be used by the blitter (when
-
 present) to indicate termination of an operation. Normally unused.
 
-
-
 !label Vector, Baud-rate generator
-
 !label Baud-rate generator, Vector for
-
 !item [LONG $110]
-
 (!B)Baud-rate Generator(!b)
-
 (!nl)
-
 ST-MFP interrupt #4. Normally unused.
 
-
-
 !label Vector, 200Hz clock
-
 !label 200Hz Timer, Vector fÅr
-
 !label Clock (200Hz), Vector for
-
 !item [LONG $114]
-
 (!B)200Hz System Clock(!b)
-
 (!nl)
-
 ST-MFP interrupt #5. Points to the system clock interrupt
-
 and may not be altered under any circumstances (required
-
 for timing loops in (!nolink [TOS]).
 
-
-
 !label Vector, IKBD
-
 !label IKBD interrupts, Vector for
-
 !label Interrupt, IKBD
-
 !label Vector, MIDI
-
 !label Interrupt, MIDI
-
 !label MIDI interrupts, Vector for
-
 !item [LONG $118]
-
 (!B)IKBD/MIDI(!b)
-
 (!nl)
-
 ST-MFP interrupt #6. Points to the handler for IKBD and MIDI interrupts.
 
-
-
 !label Vector, FDC
-
 !label FDC, Vector for
-
 !label Vector, ACSI
-
 !label ACSI, Vector for
-
 !item [LONG $11c]
-
 (!B)FDC/ACSI(!b)
-
 (!nl)
-
 ST-MFP interrupt #7. Normally unallocated.
 
-
-
 !label Vector, Display Enable Signal
-
 !label Display Enable Signal vector
-
 !item [LONG $120]
-
 (!B)Display Enable Signal(!b)
-
 (!nl)
-
 ST-MFP interrupt #8. Normally blocked.
 
-
-
 !label Vector, RS-232 Transmit Error
-
 !label RS-232 Transmit Error vector
-
 !item [LONG $124]
-
 (!B)RS-232 Transmit Error interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #9. Is triggered by transmission errors when sending data
-
 via the serial port.
 
-
-
 !label Vector, RS-232 Transmit Buffer Error
-
 !label RS-232 Transmit Buffer Error vector
-
 !item [LONG $128]
-
 (!B)RS-232 Transmit Buffer Error interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #10. Is triggered when the transmission of a single byte
-
 is completed and the transmit buffer is empty.
 
-
-
 !label Vector, RS-232 Receive Error
-
 !label RS-232 Receive Error vector
-
 !item [LONG $12c]
-
 (!B)RS-232 Receive Error interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #11. Occurs at receive errors.
 
-
-
 !label Vector, RS-232 Receive Buffer Full
-
 !label RS-232 Receive Buffer Full interrupt
-
 !item [LONG $130]
-
 (!B)RS-232 Receive Buffer Full interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #12. A complete character has been received by the
-
 serial port.
 
-
-
 !item [LONG $134]
-
 (!B)Unused(!b)
-
 (!nl)
-
 ST-MFP-Interrupt 13. Unused
 
-
-
 !label Vector, Ring Indicator
-
 !label Ring-Indicator, Vector
-
 !item [LONG $138]
-
 (!B)RS-232 Ring Indicator interrupt(!b)
-
 (!nl)
-
 ST-MFP interrupt #14. Is triggered when the serial port
-
 detects an incomming call (e.g. when using a modem).
-
 As this interrupt is so easy to trigger, debuggers like
-
 to use it as a break signal.
 
-
-
 !label Vector, Monochrom Monitor Detect
-
 !label Monitor Detect, Vector for
-
 !item [LONG $13c]
-
 (!B)Monochrom Monitor Detect(!b)
-
 (!nl)
-
 ST-MFP-Interrupt 15. unused
 
-
-
 !label Vectoren, TT-MFP-Interrupt
-
 !label MFP-TT-Interrupt-Vector
-
 !label Interrupt, MFP-TT
-
 !item [LONG $140]
-
 (!B)TT-MFP interrupts(!b)
 
-
-
 !item [~~~~:]
-
 16 interrupt vectors for the second MFP in the Atari-TT.
 
-
-
 !item [LONG $17c]
-
 (!B)TT-MFP interrupts(!b)
 
-
-
 !label Vectoren, TT-SCC-Interrupt
-
 !label SCC-TT-Interrupt-Vector
-
 !label Interrupt, SCC-TT
-
 !item [LONG $180]
-
 (!B)TT-SCC interrupts(!b)
-
-
 
 !item [~~~~:]
-
 Space for the interrupt vectors of the SCC module in the Atari-TT.
 
-
-
 !item [LONG $1bc]
-
 (!B)TT-SCC interrupts(!b)
-
-
 
 !end_xlist
 
-
-
 See also: (!nl)
-
 (!link [Reset vector][Hooking into the reset vector]) ~
-
 (!link [System variables][The system variables]) ~
-
 Exceptions under MagiC Mac
 
-
-
 !end_node
-
