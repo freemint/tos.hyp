@@ -1,794 +1,397 @@
 # Source: APC_TOPNEXT, APC_KILL and APC_SYSTEM from the sourcecode.
 
-
-
 !iflang [english]
 
-
-
 !begin_node appl_control
-
 (!begin_liste) [Availability]
-
 !item [Name:]
-
 ¯Application control® - Targeted (!nolink [control]) of applications.
-
 !item [Opcode:]
-
 129
-
 !item [Syntax:]
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat, void *ap_cout);
 
-
-
 !item [Description:]
-
 The call appl_control can be used to (!nolink [control]) the activity of
-
 applications.
 
-
-
 !begin_xlist [Paramete]
-
 !item [Parameter]
-
 Meaning
 
-
-
 !item [ap_cid]
-
 The (!nolink [AES]) ID (apid) of the application you want to
-
 (!nolink [control]).
 
-
-
 !item [ap_cwhat]
-
 The type of (!nolink [control]):
-
-
 
 !begin_xlist [APC_TOPNEXT ]
 
-
-
 !item [0 to 9]
-
 Reserved for (!nolink [N.AES])
 
-
-
 !label APC_TOPNEXT
-
 !item [APC_TOPNEXT (0)]
-
 OAESis internal mode
-
-
 
 !label APC_KILL
-
 !item [APC_KILL (1)]
-
 OAESis internal mode
 
-
-
 !label APC_SYSTEM
-
 !item [APC_SYSTEM (2)]
-
 XaAES internal mode
 
-
-
 !label APC_HIDE
-
 !item [APC_HIDE (10)]
-
 Hide (fade out) application; (!nl)
-
 if (!I)ap_cid(!i) is -1, the active application will be hidden
 
 
-
-
-
 !label APC_SHOW
-
 !item [APC_SHOW (11)]
-
 Show (fade in) application; (!nl)
-
 if (!I)ap_cid(!i) is -1, all hidden applications are shown
 
 
-
-
-
 !label APC_TOP
-
 !item [APC_TOP (12)]
-
 Bring application to front (the application becomes the active one)
 
-
-
 !label APC_HIDENOT
-
 !item [APC_HIDENOT(13)]
-
 Hide all applications except the one referred to by (!I)ap_cid(!i) (which
-
 becomes the active application)
-
-
 
 If (!I)ap_cid(!i) is -1, all applications except the active one will be hidden
 
-
-
 !label APC_INFO
-
 !item [APC_INFO(14)]
-
 Inquire the application parameters of application (!I)ap_cid(!i); if -1 is
-
 passed for (!I)ap_cid(!i), then the parameters of the current application
-
 will be returned
-
-
 
 For (!I)ap_cout(!i) a pointer to an integer is to be passed
 
-
-
 (!nolink [N.AES]) here deposits the application parameters in the form of a
-
 bitmask:
 
-
-
 !begin_xlist  [APCI_HIDD]
-
 !label APCI_HIDDEN
-
 !item [APCI_HIDDEN (1)]  Bit 0 is set if the application is faded out
 
-
-
 !label APCI_HASMBAR
-
 !item [APCI_HASMBAR (2)]  Bit 1 is set if the application posseses a menu bar
 
-
-
 !label APCI_HASDESK
-
 !item [APCI_HASDESK (4)]  Bit 2 is set if the application possesses its own
-
 desktop
-
 !end_xlist
 
-
-
 !label APC_MENU
-
 !item [APC_MENU(15)]
-
 Returns address of the menu tree that the application (!I)ap_cid(!i) last
-
 initialized. For this a pointer to an OBJECT pointer is to be passed for
-
 (!I)ap_cout(!i); the latter will be filled by (!nolink [shel_write]) with the
-
 searched for menu tree address.
 
-
-
 If -1 is passed for (!I)ap_cid(!i), then the menu tree address of the current
-
 application will be returned. If the value 0 is passed for (!I)ap_cid(!i)
-
 then the address of the system menu managed inter!-nally by (!nolink [shel_write])
-
 will be returned. This is the menu box that pops open when one selects the
-
 left-most menu title and which contains the list of all applications and
-
 desk accessories initialized by (!nolink [shel_write]).
 
-
-
 If the application inquired for has not initialized a menu bar, or no application
-
 with the identification (!I)ap_cid(!i) exists, then a NULL pointer will be
-
 written to (!I)ap_cout(!i)
-
-
 
 The return value of appl_control, mode APC_MENU is always the value 1
 
-
-
 (!B)Note:(!b) If one uses this mode, one should be quite certain what one is
-
 doing! Altering the returned menu tree can lead to undefined system states.
-
 With active MiNT memory protection even a read access to the menu tree can
-
 lead to a termination of the application!
 
 
-
-
-
 !label APC_WIDGETS
-
 !label MINWINOBJ
-
 !item [APC_WIDGETS (16)]
-
 APC_WIDGETS (16) Inquires or sets the 'default' positions of the window objects.
-
 (!I)ap_cout(!i) is a pointer to a MINWINOBJ(12)-sized (int16_t) buffer, which
-
 must be filled comple!-tely with -1 for inquiring the object order. The last
-
 WORD must be a 0. If an error-message is returned, then the buffer is too small
-
 for all objects and should be enlarged. In the buffer lie first of all the objects
-
 of the title-bar from left to right, followed by the objects of the vertical
-
 slider from top to bottom and then the objects of the horizontal slider from left
-
 to right. The list is termi!-nated with a NULL-word. For setting the positions,
-
 the first objects have to be of the type topwidgets (from left to right),
-
 followed by the objects of the type rightwidgets (from top to bottom) and then
-
 the objects of the type bottomwidgets (from left to right). If the objects are
-
 duplicated or set incorrectly then an error will be reported.
 
-
-
 !end_xlist
-
-
 
 !item [ap_cout]
-
 Is filled by the (!nolink [AES]) dependent on (!I)ap_cwhat(!i) and only has a
-
 meaning for APC_INFO, APC_MENU and APC_WIDGETS. In other cases this parameter is
-
 ignored and passing of a NULL-pointer is then possible.
-
-
 
 !end_xlist
 
-
-
 (!B)Note:(!b) Hidden application have a '*' placed in front of their names in the
-
 applications menu, unless they did not have a window open during hiding. If the
-
 latter is the case only the active application is changed.
 
-
-
 So the '*' in front of the name means: One or more windows of this application
-
 are hidden.
 
-
-
 !item [(!nolink [Return]) value:]
-
 ~0 = An error has occurred (!nl)
-
 >0 = No error has arisen
 
-
-
 !item [Availability:]
-
 The presence of the function can be checked via
-
 (!link [appl_getinfo][%apgi_65]) (opcode 65).
 
-
-
 !item [Group:]
-
 Application library
 
-
-
 !item [See Also:]
-
 (!link [Binding] [Bindings for appl_control]) ~ SM_M_SPECIAL
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings for appl_control
-
 !ignore_index
-
 (!begin_liste) [GEM-Arrays]
-
 !item [C:]
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat, void *ap_cout);
 
-
-
 !item [Binding:]
-
 !begin_verbatim
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat,
-
                        void *ap_cout);
-
 {
-
    int_in[0]  = ap_cid;
-
    int_in[1]  = ap_cwhat;
-
    addr_in[0] = ap_cout;
 
-
-
    return ( crys_if(129) );
-
 }
-
 !end_verbatim
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Address !! Element !! Contents
-
 !hline
-
 control   !! control[0] !! 129   # Function opcode
-
 control+2 !! control[1] !! 2     # Entry in int_in
-
 control+4 !! control[2] !! 1     # Entry in int_out
-
 control+6 !! control[3] !! 1     # Entry in addr_in
-
 control+8 !! control[4] !! 0     # Entry in addr_out
-
 int_in !! int_in[0] !! ap_cid
-
 int_in+2 !! int_in[1] !! ap_cwhat
-
 addr_in  !! addr_in[0] !! ap_cout
-
 int_out !! int_out[0] !! ap_creturn
-
 !end_table
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node appl_control
-
 (!begin_liste) [Beschreibung]
-
 !item [Name:]
-
 ¯Application control® - Gezieltes Steuern von Anwendungen.
-
 !item [AES-Nummer:]
-
 129
-
 !item [Deklaration:]
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat, void *ap_cout);
 
-
-
 !item [Beschreibung:]
-
 Die Funktion erlaubt ein gezieltes Steurern von Anwendungen.
-
 !begin_xlist [Paramete]
-
 !item [Parameter]
-
 Bedeutung
 
-
-
 !item [ap_cid]
-
 Die Applikationsidentifikation (apid) der Anwendung, die gesteuert
-
 werden soll.
 
-
-
 !item [ap_cwhat]
-
 Die Art der Steuerung:
-
-
 
 !begin_xlist [APC_TOPNEXT ]
 
-
-
 !item [0 bis 9]
-
 Reserviert fr N.AES.
 
-
-
 !label APC_TOPNEXT
-
 !item [APC_TOPNEXT (0)]
-
 OAESis interner Mode
-
-
 
 !label APC_KILL
-
 !item [APC_KILL (1)]
-
 OAESis interner Mode
 
-
-
 !label APC_SYSTEM
-
 !item [APC_SYSTEM (2)]
-
 XaAES interner Mode
 
-
-
 !label APC_HIDE
-
 !item [APC_HIDE (10)]
-
 Applikation ausblenden (!nl)
-
 Wird fr ap_cid -1 bergeben, so wird die  aktuelle Anwendung ausgeblendet.
 
-
-
 !label APC_SHOW
-
 !item [APC_SHOW (11)]
-
 Applikation einblenden (!nl)
-
 Wird fr ap_cid -1 bergeben, so werden alle ausgeblendeten Anwendungen
-
 ein!-ge!-blendet.
 
-
-
 !label APC_TOP
-
 !item [APC_TOP (12)]
-
 Applikation in den Vordergrund bringen (zur  aktuellen Anwendung machen).
 
-
-
 !label APC_HIDENOT
-
 !item [APC_HIDENOT(13)]
-
 Ausblenden aller Anwendungen bis auf die in  ap_cid angegebene, welche zur
-
 neuen aktu!-ellen Anwendung wird. Wird fr ap_cid -1 bergeben, so werden alle
-
 Anwendungen bis auf die aktuelle aus!-ge!-blendet.
 
-
-
 !label APC_INFO
-
 !item [APC_INFO(14)]
-
 Abfragen von Applikations!-parametern der An!-wendung ap_cid. Wird fr ap_cid -1
-
 bergeben, so werden die Parameter der aktu!-ellen Anwendung geliefert.
 
-
-
 Fr ap_cout ist ein Zeiger auf einen Integer zu bergeben. N.AES hinterlegt hier
-
 die Applikationsparameter in Form einer  Bitmaske:
 
-
-
 !begin_xlist  [APCI_HIDD]
-
 !label APCI_HIDDEN
-
 !item [APCI_HIDDEN (1)]
-
 Bit 0 ist gesetzt, wenn die Applikation aus!-ge!-blendet ist.
 
-
-
 !label APCI_HASMBAR
-
 !item [APCI_HASMBAR (2)]
-
 Bit 1 ist gesetzt, wenn die Applikation eine Menleiste besitzt.
 
-
-
 !label APCI_HASDESK
-
 !item [APCI_HASDESK (4)]
-
 Bit 2 ist gesetzt, wenn die Applikation einen eigenen Desktop besitzt.
-
 !end_xlist
 
-
-
 !label APC_MENU
-
 !item [APC_MENU(15)]
-
 Liefert die Adresse des Menbaums, den die Anwendung ap_cid zuletzt angemeldet
-
 hat. Hierzu ist fr ap_cout ein Zeiger auf einen OBJECT-Zeiger zu bergeben;
-
 letzterer wird vom N.AES mit der gesuchten Menbaumadresse gefllt.
 
-
-
 Wird fr ap_cid -1 bergeben, so wird die Menbaumadresse der aktuellen
-
 An!-wendung geliefert. šbergibt man fr ap_cid den Wert 0, so wird die Adresse
-
 des vom (!nolink [N.AES]) intern verwalteten Systemmens geliefert. Dies ist
-
 die Menbox, die aufklappt, wenn man den am weitesten links stehenden Mentitel
-
 anw„hlt und welche die Liste aller beim N.AES angemeldeten Anwendungen und
-
 Accessories enth„lt.
 
-
-
 Hat die abgefragte Anwendung keine Menleiste angemeldet oder existiert keine
-
 Anwendung mit der Identifikation ap_cid, so wird ein Nullzeiger nach ap_cout
-
 geschrieben.
-
-
 
 Der Rckgabewert von appl_control, Modus APC_MENU ist immer der Wert 1.
 
-
-
 (!B)Hinweis:(!b) Wenn man diesen Modus verwendet, sollte man sich ganz sicher
-
 sein, was man tut! Das Ver„ndern des gelieferten Menbaums kann zu
-
 un!-definierten Systemzust„nden fhren. Bei aktivem MiNT-Speicherschutz kann
-
 bereits ein Lesezugriff auf den Menbaum den Abbruch der Anwendung bewirken.
 
-
-
 !label APC_WIDGETS
-
 !label MINWINOBJ
-
 !item [APC_WIDGETS (16)]
-
 Erfragt oder setzt die 'default' Positionen der Fensterobjekte. (!I)ap_cout(!i)
-
 ist ein Zeiger
-
 auf einen MINWINOBJ(12) groen (int16_t) Buffer, der zum abfragen der
-
 Objektreihenfolge komplett mit -1 gefllt sein mu. Das letzte Word mu eine 0
-
 sein. Wird eine Fehlermeldung zurckgeliefert reicht der Buffer nicht fr alle
-
 Objekte und sollte vergr”ert werden. Im Buffer liegen als erstes die Objekte
-
 der Titelleiste von links nach rechts, danach die Objekte des Vertikalsliders
-
 von oben nach unten und dann die Objekte des Horizontalsliders von links nach
-
 rechts. Abgeschlossen wird die Liste mit einem 0 Word. Zum setzen der Positionen
-
 men die ersten Objekte vom Typ topwidgets sein (von links nach rechts), danach
-
 die Objekte des Typs rightwidgets (von oben nach unten) und dann die Objekte des
-
 Typs bottomwidgets (von links nach rechts). Sollten Objekte doppelt oder falsch
-
 gesetzt sein wird ein Fehler gemeldet.
-
 !end_xlist
-
-
 
 !item [ap_cout]
-
 Wird abh„ngig von (!I)ap_cwhat(!i) gefllt oder gelesen und hat nur fr
-
 APC_INFO, APC_MENU und APC_WIDGETS eine Bedeutung. In den anderen F„llen wird
-
 dieser Parameter ignoriert, die šbergabe eines Nullzeigers ist dann m”glich.
-
-
 
 !end_xlist
 
-
-
 (!B)Hinweis:(!b)
-
 Ausgeblendeten Anwendungen wird in der Menleiste ein '*' vorangestellt, es sei
-
 denn, sie hatten im Moment der Ausblendung kein Fenster offen. In diesem Fall
-
 wird nur die Anwendung gewechselt.
 
-
-
 Der '*' vor dem Namen bedeutet genau: Einige oder alle ge”ffneten Fenster dieser
-
 Anwendung sind ausgeblendet.
 
-
-
 !item [Ergebnis:]
-
 ~0 = ein Fehler ist aufgetreten (!nl)
-
 >0 = kein Fehler aufgetreten
 
-
-
 !item [Verfgbar:]
-
 Das Vorhandensein der Funktion ist ber (!link [appl_getinfo][%apgi_65]) (Opcode 65)
-
 nachprfbar.
 
-
-
 !item [Gruppe:]
-
 (!link [Applikationen][Applikationsfunktionen])
 
-
-
 !item [Querverweis:]
-
 (!link [Binding] [Bindings fr appl_control]) ~ SM_M_SPECIAL
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings fr appl_control
-
 !ignore_index
-
 (!begin_liste) [GEM-Arrays]
-
 !item [C:]
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat, void *ap_cout);
 
-
-
 !item [Umsetzung:]
-
 !begin_verbatim
-
 int16_t appl_control ( int16_t ap_cid, int16_t ap_cwhat,
-
                        void *ap_cout);
-
 {
-
    int_in[0]  = ap_cid;
-
    int_in[1]  = ap_cwhat;
-
    addr_in[0] = ap_cout;
 
-
-
    return ( crys_if(129) );
-
 }
-
 !end_verbatim
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Adresse !! Feldelement !! Belegung
-
 !hline
-
 control   !! control[0] !! 129   # Opcode der Funktion
-
 control+2 !! control[1] !! 2     # Eintr„ge in int_in
-
 control+4 !! control[2] !! 1     # Eintr„ge in int_out
-
 control+6 !! control[3] !! 1     # Eintr„ge in addr_in
-
 control+8 !! control[4] !! 0     # Eintr„ge in addr_out
-
 int_in !! int_in[0] !! ap_cid
-
 int_in+2 !! int_in[1] !! ap_cwhat
-
 addr_in  !! addr_in[0] !! ap_cout
-
 int_out !! int_out[0] !! ap_creturn
-
 !end_table
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !endif
-

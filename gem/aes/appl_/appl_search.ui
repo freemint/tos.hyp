@@ -1,662 +1,331 @@
 !iflang [english]
 
-
-
 !begin_node appl_search
-
 (!begin_liste) [Availability]
-
 !item [Name:]
-
 ØApplication searchÆ - Search for applications in system.
-
 !item [Opcode:]
-
 18
-
 !item [Syntax:]
-
 int16_t appl_search ( int16_t ap_smode, int8_t *ap_sname, int16_t *ap_stype,
-
                    int16_t *ap_sid );
 
-
-
 !item [Description:]
-
 Depending on the parameters, the function appl_search searches for filenames of
-
 various applications running in the system. The following apply:
-
 !begin_xlist !short [Paramete]
-
 !item [Parameter]
-
 Meaning
-
 !item [~]
-
 ~
-
 !label APP_FIRST
-
 !label APP_NEXT
-
 !label APP_DESK
-
 !label APP_TASKINFO
-
 !item [ap_smode]
-
 (!B)Search for:(!b)
-
 !begin_table [l l l]
-
 APP_FIRST !! 0  !! First application
-
 APP_NEXT !!  1  !! Next application
-
 APP_DESK !!  2  !! System shell
-
 APP_TASKINFO !! 0x100 !! Request task info, 
-
 ~            !! ~     !! (!nolink [XaAES]) bit that may be added.
-
 !end_table
-
 !item [ap_sname]
-
 Buffer that receives the name of the found application filename (at least 9
-
 bytes including a terminating NULL-byte)
-
 !label APP_SYSTEM
-
 !label APP_APPLICATION
-
 !label APP_ACCESSORY
-
 !label APP_SHELL
-
 !item [ap_stype]
-
 (!B)Type of the process as bit-vector:(!b)
-
 !begin_table [l l l]
-
 APP_SYSTEM      !! 0x001 !! System process
-
 APP_APPLICATION !! 0x002 !! Application
-
 APP_ACCESSORY   !! 0x004 !! Accessory
-
 APP_SHELL       !! 0x008 !! System shell
-
 APP_HIDDEN      !! 0x100 !! Task is disabled,
-
 ~               !! ~     !! (!nolink [XaAES]) only for APP_TASKINFO
-
 APP_FOCUS       !! 0x200 !! Active application, 
-
 ~               !! ~     !! (!nolink [XaAES]) only for APP_TASKINFO
-
 !end_table
-
 !item [ap_sid]
-
 ID of the found application
-
 !end_xlist
 
-
-
 It is possible to obtain the long name of the applica!-tion if one knows its
-
 application ID.
 
-
-
 The long name is the one that was passed by the appli!-cation at a menu_register
-
 call and is also displayed in the menu bar.
 
-
-
 If one knows the application ID (!I)apid(!i) of an application, then its long name
-
 will be transferred to the buffer (!I)longname(!i) by a following call of
-
 appl_search:
-
-
 
      appl_search(-apid, &longname[0], &type, &pid)
 
-
-
 (!I)type(!i) here is the bit-mask of the application type also returned
-
 normally, (!I)pid(!i) the MiNT-pid (not: apid) of the application.
 
-
-
 So the first parameter to be passed is the negative value of the application ID
-
 to obtain the long name of this application. This name can be up to 32
-
 characters long (31 characters plus terminating NULL-byte), so one should reserve
-
 a correspondingly sized buffer for (!I)longname.(!i)
 
-
-
 APP_TASKINFO automatically returns the long name of an application and is
-
 available only under (!nolink [XaAES]).
-
-
 
 With this routine one (!I)cannot(!i) find threads.
 
-
-
 !label X_APS_CHEXIT
-
 !label X_APS_CHILD0
-
 !label X_APS_CHILD
-
 Geneva has three extra modes:
-
 !begin_itemize
-
 !item X_APS_CHEXIT (-1) (!nl)
-
 Retrieves the name, ID, and type of the last application to exit. This makes
-
 it possible for a program which receives a CH_EXIT notice to determine the name
-
 of the program which exited. Note that this information is not buffered; this
-
 means that if one process terminates and its parent does not make the
-
 appl_search call before a second one does, the information will no longer reflect
-
 the first process which terminated.
 
-
-
 !item X_APS_CHILD0 (0x7100) (!nl)
-
 Retrieve the data concerning the child of the current application which has the
-
 lowest application ID. (This is not necessarily the first child application the
-
 parent ran.)
 
-
-
 !item X_APS_CHILD (0x7101) (!nl)
-
 Retrieve the data for each additional child of the current application.
-
 !end_itemize
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns the value 1 if no error has arisen, or the value 0 if no
-
 further applications are present.
 
-
-
 !item [Availability:]
-
 The presence of this function can be ascertained with
-
 (!link [appl_getinfo][%apgi_4]) (opcode 4). Ascertaining of the long name and
-
 task information can be recognized by (!link [appl_getinfo][%apgi_64])
-
 (opcode 64).
-
                
 
-
-
 !item [Group:]
-
 Application library
 
-
-
 !item [See Also:]
-
 (!link [Binding] [Bindings for appl_search]) ~ appl_find ~ 
-
 (!link [Broadcasting][AES Broadcasting])
 
-
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings for appl_search
-
 !ignore_index
-
 (!begin_liste) [GEM-Arrays]
-
 !item [C:]
-
 int16_t appl_search ( int16_t ap_smode, int8_t *ap_sname, int16_t *ap_stype,
-
                    int16_t *ap_sid );
-
 !item [Binding:]
-
 !begin_verbatim
-
 int16_t appl_search (int16_t ap_smode, int8_t *ap_sname,
-
                      int16_t *ap_stype, int16_t *ap_sid)
-
 {
-
    int_in[0]  = ap_smode;
-
    addr_in[0] = ap_sname;
 
-
-
   crys_if(18);
-
   
-
   *ap_stype = int_out[1];
-
   *ap_sid   = int_out[2];
-
   
-
    return ( int_out[0] ); 
-
 } 
-
 !end_verbatim
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Address !! Element !! (!nolink [Contents])
-
 !hline
-
 control !! control[0] !! 18     # Function opcode
-
 control+2 !! control[1] !! 1     # Entry in int_in
-
 control+4 !! control[2] !! 3     # Entry in int_out
-
 control+6 !! control[3] !! 1     # Entry in addr_in
-
 control+8 !! control[4] !! 0     # Entry in addr_out
-
 int_in !! int_in[0]  !! ap_smode
-
 addr_in !! addr_in[0] !! ap_sname
-
 int_out !! int_out[0] !! Return value
-
 int_out+2 !! int_out[1] !! ap_stype
-
 int_out+4 !! int_out[2] !! ap_sid
-
 !end_table
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node appl_search
-
 (!begin_liste) [Beschreibung]
-
 !item [Name:]
-
 ØApplication searchÆ - im System vorhandene Applikationen suchen.
-
 !item [AES-Nummer:]
-
 18
-
 !item [Deklaration:]
-
 int16_t appl_search ( int16_t ap_smode, int8_t *ap_sname, int16_t *ap_stype,
-
                    int16_t *ap_sid );
 
-
-
 !item [Beschreibung:]
-
 Je nach Parameter sucht die Funktion verschiedene im System vorhandene
-
 Applikationen. Es bedeuten:
-
 !begin_xlist !short [Paramete]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !label APP_FIRST
-
 !label APP_NEXT
-
 !label APP_DESK
-
 !label APP_TASKINFO
-
 !item [ap_smode]
-
 (!B)Suche(!b)
-
 !begin_table [l l l]
-
 APP_FIRST !! 0  !! erste Applikation
-
 APP_NEXT !!  1  !! nÑchste Applikation
-
 APP_DESK !!  2  !! System Shell
-
 APP_TASKINFO !! 0x100 !! Taskinformation anfordern, XaAES
-
 ~            !! ~     !! Bit das hinzugefÅgt werden kann.
-
 !end_table
-
 !item [ap_sname]
-
 Puffer der den Namen der gefundenen Applikation aufnimmt (mindestens
-
 9 Bytes).
 
-
-
 !label APP_SYSTEM
-
 !label APP_APPLICATION
-
 !label APP_ACCESSORY
-
 !label APP_SHELL
-
 !item [ap_stype]
-
 (!B)Typ des Prozesses als Bitvektor(!b)
-
 !begin_table [l l l]
-
 APP_SYSTEM      !! 0x001 !! System-Prozeû
-
 APP_APPLICATION !! 0x002 !! Applikation
-
 APP_ACCESSORY   !! 0x004 !! Accessory
-
 APP_SHELL       !! 0x008 !! System Shell
-
 APP_HIDDEN      !! 0x100 !! Task ist ausgeblendet, XaAES
-
 ~               !! ~     !! nur bei APP_TASKINFO
-
 APP_FOCUS       !! 0x200 !! Aktive Applikation, XaAES
-
 ~               !! ~     !! nur bei APP_TASKINFO
-
 !end_table
-
 !item [ap_sid]
-
 ID der gefundenen Applikation
-
 !end_xlist
 
-
-
 Es ist mîglich der Langname einer Applikation zu ermittelt, wenn 
-
 man ihre Applikations-ID kennt.
 
-
-
 Der Langname ist derjenige, der von der Applikation bei einem menu_register()- 
-
 Aufruf Åbergeben wurde und auch in der MenÅleiste dargestellt wird.
 
-
-
 Kennt man die Applikations-ID apid einer Anwendung, so wird ihr Langname
-
 durch folgenden Aufruf von appl_search in den Buffer langname
-
 Åbertragen:
-
-
 
      appl_search(-apid, &langname[0], &typ, &pid)
 
-
-
 (!I)type(!i) ist hierbei die auch normalerweise gelieferte Bitmaske des Applikationstyps,
-
 pid die MiNT-pid (nicht: apid) der Applikation.
 
-
-
 Als erster Parameter ist also der negative Wert der Applikations-ID zu 
-
 Åbergeben, um den Langnamen eben dieser Applikation zu ermitteln. Dieser Name 
-
 kann maximal 32 Zeichen lang sein (31 Zeichen plus ein Nullbyte), man sollte 
-
 also einen entsprechend groûen Buffer fÅr langname reservieren.
 
-
-
 APP_TASKINFO liefert automatisch den Langnamen einer Applikation und steht nur
-
 unter XaAES zur VerfÅgung.
-
-
 
 Mit dieser Routine kînnen (!I)keine(!i) Threads gefunden werden.
 
-
-
 !label X_APS_CHEXIT
-
 !label X_APS_CHILD0
-
 !label X_APS_CHILD
-
 Geneva have three extra modes:
-
 !begin_itemize
-
 !item X_APS_CHEXIT (-1) (!nl)
-
 Retrieves the name, ID, and type of the last application to exit. This
-
 makes it possible for a program which receives a CH_EXIT notice to determine
-
 the name of the program which exited. Note that this information is not
-
 buffered; this means that if one process terminates and its parent does not
-
 make the appl_search() call before a second one does, the information will no
-
 longer reflect the first process which terminated.
 
-
-
 !item X_APS_CHILD0 (0x7100) (!nl)
-
 Retrieve the data concerning the child of the current application which has the
-
 lowest application ID. (This is not necessarily the first child application the
-
 parent ran.)
 
-
-
 !item X_APS_CHILD (0x7101) (!nl)
-
 Retrieve the data for each additional child of the current application.
-
 !end_itemize
 
-
-
 !item [Ergebnis:]
-
 Die Funktion liefert den Wert 1, wenn kein Fehler aufgetreten ist, bzw. den
-
 Wert 0, wenn keine weiteren Applikationen vorhanden sind.
 
-
-
 !item [VerfÅgbar:]
-
 Das Vorhandensein dieser Funktion kann per (!link [appl_getinfo][%apgi_4])
-
 (Opcode 4) festgestellt werden. Die Ermittlung des Langname und Taskinformationen erkennt
-
 man an (!link [appl_getinfo][%apgi_64]) (Opcode 64).
 
-
-
 !item [Gruppe:]
-
 (!link [Applikationen][Applikationsfunktionen])
-
 !item [Querverweis:]
-
 (!link [Binding] [Bindings fÅr appl_search]) ~ appl_find ~ 
-
 (!link [Broadcasting][AES-Broadcasting])
 
-
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings fÅr appl_search
-
 !ignore_index
-
 (!begin_liste) [GEM-Arrays]
-
 !item [C:]
-
 int16_t appl_search ( int16_t ap_smode, int8_t *ap_sname, int16_t *ap_stype,
-
                    int16_t *ap_sid );
-
 !item [Umsetzung:]
-
 !begin_verbatim
-
 int16_t appl_search (int16_t ap_smode, int8_t *ap_sname,
-
                      int16_t *ap_stype, int16_t *ap_sid)
-
 {
-
    int_in[0]  = ap_smode;
-
    addr_in[0] = ap_sname;
 
-
-
   crys_if(18);
-
   
-
   *ap_stype = int_out[1];
-
   *ap_sid   = int_out[2];
-
   
-
    return ( int_out[0] ); 
-
 } 
-
 !end_verbatim
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Adresse !! Feldelement !! Belegung
-
 !hline
-
 control !! control[0] !! 18    # Opcode der Funktion
-
 control+2 !! control[1] !! 1     # EintrÑge in int_in
-
 control+4 !! control[2] !! 3     # EintrÑge in int_out
-
 control+6 !! control[3] !! 1     # EintrÑge in addr_in
-
 control+8 !! control[4] !! 0     # EintrÑge in addr_out
-
 int_in !! int_in[0]  !! ap_smode
-
 addr_in !! addr_in[0] !! ap_sname
-
 int_out !! int_out[0] !! Return-Wert
-
 int_out+2 !! int_out[1] !! ap_stype
-
 int_out+4 !! int_out[2] !! ap_sid
-
 !end_table
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !endif
-
