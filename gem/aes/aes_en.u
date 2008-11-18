@@ -1,2460 +1,1230 @@
 ## Hypertext zum TOS-Betriebssystem
-
 ##
-
 ## Kapitel 4: AES-Funktionsaufrufe
-
-
-
 
 
 !begin_node About the AES
 
-
-
 The (!nolink [AES]) ((!B)A(!b)pplication (!B)E(!b)nvironment (!B)S(!b)ervices)
-
 is that part of GEM 
-
 that represents the direct (graphical) interface to the user. The 
-
 (!nolink [AES]) offers a set of calls for applications to handle conveniently 
-
 various concepts such as screen windows, menu bars, dropdown or 
-
 pop-up menus, dialog boxes etc. The following utility libraries 
-
 serve for this purpose:
 
-
-
 !begin_xlist [ù Editable object functions ] !short
-
 !item [ù Application library]        (appl_...)
-
 !item [ù File-selector library]      (fsel_...)
-
 !item [ù Print dialogs]              (pdlg_...)
-
 !item [ù Editable object functions]  (edit_...)
-
 !item [ù Event library]              (evnt_...)
-
 !item [ù Window-dialogs]             (wdlg_...)
-
 !item [ù Window library]             (wind_...)
-
 !item [ù Extended file-selectors]    (fslx_...)
-
 !item [ù (!link [Forms][Form library])]          (form_...)
-
 !item [ù Graphics library]           (graf_...)
-
 !item [ù List boxes]                 (lbox_...)
-
 !item [ù (!link [Menus][Menu library])]          (menu_...)
-
 !item [ù (!link [Objects][Object library])]      (objc_...)
-
 !item [ù (!link [Resource][Resource library])]   (rsrc_...)
-
 !item [ù (!link [Shell communication][Shell library])]    (shel_...)
-
 !item [ù (!link [X-graphics function][Extended graphics library])]     (xgrf_...)
-
 !item [ù Font selection]                         (fnts_...)
-
 !item [ù (!link [Clipboard][Scrap library])]     (scrp_...)
-
 !end_xlist
 
-
-
 !label AES, Origin of the
-
 The origins of the (!nolink [AES]) reach back to the year 1984, developed by 
-
 (!I)Digital Research(!i) originally for MS-DOS machines, and later ported 
-
 to the Apple Lisa (under CP/M 68k). Subsequently this version was 
-
 ported to the Atari-ST (under (!nolink [GEMDOS])).
 
-
-
 In version 4.0 the (!nolink [AES]) was revised extensively, and now offers many 
-
 new and extended routines. With the function appl_getinfo one can 
-
 check easily whether (and which) new options are available.
 
-
-
 See Also: AES fundamentals ~ Bindings of the AES ~ About the VDI
-
 !end_node
-
-
-
 
 
 !begin_node AES fundamentals
 
-
-
 (!nolink [The AES]) (Application Environment (!nolink [Services]) forms the
-
 highest level of GEM. It deals with all those parts of (!nolink [GEM]) that
-
 go above elementary graphic output and input functions. As the (!nolink [AES])
-
 works exclusively with (!nolink [VDI and GEMDOS]) calls, it is completely
-
 independent of the graphic hardware, of input devices as well as of
-
 file-systems.
 
-
-
 The (!nolink [AES]) manages two types of user programs: Normal (!nolink [GEM])
-
 applications  with file extensions '.PRG', '.APP' or '.GTP', and desk accessories 
-
 with file extensions '.ACC'.
 
-
-
 Unless you are using a multitasking operating system such as MagiC, 
-
 MiNT or MultiTOS, the (!nolink [AES]) can only run one application and six desk 
-
 accessories at a time. Desk accessories (with an '.ACC' extension) 
-
 allow quasi-multitasking even with plain TOS: They are usually special 
-
 GEM programs loaded (wholly or partially) at boot-up from the root 
-
 directory of the boot drive (normally C:\), which remain in memory 
-
 and can be called (!I)at any time(!i) from (!nolink [GEM]) (and some
-
 (!nolink [TOS])) programs by  clicking on their entry in the first
-
 drop/pulldown menu. In other words, desk accessories can be called and used
-
 while another applica!-tion is running and has its window(s) open, even with
-
 a single-tasking operating system such as (!nolink [TOS]). Note that this is
-
 not real multi-tasking, as the main application is suspended while the accessory is 
-
 executing and only resumes when the accessory is exited.
 
-
-
 Unlike applications, desk accessories don't interact with the user 
-
 immediately; most just initialize themselves and enter a message loop 
-
 awaiting an AC_OPEN message. Some wait for timer events or special 
-
 messages from other applications. Once triggered, they usually open a 
-
 window where a user may interact with them. Under (!nolink [TOS]), accessories 
-
 should not use a menu bar and should never exit after a menu_register 
-
 call. Loading of any resources should happen before the accessory 
-
 calls menu_register, and these resources should be embedded in the 
-
 desk accessory rather than being post-loaded, as on (!nolink [TOS]) versions 
-
 earlier than 2.06 memory allocated to a desk accessory is not freed 
-
 at a resolution change; thus memory allocated with rsrc_load is lost 
-
 to the system after a change of resolution with the early (!nolink [TOS])'s.
 
-
-
 When a desk accessory is closed under (!nolink [TOS]), it is sent an AC_CLOSE 
-
 message by the system. Following this it should perform any required 
-
 cleanups to release sytem resources and close files opened at AC_OPEN 
-
 (the (!nolink [AES]) closes the accessory's windows automatically). Following this 
-
 it should reenter the event loop and wait for a later AC_OPEN message.
-
-
 
 The following points are covered in this section:
 
-
-
 !begin_itemize !short
-
 !item Accessories in MagiC
-
 !item (!link [Bindings of the AES][AES bindings])
-
 !item The desktop window
-
 !item Data exchange via the GEM clipboard
-
 !item Messages
-
 !item (!link [AES object structure][The object structure])
-
 !item (!link [Quarter-screen buffer][The quarter-screen buffer])
-
 !item (!link [Rectangle-list of a window][The rectangle-list of a window])
-
 !item (!link [Screen-manager][The screen-manager])
-
 !item Startup-code for accessories
-
 !item Toolbar support
-
 !end_itemize
-
 !label AES clones
-
 !label Clones, AES
-
 !label N.AES
-
 !label MinA
-
 !label AES in source text?
-
 !label Source text, AES in
 
-
-
 For the (!nolink [AES]) too there have been some interesting developments, as 
-
 various programmers have meanwhile announced their own (!B)(!nolink [AES])
-
 clones(!b);  at present one can mention projects such as
-
 (!I)N.(!nolink [AES])(!i) and (!I)(!nolink [XaAES]).(!i) Besides 
-
 constant evolution one may hope also for source texts of these (!nolink [GEM]) 
-
 components.
-
-
 
 See Also: Style guidelines
 
 
-
-
-
 !begin_node Accessories in MagiC
-
 !label MagiC, Accessories in
 
-
-
 Under MagiC, desk accessories are almost equal to programs. Their 
-
 windows are maintained at program changes. They may have menus and 
-
 desktop backgrounds, post-load programs, allocate memory, open/close/
-
 delete/copy files etc.
 
-
-
 As there is no longer any reason to close windows at program changes, 
-
 there is no AC_CLOSE message any more. The system does not distinguish  
-
 desk accessories from programs, apart from the fact that they may not 
-
 terminate themselves. As under (!nolink [GEM])/2, accessories can also deregister 
-
 themselves in the menu, using the (!nolink [AES]) call menu_unregister. 
 
-
-
 In place of accessories, under (!nolink [MagiC]) it is more sensible to use 
-
 applications that simply register one menu bar with one menu, and lie 
-
 in the APP autostart folder. These applications can be loaded when 
-
 required, and also removed again afterwards.
 
-
-
 (!B)Note:(!b) As of (!nolink [MagiC]) 4, desk accessories can be loaded also
-
 while the  system is running (not just at boot-up). Furthermore accessories can 
-
 be unloaded by clicking on the corresponding accessory entry in the 
-
 first menu while the [Control] key is held down. One disadvantage is 
-
 that at present accessories may not perform Pexec with mode 104.
 
-
-
 See Also: About the AES ~ GEM ~ Startup-code for accessories ~  shel_write
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The desktop window
-
 !label Window, Desktop
 
-
-
 Of the available windows, the desktop or background window plays a 
-
 special role. It has the ID 0, occupies the whole screen area, is 
-
 always open and also cannot be closed. The (!I)working area(!i) is the area 
-
 below the menu bar. Only in this working area can other programs 
-
 output to the screen or open their own windows.
 
-
-
 Normally the working area of the desktop appears as a solid green area 
-
 (in colour resolutions) or as a grey raster pattern (in monochrome 
-
 operation). The (!link [screen-manager][The screen-manager]) attends to the
-
 screen redraws all on its own; with a call of (!I)wind_set(!i), other
-
 application programs can  anchor any other object tree as a background.
-
 In that case too the screen-manager looks after any required redraws of
-
 sections of the image. Although this possibility is very alluring, there
-
 are several reasons that point (!I)against(!i) the use of the desktop window;
-
 the most important:
 
-
-
 !begin_itemize
-
 !item  Even under a multitasking-capable GEM (MagiC or MultiTOS), there 
-
 can be (!I)only one(!i) screen background. This should be reserved for 
-
 the program that can make the most use of it - as a rule this is 
-
 the desktop or a desktop replacement such as the Gemini shell, 
-
 Thing or Jinnee for instance.
-
 !end_itemize
 
-
-
 To sum up: If possible, the desktop background should (!I)not(!i) be used 
-
 in your own programs.
 
-
-
 See Also: About the AES  ~ wind_set ~  WF_NEWDESK
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Data exchange via the GEM clipboard
-
 !label Data exchange via clipboard
-
 !label Clipboard, Data exchange via
-
-
 
 To store files in the clipboard, one should proceed as follows:
 
-
-
 !begin_itemize !short
-
 !item Delete all clipboard files that match the mask 'scrap.*' and 
-
 'SCRAP.*'. (!I)Note:(!i) The mask 'SCRAP.*' must be allowed for because 
-
 old programs knew nothing of alternative and case-sensitive file-systems.
-
 !item Save the data to be stored in one or several formats.
-
 !item Send the message SC_CHANGED to (!I)all(!i) applications in the system 
-
 and SH_WDRAW to the system shell.
-
 !end_itemize
 
-
-
 The filename is (!I)always(!i) 'scrap.', the extension (suffix) depends on 
-
 the selected format here; if possible one should (!I)always(!i) support one 
-
 of the following standard formats:
 
-
-
 !begin_xlist [Suffix] !short
-
 !item [Suffix]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [gem]
-
 Vector graphics in metafile format
-
 !item [img]
-
 Pixel images in XIMG format
-
 !item [txt]
-
 ASCII text file, each line terminated with CR/LF
-
 !end_xlist
-
-
 
 In addition one can support one or more of the following formats (the 
-
 receiver then has the option of using the option with the greatest 
-
 amount of information):
 
-
-
 !begin_xlist [Suffix] !short
-
 !item [Suffix]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [asc]
-
 ASCII text file, each paragraph terminated with CR/LF
-
 !item [csv]
-
 ASCII file with comma-separated numbers
-
 !item [cvg]
-
 Calamus vector graphic format
-
 !item [dif]
-
 Export file of spreadsheets
-
 !item [eps]
-
 Encapsulated PostScript
-
 !item [1wp]
-
 Wordplus format
-
 !item [rtf]
-
 Microsoft Rich Text Format
-
 !item [tex]
-
 TeX
-
 !end_xlist
 
-
-
 The receiving program should first check which of the available files 
-
 contains the most information, and then use this file.
 
-
-
 (!B)Important:(!b) Each of the files in the clipboard contains the same infor!-
-
 mation on principle, just in different formats. The text processor 
-
 (!I)Papyrus(!i), for instance, imports 'scrap.rtf' only if its own format 
-
 'scrap.pap' could not be found.
 
-
-
 It should be clear from the above explanation that only (!I)one(!i) data 
-
 object (though in different formats) can be present in the clipboard 
-
 at any time.
 
-
-
 (!I)Note:(!i) A few old programs, such as First Word and First Word Plus, 
-
 are promiscuous and the clipoards they create automatically are 
-
 scattered all over the place - usually the directory they are launched 
-
 from. Some other applications may then use this clipboard rather than 
-
 the 'official' one on the boot drive!
 
-
-
 See Also: (!link [Clipboard functions][Scrap library]) ~ scrp_clear ~
-
 Style guidelines
-
 !end_node
-
-
-
 
 
 !begin_node The object structure
 
-
-
 Although the data structure of the object tree is not a tree in the 
-
 sense of a binary tree, it nevertheless possesses within a pointer 
-
 the logical chaining of a tree, with predecessors and successors 
-
 (generally called 'parents' and 'children' respectively). The speci!-
-
 fication of parents and children is made via indices to an array. 
 
-
-
 The tree structure of the individual objects can be illustrated best 
-
 with a simple example: A menu is composed at first of the menu bar. 
-
 This in turn contains several title texts. The title texts therefore 
-
 are contained directly in the menu bar, and are both children of the 
-
 object 'menu bar', so they move on the same hierarchical level. The 
-
 object menu bar refers with (!I)ob_head(!i) to the first menu title and with 
-
 (!I)ob_tail(!i) to the last menu title. In the first menu title the pointer 
-
 (!I)ob_next(!i) serves for addressing the next menu title. Thus the 
-
 chaining shows the following structure:
-
 !begin_verbatim
-
       Menu bar:
-
    +---------+---------+--------+
-
    | ob_head | ob_tail | ...    |
-
    |    o    |    o    |        |
-
    +----|----+----|----+--------+
-
         |         +-------------------------+
-
         V                                   V
-
    +---------+---------+--------+       +---------+---------+--------+
-
    | ...     | ob_next | ...    |  ...  | ...     | ...     | ...    |
-
    |         |    o    |        |       |         |         |        |
-
    +---------+----|----+--------+       +---------+---------+--------+
-
    1st menu title |                          n-th menu title
-
                   +-----> 2nd menu title
-
 !end_verbatim
-
 The actions that may be performed with a given object is specified 
-
 in (!I)ob_flags.(!i) The state of an object is held in the entry (!I)ob_state.(!i)
-
 The entry (!I)ob_type(!i) determines the object type. 
 
-
-
 For an exact definition some objects need an additional data structure 
-
 such as TEDINFO or BITBLK. In that case a pointer to this additional 
-
 structure will be stored in (!I)ob_spec.(!i)
 
-
-
 Summarising again the total setup of the data structure for objects OBJECT:
-
 !begin_verbatim
-
          +-------------+
-
          |  ob_next    |   Index for the next object
-
          +-------------+
-
          |  ob_head    |   Index of the first child
-
          +-------------+
-
          |  ob_tail    |   Index of the last child
-
          +-------------+
-
          |  ob_type    |   Object type
-
          +-------------+
-
          |  ob_flags   |   Manipulation flags
-
          +-------------+
-
          |  ob_state   |   Object status
-
          +-------------+
-
          |  ob_spec    |   See under object type
-
          +-------------+
-
          |  ob_x       |   Relative X-coordiante to parent object
-
          +-------------+
-
          |  ob_y       |   Relative Y-coordinate to parent object
-
          +-------------+
-
          |  ob_width   |   Width of the object
-
          +-------------+
-
          |  ob_height  |   Height of the object
-
          +-------------+
-
 !end_verbatim
-
 See Also: AES object colours ~ (!link [Object types][AES object types]) ~
-
 (!link [Manipulation flags][AES object flags]) ~
-
 (!link [Object status][AES object stati])
-
-
-
-
 
 
 
 !begin_node AES object types
 
-
-
 !label Object types of the AES
-
 The following types of object are available for selection:
 
 
-
-
-
 !begin_xlist [G_WINTITLE (36)]
-
 !item [Type] Meaning
 
-
-
 !label G_BOX
-
 !item [G_BOX      (20)]
-
 Rectangular box with optional border; (!I)ob_spec(!i) contains sundry
-
 information about border width, colour and similar matters
 
-
-
 !label G_TEXT
-
 !item [G_TEXT     (21)]
-
 Formatted graphic text; (!I)ob_spec(!i) points to a TEDINFO structure
 
-
-
 !label G_BOXTEXT
-
 !item [G_BOXTEXT  (22)]
-
 Rectangular box with formatted graphic text; (!I)ob_spec(!i)points to
-
 a (!nolink [TEDINFO]) structure
-
                   
-
 !label G_IMAGE
-
 !item [G_IMAGE    (23)]
-
 Monochrome image;(!I)ob_spec(!i)points to BITBLK structure
 
-
-
 !label USERDEF
-
 !label G_USERDEF
-
 !label G_PROGDEF
-
 !item [G_USERDEF  (24)]
-
 User-defined function for drawing a customized object; (!I)ob_spec(!i) points to
-
 a USERBLK structure. ((!I)Note:(!i) In some libraries this is called G_PROGDEF
-
 for a programmer-defined function)
 
-
-
 !label G_IBOX
-
 !item [G_IBOX     (25)]
-
 Transparent rectangle that can only be seen if the optional border does not have
-
 zero width; (!I)ob_spec(!i) contains futher information about the appearance
 
-
-
 !label G_BUTTON
-
 !item [G_BUTTON   (26)]
-
 Push-button text with border for option selection; (!I)ob_spec(!i) points to a
-
 text string with the text that is to appear in the button
 
-
-
 (!B)New as of MagiC Version 3.0:(!b) (!nl)
-
 If the object flag WHITEBAK is set, and bit 15 in object status = 0, then the
-
 button will contain an underscored character; for this, (high byte & 0xf)
-
 of (!I)ob_state(!i) gives the desired position of the underscore (with a suitable
-
 library one can make the underscored character when pressed together with the
-
 [Alternate] key select the button in the dialog of a running application)
-
                   
-
 On the other hand if bit 15 = 1 then we are dealing with a special button
-
 (radio-button or checkbox)
 
-
-
 Further specialties: WHITEBAK = 1, bit 15 = 1 and in (!I)ob_state(!i):
-
                   
-
 !begin_xlist !short [Highbyte != -1,-2]
-
 !item [Highbyte = -2]
-
 Group frames
-
 !item [Highbyte = -1]
-
 Special button, no underscore
-
 !item [Highbyte != -1,-2]
-
 Special button, with underscore
-
 !end_xlist
-
 (Here again (high byte & 0xf) of (!I)ob_spec(!i) is the underscore position). The
-
 presence of these features is best established via the function
-
 (!link [appl_getinfo][%apgi_13]) (opcode 13).
-
                   
-
 !label G_BOXCHAR
-
 !item [G_BOXCHAR  (27)]
-
 Rectangle containing a character; in (!I)ob_spec(!i) both the appearance of the
-
 border and the character are defined
 
-
-
 !label G_STRING
-
 !item [G_STRING   (28)]
-
 Character string; (!I)ob_spec(!i) points to the string
 
-
-
 (!B)New as of MagiC Version 3.0:(!b) (!nl)
-
 If the object flag WHITEBAK is set, and the high-byte of (!I)ob_state(!i) !=
-
 -1, then a character of the string will be underscored; the underscore
-
 position is determined by (high byte & 0xf) of (!I)ob_state(!i)
 
-
-
 With (!nolink [WHITEBAK]) flag set and high byte of(!I)ob_state(!i)= -1
-
 the complete string will be underscored. The presence of these features is best
-
 established via the function (!link [appl_getinfo][%apgi_13]) (opcode 13).
 
-
-
 !label G_FTEXT
-
 !item [G_FTEXT    (29)]
-
 Editable formatted graphic text; (!I)ob_spec(!i) points to a TEDINFO structure
 
-
-
 !label G_FBOXTEXT
-
 !item [G_FBOXTEXT (30)]
-
 Rectangle with editable formatted graphic text; (!I)ob_spec(!i) points to a
-
 (!nolink [TEDINFO]) structure
 
-
-
 !label G_ICON
-
 !item [G_ICON     (31)]
-
 Monochrome icon symbol with mask; (!I)ob_spec(!i) points to the ICONBLK structure
 
-
-
 !label G_TITLE
-
 !item [G_TITLE    (32)]
-
 (!nolink [Title]) of a drop-down menu; (!I)ob_spec(!i) points to the string.
 
-
-
 As of MagiC 2 one can also underscore one of the characters. This is done as
-
 follows:
 
-
-
 Set WHITEBAK in (!I)ob_state(!i)
-
 !begin_xlist !short [(ob_state >> 8) & 0xf0]
-
 !item [(ob_state >> 8) & 0xf]
-
 Position of the underscore
-
 !item [(ob_state >> 8) & 0xf0]
-
 is 0
-
 !end_xlist
-
-
 
 !label G_CICON
-
 !item [G_CICON    (33)]
-
 Colour icon (available as of (!nolink [AES]) V3.3); (!I)ob_spec(!i)
-
 points to the CICONBLK structure
 
-
-
 !label G_CLRICN
-
 !item [G_CLRICN    (33)]
-
 Colour icon; (!I)ob_spec(!i) is a pointer to an ICONBLK structure. Supported in
-
 the ViewMAX/3 beta and in FreeGEM.
 
-
-
 !label G_SWBUTTON
-
 !item [G_SWBUTTON (34)]
-
 Cycle button (i.e. a button which alters its text cyclically when clicked on);
-
 (!I)ob_spec(!i) points to a SWINFO structure. The presence of this object type
-
 should be inquired with (!link [appl_getinfo][%apgi_13]) (opcode 13).
-
-
 
 !label G_DTMFDB
-
 !item [G_DTMFDB    (34)]
-
 For internal (!nolink [AES]) use only: desktop image. The (!I)ob_spec(!i) is a
-
 far pointer to a MFDB structure. Supported in the ViewMAX/3 beta and in FreeGEM.
 
-
-
 !label G_POPUP
-
 !item [G_POPUP    (35)]
-
 Popup menu; (!I)ob_spec(!i) points to a POPINFO structure. If the menu has more
-
 than 16 entries, then it can be scrolled. The presence of this object type
-
 should be inquired with (!link [appl_getinfo][%apgi_13]) (opcode 13).
-
 (!I)Note:(!i) G_POPUP looks like G_BUTTON but the character string is not
-
 centred, so as to line up with the other character strings in the menu if
-
 possible.
-
                   
-
 !label G_WINTITLE
-
 !item [G_WINTITLE (36)]
-
 This object number is used internally by MagiC to depict window titles. The
-
 construction of this object type may change at any time and is therefore
-
 not documented.
 
-
-
 !label G_EDIT
-
 !item [G_EDIT     (37)]
-
 As of MagiC 5.20 an editable object implemented in a shared library is available;
-
 (!I)ob_spec(!i) points to the object. (!B)Warning:(!b) This type is
-
 (!I)not yet(!i) supported by the functions (!nolink [form_do]),
-
 (!nolink [form_xdo]), (!nolink [form_button]),
-
 (!nolink [form_keybd]), (!nolink [objc_edit]), (!nolink [wdlg_evnt]) and wdlg_do
-
 at present, i.e. the corresponding events need to be passed on to the object
-
 (with edit_evnt).
-
                   
-
 !label G_SHORTCUT
-
 !item [G_SHORTCUT (38)]
-
 This type is treated in a similar way to G_STRING, but any keyboard shortcut
-
 present is split off and output ranged right. The presence of this object
-
 type should be inquired for with (!link [appl_getinfo][%apgi_13]) (opcode 13).
 
-
-
 The introduction of proportional (!nolink [AES]) fonts required new strategy
-
 for the alignment of menu entries. So as to align keyboard shortcuts ranged
-
 right, objects of the type G_STRING inside a menu are therefore split into
-
 commands and shortcuts. This strategy however fails for menus that are managed
-
 by the program itself, e.g. within a window or a popup menu. This new object
-
 type had to be introduced in order to achieve usable alignment in that case too.
 
-
-
 !label G_SLIST
-
 !item [G_SLIST (39)]
-
 (!nolink [XaAES]) extended object - scrolling list.
 
-
-
 !end_xlist
-
 (!B)Note:(!b) For G_BOX, G_IBOX and G_BOXCHAR, the component (!I)ob_spec(!i) of
-
 the OBJECT structure does (!I)not(!i) point to another data structure, but
-
 contains further information for the appearance of the object. The
-
 following apply:
 
-
-
 !begin_xlist !short
-
 !item [Bits] Meaning
-
 !item [~] ~
-
 !item [24..31]
-
 Character to be depicted (only for G_BOXCHAR)
-
 !item [16..23]
-
 !begin_xlist [-1..127] !short
-
 !item [0]
-
 = Border width
-
 !item [1..128]
-
 = Border lies 1..128 pixels at the inside of the object
-
 !item [-1..-127]
-
 = Border lies 1..127 pixel at the outside of the object
-
 !end_xlist
-
 !item [12..15]
-
 Border colour (0..15)
-
 !item [08..11]
-
 Text colour   (0..15)
-
 !item [7]
-
 Text transparent (0) or opaque (1)
-
 !item [04..06]
-
 !begin_xlist !short
-
 !item [0]
-
 = Hollow
-
 !item [1]
-
 = Increasing intensity
-
 !item [2]
-
 ~
-
 !item [.]
-
 ~
-
 !item [.]
-
 ~
-
 !item [7]
-
 = Solid area
-
 !end_xlist
-
 !item [00..03]
-
 Inner colour (0..15)
-
 !end_xlist
-
 The high byte is used by the (!nolink [AES]) only for submenus. If the highest bit
-
 of (!I)ob_type(!i) is 0x8000 and the bit SUBMENU in (!I)ob_flags(!i) is set, then
-
 the bits 8..14 specify which submenu is coupled with the menu entry.
-
 Hence each application can have a maximum of 128 submenus. MagiC only
-
 reads the low byte from (!I)ob_type(!i), apart from the submenu handling.
-
 (!nolink [TOS]) reacts cleanly to unknown object types (such as the purely
-
 (!nolink [MagiC]) types G_SWBUTTON etc.), i.e. the objects are not drawn.
 
-
-
 See Also:  (!link [Object structure in AES][The object structure]) ~
-
 AES object colours
-
 !end_node
-
-
-
-
 
 
 
 !begin_node AES object colours
 
-
-
 !label Object colours of the AES
-
 The following table contains the predefined object colours. Of course
-
 particulars depend on the selected screen resolution, as well as any
-
 settings made by the user.
 
-
-
 !begin_table [l|l|r]
-
 Number !! Colour !! Standard RGB values
-
 !hline
-
 WHITE    (00) !! White        !! 1000, 1000, 1000
-
 BLACK    (01) !! Black        !!    0,    0,    0
-
 RED      (02) !! Red          !! 1000,    0,    0
-
 GREEN    (03) !! Green        !!    0, 1000,    0
-
 BLUE     (04) !! Blue         !!    0,    0, 1000
-
 CYAN     (05) !! Cyan         !!    0, 1000, 1000
-
 YELLOW   (06) !! Yellow       !! 1000, 1000,    0
-
 MAGENTA  (07) !! Magenta      !! 1000,    0, 1000
-
 DWHITE   (08) !! Light grey   !!  752,  752,  752
-
 DBLACK   (09) !! Dark grey    !!  501,  501,  501
-
 DRED     (10) !! Dark red     !!  713,    0,    0
-
 DGREEN   (11) !! Dark green   !!    0,  713,    0
-
 DBLUE    (12) !! Dark blue    !!    0,    0,  713
-
 DCYAN    (13) !! Dark cyan    !!    0,  713,  713
-
 DYELLOW  (14) !! Dark yellow  !!  713,  713,    0
-
 DMAGENTA (15) !! Dark magenta !!  713,    0,  713
-
 !end_table
-
 (!B)Note:(!b) These colours also correspond mostly to the icon colours used
-
 under Windows and OS/2. With a suitable CPX module one can set the
-
 correct RGB values for the frst 16 colours.
 
-
-
 See Also: (!link [Object structure in AES][The object structure]) ~
-
 AES object types
-
 !end_node
-
-
-
-
 
 
 
 !begin_node AES object flags
 
-
-
 !label Object flags of the AES
-
 The manipulation flags of an object determine its properties. The
-
 following options can be chosen:
 
-
-
 !begin_xlist [TOUCHEXIT  (0x0040)]
-
 !item [Flag] Meaning
-
-
 
 !item [NONE       (0x0000)] No properties.
 
-
-
 !label SELECTABLE
-
 !item [SELECTABLE (0x0001)]
-
 The object is selectable by clicking on it with the mouse.
 
-
-
 !label DEFAULT
-
 !item [DEFAULT    (0x0002)]
-
 If the user presses the [Return] or [Enter] key, this object will be selected
-
 automatically and the dialog exited; the object will have a thicker outline.
-
 This flag is permitted only once in each tree.
 
-
-
 !label EXIT
-
 !item [EXIT       (0x0004)]
-
 Clicking on such an object and releasing the mouse button while still over it
-
 will terminate the dialog (see also form_do).
 
-
-
 !label EDITABLE
-
 !item [EDITABLE   (0x0008)]
-
 This object may be edited by the user by means of the keyboard.
 
-
-
 !label RBUTTON
-
 !item [RBUTTON    (0x0010)]
-
 If several objects in an object tree have the property RBUTTON (radio button,
-
 similar to those on a push-button radio), then only one of these objects can
-
 be in a selected state at a time. These objects should all be children of a
-
 parent object with the object type G_IBOX. If another object of this group is
-
 selected, then the previously selected object will be deselected
-
 automatically.
 
-
-
 !label LASTOB
-
 !item [LASTOB     (0x0020)]
-
 This flag tells the (!nolink [AES]) that this is the last object within an object
-
 tree.
 
-
-
 !label TOUCHEXIT
-
 !item [TOUCHEXIT  (0x0040)]
-
 The dialog (see also form_do) will be exited as soon as the mouse pointer lies
-
 above this object and the left mouse button is pressed.
 
-
-
 !label HIDETREE
-
 !label HIDDEN
-
 !item [HIDETREE   (0x0080)]
-
 The object and its children will no longer be noticed by objc_draw and objc_find
-
 as soon as this flag is set. Furthermore this flag is also evaluated as of MagiC
-
 5.20 by form_keybd, if objects for keyboard shortcuts are searched for.
-
 Input to hidden objects is still possible, how!-ever. To prevent this, the
-
 EDITABLE flag has to be cleared.
 
-
-
 !label INDIRECT
-
 !item [INDIRECT   (0x0100)]
-
 (!I)ob_spec(!i) now points to a further pointer that in turn points to the actual
-
 value of (!I)ob_spec(!i) (see also OBJECT). In this way the standard data
-
 structures such as TEDINFO etc. can be extended in a simple way.
 
-
-
 !label FL3DIND
-
 !item [FL3DIND    (0x0200)]
-
 Under MultiTOS this object creates a three-dimensional object (under MagiC as of
-
 Version 3.0 only from 16-colour resolutions onwards and when the 3D effect has
-
 not been switched off). In 3D operation this will be interpreted as an
-
 indicator. As a rule, such objects are buttons that display a status, e.g.
-
 radio-buttons.
 
-
-
 !label ESCCANCEL
-
 !item [ESCCANCEL (0x0200)]
-
 Pressing the [Esc] key corresponds to the selec!-tion of the object with this
-
 flag. Therefore there may be only one default object in a dialog. Only
-
 effective in ViewMAX/2 and later.
 
-
-
 !label FL3DBAK
-
 !item [FL3DBAK    (0x0400)]
-
 In 3D operation this object will be treated as an (!nolink [AES]) background
-
 object, and drawn as such. It is recommended to allocate the ROOT object with
-
 this flag in dialogs with 3D buttons. The same applies for editable fields and
-
 text objects, as only in this way will a consistent background colour be
-
 maintained.
-
-
 
 See also (0x4000).
 
-
-
 !label BITBUTTON
-
 !item [BITBUTTON (0x0400)]
-
 This flag was introduced with ViewMAX beta, but not used there. Presumably a
-
 button with this flag contains a bitmap in place of a text. Only effective in
-
 ViewMAX/2 and later.
 
-
-
 !label FL3DACT
-
 !item [FL3DACT    (0x0600)]
-
 In 3D operation this object will be treated as an activator. As a rule such
-
 objects are buttons with which one can exit dialogs or trigger some action.
 
-
-
 !label SUBMENU
-
 !item [SUBMENU    (0x0800)]
-
 This is used in MultiTOS and from MagiC 5.10 on to mark submenus. menu_attach
-
 sets this bit in a menu entry to signify that a submenu is attached to it. The
-
 high byte of (!I)ob_type(!i)then contains the submenu index (128..255) i.e. bit
-
 15 of (!I)ob_type(!i) is always set simultabeously with SUBMENU.
 
-
-
 !label SCROLLER
-
 !item [SCROLLER (0x0800)]
-
 Pressing the [PAGEUP] key corresponds to the selection of the first object with
-
 this flag in the dialog; pressing the [PAGEDOWN] key corres!-ponds to the
-
 selection of the last object with this flag. Only effective in ViewMAX/2 and
-
 later.
 
-
-
 !label FLAG3D
-
 !item [FLAG3D (0x1000)]
-
 An object with this flag will be drawn with a 3D border. From ViewMAX/2 on every
-
 button will be drawn automatically with a 3D border. The colour category (see
-
 USECOLOURCAT) will be used for this. Only effective in ViewMAX/2 and later.
 
-
-
 !label USECOLOURCAT
-
 !item [USECOLOURCAT (0x2000)]
-
 USECOLOURCAT (0x2000) The colour of the object is not a colour index of the
-
 (!nolink [VDI]), but an entry in a table with colours for designated categories.
-
 This table has 16 entries. ViewMAX uses the following categories:
 
-
-
 !begin_xlist !short [CC_DESKTOP (10)]
-
 !item [CC_NAME (8)]       Inactive title-bar
-
 !item [CC_SLIDER (8)]     Scroll bar background
-
 !item [CC_DESKTOP (10)]   The desktop
-
 !item [CC_BUTTON (11)]    Buttons and other 3D widgets
-
 !item [CC_INFO (12)]      Window information-line
-
 !item [CC_ALERT (13)]     Alert boxes (not used in ViewMAX or FreeGEM)
-
 !item [CC_SLCTDNAME (14)] Active title-bar
-
 !end_xlist
-
-
 
 Probably it is intended to let the categories 0 to 7 be defined by the
-
 application, while 8 to 15 are reserved for the system. The settings are
-
 stored in ViewMAX.INI ((!nolink [GEM]).CFG in FreeGEM) and consist of one
-
 foreground, one background, a fill-style and a fill index in each case. Only
-
 effective in ViewMAX/2 and later.
 
-
-
 !item [FL3DBAK (0x4000)]
-
 3D background (sunken rather than raised). To check for this feature, use
-
 appl_init and check that bit 3 of xbuf.abilities is set.
 
-
-
 !item [SUBMENU (0x8000)]
-
 Not implemented in any known PC (!nolink [AES]).
 
-
-
 !end_xlist
-
-
-
 
 
 See Also: (!link [Object structure in AES][The object structure]) ~
-
 AES object types
-
 !end_node
-
-
-
-
 
 
 
 !begin_node AES object stati
 
-
-
 !label Object stati of the AES
-
 The object status determines how an object will be displayed later on
-
 the screen. An object status can be of the following type:
 
-
-
 !begin_xlist [UNDERLINE (0x0f00)]
-
 !item [Status] Meaning
-
 !item [~] ~
 
-
-
 !item [NORMAL    (0x0000)]
-
 Normal representation.
 
-
-
 !label SELECTED
-
 !item [SELECTED  (0x0001)]
-
 Inverse representation, i.e. the object is selected (except for G_CICON,
-
 which will use its 'selected' image).
 
-
-
 !label CROSSED
-
 !item [CROSSED   (0x0002)]
-
 If the object type is BOX, the object will be drawn with a white diagonal cross
-
 over it (usually this state can be seen only over a selected or coloured object).
-
 (!B)See also below.(!b)
 
-
-
 !label CHECKED
-
 !item [CHECKED   (0x0004)]
-
 A checkmark tick will be displayed at the left edge of the object.
 
-
-
 !label DISABLED
-
 !item [DISABLED  (0x0008)]
-
 The object will be displayed greyed out and is no longer selectable.
 
-
-
 !label OUTLINED
-
 !item [OUTLINED  (0x0010)]
-
 The object gets a border.
 
-
-
 !label SHADOWED
-
 !item [SHADOWED  (0x0020)]
-
 A shadow is drawn under the object.
 
-
-
 !label WHITEBAK
-
 !item [WHITEBAK  (0x0040)]
-
 With PC-(!nolink [GEM]) this causes the icon mask not to be drawn with the icon,
-
 which can speed up output is some circumstances. (!nl)
-
 As of MagiC 3 this controls the underscoring of character strings. This feature
-
 can be ascer!-tained with (!link [appl_getinfo][%apgi_13]) (opcode 13).
 
-
-
 !label DRAW3D
-
 !item [DRAW3D    (0x0080)]
-
 An object is to be drawn with a 3D effect. This flag is of interest only for
-
 PC-(!nolink [GEM]), and will be ignored by the Atari (!nolink [AES]) (and also
-
 in (!nolink [MagiC])).
 
-
-
 !label HIGHLIGHTED
-
 !item [HIGHLIGHTED (0x0100)]
-
 An object with this status will be surrounded by a dashed line that is drawn
-
 with MD_XOR. This status was introduced with ViewMAX beta.
 
-
-
 !label UNHIGHLIGHTED
-
 !item [UNHIGHLIGHTED (0x0200)]
-
 An object with this status will be drawn with the surround explicitly set by the
-
 status HIGHLIGHTED removed. For this one has to proceed as follows: First the
-
 status HIGHLIGHTED must be cleared, then the status UNHIGHLIGHTED set and
-
 following this the object must be redrawn with the function objc_draw. A redraw
-
 of the object without the status UNHIGHLIGHTED would not remove the surround, as
-
 it lies outside the area that the object occupies. After the redraw the status
-
 UNHIGHLIGHTED should be cleared again. This status was introduced with ViewMAX beta.
 
-
-
 !label UNDERLINE
-
 !item [UNDERLINE (0x0f00)]
-
 This opcode is available in MagiC from Version 2.0 onwards, and sets the position
-
 and size of the underscore for objects of the type G_STRING, G_TITLE and G_BUTTON.
 
-
-
 !label XSTATE
-
 !item [XSTATE    (0xf000)]
-
 This opcode is available in MagiC from Version 2.0 onwards, and serves for
-
 switching for the various button types ((!nolink [G_STRING]), (!nolink [G_TITLE])
-
 and (!nolink [G_BUTTON])).
-
 !end_xlist
 
-
-
 In (!nolink [GEM])/5, CROSSED makes the object draw in 3D:
-
 !begin_itemize !short
-
 !item If an object is both CROSSED and SELECTABLE, then it is drawn as a checkbox.
-
 !item If it is CROSSED, SELECTABLE and an RBUTTON, it is drawn as a radio button.
-
 !item If it is a button or a box and it is CROSSED, then it is drawn as a raised
-
 3D shape, similar to Motif.
-
 !item If a button is CROSSED and DEFAULT, a "Return key" symbol appears on it
-
    (rather like NEXTSTEP).
-
 !item Boxes and text fields that are CROSSED and CHECKED appear sunken.
-
 !end_itemize
-
 (!nolink [GEM])/5 can be detected by calling vqt_name for font 1. If nothing is
-
 returned, (!nolink [GEM])/5 is running.
 
 
-
-
-
 Recent FreeGEM builds contain a system based on the (!nolink [GEM])/5 one, but
-
 extended and backwards-compatible. The DRAW3D state is used instead
-
 of CROSSED:
 
-
-
 !begin_itemize !short
-
 !item If an object is both DRAW3D and SELECTABLE, then it is drawn as a checkbox.
-
 !item If it is DRAW3D, SELECTABLE and an RBUTTON, it is drawn as a radio button.
-
 !item If a button is DRAW3D and DEFAULT, a "Return key" symbol will be on it.
-
 !item If an object with a 3D border has the WHITEBAK state, then the 3D border
-
 will not have a black edge.
-
 !item If a radio button or checkbox has the WHITEBAK state, then it will be drawn
-
 with a white background rather than in the colour used by 3D objects.
-
 !end_itemize
 
-
-
 To check for these abilities, use appl_init and check that bit 3 of
-
 xbuf.abilities is set.
 
-
-
 See Also: (!link [Object structure in AES][The object structure]) ~
-
 AES object types
-
 !end_node
-
 !end_node
-
-
-
 
 
 !begin_node The quarter-screen buffer
 
-
-
 The quarter-screen buffer is required by the
-
 (!link [screen-manager][The screen-manager]) to save
-
 the contents of the menu background when drop-down menus drop down.
-
 The 'QSB' (the usual abbreviation) is also used for the display of
-
 alert boxes. Normally its size should depend on the number of colour
-
 planes and the size of the system font, but (!I)not(!i) on the total size
-
 of the screen.
 
-
-
 (!B)A good formula would be:(!b) (!nl)
-
 ~~500(characters) * space of one character * colour planes
 
-
-
 In 'ST High' resolution this would give a value of exactly 8000 (i.e.
-
 a quarter of the screen memory). Unfortunately in many cases the (!nolink [AES])
-
 is not so clever. The following table contains a summary of the algo!-rithm
-
 used by some (!nolink [GEM]) versions:
 
-
-
 !begin_xlist !short
-
 !item [(!nolink [GEM]) version]
-
 Method for setting the QSB
-
 !item [~] ~
-
 !item [1.0 and 1.2]
-
 Static, 8000 bytes
-
 !item [1.4]
-
 Dynamic, a quarter of the screen memory
-
 !item [3.0]
-
 Dynamic, half of the screen memory
-
 !end_xlist
 
-
-
 (!B)Note:(!b) The (!nolink [GEM]) versions 1.0 and 1.2 (i.e. up to and including
-
 (!nolink [TOS]) Version 1.02) are (!I)not(!i) prepared by this for colour graphics
-
 cards - one of several reasons why even with the use of a special (!nolink [VDI])
-
 driver under these (!nolink [GEM]) versions one can (!I)not(!i) make use of colour
-
 graphics cards.
 
-
-
 See Also: GEM
-
 !end_node
-
-
-
 
 
 !begin_node The rectangle-list of a window
-
 !label Window, rectangle-list of a
 
-
-
 To overcome the problem of windows that overlap each other, the (!nolink [AES])
-
 holds for each window a so-called (!I)rectangle-list(!i); when a window is
-
 partially obscured, GEM divides the visible portion of that window
-
 into the least possible number of non-overlapping rectangles, the
-
 details of which are then stored in the rectangle-list. Thus the
-
 elements of this list form a record of the currently completely
-
 visible working area of the corresponding window.
 
-
-
 To redraw a window (or its contents) one first inquires with the function
-
 wind_get((!link [WF_FIRSTXYWH][WF_FIRSTXYWH, wind_get])) for the first rectangle
-
 of the above!-mentioned list. Then one checks whether this rectangle overlaps with
-
 the screen area to be redrawn; then and only then one can redraw this
-
 area with the use of vs_clip.
 
-
-
 This method will be continued with all remaining elements of the
-
 rectangle-list, until the height (!I)and(!i) the width of a rectangle have
-
 the value zero.
 
-
-
 See also: Clipping ~ WM_REDRAW ~ wind_get ~ wind_update
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The screen-manager
 
-
-
 The screen-manager is always active and supervises the position of the
-
 mouse pointer when this leaves the working area of the window of other
-
 applications. The areas in question are the frames of the windows, the
-
 drop-down menus and the menu bar.
 
-
-
 When touching the menu area, the screen-manager automatically ensures
-
 that the section of the screen occupied by the menu is saved and later
-
 restored again ((!link [the quarter-screen buffer][The quarter-screen buffer])
-
 is used for this).
 
-
-
 Manipulation of the window controllers also do not lead to permanent
-
 changes of the screen memory; the result of the interaction with the
-
 screen-manager are the so-called message events, which inform the
-
 relevant application about the user's actions.
 
-
-
 !label Screen-manager, Name of the
-
 !label Screen-manager, ID of the
-
 (!B)Note:(!b) The ID of the screen-manager can, incidentally, be found easily
-
 by a call of appl_find("SCRENMGR").
 
-
-
 See Also: About the AES ~ GEM ~ Messages
-
 !end_node
-
-
-
 
 
 !begin_node Startup-code for accessories
-
 !label Accessories, Startup-code for
-
 To test whether an application was launched as a program or as a desk
-
 accessory, one can proceed as follows:
-
 !begin_itemize
-
 !item If the register a0 has the value zero at program startup, then
-
      we are dealing with a normal program launch.
 
-
-
 !item Otherwise we are dealing with a desk accessory, and register a0
-
      contains a pointer to the (incompletely) filled BASEPAGE. The TPA
-
      has already been shrunk appropriately (to the sum of basepage
-
      size and the length of the three program segments), but a stack
-
      still has to be created.
-
 !end_itemize
 
-
-
 (!B)Note:(!b) With this information there is no problem in creating the start-
-
 up code for a program in such a way that it recognizes automatically
-
 how the application was launched, and to continue the initialization
-
 appropriately. With most C compilers the external variable (!I)_app(!i) in
-
 the startup code is initialized automatically, which has the value 0
-
 when the application was launched as a desk accessory. This makes it
-
 possible to develop applications so that they may be launched either
-
 as desk accessories or as normal programs.
 
-
-
 See also: About the AES ~ Accessories in MagiC ~ Program launch and TPA
-
 !end_node
-
-
-
 
 
 !include gem\aes\toolbar.ui
 
 
-
-
-
 !begin_node AES bindings
-
 !label Bindings of the AES
 
-
-
 The (!nolink [AES]) is called via a single subprogram that is passed 6 parameters;
-
 these are addresses of various arrays that are used for input/output
-
 communications. To call an (!nolink [AES]) function, the following parameter block
-
 must be populated with the addresses of the arrays described below:
 
-
-
 !label AES parameter-block
-
 !label Parameter-block of the AES
-
 !begin_verbatim
-
 typedef struct
-
 {
-
     int16_t *cb_pcontrol;  /* Pointer to control array */
-
     int16_t *cb_pglobal;   /* Pointer to global array  */
-
     int16_t *cb_pintin;    /* Pointer to int_in array  */
-
     int16_t *cb_pintout;   /* Pointer to int_out array */
-
     int16_t *cb_padrin;    /* Pointer to adr_in array  */
-
     int16_t *cb_padrout;   /* Pointer to adr_out array */
-
 } AESPB;
-
 !end_verbatim
-
-
 
 The address of this parameter block (which lies on the stack) must be
-
 entered in register d1, and subsequently register d0.w must be filled
-
 with the magic value 0xc8 (200). With a TRAP #2 system call the (!nolink [AES])
-
 can then be called directly. For the (!B)(!I)Pure-Assembler(!b)(!i) this could look
-
 like this, for instance:
 
-
-
 !label aes
-
 !begin_verbatim
-
                 .EXPORT aes         ; Export function
-
                 .CODE               ; Start of the code-segment
 
-
-
         aes:     MOVE.L 4(sp),d1    ; Address of the parameter blocks
-
                  MOVE.W #200,d0     ; Opcode of the AES
-
                  TRAP   #2          ; Call GEM
-
                  RTS                ; And exit
 
-
-
                 .END                ; End of the module
-
 !end_verbatim
 
-
-
 There is no clear information available about which registers may be
-
 altered. In fact, however, the corresponding routines in ROM save (!I)all(!i)
-
 registers.
 
-
-
 Now to the individual arrays. With each field, designated input or
-
 output functions can be performed. The following apply:
 
-
-
 !label control
-
 !begin_xlist [int16_t control[5!]] !short
-
 !item [(!B)int16_t control[5!](!b)]
-
 With this field information about the called function and its parameters can
-
 be determined. The following apply:
-
 !begin_xlist
-
 !item [control[0!]]
-
 = Function number (opcode)
-
 !item [control[1!]]
-
 = Number of elements in int_in array the function is being sent
-
 !item [control[2!]]
-
 = Number of elements in int_out array the function is being sent
-
 !item [control[3!]]
-
 = Number of elements in addr_in array the function returns
-
 !item [control[4!]]
-
 = Number of elements in addr_out array the function returns
-
 !end_xlist
-
 There is no clear information about which elements must be set before an
-
 (!nolink [AES]) call. It is required in each case for elements [0],[1] and
-
 [3]. It seems less sensible for the elements [2] and [4] - after all the
-
 (!nolink [AES]) functions know how many values they return in the output
-
 fields.
 
-
-
 !label Global field of the AES
-
 !label global
-
 !item [(!B)int16_t global[15!](!b)]
-
 This field contains global data for the application and is used partly by
-
 appl_init and partly by other (!nolink [AES]) functions, and is filled
-
 automatically. The following apply:
-
 !begin_xlist [global[11,12]] !short
 
-
-
 !label AES version number
-
 !label Version number of the AES
-
 !item [global[0!]]
-
 Version number of the (!nolink [AES])
 
-
-
 !label Multitasking present?
-
 !item [global[1!]]
-
 Number of applications that can run concurrently; with a value of
-
 -1 there is no limit
 
-
-
 !item [global[2!]]
-
 Unique ID number of the application
 
-
-
 !item [global[3,4!]]
-
 Miscellaneous information that only has meanning for the application, and can
-
 be set and read by it
 
-
-
 !item [global[5,6!]]
-
 Pointer to a list of pointers to the object trees of the application
-
 (is set by rsrc_load)
 
-
-
 !item [global[7,8!]]
-
 Address of the memory reserved for the resource file. Only documented by
-
 Digital Research and (!I)not(!i) by Atari.
 
-
-
 !item [global[9!]]
-
 Length of the reserved memory. Only documented by Digital Research
-
 and (!I)not(!i) by Atari.
 
-
-
 !item [global[10!]]
-
 Number of colour planes. Only documented by Digital Research and (!I)not(!i)
-
 by Atari.
 
-
-
 !item [global[11,12!]]
-
 Reserved
 
-
-
 !item [global[13!]]
-
 Maximum height of a character, which is used by the (!nolink [AES]) for the
-
 vst_height call. This entry is only available as of (!nolink [AES]) Version 4.0,
-
 and also only documented by Atari. (!nl)
-
 As of PC-(!nolink [GEM]) Version 2.0 this value is interpreted as a bit-vector with
-
 the drives registered with the desktop (bit 15 = Drive A:).
 
-
-
 !item [global[14!]]
-
 Minimum height of a character, which is used by the (!nolink [AES]) for the
-
 vst_height call. This entry is only available as of (!nolink [AES]) Version 4.0,
-
 and also only documented by Atari. (!nl)
-
 As of PC-(!nolink [GEM]) Version 2.0 this value is interpreted as a bit-vector
-
 that specifies which of the drives lis!-ted in global[13] can be regarded
-
 as hard drives.
-
                                    
-
 !end_xlist
-
-
 
 !label int_in
-
 !item [(!B)int16_t int_in[16!](!b)]
-
 All 16-bit-sized input parameters are passed with this field.
 
-
-
 !label int_out
-
 !item [(!B)int16_t int_out[10!](!b)]
-
 All 16-bit-sized return values are supplied by the (!nolink [AES]) via this
-
 field.
-
-
 
 !label addr_in
-
 !item [(!B)int32_t addr_in[8!](!b)]
-
 This field serves for the transmission of pointers (e.g. pointers to
-
 character strings) to the (!nolink [AES]) functions.
 
-
-
 !label addr_out
-
 !item [(!B)int32_t addr_out[2!](!b)]
-
 All 32-bit-sized return values are supplied by the (!nolink [AES]) via this
-
 field.
-
 !end_xlist
 
-
-
 (!B)Warning:(!b) If the operating system supports threads, then it is impera!-
-
 tive that a multithread-safe library is used. In particular one must
-
 ensure that each thread receives (!I)its own(!i) global field (see above).
 
-
-
 See Also: (!link [Sample binding][Sample binding for AES functions]) ~
-
 VDI bindings ~ TOS list
-
-
-
 
 
 !begin_node Sample binding for AES functions
 
-
-
 The function 'crys_if' (crystal interface) looks after the proper
-
 filling of the (!nolink [control]) arrays, and performs the actual
-
 (!nolink [AES]) call. It is passed one WORD parameter in d0 containing the
-
 funtion's opcode minus 10 multiplied by 4 (for faster table indexing); this
-
 gives an index into a table in which the values for (!nolink [control])[1],
-
 (!nolink [control])[2] and (!nolink [control])[3] are entered for each
-
 individual (!nolink [AES]) function.
 
-
-
 !label crys_if
-
 !begin_verbatim
-
 AESPB c;
 
-
-
 int16_t crys_if (int16_t opcode)
-
 {
-
 	int16_t i, *paesb;
-
 	
-
 	control[0] = opcode;
-
 	paespb = &ctrl_cnts[ (opcode-10)*3 ];
-
 	
-
 	for (i = 1; i < 4; i++)
-
 		control[i] = *paespb++;
-
 		
-
 	aes (c);
-
 	return (int_out[0]);
-
 		
-
 } /* crys_if */
-
 !end_verbatim
-
-
 
 The table used for this could be built up as follows, for instance:
 
-
-
 !begin_verbatim
-
 .GLOBAL ctrl_cnts
-
 .DATA
 
-
-
 ctrl_cnts: .dc.b     0,  1,  0       ; appl_init
-
            .dc.b     2,  1,  1       ; appl_read
-
            .dc.b     2,  1,  1       ; appl_write
-
             ...
-
             ...
-
             ...
-
           
-
 .END
-
 !end_verbatim
-
 A fuller version is given in (!I)The Atari Compendium(!i) pp. 6.39-41.
-
 Note that the rsrc_gaddr call must be special cased in a library if
-
 you want to use the crys_if binding to call the (!nolink [AES]).
 
-
-
 See Also: AES bindings ~ GEM
-
 !end_node
-
 !end_node
-
 !end_node
-

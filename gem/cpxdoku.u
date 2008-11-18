@@ -1,5710 +1,2855 @@
 !iflang [english]
 
-
-
 !begin_node About XCONTROL
 
-
-
 XControl is a modular (extendable) (!nolink [control]) field desk accessory that
-
 was first shipped by Atari with the TT030 and Mega-STE series of 
-
 computers.
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image xcontrol
-
 !else
-
 !image (!picture_path)\xcontrol
-
 !endif
-
 !else
-
 !image (!picture_path)\xcontrol
-
 !endif
-
-
 
 The individual modules are files with the extension '.CPX' ((!B)C(!b)ontrol
-
 (!B)P(!b)anel e(!B)X(!b)tension), and XControl itself can be taken as the
-
 (!nolink [control]) program for these modules.
 
-
-
 (!B)Important:(!b) XControl should be used only as a tool for configuration
-
 dialogs, and (!I)not(!i) misused for other purposes.
 
-
-
 The communication between XControl and its modules takes place via
-
 two structures that are denoted XCPB and CPXINFO. The former makes
-
 some flags as well as a whole string of help functions available.
 
-
-
 !label XControl, Start of
-
 At system start-up XControl loads all available CPX headers, using up
-
 to 512 bytes of system memory per header; provided the corresponding
-
 flag is set in the header, each of the CPX files is called once for
-
 initialization. One can specify for each individual module whether it
-
 is to be loaded as resident or not (this can be changed also with the
-
 bundled configuration CPX). In addition it is possible to write CPX
-
 modules that set only certain values; these so-called 'set only'
-
 modules are called only during booting or renewed loading of the CPX
-
 modules with XControl, and simply return a NULL-pointer during the
-
 initialization.
 
-
-
 !label CPX module, Activation of a
-
 As soon as a user selects a CPX module, XControl loads it into memory
-
 and calls the function cpx_init. Subsequently cpx_call is called, for
-
 which essentially the module itself now takes (!nolink [control]).
 
-
-
 !label CPX, Form
-
 !label CPX, Event
-
 !label Form CPX
-
 !label Event CPX
-
 (!B)One can differentiate between a Form CPX and an Event CPX(!b). The former
-
 are relatively simple to program, but offer only limited flexibility.
-
 The latter are more flexible, since they evaluate the (!nolink [AES]) events
-
 directly. All the CPX modules supplied with XControl 1.0 are Form CPX
-
 files, from which one can deduce that Form CPXs suffice in most cases.
 
-
-
 !label CPX, Suffix of a
-
 The following terminology applies for the filenames of CPX modules:
 
-
-
 !begin_table [l l]
-
 Suffix !! Meaning
-
 !hline
-
 *.CP !! Standard CPX without header
-
 *.CPX !! Standard CPX, ready for use
-
 *.CPZ !! Inactive CPX (deactivated by XControl)
-
 *.HDR !! Header for the CPX file
-
 *_R.CPX !! Resident CPX file
-
 *_S.CPX !! Set-only CPX file
-
 !end_table
 
-
-
 !label CPX file, Format of a
-
 !label CPX file, Header of a
-
 The format of a CPX file is very similar to that of a normal program.
-
 It consists of a 512-byte header and the remaining file content that
-
 is almost a normal (!nolink [GEMDOS]) program file, including a standard 28-byte
-
 (!nolink [GEMDOS]) header.
 
-
-
 !label CPXHEAD
-
 !begin_verbatim
-
 typedef struct
-
 {
-
     uint16_t magic;                 /* Magic constant = 100   */
 
-
-
     struct
-
     {
-
         unsigned reserved : 13;  /* Reserved                */
-
         unsigned resident :  1;  /* RAM-resident if set     */
-
         unsigned bootinit :  1;  /* Boot initialize if set  */
-
         unsigned setonly  :  1;  /* Set-only CPX if set     */
-
-
 
     } flags;
 
-
-
     int32_t  cpx_id;                /* Unique CPX ID                   */
-
     uint16_t cpx_version;           /* CPX version number              */
-
     int8_t   i_text[14];            /* Icon text                       */
-
     uint16_t sm_icon[48];           /* Icon bitmap (32*24 pixel)       */
-
     uint16_t i_color;               /* Icon colour                     */
-
     int8_t   title_text[18];        /* Name of the CPX (16 chars. max) */
-
     uint16_t t_color;               /* Text colour                     */
-
     int8_t   buffer[64];            /* Non-volatile buffer             */
-
     int8_t   reserved[306];         /* Reserved                        */
 
-
-
 } CPXHEAD;
-
 !end_verbatim
-
-
 
 (!B)Some notes about the header:(!b)
 
-
-
 !begin_itemize !short
-
 !item The first function in the TEXT segment has to be the initialization
-
 routine for the CPX
-
 !item There are everal toolkits for the construction of a CPX header
-
 !item Header and linked program file can be joined in most UNIX-like
-
 shells (e.g. Mupfel from Gemini) with the command 'cat'
-
 !item During CPX development it is very practical that XControl can be launched
-
 also as a program (alter the suffix!); this allows working without permanent
-
 rebooting of the computer
-
 !item CPX ID and version number ensure that each CPX appears only once (and also
-
 only the latest version)
-
 !end_itemize
-
  
-
 While programming a CPX module one should note some subtleties: As
-
 such a module has no non-volatile memory available (apart from 64
-
 bytes), nothing is permitted that reserves fixed memory in any way.
-
 In particular, all variable contents are lost when leaving the CPX
-
 as a rule!
 
-
-
 (!B)Hence one should(!b):
-
 !begin_itemize !short
-
 !item Incorporate resources statically
-
 !item Only permit short-term memory allocation
-
 !item Not create permanent virtual (!nolink [VDI]) workstations
-
 !end_itemize
-
-
 
 For the programming of a CPX module one can fall back on the functions
-
 from the following categories:
 
-
-
 !begin_itemize
-
 !item CPX functions
-
 !item XCONTROL functions
-
 !end_itemize
 
-
-
 !label COPS
-
 (!B)Note:(!b) There are several alternatives to (!nolink [XCONTROL]), which is not being
-
 developed by Atari any more. One that is particularly recommended is
-
 COPS ((!B)CO(!b)ntrol (!B)P(!b)anel (!B)S(!b)erver, which not only permits simultaneous
-
 opening of any mumber of CPX modules, but also allows (!nolink [control]) fields
-
 with a larger working area than (!nolink [XCONTROL]).
 
-
-
 Other alternatives are ZCONTROL and a supplementary function of the
-
 Freedom2 file-selector.
 
 
-
-
-
 !begin_node CPX programming guidelines
-
 !label Guidelines for CPX modules
 
-
-
 When programming a CPX module one should keep to the following rules
-
 if possible:
 
-
-
 !begin_itemize !short
-
 !item Release reserved memory as soon as possible
-
 !item XControl functions should always be used if this is possible
-
 !item The user interface should be as simple as possible and fashioned
-
      in a similar way to other CPX modules
 
-
-
 !item Graphical elements are to be preferred to menu commands
-
 !item 'OK' and 'Cancel' should always be implemented (if possible)
-
 !item Popup menus should be depicted as text with a shadowed rectanle
-
 !item AC_CLOSE (quitting of the main program) is evaluated as 'Cancel'
-
 !item WM_CLOSE (closing of the XControl window) is evaluated as 'OK'
-
 !item 'Save' is evaluated as 'OK' without quitting the dialog
-
 !item The root object of the CPX always has a size of 256*176 pixels
-
 (!B)Exception:(!b) Under COPS the object tree may have a size of up to
-
 512*384 pixels
 
-
-
 !item Interrupt vectors may not be altered
-
 !item Xform_do may not be mixed with functions for (!link [Event CPXs][Event CPX])
-
 !item One must not forget about reserved memory when quitting the CPX,
-
      as this would lead to fragmentation of the memory otherwise
 
-
-
 !item One must not use IDs already being used by other CPXs
-
 !item Opened files must be closed again
-
 !item Opened (!nolink [VDI]) workstations must be closed again in every case (at
-
 the latest at the receipt of a (!nolink [AC_CLOSE]) or WM_CLOSE message), if
-
 they are no longer needed
-
 !end_itemize
-
 !end_node
-
-
 
 !begin_node CPX functions
 
-
-
 !begin_xlist [˘ cpx_button] !short 
-
 !item [˘ cpx_button]    Mouse button event
-
 !item [˘ cpx_call  ]    Activation routine
-
 !item [˘ cpx_close ]    Close event
-
 !item [˘ cpx_draw  ]    Redraw event
-
 !item [˘ cpx_hook  ]    Preemption hook
-
 !item [˘ cpx_init  ]    Initialization
-
 !item [˘ cpx_m1    ]    Mouse rectangle event
-
 !item [˘ cpx_m2    ]    Mouse rectangle event
-
 !item [˘ cpx_key   ]    Keyboard event
-
 !item [˘ cpx_timer ]    Timer event
-
 !item [˘ cpx_wmove ]    Window movement
-
 !end_xlist
-
-
-
 
 
 !begin_node cpx_button
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_buttonÆ - Mouse button event.
-
 !item [Declaration]
-
 VOID cdecl (*cpx_button) (MRETS *mrets, int16_t nclicks, int16_t *event);
-
 !item [Description]
-
 The call cpx_button is made when a mouse button event occurs. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [mrets]
-
 Mouse parameter for event
-
 !item [nclicks]
-
 Number of mouse clicks
-
 !item [event]
-
 Is to be set to the value 1 if the CPX is to be quit
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
-
 !item [Group:]
-
 CPX functions
-
 !item [See also:]
-
 cpx_key ~  cpx_timer
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_call
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_callÆ - Calling of the CPX module.
-
 !item [Declaration]
-
 int16_t cdecl (*cpx_call) ( GRECT *work );
 
-
-
 int16_t cdecl (*cpx_call) ( GRECT *work, DIALOG *dialog );
-
 !item [Description]
-
 The call cpx_call is made when the user has selected the corresponding module. The
-
 following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [work]
-
 Rectangle with the coordinates of the XControl window
-
 !item [dialog]
-
 Pointer to a window dialog
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The second calling procedure is only available under COPS. The
-
 parameter (!I)dialog(!i) in this case contains a pointer to the window dialog
-
 structure. The dialog is opened by COPS after the cpx_init with the aid of
-
 wdlg_create and wdlg_open. The parameter (!I)work(!i) and the object tree lie
-
 outside the visible screen area up to the first call of Xform_do or up to the
-
 return from the cpx_call function.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [r l l]
-
 0 !! = !! End of processing
-
 <> 0 !! = !! CPX should continue to be processed
-
 !end_table
 
-
-
 !item [Group:]
-
 CPX functions
-
 !item [See also:]
-
 XCONTROL
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_close
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_closeÆ - Event for closing the CPX window.
-
 !item [Declaration]
-
 VOID cdecl (*cpx_close) (int16_t flag);
-
 !item [Description]
-
 The call cpx_close serves for closing the CPX module. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [flag]
-
 Reason for closing:
-
 !begin_table [r l l]
-
 0 !! = !! AC_CLOSE message
-
 <> 0 !! = !! WM_CLOSE message
-
 !end_table
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The function is called for every (!nolink [AC_CLOSE]) or
-
 (!nolink [WM_CLOSE]) message. The CPX should then immediately release all memory
-
 reserved for it. The function must be implemented for every Event CPX.
-
 (!nolink [AC_CLOSE]) is to be evaluated as 'Cancel', (!nolink [WM_CLOSE]) as
-
 'OK'.
-
                
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_init ~  (!link [XCONTROL] [About XCONTROL])
-
-
 
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node cpx_draw
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_drawÆ - Event for redrawing the CPX window.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_draw) (GRECT *clip);
 
-
-
 !item [Description]
-
 The call cpx_draw serves for redrawing parts of the CPX window. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [clip]
-
 Region to be redrawn, which is also needed as a passing parameter for
-
 (!nolink [GetFirstRect])
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The required rectangle list must be obtained with
-
 (!nolink [GetFirstRect]) and (!nolink [GetNextRect]).
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_wmove ~  GetFirstRect ~  GetNextRect
-
-
 
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node cpx_hook
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_hookÆ - Preemption hook.
 
-
-
 !item [Definiton]
-
 int16_t cdecl (*cpx_hook) (int16_t event, int16_t *msg, MRETS *mrets, int16_t *key,
-
 int16_t *nclicks);
 
-
-
 !item [Description]
-
 The call cpx_hook is made immediately after evnt_multi, so before XControl
-
 processes the event. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [event]
-
 Occurring events
-
 !item [msg]
-
 Event buffer
-
 !item [mrets]
-
 Mouse parameters
-
 !item [key]
-
 Keypress
-
 !item [nclicks]
-
 Number of mouse clicks
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [r l l]
-
 0 !! = !! Continue processing events
-
 <> 0 !! = !! Break off processing events
-
 !end_table
 
-
-
 !item [Group:]
-
 CPX functions
-
 !item [See also:]
 
-
-
 cpx_button ~ cpx_draw ~ cpx_key ~ cpx_m1 ~ cpx_m2 ~ cpx_timer ~ cpx_wmove
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node cpx_init
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_initÆ - Initialization of the CPX.
 
-
-
 !item [Declaration]
-
 CPXINFO * cdecl cpx_init (XCPB *xcpb);
 
-
-
 (!nolink [CPXINFO]) * (!nolink [cdecl]) cpx_init ((!nolink [XCPB]) *xcpb, int32_t magic,
-
 int32_t version );
 
-
-
 !item [Description]
-
 The call cpx_init serves for initializing the CPX. The following applies:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Meaning
-
 !item [xcpb]
-
 Pointer to the XCPB structure of XControl
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The function must be placed at the start of the TEXT segment of the
-
 CPX file, and is called during XControl initialization as well as on activating
-
 the CPX.
 
-
-
 With the aid of the second calling procedure one can ascertain from the parameters
-
 (!I)magic(!i) and (!I)version(!i) whether the CPX is running under
-
 (!nolink [XCONTROL]) or COPS. The following routine may be used:
 
-
-
 !label COPS, Test for
-
 !begin_verbatim
-
 int16_t is_COPS ( int32_t magic, int32_t version )
-
 {
-
    if ((magic == 'COPS') && (version >= 0x10000L))
-
       return (TRUE);      /* COPS */
-
    else return (FALSE);   /* XCONTROL */ 
-
 }
-
 !end_verbatim
 
-
-
 If COPS is recognized, the CPX can draw an object tree with a size up to
-
 512*384 pixels and pass it to the function Xform_do.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! 'Set-only' CPX
-
 Else !! : !! Pointer to the (!nolink [CPXINFO]) structure of the CPX
-
 !end_table
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_close ~  (!link [XCONTROL] [About XCONTROL])
-
-
 
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node cpx_m1
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_m1Æ - Event 1 for a mouse rectangle.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_m1) (MRETS *mrets, int16_t *event);
 
-
-
 !item [Description]
-
 The call cpx_m1 is made when the mouse pointer enters or leaves a certain area.
-
 The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [mrets]
-
 Mouse parameters
-
 !item [event]
-
 Set to the value 1 when the CPX is to be exited
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_m2 ~  (!link [XCONTROL] [About XCONTROL])
 
-
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_m2
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_m2Æ - Event 2 for a mouse rectangle.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_m2) (MRETS *mrets, int16_t *event);
 
-
-
 !item [Description]
-
 The call cpx_m2 is made when the mouse pointer enters or leaves a certain area.
-
 The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [mrets]
-
 Mouse parameters
-
 !item [event]
-
 Set to the value 1 when the CPX is to be exited
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_m1 ~  (!link [XCONTROL] [About XCONTROL])
 
-
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_key
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_keyÆ - Event for a key-press.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_key) (int16_t kstate, int16_t key, int16_t *event);
 
-
-
 !item [Description]
-
 The call cpx_key is made when a keyboard vvent has occurred. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [kstate]
-
 Status of the 'special' keys ([Alternate], [Control], [Shift], etc.)
-
 !item [key]
-
 (!B)Triggering key:(!b)
-
 !begin_table [l l l]
-
 High byte !! : !! Scancode of the key
-
 Low byte !! : !! ASCII-code of the key
-
 !end_table
 
-
-
 !item [event]
-
 Set to the value 1 when the CPX is to be exited
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_button ~  cpx_timer
 
-
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_timer
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_timerÆ - Timer event.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_timer) (int16_t *event);
 
-
-
 !item [Description]
-
 The call cpx_timer is made when a timer event has occurred. The following
-
 applies:
 
-
-
 !begin_xlist
-
 !item [Parameter]
-
 Meaning
-
 !item [event]
-
 Set to the value 1 when the CPX is to be exited
-
 !end_xlist
-
-
 
 (!B)Note:(!b) Timer events are (!I)not(!i) supported by
-
 (!link [Form CPXs][Form CPX]).
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_button  ~ cpx_key  ~ (!link [XCONTROL] [About XCONTROL])
 
-
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_wmove
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Øcpx_wmoveÆ - Movement of the XControl window.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*cpx_wmove) (GRECT *work);
-
 !item [Description]
-
 The call cpx_wmove is made when the user moves the XControl window. The
-
 following applies:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Meaning
-
 !item [work]
-
 New coordinates of the XControl window
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 CPX functions
 
-
-
 !item [See also:]
-
 cpx_draw ~  (!link [XCONTROL] [About XCONTROL])
 
-
-
 !end_xlist
-
 !end_node
-
 !end_node
-
-
-
 
 
 !begin_node XCONTROL functions
 
-
-
 !begin_xlist [˘ Set_Evnt_Mask] !short 
-
 !item [˘ CPX_Save     ]   Saves defaults
-
 !item [˘ Get_Buffer   ]   Gets buffer
-
 !item [˘ getcookie    ]   Gets cookie variables
-
 !item [˘ GetFirstRect ]   Gets first rectangle from list
-
 !item [˘ GetNextRect  ]   Gets next rectangle from list
-
 !item [˘ MFsave       ]   Saves/restores mouse form
-
 !item [˘ Popup        ]   Popup menu management
-
 !item [˘ rsh_fix      ]   Converts object tree
-
 !item [˘ rsh_obfix    ]   Converts object from character to pixel display
-
 !item [˘ Set_Evnt_Mask]   Sets event mask
-
 !item [˘ Sl_arrow     ]   Slider arrow handling
-
 !item [˘ Sl_dragx     ]   Slider drag movement (horizontal)
-
 !item [˘ Sl_dragy     ]   Slider drag nmovement (vertical)
-
 !item [˘ Sl_size      ]   Sets slider size
-
 !item [˘ Sl_x         ]   Positions a slider (horizontal)
-
 !item [˘ Sl_y         ]   Positions a slider (vertical)
-
 !item [˘ Xform_do     ]   Form management
-
 !item [˘ XGen_Alert   ]   Displays an alert box.
-
 !end_xlist
-
-
-
 
 
 !begin_node CPX_Save
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØCPX_SaveÆ - Save defaults.
 
-
-
 !item [Declaration]
-
 int16_t cdecl (*CPX_Save) (VOID *ptr, int32_t num);
-
 !item [Description]
-
 The call CPX_Save permits saving the default settings of a CPX. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [ptr]
-
 Address of the data to be saved
-
 !item [num]
-
 Number of bytes to be saved
-
 !end_xlist
-
-
 
 (!B)Note:(!b) XControl saves the settings in the DATA segment of the CPX. Thus
-
 developers must themselves ensure that there is sufficient free space in the
-
 DATA segment. This is done with the data field 'SAVE_VARS' in CPXSTART.S.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [r l l]
-
 0 !! : !! An error has arisen
-
 <> 0 !! : !! No eror has arisen
-
 !end_table
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Get_Buffer
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØGet_BufferÆ - Get buffer.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Get_Buffer) (VOID);
 
-
-
 !item [Description]
-
 The call Get_Buffer obtains the address of a 64-byte sized resident memory
-
 block.
 
-
-
 (!B)Note:(!b) In this memory the CPX can save the contents of write-only
-
 registers if (!nolink [TOS]) offers no functions for interrogation (example:
-
 window colours). One has to emphasise again that any other memory
-
 allocated to a CPX is volatile!
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns a pointer to the memory block address.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node getcookie
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØgetcookieÆ - Get cookie variables.
 
-
-
 !item [Declaration]
-
 int16_t cdecl (*getcookie) (int32_t cookie, int32_t *p_value);
 
-
-
 !item [Description]
-
 The call getcookie searches for a cookie, and obtains its value. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [cookie]
-
 Cookie variable
-
 !item [p_value]
-
 Address of a variable that is to receive the value, or NULL if the value is of
-
 no interest
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [r l l]
-
 0 !! : !! Cookie not found
-
 <>0 !! : !! Cookie found
-
 !end_table
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Cookie jar
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node GetFirstRect
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØGetFirstRectÆ - Get first rectangle from list.
 
-
-
 !item [Declaration]
-
 GRECT * cdecl (*GetFirstRect) (GRECT *prect);
 
-
-
 !item [Description]
-
 The call GetFirstRect obtains the first rectangle from the rectangle list. The
-
 following applies:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Meaning
-
 !item [prect]
-
 Area to be updated
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The function is required for the redrawing of window portions
-
 after a WM_REDRAW message; however, the object tree is managed by XControl
-
 itself.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! No further window portions present
-
 Else !! : !! Window portion to be restored
-
 !end_table
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 GetNextRect ~   (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node GetNextRect
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØGetNextRectÆ - Get next rectangle from list.
 
-
-
 !item [Declaration]
-
 GRECT * cdecl (*GetNextRect) (VOID);
 
-
-
 !item [Description]
-
 The call GetNextRect obtains the next rectangle from the rectangle list.
 
-
-
 (!B)Note:(!b) The function is required for the redrawing of window portions
-
 after a WM_REDRAW message; however, the object tree is managed by XControl
-
 itself.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! No further window portions present
-
 Else !! : !! Window portion to be restored
-
 !end_table
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 GetFirstRect ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node MFsave
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØMFsaveÆ - Save/restore mouse form.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*MFsave) (int16_t saveit, MFORM *mf);
 
-
-
 !item [Description]
-
 The call MFsave saves or restores the shape of the mouse pointer. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [savit]
-
 !begin_table [l l l]
-
 0 !! = !! Restore mouse-shape
-
 1 !! = !! Save mouse-shape
-
 !end_table
-
 !item [mf]
-
 Memory block for saving the mouse-shape
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 graf_mouse ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Popup
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØPopupÆ - Management of a popup menu.
 
-
-
 !item [Declaration]
-
 int16_t cdecl  (*Popup) (int8_t *items[], int16_t num_items, int16_t default_item,
-
 int16_t font_size, GRECT *button, GRECT *world);
 
-
-
 !item [Description]
-
 The call Popup takers on the complete management of a popup menu. The following
-
 apply:
 
-
-
 !begin_xlist [default_item] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [items]
-
 Array with character strings for the individual entries; each entry must have
-
 the same length, as well as at least two spaces at the start and at least one
-
 space at the end
-
 !item [num_items]
-
 Number of entries
-
 !item [default_item]
-
 Default entry (count starts at 0), or the value -1
-
 !item [font_size]
-
 (!B)Font size:(!b) 8*16 or 8*8 font; for the parameters one should use the same
-
 values as in the TEDINFO structure (according to Atari, only the large
-
 system font is used at present)
-
 !item [button]
-
 Rectangle of the button to which the popup belongs
-
 !item [world]
-
 Rectangle of the background object tree (as a rule the object tree of the CPX)
-
 !end_xlist
-
-
 
 (!B)Note:(!b) With too many entries (five onwards) the popup is scrolled
-
 automatically; the processing blocks all other actions.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns the selected entry of the popup, or the value -1 if no
-
 element of the popup had been selected.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Xform_do ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node rsh_fix
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Ørsh_fixÆ - Object tree conversion.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*rsh_fix) (int16_t num_objs, int16_t num_frstr, int16_t num_frimg,
-
 int16_t num_tree, OBJECT *rs_object, TEDINFO *rs_tedinfo, int8_t *rs_string[],
-
 ICONBLK *rs_iconblk, BITBLK *rs_bitblk, int32_t *rs_frstr, int32_t *rs_frimg,
-
 int32_t *rs_trindex, struct foobar *rs_imdope);
 
-
-
 !item [Description]
-
 The call rsh_fix converts an object tree on the basis of 8*16 pixel-sized
-
 characters. The following apply:
 
-
-
 !begin_xlist [rs_tedinfo] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [num_objs]
-
 Total number of objects
-
 !item [num_frstr]
-
 Total number of strings
-
 !item [num_frimg]
-
 Total number of images
-
 !item [num_tree]
-
 Total number of object trees
-
 !item [rs_object]
-
 !item [rs_tedinfo]
-
 !item [rs_string]
-
 !item [rs_iconblk]
-
 !item [rs_bitblk]
-
 !item [rs_frstr]
-
 !item [rs_frimg]
-
 !item [tr_trindex]
-
 !item [rs_imdope]
-
 !end_xlist
-
-
 
 (!B)Note:(!b) With this the CPX has the same pixel size in all resolutions. When
-
 working with a RCS one should therefore also choose a graphics mode with 8*16
-
 pixel-sized characters.
 
-
-
 The coordinate conversion may only take place once, of course - hence XControl
-
 makes the flag 'SkipRshFix' available in the XCPB structure.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 rsh_obfix ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node rsh_obfix
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 Ørsh_obfixÆ - Object conversion: Character to pixel display.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*rsh_obfix) (OBJECT *tree, int16_t curob);
 
-
-
 !item [Description]
-
 The call rsh_obfix converts the size and position of a specified object from
-
 a character-based display to a pixel-based display. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [curob]
-
 Object to be converted
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 rsh_fix  ~ rsrc_obfix ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Set_Evnt_Mask
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSet_Evnt_MaskÆ - Set an event mask.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Set_Evnt_Mask) (int16_t mask, MOBLK *m1, MOBLK *m2, int32_t time);
 
-
-
 !item [Description]
-
 The call Set_Evnt_Mask determines which events the CPX should react to. The
-
 following apply:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Meaning
-
 !item [mask]
-
 Permitted events (as for evnt_multi)
-
 !item [m1]
-
 Mouse rectangle and -direction
-
 !item [m2]
-
 Mouse rectangle and -direction
-
 !item [time]
-
 Time in milliseconds for timer event
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_arrow
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_arrowÆ - Slider arrow handling.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_arrow) (OBJECT *tree, int16_t base, int16_t slider, int16_t obj,
-
 int16_t inc, int16_t min, int16_t max, int16_t *value, int16_t direction,
-
 VOID (*foo) (VOID));
 
-
-
 !item [Description]
-
 The call Sl_arrow is to be made as soon as an arrow of a slider has been clicked
-
 on. The following apply:
 
-
-
 !begin_xlist [direction] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of base object)
-
 !item [obj]
-
 Arrow that was clicked on
-
 !item [inc]
-
 Number of units that are to be added or subtracted
-
 !item [min]
-
 Minimum (!I)value(!i) that can be accepted
-
 !item [max]
-
 Maximum (!I)value(!i) that can be accepted
-
 !item [value]
-
 Address for current value
-
 !item [direction]
-
 (!B)Direction:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! Vertical
-
 1 !! = !! Horizontal
-
 !end_table
-
 !item [foo]
-
 Address of a function (as for Sl_x/Sl_y)
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_dragx ~  Sl_dragy ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_dragx
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_dragxÆ - Slider drag movement (horizontal).
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_dragx) (OBJECT *tree, int16_t base, int16_t slider, int16_t min,
-
 int16_t max, int16_t *value, VOID (*foo) (VOID));
 
-
-
 !item [Description]
-
 The call Sl_dragx manages the movement of the horizontal slider. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of the base object)
-
 !item [min]
-
 Minimum (!I)value(!i) that can be accepted
-
 !item [max]
-
 Maximum (!I)value(!i) that can be accepted
-
 !item [value]
-
 Address for current value
-
 !item [foo]
-
 Address of a function, as for Sl_x
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_dragy ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_dragy
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_dragyÆ - Slider drag movement (vertical).
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_dragy) (OBJECT *tree, int16_t base, int16_t slider, int16_t min,
-
 int16_t max, int16_t *value, VOID (*foo) (VOID));
 
-
-
 !item [Description]
-
 The call Sl_dragy manages the movement of the vertical slider. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of the base object)
-
 !item [min]
-
 Minimum (!I)value(!i) that can be accepted
-
 !item [max]
-
 Maximum (!I)value(!i) that can be accepted
-
 !item [value]
-
 Address for current value
-
 !item [foo]
-
 Address of a function, as for Sl_y
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_dragx ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_size
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_sizeÆ - Sets slider size.
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_size) (OBJECT *tree, int16_t base, int16_t slider, int16_t num_items,
-
 int16_t visible, int16_t direction, int16_t min_size);
 
-
-
 !item [Description]
-
 The call Sl_size sets the size of the slider. The following apply:
 
-
-
 !begin_xlist [direction] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of the base object)
-
 !item [num_items]
-
 Anzahl der vorhandenen Elemente
-
 !item [visible]
-
 Anzahl der sichtbaren Elemente
-
 !item [direction]
-
 (!B)Direction:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! Vertical
-
 1 !! = !! Horizontal
-
 !end_table
-
 !item [min_size]
-
 Minimum size of slider, in pixels
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The function is required to obtain the relation!-ship of the
-
 amount of data displayed to the total that is present.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_dragx  ~ Sl_dragy ~  Sl_x ~  Sl_y ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_x
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_xÆ - Positions a slider (horizontal).
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_x) (OBJECT *tree, int16_t base, int16_t slider, int16_t value,
-
 int16_t min, int16_t max, VOID (*foo) (VOID));
 
-
-
 !item [Description]
-
 The call Sl_x positions the slider within a base object in the horizontal
-
 direction. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of the base object)
-
 !item [value]
-
 New value that the slider should represent
-
 !item [min]
-
 Minimum that (!I)value(!i) may accept
-
 !item [max]
-
 Maximum that (!I)value(!i) may accept
-
 !item [foo]
-
 Address of a function (or NULL), which is called simultaneously with slider
-
 re!-positioning; this permits slider movements to be used also to alter
-
 displayed values
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_y  ~ (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Sl_y
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØSl_yÆ - Positions a slider (vertical).
 
-
-
 !item [Declaration]
-
 VOID cdecl (*Sl_y) (OBJECT *tree, int16_t base, int16_t slider, int16_t value,
-
 int16_t min, int16_t max, VOID (*foo) (VOID));
 
-
-
 !item [Description]
-
 The call Sl_y positions the slider within a base object in the vertical
-
 direction. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [base]
-
 Base object (index of slider 'track')
-
 !item [slider]
-
 Slider (child of the base object)
-
 !item [value]
-
 New value that the slider should represent
-
 !item [min]
-
 Minimum that (!I)value(!i) may accept
-
 !item [max]
-
 Maximum that (!I)value(!i) may accept
-
 !item [foo]
-
 Address of a function (or NULL), which is called simultaneously with slider
-
 re!-positioning; this permits slider movements to be used also to alter
-
 displayed values
-
 !end_xlist
-
-
 
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 Sl_x  ~ (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Xform_do
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØXform_doÆ - Manage a form.
 
-
-
 !item [Declaration]
-
 int16_t cdecl (*Xform_do) (OBJECT *tree, int16_t startob, int16_t *puntmsg);
 
-
-
 !item [Description]
-
 The call Xform_do takes on the management of a form, as well as (to a limited
-
 extent) the handling of (!nolink [AES]) messages. The following apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [tree]
-
 Address of the object tree
-
 !item [startob]
-
 Start object
-
 !item [puntmsg]
-
 Message buffer
-
 !end_xlist
-
-
 
 (!B)Note:(!b) Under COPS the CPX can draw an object tree up to 512*384 pixels
-
 in size and pass it to this function.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_xlist
-
 !item [-1:]
-
 (!I)puntmsg(!i) contains a message to be evaluated:
 
-
-
 !begin_xlist [WM_REDRAW:]
-
 !item [WM_REDRAW:]
-
 The CPX must itself redraw objects that do not belong to the object tree. The
-
 rectangle list can be obtained with the functions GetFirstRect and GetNextRect.
-
 !item [AC_CLOSE:] (!U)and(!u)
-
 !item [WM_CLOSE:]
-
 The CPX was terminated; reserved memory is to be freed immediately. AC_CLOSE is to
-
 be evaluated as 'Cancel', WM_CLOSE as 'OK'.
-
 !item [CT_KEY:]
-
 Special message that permits evaluation of key-presses, provided these can have
-
 no repercussions on EDIT fields.
 
-
-
 !begin_table [l l l l]
-
 (!I)puntmsg(!i)[3] !! High byte !! : !! Scancode of the pressed key
-
 (!I)puntmsg(!i)[3] !! Low byte  !! : !! ASCII-code of the pressed key
-
 !end_table
-
  
-
 !item [Else:]
-
 Index of object clicked on (a double-click is flagged in the upper bit).
-
 !end_xlist
-
 !end_xlist
-
-
 
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 form_do ~  form_xdo ~
-
 (!link [Rectangle-list of a window][The rectangle-list of a window])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node XGen_Alert
 
-
-
 !begin_xlist [Description]
-
 !item [Name:]
-
 ØXGen_AlertÆ - Display an alert box.
 
-
-
 !item [Declaration]
-
 int16_t cdecl (*XGen_Alert) (int16_t id);
 
-
-
 !item [Description]
-
 The call XGen_Alert enables the display of a simple alert box. The following
-
 apply:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Meaning
-
 !item [id]
-
 (!B)Type of message:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! 'Save default settings?'
-
 1 !! = !! 'Memory allocation error!'
-
 2 !! = !! 'File read/write error'
-
 3 !! = !! 'File not found'
-
 !end_table
-
 !end_xlist
-
-
 
 (!B)Note:(!b) Further alert boxes must be defined by the user. However, form_alert
-
 is (!I)not(!i) suitable for this, as it centres the alert box with reference to
-
 the full screen area and not with reference to the XControl window.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function returns one of the following values:
 
-
-
 !begin_xlist [<> 0 :]
-
 !item [~~~0 :]
-
 'Cancel' was clicked on
-
 !item [<> 0 :]
-
 'OK' was clicked on (if the alert box has only one button, then it is the
-
 'OK' button)
-
 !end_xlist
-
-
 
 !item [Group:]
-
 XCONTROL functions
 
-
-
 !item [See also:]
-
 form_alert ~  (!link [XCONTROL] [About XCONTROL])
-
 !end_xlist
-
 !end_node
-
 !end_node
-
 !end_node
-
-
 
 !else
-
-
 
 !begin_node Das XCONTROL
 
-
-
 XControl ist ein modulares (erweiterbares) Kontrollfeld, das von Atari
-
 zuerst mit den Computern der TT und Mega-STE Serie ausgeliefert wurde.
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image xcontrol
-
 !else
-
 !image (!picture_path)\xcontrol
-
 !endif
-
 !else
-
 !image (!picture_path)\xcontrol
-
 !endif
-
-
 
 Die einzelnen Module sind Dateien mit der Namenserweiterung '.CPX'
-
 (Control-Panel eXtension), und XControl selbst kann als Steuerungsprogramm
-
 fÅr diese Module angesehen werden.
 
-
-
 (!B)Wichtig:(!b) XControl sollte nur als Tool fÅr Konfigurationsdialoge
-
 angesehen werden, und (!I)nicht(!i) fÅr andere Zwecke miûbraucht werden.
 
-
-
 Die Kommunikation zwischen XControl und seinen Modulen erfolgt Åber zwei
-
 Strukturen, die mit XCPB und CPXINFO bezeichnet werden. öber erstere werden
-
 einige Flags sowie eine ganze Reihe von Hilfsfunktionen zugÑnglich gemacht.
 
-
-
 !label XControl, Start von
-
 Beim Start lÑdt XControl alle verfÅgbaren CPX-Header; sofern im Header
-
 ein entsprechendes Flag gesetzt ist, werden alle CPX-Dateien einmal zum
-
 initialisieren aufgerufen. FÅr jedes einzelne Modul kann angegeben
-
 werden, ob es resident geladen werden soll (dies kann auch Åber das
-
 mitgelieferte Konfigurations-CPX verÑndert werden). DarÅber hinaus ist es
-
 mîglich, CPX-Module zu schreiben, die nur bestimmte Werte setzen. Man
-
 spricht in diesem Zusammenhang von 'Set-Only'-Modulen, die nur beim
-
 Booten bzw. erneuten Laden der CPX-Module durch XControl aufgerufen
-
 werden, und bei der Initialisierung einfach einen Nullzeiger zurÅckliefern.
 
-
-
 !label CPX-Moduls, Aktivierung eines
-
 Sobald ein CPX-Modul vom Anwender ausgewÑhlt wird, lÑdt XControl dieses
-
 in den Speicher, und ruft die Funktion cpx_init auf. Anschlieûend wird
-
 noch cpx_call aufgerufen, wobei im wesentlichen nun das Modul selbst die
-
 Steuerung Åbernimmt.
 
-
-
 !label CPX, Form-
-
 !label CPX, Event-
-
 !label Form-CPX
-
 !label Event-CPX
-
 (!B)Man unterscheidet zwischen Form-CPX und Event-CPX(!b). Erstere sind
-
 relativ einfach zu programmieren, bieten jedoch nur eine eingeschrÑnkte
-
 FlexibilitÑt. Letztere sind flexibler, da sie die AES-Events direkt
-
 auswerten. Alle mit XControl 1.0 ausgelieferten CPX-Module sind Form-CPX
-
 Dateien, woraus geschlossen werden kann, daû Form-CPX in den meisten
-
 FÑllen ausreichen.
 
-
-
 !label CPX, Suffix eines
-
 FÅr die Dateinamen von CPX-Modulen gilt die folgende Terminologie:
 
-
-
 !begin_table [l l]
-
 Suffix !! Bedeutung
-
 !hline
-
 *.CP !! Standard-CPX ohne Header
-
 *.CPX !! Standard-CPX, fertig zum Gebrauch
-
 *.CPZ !! inaktive CPX (von XControl deaktiviert)
-
 *.HDR !! Header fÅr die CPX-Datei
-
 *_R.CPX !! residente CPX-Datei
-
 *_S.CPX !! Set-Only CPX-Datei
-
 !end_table
 
-
-
 !label CPX-Datei, Aufbau einer
-
 !label CPX-Datei, Header einer
-
 Der Aufbau einer CPX-Datei ist einem normalen Programm sehr Ñhnlich. Sie
-
 besteht aus einem 512 Byte groûen Header und dem Åbrigen Dateiinhalt, bei
-
 dem es sich fast um eine normale GEMDOS-Programmdatei handelt. Der Header
-
 ist dabei wie folgt definiert:
 
-
-
 !label CPXHEAD
-
 !begin_verbatim
-
 typedef struct
-
 {
-
     uint16_t magic;                 /* Magic-Konstante = 100   */
-
  
-
     struct
-
     {
-
         unsigned reserved : 13;  /* reserviert              */
-
         unsigned resident :  1;  /* RAM-resident            */
-
         unsigned bootinit :  1;  /* Boot-Initialisierung    */
-
         unsigned setonly  :  1;  /* Set-Only                */
-
  
-
     } flags;
-
  
-
     int32_t  cpx_id;                /* eindeutige CPX-ID       */
-
     uint16_t cpx_version;           /* CPX-Versionsnummer      */
-
     int8_t   i_text[14];            /* Icontext                */
-
     uint16_t sm_icon[48];           /* Bitmap (32*24 Pixel)    */
-
     uint16_t i_color;               /* Iconfarbe               */
-
     int8_t   title_text[18];        /* Name des CPX            */
-
     uint16_t t_color;               /* Textfarbe               */
-
     int8_t   buffer[64];            /* nicht-flÅchtiger Puffer */
-
     int8_t   reserved[306];         /* reserviert              */
-
  
-
 } CPXHEAD;
-
 !end_verbatim
-
-
 
 (!B)Zum Header noch einige (!nolink [Anmerkungen]):(!b)
 
-
-
 !begin_itemize !short
-
 !item die erste Funktion im TEXT-Segment muû die Initialisierungsroutine
-
 fÅr die CPX sein
-
 !item zur Konstruktion eines CPX-Headers gibt es mehrere Toolkits
-
 !item Header und gelinkte Programmdatei kînnen in den meisten UNIX-Ñhnlichen
-
 Shells (z.B. der Mupfel aus Gemini) mit dem Kommando 'cat' zusammengefÅgt
-
 werden.
-
 !item bei der CPX-Entwicklung ist es sehr praktisch, daû man XControl auch
-
 als Programm starten kann (Suffix Ñndern !). Dies erlaubt es, ohne
-
 permanentes Neu-Booten des Rechners zu arbeiten.
-
 !item CPX-ID und -Versionsnummer sorgen dafÅr, daû jede CPX nur ein einziges
-
 mal (und auch nur die neueste Version) erscheint.
-
 !end_itemize
-
  
-
 Bei der Programmierung eines CPX-Moduls sind einige Feinheiten zu beachten.
-
 Da ein solches Modul (mit Ausnahme von 64 Byte) Åber keinen
-
 nichtvergÑnglichen Speicher verfÅgt, ist nichts erlaubt, was Speicher in
-
 irgendeiner Form fest reserviert. Insbesondere gehen Variableninhalte mit
-
 dem Verlassen der CPX in aller Regel verloren ! (!B)Daher sollte man(!b):
 
-
-
 !begin_itemize !short
-
 !item Resourcen statisch einbinden
-
 !item Speicheranforderungen nur kurzzeitig erlauben
-
 !item virtuelle VDI-Workstations nicht dauerhaft anlegen
-
 !end_itemize
-
-
 
 Bei der Programmierung eines CPX-Moduls kann auf Funktionen der beiden
-
 folgenden Kategorien zurÅckgegriffen werden:
 
-
-
 !begin_itemize
-
 !item CPX-Funktionen
-
 !item XCONTROL-Funktionen
-
 !end_itemize
 
-
-
 !label COPS
-
 (!B)Hinweis:(!b) Als Alternative zu (!nolink [XCONTROL]), welches von Atari nicht mehr
-
 weiterentwickelt wird, bieten sich verschiedene Programme an. Besonders
-
 empfehlenswert ist dabei COPS ((!B)COntrol Panel Server(!b), mit dessen
-
 Hilfe sich nicht nur beliebig viele CPX-Module gleichzeitig îffnen lassen,
-
 sondern das auch Kontrollfelder mit grîûerer ArbeitsflÑche als (!nolink [XCONTROL])
-
 erlaubt.
 
 
-
-
-
 !begin_node CPX-Programmierrichtlinien
-
 !label Richtlinien fÅr CPX-Module
 
-
-
 Bei der Programmierung eines CPX-Moduls sollte man tunlichst die
-
 folgenden Regeln beachten:
 
-
-
 !begin_itemize !short
-
 !item reservierter Speicher ist mîglichst schnell wieder freizugeben
-
 !item XControl-Funktionen sind immer auszunutzen, wenn dies mîglich ist
-
 !item die Benutzerschnittstelle ist einfach und in Anlehnung an die anderen
-
 CPX-Module zu gestalten
 
-
-
 !item grafische Elemente sind MenÅkommandos vorzuziehen
-
 !item 'OK' und 'Abbruch' sind (wenn mîglich) immer zu implementieren
-
 !item Popup-MenÅs sind als Text mit schattiertem Rechteck darzustellen
-
 !item AC_CLOSE (Verlassen des Hauptprogramms) wird als 'Abbruch' gewertet
-
 !item WM_CLOSE (Schlieûen des XControl-Fensters) wird als 'OK' gewertet
-
 !item 'Save'/'Sichern' ist als 'OK' ohne Verlassen des Dialogs zu werten
-
 !item das Wurzelobjekt der CPX hat immer eine Grîûe von 256*176 Pixeln.
-
 (!B)Ausnahme:(!b) Unter COPS darf der Objektbaum eine Grîûe von bis zu
-
 512*384 Pixeln besitzen.
 
-
-
 !item Interrupt-Vektoren dÅrfen nicht verÑndert werden
-
 !item Xform_do darf nicht mit Funktionen fÅr Event-CPX vermischt werden
-
 !item reservierter Speicher darf beim Verlassen der CPX nicht vergessen
-
 werden, da es sonst zu einer Fragmentierung des Speichers kommt
 
-
-
 !item bereits von anderen CPX verwandte ID's dÅrfen nicht benutzt werden
-
 !item geîffnete Dateien mÅssen wieder geschlossen werden
-
 !item geîffnete (!nolink [VDI])-Workstations sind auf jedenfall wieder zu schlieûen
-
 (spÑtestens bei einer (!nolink [AC_CLOSE]) bzw. WM_CLOSE Meldung), wenn sie nicht mehr
-
 benîtigt werden
-
 !end_itemize
-
 !end_node
-
-
 
 !begin_node CPX-Funktionen
 
-
-
 !begin_xlist [˘ cpx_button] !short 
-
 !item [˘ cpx_button]    Maustasten-Ereignis
-
 !item [˘ cpx_call  ]    Aktivierungsroutine
-
 !item [˘ cpx_close ]    Close-Ereignis
-
 !item [˘ cpx_draw  ]    Redraw-Ereignis
-
 !item [˘ cpx_hook  ]    Preemption Hook
-
 !item [˘ cpx_init  ]    Initialisierung
-
 !item [˘ cpx_m1    ]    Mausrechteck-Ereignis
-
 !item [˘ cpx_m2    ]    Mausrechteck-Ereignis
-
 !item [˘ cpx_key   ]    Keyboard-Ereignis
-
 !item [˘ cpx_timer ]    Timer-Ereignis
-
 !item [˘ cpx_wmove ]    Fensterverschiebung
-
 !end_xlist
-
-
-
 
 
 !begin_node cpx_button
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_buttonÆ - Ereignis fÅr die Maustasten
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_button) (MRETS *mrets, int16_t nclicks, int16_t *event);
-
 !item [Beschreibung:]
-
 Die Funktion wird bei einem aufgetretenen Maustastenereignis aufgerufen. Es
-
 gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [mrets]
-
 Maus-Parameter zum Event
-
 !item [nclicks]
-
 Anzahl der Mausklicks
-
 !item [event]
-
 auf den Wert 1 setzen, falls das CPX verlassen werden soll
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_key ~  cpx_timer
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_call
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_callÆ - Aufruf des CPX Moduls
-
 !item [Deklaration:]
-
 int16_t cdecl (*cpx_call) ( GRECT *work );
 
-
-
 int16_t cdecl (*cpx_call) ( GRECT *work, DIALOG *dialog );
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn der Anwender das entsprechende Modul
-
 ausgewÑhlt hat. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [work]
-
 Rechteck mit den Koordinaten des XControl-Fensters
-
 !item [dialog]
-
 Zeiger auf einen Fensterdialog
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die zweite Aufrufform steht nur unter COPS zur VerfÅgung.
-
 Der Parameter (!I)dialog(!i) enthÑlt in diesem Fall einen Zeiger auf die
-
 Fensterdialogstruktur. Der Dialog wird von COPS nach dem cpx_init mit Hilfe
-
 von wdlg_create und wdlg_open geîffnet. Der Parameter (!I)work(!i) und der
-
 Objektbaum liegen bis zum ersten Aufruf von Xform_do bzw. bis zur RÅckkehr
-
 aus der Funktion cpx_call auûerhalb des sichtbaren Bildschirms.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [r l l]
-
 0 !! = !! Ende der Bearbeitung
-
 <> 0 !! = !! CPX soll weiterbearbeitet werden
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 XCONTROL
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_close
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_closeÆ - Ereignis zum Schlieûen des Fensters
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_close) (int16_t flag);
-
 !item [Beschreibung:]
-
 Die Funktion sorgt fÅr das Schlieûen des CPX-Moduls. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [flag]
-
 Grund des Schlieûens
-
 !begin_table [r l l]
-
 0 !! = !! AC_CLOSE Message
-
 <> 0 !! = !! WM_CLOSE Message
-
 !end_table
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die Funktion wird bei jeder (!nolink [AC_CLOSE]) bzw. WM_CLOSE
-
 Nachricht aufgerufen. Die CPX sollte dann sofort allen reservierten
-
 Speicher freigeben. Die Funktion muss bei jeder Event-CPX implementiert
-
 sein. (!nolink [AC_CLOSE]) ist als 'Abbruch', WM_CLOSE als 'Ok' zu werten.
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_init ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_draw
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_drawÆ - Ereignis zum Neuzeichnen des CPX-Fensters
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_draw) (GRECT *clip);
-
 !item [Beschreibung:]
-
 Die Funktion sorgt fÅr das Neuzeichnen von Teilen des CPX-Fensters. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [clip]
-
 neu zu zeichnender Bereich, der auch als Åbergabe-Parameter fÅr (!nolink [GetFirstRect])
-
 benîtigt wird.
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die nîtige Rechteckliste muss per (!nolink [GetFirstRect]) und
-
 (!nolink [GetNextRect]) ermittelt werden.
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_wmove ~  GetFirstRect ~  GetNextRect
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_hook
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_hookÆ - Preemption Hook
-
 !item [Definiton]
-
 int16_t cdecl (*cpx_hook) (int16_t event, int16_t *msg, MRETS *mrets, int16_t *key,
-
 int16_t *nclicks);
-
 !item [Beschreibung:]
-
 Die Funktion wird sofort nach evnt_multi aufgerufen, also noch bevor
-
 XControl das Event bearbeitet. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [event]
-
 aufgetretene Events
-
 !item [msg]
-
 Ereignispuffer
-
 !item [mrets]
-
 Mausparameter
-
 !item [key]
-
 Tastendruck
-
 !item [nclicks]
-
 Anzahl der Mausklicks
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [r l l]
-
 0 !! = !! Event-Bearbeitung fortsetzen
-
 <> 0 !! = !! Event-Bearbeitung abbrechen
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_button ~  cpx_draw ~  cpx_key ~  cpx_m1 ~  cpx_m2 ~  cpx_timer ~ cpx_wmove
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_init
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_initÆ - Initialisierung der CPX
-
 !item [Deklaration:]
-
 CPXINFO * cdecl cpx_init (XCPB *xcpb);
 
-
-
 (!nolink [CPXINFO]) * (!nolink [cdecl]) cpx_init ((!nolink [XCPB]) *xcpb, int32_t magic,
-
 int32_t version );
 
-
-
 !item [Beschreibung:]
-
 Die Funktion sorgt fÅr die Initialisierung der CPX. Es gilt:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [xcpb]
-
 Zeiger auf die XCPB-Struktur von XControl
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die Funktion muss am Beginn des Textsegments der CPX-Datei
-
 stehen, und wird wÑhrend der XControl-Initialisierung sowie beim Aktivieren
-
 der CPX aufgerufen.
 
-
-
 Mit Hilfe der zweiten Aufrufform kann anhand der Parameter (!I)magic(!i) und
-
 (!I)version(!i) festgestellt werden, ob die CPX unter (!nolink [XCONTROL]) oder COPS
-
 lÑuft. Es bietet sich die folgende Routine an:
 
-
-
 !label COPS, Test auf
-
 !begin_verbatim
-
 int16_t is_COPS ( int32_t magic, int32_t version )
-
 {
-
    if ((magic == 'COPS') && (version >= 0x10000L))
-
       return (TRUE);      /* COPS */
-
    else return (FALSE);   /* XCONTROL */ 
-
 }
-
 !end_verbatim
 
-
-
 Falls COPS erkannt wurde, kann die CPX einen bis zu 512*384 Pixel groûen
-
 Objektbaum zeichnen und bei der Funktion Xform_do Åbergeben.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! 'Set Only'-CPX
-
 sonst !! : !! Zeiger auf die (!nolink [CPXINFO])-Struktur der CPX
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_close ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_m1
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_m1Æ - Ereignis fÅr ein Mausrechteck
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_m1) (MRETS *mrets, int16_t *event);
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn der Mauszeiger einen bestimmten Bereich
-
 betritt oder verlÑût. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [mrets]
-
 Parameter der Maus
-
 !item [event]
-
 auf den Wert 1 setzen, wenn die CPX verlassen werden soll
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_m2 ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_m2
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_m2Æ - Ereignis fÅr ein Mausrechteck
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_m2) (MRETS *mrets, int16_t *event);
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn der Mauszeiger einen bestimmten Bereich
-
 betritt oder verlÑût. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [mrets]
-
 Parameter der Maus
-
 !item [event]
-
 auf den Wert 1 setzen, wenn die CPX verlassen werden soll
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_m1 ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_key
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_keyÆ - Ereignis fÅr einen Tastendruck
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_key) (int16_t kstate, int16_t key, int16_t *event);
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn ein Keyboard-Event aufgetreten ist. Es
-
 gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [kstate]
-
 Status der Umschalttasten (Alternate, Control, Shift, etc.)
-
 !item [key]
-
 (!B)auslîsende Taste(!b)
-
 !begin_table [l l l]
-
 Highbyte !! : !! Scan-Code der Taste
-
 Lowbyte !! : !! ASCII-Code der Taste
-
 !end_table
 
-
-
 !item [event]
-
 auf den Wert 1 setzen, wenn die CPX verlassen werden soll
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_button ~  cpx_timer
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_timer
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_timerÆ - Timer Ereignis
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_timer) (int16_t *event);
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn ein Timer-Event aufgetreten ist. Es gilt:
 
-
-
 !begin_xlist
-
 !item [Parameter]
-
 Bedeutung
-
 !item [event]
-
 auf den Wert 1 setzen, wenn die CPX verlassen werden soll
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Timer-Events werden von Form-CPX (!I)nicht(!i) unterstÅtzt.
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_button  ~ cpx_key  ~ (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node cpx_wmove
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Øcpx_wmoveÆ - Verschiebung des XControl-Fensters
-
 !item [Deklaration:]
-
 VOID cdecl (*cpx_wmove) (GRECT *work);
-
 !item [Beschreibung:]
-
 Die Funktion wird aufgerufen, wenn der Anwender das Xcontrol-Fenster bewegt.
-
 Es gilt:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [work]
-
 neue Koordinaten des XControl-Fensters
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 CPX-Funktionen
-
 !item [Querverweis:]
-
 cpx_draw ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
 !end_node
-
-
-
 
 
 !begin_node XCONTROL-Funktionen
 
-
-
 !begin_xlist [˘ Set_Evnt_Mask] !short 
-
 !item [˘ CPX_Save     ]   Defaults sichern
-
 !item [˘ Get_Buffer   ]   Zwischenspeicher ermitteln
-
 !item [˘ getcookie    ]   Cookie-Variablen abfragen
-
 !item [˘ GetFirstRect ]   Behandlung der Rechteckliste
-
 !item [˘ GetNextRect  ]   Behandlung der Rechteckliste
-
 !item [˘ MFsave       ]   Mausform sichern/wiederherstellen
-
 !item [˘ Popup        ]   Popup-MenÅ
-
 !item [˘ rsh_fix      ]   Objektbaum-Umwandlung
-
 !item [˘ rsh_obfix    ]   Umwandlung eines Objektes
-
 !item [˘ Set_Evnt_Mask]   Eventmaske setzen
-
 !item [˘ Sl_arrow     ]   Slider-Arrow
-
 !item [˘ Sl_dragx     ]   Sliderdrag-Bewegung
-
 !item [˘ Sl_dragy     ]   Sliderdrag-Bewegung
-
 !item [˘ Sl_size      ]   Slidergrîûe
-
 !item [˘ Sl_x         ]   Positionierung eines Sliders
-
 !item [˘ Sl_y         ]   Positionierung eines Sliders
-
 !item [˘ Xform_do     ]   Formular-Verwaltung
-
 !item [˘ XGen_Alert   ]   Alarmbox
-
 !end_xlist
-
-
-
 
 
 !begin_node CPX_Save
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØCPX_SaveÆ - Defaults sichern
-
 !item [Deklaration:]
-
 int16_t cdecl (*CPX_Save) (VOID *ptr, int32_t num);
-
 !item [Beschreibung:]
-
 Die Funktion erlaubt das Speichern von Defaulteinstellungen einer CPX. Es
-
 gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [ptr]
-
 Adresse der zu speichernden Daten
-
 !item [num]
-
 Anzahl der zu speichernden Bytes
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) XControl speichert die Einstellungen im DATA Segment der
-
 CPX. Daher mÅssen Entwickler selbst fÅr ausreichend freien Speicherplatz im
-
 DATA-Segment sorgen. Dies geschieht Åber das Datenfeld 'SAVE_VARS' in
-
 CPXSTART.S.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [r l l]
-
 0 !! : !! Fehler aufgetreten
-
 <> 0 !! : !! kein Fehler aufgetreten
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Get_Buffer
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØGet_BufferÆ - Zwischenspeicher ermitteln
-
 !item [Deklaration:]
-
 VOID cdecl (*Get_Buffer) (VOID);
-
 !item [Beschreibung:]
-
 Die Funktion ermittelt die Adresse eines 64 Byte groûen, residenten
-
 Speicherbereiches.
 
-
-
 (!B)Hinweis:(!b) In diesem Speicher kann die CPX Inhalte von
-
 Write-Only-Registern sichern, falls TOS keine Funktion zur Abfrage bietet
-
 (Beispiel: Fensterfarben). Es sei noch einmal darauf hingewiesen, daû jeder
-
 andere Speicher einer CPX flÅchtig ist !
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen Zeiger auf den Speicherbereich zurÅck.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node getcookie
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØgetcookieÆ - Cookievariablen abfragen
-
 !item [Deklaration:]
-
 int16_t cdecl (*getcookie) (int32_t cookie, int32_t *p_value);
-
 !item [Beschreibung:]
-
 Die Funktion sucht einen Cookie, und ermittelt seinen Wert. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [cookie]
-
 Cookie-Variable
-
 !item [p_value]
-
 Adresse einer Variablen die den Wert aufnehmen soll, oder NULL, falls der
-
 Wert nicht von Interesse ist.
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [r l l]
-
 0 !! : !! Cookie nicht gefunden
-
 <>0 !! : !! Cookie gefunden
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Cookie-Jar
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node GetFirstRect
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØGetFirstRectÆ - Rechteckliste abfragen
-
 !item [Deklaration:]
-
 GRECT * cdecl (*GetFirstRect) (GRECT *prect);
-
 !item [Beschreibung:]
-
 Die Funktion ermittelt das erste Rechteck der Rechteckliste. Es gilt:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [prect]
-
 zu aktualisierender Bereich
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die Funktion wird zum Neuzeichnen von Fensterbereichen nach
-
 einer WM_REDRAW Message benîtigt; der Objektbaum wird jedoch von XControl
-
 selbst verwaltet.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! keine weiteren Ausschnitte vorhanden
-
 sonst !! : !! wiederherzustellender Ausschnitt
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 GetNextRect ~   (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node GetNextRect
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØGetNextRectÆ - Rechteckliste abfragen
-
 !item [Deklaration:]
-
 GRECT * cdecl (*GetNextRect) (VOID);
-
 !item [Beschreibung:]
-
 Die Funktion ermittelt das nÑchste Rechteck der Rechteckliste.
 
-
-
 (!B)Hinweis:(!b) Die Funktion wird zum Neuzeichnen von Fensterbereichen nach
-
 einer WM_REDRAW Message benîtigt; der Objektbaum wird jedoch von XControl
-
 selbst verwaltet.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_table [l l l]
-
 NULL !! : !! keine weiteren Ausschnitte vorhanden
-
 sonst !! : !! wiederherzustellender Ausschnitt
-
 !end_table
 
-
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 GetFirstRect ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node MFsave
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØMFsaveÆ - Mausform sichern oder wiederherstellen
-
 !item [Deklaration:]
-
 VOID cdecl (*MFsave) (int16_t saveit, MFORM *mf);
-
 !item [Beschreibung:]
-
 Die Funktion sichert oder restauriert die Form des Mauszeigers. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [savit]
-
 !begin_table [l l l]
-
 0 !! = !! Mausform wiederherstellen
-
 1 !! = !! Mausform sichern
-
 !end_table
-
 !item [mf]
-
 Speicherbereich zur Sicherung der Mausform
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 graf_mouse ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Popup
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØPopupÆ - Verwaltung eines Popup-MenÅs
-
 !item [Deklaration:]
-
 int16_t cdecl  (*Popup) (int8_t *items[], int16_t num_items, int16_t default_item,
-
 int16_t font_size, GRECT *button, GRECT *world);
-
 !item [Beschreibung:]
-
 Die Funktion ermîglicht die komplette Verwaltung eines Popup-MenÅs. Es gilt:
 
-
-
 !begin_xlist [default_item] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [items]
-
 Array mit Zeichenketten fÅr die einzelnen EintrÑge. Jeder Eintrag muss die
-
 gleiche LÑnge besitzen, sowie vorne mindestens zwei und am Ende mindestens
-
 ein Leerzeichen aufweisen.
-
 !item [num_items]
-
 Anzahl der EintrÑge
-
 !item [default_item]
-
 Default-Eintrag (ZÑhlung beginnt bei 0), oder der Wert -1
-
 !item [font_size]
-
 (!B)Zeichengrîûe:(!b) 8*16 oder 8*8-Font. Als Parameter sind die gleichen
-
 Werte wie in der TEDINFO-Struktur zu verwenden. Laut Atari wird z.Zt. nur
-
 der groûe Zeichensatz verwendet.
-
 !item [button]
-
 Rechteck des Buttons, zu dem das Popup gehîrt.
-
 !item [world]
-
 Rechteck des Hintergrund-Objekbaumes (i.d.R. der Objektbaum der CPX)
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Bei zu vielen EintrÑgen (ab fÅnf) wird das Popup
-
 automatisch gescrollt; die Bearbeitung blockiert alle anderen Aktionen.
-
 !item [Ergebnis:]
-
 Die Funktion liefert den gewÑhlten Eintrag des Popups zurÅck, oder den
-
 Wert -1, wenn kein Element des Popups ausgewÑhlt worden ist.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Xform_do ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node rsh_fix
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Ørsh_fixÆ - Umwandlung eines Objektbaumes
-
 !item [Deklaration:]
-
 VOID cdecl (*rsh_fix) (int16_t num_objs, int16_t num_frstr, int16_t num_frimg,
-
 int16_t num_tree, OBJECT *rs_object, TEDINFO *rs_tedinfo, int8_t *rs_string[],
-
 ICONBLK *rs_iconblk, BITBLK *rs_bitblk, int32_t *rs_frstr, int32_t *rs_frimg,
-
 int32_t *rs_trindex, struct foobar *rs_imdope);
-
 !item [Beschreibung:]
-
 Die Funktion wandelt einen Objektbaum auf Basis von 8*16 Pixel groûen
-
 Zeichen. Es gilt:
 
-
-
 !begin_xlist [rs_tedinfo] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [num_objs]
-
 Gesamtzahl der Objekte
-
 !item [num_frstr]
-
 Gesamtzahl der Strings
-
 !item [num_frimg]
-
 Gesamtzahl der Images
-
 !item [num_tree]
-
 Gesamtzahl der ObjektbÑume
-
 !item [rs_object]
-
 !item [rs_tedinfo]
-
 !item [rs_string]
-
 !item [rs_iconblk]
-
 !item [rs_bitblk]
-
 !item [rs_frstr]
-
 !item [rs_frimg]
-
 !item [tr_trindex]
-
 !item [rs_imdope]
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die CPX hat somit unter allen Auflîsungen die gleiche
-
 Pixelgrîûe. Bei der Arbeit mit einem RCS sollte man daher ebenfalls einen
-
 Grafikmodus mit 8*16 Pixel groûen Zeichen wÑhlen.
 
-
-
 Die Koordinaten-Umwandlung darf natÅrlich nur ein einziges Mal stattfinden -
-
 XControl stellt dazu in der XCPB-Struktur das Flag 'SkipRshFix' zur
-
 VerfÅgung.
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 rsh_obfix ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node rsh_obfix
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 Ørsh_obfixÆ - Umwandlung eines Objektes
-
 !item [Deklaration:]
-
 VOID cdecl (*rsh_obfix) (OBJECT *tree, int16_t curob);
-
 !item [Beschreibung:]
-
 Die Funktion konvertiert die Grîûe und Position eines Objektes von einer
-
 Zeichendarstellung in die Pixeldarstellung. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [curob]
-
 zu konvertierendes Objekt
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 rsh_fix  ~ rsrc_obfix ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Set_Evnt_Mask
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSet_Evnt_MaskÆ - Festlegen der Ereignis Maske
-
 !item [Deklaration:]
-
 VOID cdecl (*Set_Evnt_Mask) (int16_t mask, MOBLK *m1, MOBLK *m2, int32_t time);
-
 !item [Beschreibung:]
-
 Die Funktion legt fest, auf welche Ereignisse die CPX reagieren soll. Es
-
 gilt:
 
-
-
 !begin_xlist [Parameter]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [mask]
-
 erlaubte Events (analog evnt_multi)
-
 !item [m1]
-
 Mausrechteck und -richtung
-
 !item [m2]
-
 Mausrechteck und -richtung
-
 !item [time]
-
 Zeit in Millisekunden fÅr Timer-Event
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_arrow
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_arrowÆ - Behandlung des Sliderarrows
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_arrow) (OBJECT *tree, int16_t base, int16_t slider, int16_t obj,
-
 int16_t inc, int16_t min, int16_t max, int16_t *value, int16_t direction,
-
 VOID (*foo) (VOID));
-
 !item [Beschreibung:]
-
 Die Funktion ist aufzurufen, sobald der Pfeil eines Sliders angeklickt wird.
-
 Es gilt:
 
-
-
 !begin_xlist [direction] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [obj]
-
 Pfeil der angeklickt wurde
-
 !item [inc]
-
 Anzahl der Einheiten die addiert bzw. subtrahiert werden sollen
-
 !item [min]
-
 Minimalwert der angenommen werden kann
-
 !item [max]
-
 Maximalwert der angenommen werden kann
-
 !item [value]
-
 Adresse fÅr aktuellen Wert
-
 !item [direction]
-
 (!B)Richtung(!b)
-
 !begin_table [l l l]
-
 0 !! = !! vertikal
-
 1 !! = !! horizontal
-
 !end_table
-
 !item [foo]
-
 Adresse einer Funktion (analog zu Sl_x, bzw. Sl_y).
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_dragx ~  Sl_dragy ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_dragx
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_dragxÆ - Draggen eines Sliders
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_dragx) (OBJECT *tree, int16_t base, int16_t slider, int16_t min,
-
 int16_t max, int16_t *value, VOID (*foo) (VOID));
-
 !item [Beschreibung:]
-
 Die Funktion verwaltet die Bewegung des horizontalen Sliders. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [min]
-
 Minimalwert der angenommen werden kann
-
 !item [max]
-
 Maximalwert der angenommen werden kann
-
 !item [value]
-
 Adresse fÅr aktuellen Wert
-
 !item [foo]
-
 Adresse einer Funktion analog zu Sl_x
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_dragy ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_dragy
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_dragyÆ - Draggen eines Sliders
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_dragy) (OBJECT *tree, int16_t base, int16_t slider, int16_t min,
-
 int16_t max, int16_t *value, VOID (*foo) (VOID));
-
 !item [Beschreibung:]
-
 Die Funktion verwaltet die Bewegung des horizontalen Sliders. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [min]
-
 Minimalwert der angenommen werden kann
-
 !item [max]
-
 Maximalwert der angenommen werden kann
-
 !item [value]
-
 Adresse fÅr aktuellen Wert
-
 !item [foo]
-
 Adresse einer Funktion analog zu Sl_y
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_dragx ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_size
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_sizeÆ - Grîûe des Sliders festlegen
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_size) (OBJECT *tree, int16_t base, int16_t slider, int16_t num_items,
-
 int16_t visible, int16_t direction, int16_t min_size);
-
 !item [Beschreibung:]
-
 Die Funktion stellt die Grîûe des Sliders ein. Es gilt:
 
-
-
 !begin_xlist [direction] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [num_items]
-
 Anzahl der vorhandenen Elemente
-
 !item [visible]
-
 Anzahl der sichtbaren Elemente
-
 !item [direction]
-
 (!B)Richtung(!b)
-
 !begin_table [l l l]
-
 0 !! = !! vertical
-
 1 !! = !! horizontal
-
 !end_table
-
 !item [min_size]
-
 Minimalgrîûe des Sliders in Pixeln
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Die Funktion wird benîtigt, um die Relation der
-
 dargestellten Datenmenge zur vorhandenen zu erhalten.
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_dragx  ~ Sl_dragy ~  Sl_x ~  Sl_y ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_x
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_xÆ - Positionierung eines Sliders
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_x) (OBJECT *tree, int16_t base, int16_t slider, int16_t value,
-
 int16_t min, int16_t max, VOID (*foo) (VOID));
-
 !item [Beschreibung:]
-
 Die Funktion positioniert den Slider innerhalb eines Basisobjektes in
-
 horizontaler Richtung. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [value]
-
 neuer Wert, den der Slider reprÑsentieren soll
-
 !item [min]
-
 Minimalwert den value annehmen darf
-
 !item [max]
-
 Maximalwert den value annehmen darf
-
 !item [foo]
-
 Adresse einer Funktion (oder NULL), die gleichzeitig mit der
-
 Slider-Neupositionierung aufgerufen wird; so lassen sich die
-
 Sliderbewegungen ausnutzen, um auch die angezeigten Werte zu erneuern.
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_y  ~ (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Sl_y
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØSl_yÆ - Positionierung eines Sliders
-
 !item [Deklaration:]
-
 VOID cdecl (*Sl_y) (OBJECT *tree, int16_t base, int16_t slider, int16_t value,
-
 int16_t min, int16_t max, VOID (*foo) (VOID));
-
 !item [Beschreibung:]
-
 Die Funktion positioniert den Slider innerhalb eines Basisobjektes in
-
 vertikaler Richtung. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [base]
-
 Basisobjekt
-
 !item [slider]
-
 Slider (Child des Basisobjektes)
-
 !item [value]
-
 neuer Wert, den der Slider reprÑsentieren soll
-
 !item [min]
-
 Minimalwert den value annehmen darf
-
 !item [max]
-
 Maximalwert den value annehmen darf
-
 !item [foo]
-
 Adresse einer Funktion (oder NULL), die gleichzeitig mit der
-
 Slider-Neupositionierung aufgerufen wird; so lassen sich die
-
 Sliderbewegungen ausnutzen, um auch die angezeigten Werte zu erneuern.
-
 !end_xlist
-
-
 
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
-
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 Sl_x  ~ (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node Xform_do
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØXform_doÆ - Verwaltung eines Formulars
-
 !item [Deklaration:]
-
 int16_t cdecl (*Xform_do) (OBJECT *tree, int16_t startob, int16_t *puntmsg);
-
 !item [Beschreibung:]
-
 Die Funktion Åbernimmt die Verwaltung eines Formulars, sowie (in geringem
-
 Umfang) die Bearbeitung von AES Nachrichten. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [tree]
-
 Adresse des Objektbaumes
-
 !item [startob]
-
 Startobjekt
-
 !item [puntmsg]
-
 Mitteilungs-Puffer
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Unter COPS kann die CPX einen bis zu 512*384 Pixel groûen
-
 Objektbaum zeichnen und an diese Funktion Åbergeben.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_xlist
-
 !item [-1:]
-
 puntmsg enthÑlt eine Nachricht, die auszuwerten ist:
 
-
-
 !begin_xlist [WM_REDRAW:]
-
 !item [WM_REDRAW:]
-
 die CPX muû solche Objekte selbst neuzeichnen, die nicht zum Objektbaum
-
 gehîren. Die Rechteckliste kann Åber die Funktionen GetFirstRect und
-
 GetNextRect ermittelt werden.
-
 !item [AC_CLOSE:]
-
 !item [WM_CLOSE:]
-
 Die CPX wurde beendet; reservierter Speicher ist sofort freizugeben.
-
 AC_CLOSE ist als 'Abbruch', WM_CLOSE als 'Ok' zu werten.
-
 !item [CT_KEY:]
-
 spezielle Nachricht, die das Auswerten von TastendrÅcken erlaubt, sofern
-
 diese keine Auswirkungen auf EDIT-Felder haben kînnen.
 
-
-
 !begin_table [l l l l]
-
 puntmsg[3] !! Highbyte !! : !! Scan-Code der Taste
-
 puntmsg[3] !! Lowbyte !! : !! ASCII-Code der Taste
-
 !end_table
-
  
-
 !item [sonst:]
-
 Nummer des angeklickten Objektes (ein (!nolink [Doppelklick]) wird im oberen Bit
-
 gekennzeichnet).
-
 !end_xlist
-
 !end_xlist
-
-
 
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 form_do ~  form_xdo ~
-
 (!link [Rechteckliste eines Fensters][Die Rechteckliste eines Fensters])
-
 !end_xlist
-
 !end_node
-
-
-
 
 
 !begin_node XGen_Alert
 
-
-
 !begin_xlist [Beschreibung:]
-
 !item [Name:]
-
 ØXGen_AlertÆ - Anzeigen einer Alarmbox
-
 !item [Deklaration:]
-
 int16_t cdecl (*XGen_Alert) (int16_t id);
-
 !item [Beschreibung:]
-
 Die Funktion ermîglicht das Anzeigen einer einfachen Alarmbox. Es gilt:
 
-
-
 !begin_xlist [Parameter] !short
-
 !item [Parameter]
-
 Bedeutung
-
 !item [id]
-
 (!B)Art der Meldung(!b)
-
 !begin_table [l l l]
-
 0 !! = !! "Voreinstellungen sichern?"
-
 1 !! = !! "Fehler bei Speicheranforderung!"
-
 2 !! = !! "Fehler beim Schreiben/Lesen von Dateien"
-
 3 !! = !! "Datei nicht gefunden"
-
 !end_table
-
 !end_xlist
-
-
 
 (!B)Hinweis:(!b) Weitere Alarmboxen mÅssen selbst definiert werden. Hierzu
-
 bietet sich form_alert jedoch (!I)nicht(!i) an, da es die Alarmbox bezÅglich
-
 der vollen BildschirmflÑche und nicht bezÅglich des XControl-Fensters
-
 zentriert.
-
 !item [Ergebnis:]
-
 Die Funktion liefert einen der folgenden Werte zurÅck:
 
-
-
 !begin_xlist [<> 0 :]
-
 !item [~~~0 :]
-
 Abbruch bzw. Cancel wurde angeklickt.
-
 !item [<> 0 :]
-
 Ok wurde angeklickt (falls eine Alarmbox nur einen Button hat, so ist es der
-
 Ok-Button)
-
 !end_xlist
-
-
 
 !item [Gruppe:]
-
 XCONTROL-Funktionen
-
 !item [Querverweis:]
-
 form_alert ~  (!link [XCONTROL][Das XCONTROL])
-
 !end_xlist
-
 !end_node
-
 !end_node
-
 !end_node
-
-
 
 !endif
-

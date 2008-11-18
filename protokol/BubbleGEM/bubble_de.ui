@@ -1,848 +1,424 @@
 !begin_node BubbleGEM
 
-
-
 !begin_center
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image bubblegem
-
 !else
-
 !image (!picture_path)\bubblegem
-
 !endif
-
 !else
-
 !image (!picture_path)\bubblegem
-
 !endif
-
 !end_center
-
 Die Icons werden immer zahlreicher und bunter, doch so manches mal
-
 verbirgt sich der Sinn - oder wozu war nochmal der Button da? Fragen,
-
 die sich jeder stellt.
 
-
-
 Die Antwort: BubbleGEM. Mittels dieses kleinen ProgrÑmmchens kann
-
 jeder Programmierer die beliebte und umsatzfîrdernde Sprechblasenhilfe
-
 einbauen und jeder Benutzer mehr Åber die ArbeitsoberflÑche erfahren.
-
-
 
 !subtoc [all]
 
-
-
 !begin_node Aufruf von BubbleGEM
-
 !ignore_index
 
-
-
 GrundsÑtzlich gibt es zwei Mîglichkeiten, (!nolink [BubbleGEM]) aufzurufen. In den
-
 direkt folgenden Abschnitten wird der Aufruf aus unmodalen Dialogen,
-
 also aus Fensterdialogen, beschrieben, der am einfachsten ist. Seit
-
 der Release 05 kann man (!nolink [BubbleGEM]) nun aber auch aus modalen Dialogen
-
 aufrufen.
 
-
-
 Als modernes Programm sucht man vor jedem Bubble-Aufruf per
-
 appl_find("BUBBLE  ") die AES-Applikations-Identifikationsnummer
-
 (kurz: bubble_id) von (!nolink [BubbleGEM]). Hat man die AES-ID erhalten, kann man
-
 die Nachricht BUBBLEGEM_SHOW (hexadezimal: 0xBABB) an die ap_id ver-
-
 schicken und erhÑlt BUBBLEGEM_ACK (0xBABC) zurÅck.
 
-
-
 Wichtig ist, daû die Åbergebene nullterminierte Zeichenkette maximal
-
 255 Zeichen lang sein darf und daû sie global lesbar sein muû. In
-
 Systemen mit Speicherschutz kommt es sonst zu Schutzverletzungen, was
-
 die ProfessionalitÑt Ihres Programms nicht gerade unterstreichen
-
 wÅrde. Daher unbedingt globalen Speicher anfordern!
 
-
-
 Die Nachricht BUBBLEGEM_SHOW sollte bereits losgesandt werden, wenn
-
 die rechte Maustaste heruntergedrÅckt wurde, nicht erst beim Los-
-
 lassen! Mit x und y Åbergibt man die Mauskoordinaten, an deren Stelle
-
 die Sprechblase dann gezeichnet wird.
 
-
-
 Ein Umbruch in der Blase wird von (!nolink [BubbleGEM]) automatisch vorgenommen,
-
 wer trotzdem manuell eingreifen will, kann den senkrechten Strich "|"
-
 dafÅr verwenden. Leerzeichen davor oder dahinter sind nicht notwendig.
-
-
 
 Ein kleines Beispiel in C:
 
-
-
 !label BUBBLEGEM_SHOW
-
 !begin_verbatim
-
 #include <portab.h>
 
-
-
 /* BUBBLEGEM_SHOW - Nachricht:
-
  * msg[0]   0xBABB
-
  * msg[1]   ap_id
-
  * msg[2]   0
-
  * msg[3]   Maus X
-
  * msg[4]   Maus Y
-
  * msg[5/6] Pointer auf nullterminierte Zeichenkette im globalen
-
  *          Speicher
-
  * msg[7]   0
-
  */
 
-
-
 ...
-
-
 
 #define MGLOBAL     0x20
 
-
-
 #define BUBBLEGEM_REQUEST  0xBABA
-
 #define BUBBLEGEM_SHOW     0xBABB
-
 #define BUBBLEGEM_ACK      0xBABC
-
 #define BUBBLEGEM_ASKFONT  0xBABD
-
 #define BUBBLEGEM_FONT     0xBABE
-
 #define BUBBLEGEM_HIDE     0xBABF
 
-
-
 #define MagX_COOKIE     0x4D616758L
-
 #define MiNT_COOKIE     0x4D694E54L
-
 ...
 
-
-
 WORD msg[8];
-
 WORD bubble_id;
-
 BYTE *bubble_text;
 
-
-
 /* Feststellen, ob Mxalloc() vorhanden ist, wenn ja,
-
  *  dann Speicherschutz-Modus auf "Global" setzen
-
  */
-
 if ((get_cookie (MagX_COOKIE, &val) == TRUE) ||
-
    (get_cookie (MiNT_COOKIE, &val) == TRUE))
-
 {
-
   bubble_text = (BYTE *) Mxalloc (256, 0 | MGLOBAL);
-
 }
-
 else
-
   bubble_text = (BYTE *) Malloc (256);
 
-
-
 if (!bubble_text)   /* Pointer ungÅltig, kein Speicher da */
-
   return;
 
-
-
 if (rechte_maustaste_ueber_button_gedrueckt)
-
 {
-
   /* Puffer fÅllen */
-
   strncpy(bubble_text, "Meine erste Sprechblasenhilfe.", 255);
-
-
 
   bubble_id = appl_find("BUBBLE  ");
 
-
-
   if (bubble_id >= 0)
-
   {
-
     msg[0] = BUBBLEGEM_SHOW;
-
     msg[1] = ap_id;
-
     msg[2] = 0;
-
     msg[3] = x;
-
     msg[4] = y;
-
     msg[5] = (WORD)(((LONG) bubble_text >> 16)
-
              & 0x0000ffff);
-
     msg[6] = (WORD)((LONG) bubble_text & 0x0000ffff);
-
     msg[7] = 0;
-
     if (appl_write(bubble_id, 16, msg) == 0)
-
     {
-
       /* Fehler */
-
     }
-
   }
-
 }
-
 !end_verbatim
 
-
-
 !label BUBBLEGEM_ACK
-
 Als Antwortnachricht erhÑlt man BUBBLEGEM_ACK (0xBABC) mit dem Pointer
-
 auf die Zeichenkette, deren Speicher man nun bei Bedarf freigeben
-
 kann. Die Arrayelemente 2, 3, 4 und 7 sind ausgenullt. Beim nichtmoda-
-
 len Aufruf kommt das BUBBLEGEM_ACK erst nach dem Schlieûen der Blase!
 
-
-
 !begin_verbatim
-
 /* BUBBLEGEM_ACK (0xBABC)
-
  *
-
  * msg[0]   0xBABC
-
  * msg[1]   ap_id
-
  * msg[2]   0
-
  * msg[3]   0
-
  * msg[4]   0
-
  * msg[5/6] Pointer aus BUBBLEGEM_SHOW
-
  * msg[7]   Gleicher Wert wie msg[7] beim Senden von BUBBLEGEM_SHOW;
-
  *          derzeit 0.
-
  */
-
-
 
 /* kurzer Beispielcode */
 
-
-
 pointer = *(BYTE **) &msg[5];
 
-
-
 if (pointer)
-
   Mfree(pointer);
-
 !end_verbatim
 
-
-
 Zu bedenken ist, daû man die Zeichenketten am besten extern auslagert,
-
 damit öbersetzungen in andere Sprachen leichter fallen - also am
-
 besten ins Resource-File oder eine separate ASCII-Datei damit.
 
-
-
 Wenn bei BUBBLEGEM_SHOW das Bit BGS7_MOUSE (0x0004) in msg[7] gesetzt
-
 ist, werden die Åbergebenen Koordinaten nur zum Zeichnen verwendet;
-
 (!nolink [BubbleGEM]) ermittelt dann die Mauskoordinaten, anhand derer eine
-
 Bewegung der Maus erkannt wird (und die zum Schlieûen der Blase
-
 fÅhrt), kurz vor der Anzeige der Blase automatisch neu.
 
-
-
 Der Aufruf aus modalen Dialogen (siehe auch die Aufrufroutine) erfolgt
-
 wie bei den unmodalen, vorausgesetzt, daû der BGEM-Cookie vorhanden
-
 ist. Man setzt im Gegensatz zum Aufruf aus unmodalen Dialogen jedoch
-
 BGS7_USRHIDE (0x0001) in pipe[7].
-
 !label BUBBLEGEM_HIDE
-
 Auûerdem muû nach der Mausauswertung durch die aufrufende Applikation
-
 BUBBLEGEM_HIDE (0xbabf) an (!nolink [BubbleGEM]) geschickt werden. Die Auswertung
-
 der Maus- und Tastenereignisse muû die Applikation beim Aufruf aus
-
 modalen Dialogen selbst Åbernehmen.
 
-
-
 Auf Systemen ohne wind_update()-Testmodus werden evtl. doppelte
-
 Hilfstexte angezeigt (direkt nacheinander). Dies ist derzeit leider
-
 nicht anders realisierbar.
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Aufrufroutine
-
 !ignore_index
-
-
 
 Hier eine allgemeine Routine zum Aufruf von BubbleGEM in Pseudocode.
 
-
-
 !begin_verbatim
-
 bubblegem:=appl_find('BUBBLE  ');
-
 if bubblegem<0 then
-
   begin
-
     pfad:=GetEnv('BUBBLEGEM');
-
     if length(pfad)>0 then
-
       begin
-
         { BubbleGEM nachstarten, ID in bubblegem merken }
-
         if bubblegem>=0 then evnt_timer(500,0)
-
       end
-
   end;
-
 if bubblegem<0 then exit; { BubbleGEM nicht gefunden -> Abbruch}
-
 StrPCopy(bubblebuf,hilfetext);
-
 pipe[0]:=BUBBLEGEM_SHOW;
-
 pipe[1]:=apID;
-
 pipe[2]:=0;
-
 pipe[3]:=mx;
-
 pipe[4]:=my;
-
 pipe[5]:=integer(HiWord(bubblebuf));
-
 pipe[6]:=integer(LoWord(bubblebuf));
-
 pipe[7]:=0;
-
 if unmodaler_Aufruf then
-
   begin
-
     appl_write(bubblegem,16,@@pipe);
-
     evnt_timer(100,0)
-
   end
-
 else
-
   begin
-
     { Aufruf aus einem systemmodalen Dialog heraus: }
-
     if not(GetCookie('BGEM',bgemcookie)) then Bing { Fehler }
-
       { modaler Aufruf nur mîglich, wenn BGEM-Cookie vorhanden }
-
     else
-
       begin
-
         pipe[7]:=pipe[7] or BGS7_USRHIDE;
-
         appl_write(bubblegem,16,@@pipe);
-
         evnt_timer(10,0);
-
         graf_mkstate(dummy,dummy,ms,dummy);
-
         if (ms and 3)=0 then { keine Maustaste gedrÅckt? }
-
           begin
-
             bclicks:=258;
-
             bmask:=3;
-
             bstate:=0
-
           end
-
         else
-
           begin
-
             bclicks:=0;
-
             bmask:=3;
-
             bstate:=0
-
           end;
-
         if not(GetCookie('BHLP',delay)) then delay:=200
-
         else
-
           delay:=(delay shr 16) and 0x0000ffff;
-
         graf_mouse(USER_DEF,bgemcookie->mhelp);
-
         evnt_timer(delay,0);
-
         evnt_multi(MU_KEYBD or MU_BUTTON or MU_M1, bclicks, bmask,
-
           bstate, 1, mX-6, mY-6, 13, 13, 0, 0, 0, 0, 0, pipe,
-
           0, 0, dummy, dummy, ms, dummy, dummy, dummy);
-
         pipe[0]:=BUBBLEGEM_HIDE;
-
         pipe[1]:=apID;
-
         pipe[2]:=0;
-
         pipe[3]:=0;
-
         pipe[4]:=0;
-
         pipe[5]:=0;
-
         pipe[6]:=0;
-
         pipe[7]:=0;
-
         appl_write(bubblegem,16,@@pipe);
-
         graf_mouse(ARROW,NULL)
-
       end;
-
     repeat
-
       graf_mkstate(dummy,dummy,ms,dummy)
-
     until (ms and 3)=0
-
   end;
-
 !end_verbatim
-
 !end_node
 
 
-
-
-
 !begin_node Zeitgesteuerter Aufruf
-
 !ignore_index
 
-
-
 Die Anpassung von Applikationen ist denkbar einfach:
-
 !label BUBBLEGEM_REQUEST
-
 !begin_itemize
-
    !item Beim Empfang von BUBBLEGEM_REQUEST (0xBABA) ruft man (!nolink [BubbleGEM])
-
      ganz normal (allerdings mit den Koordinaten aus
-
      BUBBLEGEM_REQUEST) auf, nachdem man anhand der empfangenen
-
      Koordinaten festgestellt hat, ob man fÅr diese Position eine
-
      Hilfe anbieten kann.
 
-
-
    !item Die Message BUBBLEGEM_REQUEST ist wie folgt aufgebaut:
-
      pipe[0]:=BUBBLEGEM_REQUEST; (!nl)
-
      pipe[1]:=demonID; (!nl)
-
      pipe[2]:=0; (!nl)
-
      pipe[3]:=winID; { AES-ID des Fensters unter dem Mauscursor } (!nl)
-
      pipe[4]:=mX; ~~~{ Koordinaten der Maus } (!nl)
-
      pipe[5]:=mY; (!nl)
-
      pipe[6]:=KStat; { Status der Umschalttasten } (!nl)
-
      pipe[7]:=0;
-
-
-
 
 
    !item Die zeitgesteuerte Hilfe funktioniert nur nichtmodal.
 
-
-
    !item Damit der Hilfe-DÑmon funktionieren kann, muû das System
-
      wind_get(WF_OWNER) unterstÅtzen.
 
-
-
    !item Der DÑmon ist an, wenn Bit BGC_DEMONACTIVE (0x0008) im BHLP-Cookie
-
      gesetzt ist; nach énderung BUBBLEGEM_REQUEST (msg[3..7]
-
      ausgenullt) an BUBBLE.APP schicken (statt wie bisher an
-
      HLPDEMON.APP)
 
-
-
    !item Wenn BGC_TOPONLY (0x0010) gesetzt ist, arbeitet der HelpDemon nur
-
      beim Top-Window.
 
-
-
    !item An-/Ausschalten des Hilfe-DÑmons auch per VA_START (obwohl CPX
-
      besser, da Zustand an/aus gespeichert wird): "-demonon" (="-
-
      demon1"), "-demonoff" (="-demon0")
 
-
-
    !item Der DÑmon-Timer ist per Default 200ms, er kann im Feld dtimer des
-
      BGEM-Cookies geÑndert werden.
-
 !end_itemize
-
 !end_node
-
-
-
 
 
 !begin_node BubbleGEM-Cookies
 
-
-
 BHLP:
 
-
-
 (!nolink [BubbleGEM]) wertet den Cookie "BHLP" aus. Im oberen Word ist die Dauer
-
 der Mindest-Sichtbarkeit eingetragen, Standard sind 200 Millisekunden.
-
 Das untere Word ist eine Bitmap; ist Bit 0 (0x0001 = BGC_FONTCHANGED)
-
 gesetzt, so bedeutet dies, daû FONT_CHANGED ausgewertet wird. Ist
-
 BGC_NOWINSTYLE (0x0002) (lies: no-win-style, nicht now-in-style)
-
 gesetzt, so wird die Hilfe als Sprechblase dargestellt (d.h. ein
-
 gelîschtes Bit entspricht der Windows-Hilfe!). Ein gesetztes Bit bei
-
 BGC_SENDKEY (0x0004) bewirkt, daû nach Schlieûen der Hilfe durch einen
-
 Tastendruck AV_SENDKEY an den Aufrufer geschickt wird. BGC_DEMONACTIVE
-
 (0x0008) bewirkt, daû DÑmon eingeschaltet ist. BGC_TOPONLY (0x0010)
-
 bestimmt, ob der HelpDemon nur beim Top-Window arbeitet.
-
-
 
 BGEM:
 
-
-
 ZusÑtzlich wird der BGEM-Cookie gesetzt. Er ist nur zur Laufzeit von
-
 (!nolink [BubbleGEM]) vorhanden, d.h. er wird beim Start von BubbleGEM angelegt
-
 und bei AP_TERM entfernt.
 
-
-
 !begin_verbatim
-
  typedef struct
-
  {
-
    long   magic;   /* 'BGEM'                                   */
-
    long   size;    /* Grîûe dieser Struktur, derzeit 18        */
-
    int    release; /* derzeit 7, nie kleiner als 5             */
-
    int    active;  /* <>0, wenn gerade eine Hilfe angezeigt wird;
-
                         0  sonst                               */
-
    MFORM *mhelp;   /* Zeiger auf Hilfe-Mausform                */
-
    int    dtimer;  /* DÑmon-Timer; Default 200ms; ab Release 6 */
-
  } BGEM;
-
 !end_verbatim
 
-
-
 Die Struktur liegt im globalen Speicher. (!B)Wichtig:(!b) dtimer ist das
-
 (!B)einzige(!b) Feld, das fÅr Lesen (!B)und(!b) Schreiben freigegeben ist, alle
-
 anderen Felder sind (!B)read only(!b)!
 
-
-
 !end_node
-
-
-
 
 
 !begin_node BubbleGEM-Environmentvariable
 
-
-
 Will man (!nolink [BubbleGEM]) von Hand nachstarten, falls es noch nicht lÑuft, so
-
 findet man in der Environmentvariablen "BUBBLEGEM" den absoluten Pfad
-
 inklusive Programmnamen zum BUBBLE.APP, also fÅr MagiC etwa:
-
-
 
  #_ENV BUBBLEGEM=D:\Tools\Bubble\Bubble.app
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Schriftauswahl
-
 !ignore_index
 
-
-
 !label BUBBLEGEM_ASKFONT
-
 !label BUBBLEGEM_FONT
-
 BUBBLEGEM_ASKFONT wird beim Start von BubbleGEM an den AV-Server oder
-
 an die Applikation mit der AES-ID 0 geschickt. Diese sollte dann mit
-
 der Nachricht BUBBLEGEM_FONT antworten (Jinnee macht das bspw.).
 
-
-
 !begin_verbatim
-
 msg[0] = BUBBLEGEM_ASKFONT;
-
 msg[1] = apID;
-
 msg[2] = 0;
-
 msg[3] = 0;
-
 msg[4] = 0;
-
 msg[5] = 0;
-
 msg[6] = 0;
-
 msg[7] = 0;
-
-
 
 msg[0] = BUBBLEGEM_FONT;
-
 msg[1] = apID;
-
 msg[2] = 0;
-
 msg[3] = FontID;
-
 msg[4] = FontPt;
-
 msg[5] = 0;
-
 msg[6] = 0;
-
 msg[7] = 0;
-
 !end_verbatim
 
-
-
 Wenn (!nolink [BubbleGEM]) diese Nachricht empfÑngt, nimmt es ab sofort den Font
-
 mit der ID msg[3] und der Grîûe (in Punkt) msg[4] zur Darstellung der
-
 Hilfeblasen. ID und Grîûe werden ohne PrÅfung Åbernommen. Auûerdem
-
 reagiert BubbleGEM auf FONT_CHANGED, wenn das entsprechende Feld im
-
 CPX-Modul aktiviert ist.
 
-
-
 !end_node
-
-
-
 
 
 !begin_node AV_SENDCLICK, BubbleGEM
-
 !ignore_index
 
-
-
 !begin_verbatim
-
 msg[0] = AV_SENDCLICK  /* 0x4709 */
-
 msg[1] = ap_id;
-
 msg[2] = 0;
-
 msg[3] = ev_mmox;
-
 msg[4] = ev_mmoy;
-
 msg[5] = ev_mmobutton;
-
 msg[6] = ev_mmokstate;
-
 msg[7] = ev_mbreturn;
-
 !end_verbatim
 
-
-
 (!nolink [AV_SENDCLICK]) wird verschickt, wenn die Blase durch Klicken geschlossen
-
 wurde (also nicht, wenn BubbleGEM mit gedrÅckter Maustaste aufgerufen
-
 wird und die Blase durch (!B)Loslassen(!b) geschlossen wird!). AV_SENDCLICK
-
 ist das Pendant zu AV_SENDKEY.
 
-
-
 !end_node
 
-
-
 !end_node
-
-
 

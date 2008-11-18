@@ -1,644 +1,322 @@
 !iflang [english]
 
-
-
 !begin_node vro_cpyfm
-
-
 
 (!begin_liste) [Availability]
 
-
-
 !item [Name:]
-
 ØCopy raster, opaqueÆ - Copy a memory block.
 
-
-
 !item [Opcode:]
-
 109
 
-
-
 !item [Syntax:]
-
 void vro_cpyfm ( int16_t handle, int16_t vr_mode, int16_t *pxyarray, MFDB *psrcMFDB,
-
                  MFDB *pdesMFDB );
 
-
-
 !item [Description:]
-
 The call vro_cpyfm copies a source memory block to a destination and during this
-
 combines the source S and destination D by the logical linkage decoded in
-
 (!I)vr_mode.(!i) The following apply:
 
-
-
 !begin_xlist !short [pxyarray+0+]
-
 !item [Parameter]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [handle]
-
 Workstation identifier
-
 !item [vr_mode]
-
 One of 16 logical operations between the pixels of source and destination
-
 rasters:
-
 !begin_table [l l l]
-
 ALL_WHITE  !! 0  !! D := 0
-
 S_AND_D    !! 1  !! D := S AND D
-
 S_AND_NOTD !! 2  !! D := S AND (NOT D)
-
 S_ONLY     !! 3  !! D := S
-
 NOTS_AND_D !! 4  !! D := (NOT S) AND D
-
 D_ONLY     !! 5  !! D := D
-
 S_XOR_D    !! 6  !! D := S XOR D
-
 S_OR_D     !! 7  !! D := S OR D
-
 NOT_SORD   !! 8  !! D := NOT (S OR D)
-
 NOT_SXORD  !! 9  !! D := NOT (S XOR D)
-
 D_INVERT   !! 10 !! D := NOT D
-
 NOT_D      !! 11 !! D := S OR (NOT D)
-
 S_OR_NOTD  !! 12 !! D := NOT S
-
 NOTS_OR_D  !! 13 !! D := (NOT S) OR D
-
 NOT_SANDD  !! 14 !! D := NOT (S AND D)
-
 ALL_BLACK  !! 15 !! D := 1  
-
 !end_table
-
 !item [pxyarray[0!]]
-
 X-coordinate, (!U)and(!u)
-
 !item [(!nolink [pxyarray])[1!]]
-
 Y-coordinate of a corner of the source rectangle
-
 !item [(!nolink [pxyarray])[2!]]
-
 X-coordinate, (!U)and(!u)
-
 !item [(!nolink [pxyarray])[3!]]
-
 Y-coordinate of the diagonally opposite corner of the source rectangle
-
 !item [(!nolink [pxyarray])[4!]]
-
 X-coordinate, (!U)and(!u)
-
 !item [(!nolink [pxyarray])[5!]]
-
 Y-coordinate of a corner of the destination rectangle
-
 !item [(!nolink [pxyarray])[6!]]
-
 X-coordinate, (!U)and(!u)
-
 !item [(!nolink [pxyarray])[7!]]
-
 Y-coordinate of the diagonally opposite corner of the destination rectangle
-
 !item [psrcMFDB]
-
 Pointer to the source MFDB
-
 !item [pdesMFDB]
-
 Pointer to the destination (!nolink [MFDB])
-
 !end_xlist
 
-
-
 (!B)Note:(!b) If the sizes of both rasters do not match, then the size of the
-
 source raster will be used. The address of the destination raster in that case
-
 serves only as a pointer. If the addresses of the source and destina!-tion areas
-
 correspond (and if they are non-zero) and if the two areas overlap, then the
-
 source rectangle will not be altered until the destination rectangle has been
-
 copied.
 
-
-
 vro_cpyfm usually ignores the height and width of the destination rectangle and
-
 uses the size of the source. If you want to scale a bitmap, you have to set the
-
 most significant bit in the transfer mode ((!I)vr_mode(!i) | 0x8000). In this case
-
 vro_cpyfm scales the bitmap  according to the size of the destination rectangle.
-
 Whether the driver is able to scale or not is returned by vq_extnd in
-
 (!I)work_out[30](!i) (you are only allowed to set the upper bit of the mode if
-
 it is able to).
 
-
-
 (!B)Important:(!b) Rasters in standard format (!I)cannot and must not(!i) be
-
 copied, as in general one has no information about the device-specific format.
-
 Hence the function vr_trnfm should be used if necessary.
 
-
-
 (!B)Note re NVDI:(!b) In some older printer drivers this function unfortunately
-
 has an error, which results in bitmaps that are only a line high possibly not
-
 being output. For this reason the passed bitmap should be at least two lines high.
 
-
-
 !item [(!nolink [Return]) value:]
-
 The function does not return a result.
 
-
-
 !item [Availability:]
-
 Supported by all screen drivers.
 
-
-
 !item [Group:]
-
 Raster functions
 
-
-
 !item [See Also:]
-
 (!link [Binding] [Bindings for vro_cpyfm]) ~ vrt_cpyfm ~ vr_trnfm ~ Raster formats
 
-
-
 (!ende_liste)
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Bindings for vro_cpyfm
-
 !ignore_index
-
-
 
 (!begin_liste) [GEM-Arrays]
 
-
-
 !item [C:]
-
 void vro_cpyfm ( int16_t handle, int16_t vr_mode, int16_t *pxyarray, MFDB *psrcMFDB,
-
                  MFDB *pdesMFDB );
 
-
-
 !item [Binding:]
-
 !begin_verbatim
-
 void vro_cpyfm (int16_t handle, int16_t vr_mode,
-
                 int16_t *pxyarray, MFDB *psrcMFDB,
-
                 MFDB *pdesMFDB)
-
 {
-
    intin[0]    = vr_mode;
-
    ptsin[0..7] = pxyarray[0..7];
-
    iptr (psrcMFDB);
-
    iptr2 (pdesMFDB);
 
-
-
    contrl[0] = 109;
-
    contrl[1] = 4;
-
    contrl[3] = 1;
-
    contrl[6] = handle;
 
-
-
    vdi ();
-
 }
-
 !end_verbatim
 
-
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Address !! Element !! Contents
-
 !hline
-
 contrl    !! contrl[0]    !! 109   # Function opcode
-
 contrl+2  !! contrl[1]    !! 4     # Entry in ptsin
-
 contrl+4  !! contrl[2]    !! 0     # Entry in ptsout
-
 contrl+6  !! contrl[3]    !! 1     # Entry in intin
-
 contrl+8  !! contrl[4]    !! 0     # Entry in intout
-
 contrl+12 !! contrl[6]    !! handle
-
 contrl+14 !! contrl[7,8]  !! psrcMFDB
-
 contrl+18 !! contrl[9,10] !! pdesMFDB
-
 intin     !! intin[0]     !! vr_mode
-
 ptsin     !! ptsin[0..7]  !! pxyarray[0..7]
-
 !end_table
 
-
-
 (!ende_liste)
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node vro_cpyfm
-
-
 
 (!begin_liste) [Beschreibung]
 
-
-
 !item [Name:]
-
 ØCopy Raster, OpaqueÆ - kopiert einen Speicherbereich.
 
-
-
 !item [VDI-Nummer:]
-
 109
 
-
-
 !item [Deklaration:]
-
 void vro_cpyfm ( int16_t handle, int16_t vr_mode, int16_t *pxyarray, MFDB *psrcMFDB,
-
                  MFDB *pdesMFDB );
 
-
-
 !item [Beschreibung:]
-
 Die Funktion kopiert einen Quellspeicherbereich an ein Ziel und verknÅpft
-
 dabei die Quelle und das Ziel durch die in (!I)vr_mode(!i) decodierte
-
 logische VerknÅpfung. Es gilt:
 
-
-
 !begin_xlist !short [pxyarray+0+]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [handle]
-
 Kennung der Workstation
-
 !item [vr_mode]
-
 eine von 16 logischen VerknÅpfungen zwischen den Pixeln des Quell- und
-
 Zielraster
-
 !begin_table [l l l]
-
 ALL_WHITE  !! 0  !! D := 0
-
 S_AND_D    !! 1  !! D := S AND D
-
 S_AND_NOTD !! 2  !! D := S AND (NOT D)
-
 S_ONLY     !! 3  !! D := S
-
 NOTS_AND_D !! 4  !! D := (NOT S) AND D
-
 D_ONLY     !! 5  !! D := D
-
 S_XOR_D    !! 6  !! D := S XOR D
-
 S_OR_D     !! 7  !! D := S OR D
-
 NOT_SORD   !! 8  !! D := NOT (S OR D)
-
 NOT_SXORD  !! 9  !! D := NOT (S XOR D)
-
 D_INVERT   !! 10 !! D := NOT D
-
 NOT_D      !! 11 !! D := S OR (NOT D)
-
 S_OR_NOTD  !! 12 !! D := NOT S
-
 NOTS_OR_D  !! 13 !! D := (NOT S) OR D
-
 NOT_SANDD  !! 14 !! D := NOT (S AND D)
-
 ALL_BLACK  !! 15 !! D := 1  
-
 !end_table
-
 !item [pxyarray[0!]]
-
 x-Koordinate
-
 !item [(!nolink [pxyarray])[1!]]
-
 y-Koordinate eines Eckpunktes des Quellrasters
-
 !item [(!nolink [pxyarray])[2!]]
-
 x-Koordinate
-
 !item [(!nolink [pxyarray])[3!]]
-
 y-Koordinate des diagonal gegenÅberliegenden Eckpunktes des Quellrasters
-
 !item [(!nolink [pxyarray])[4!]]
-
 x-Koordinate
-
 !item [(!nolink [pxyarray])[5!]]
-
 y-Koordinate eines Eckpunktes des Zielrasters
-
 !item [(!nolink [pxyarray])[6!]]
-
 x-Koordinate
-
 !item [(!nolink [pxyarray])[7!]]
-
 y-Koordinate des diagonal gegenÅberliegenden Eckpunktes des Zielrasters
-
 !item [psrcMFDB]
-
 Zeiger auf den MFDB der Quelle
-
 !item [pdesMFDB]
-
 Zeiger auf den (!nolink [MFDB]) des Ziels
-
 !end_xlist
 
-
-
 (!B)Hinweis:(!b) Falls die Grîûen beider Raster nicht Åbereinstimmen, wird
-
 die Grîûe des Quellrasters benutzt. Die Adresse des Zielrasters dient in
-
 diesem Fall lediglich als Zeiger. Stimmen die Adressen von Quell- und
-
 Zielbereich Åberein (und sind diese ungleich 0), und Åberlappen sich die
-
 beiden Bereiche, so wird das Quellrechteck nicht verÑndert bis das
-
 Zielrechteck fertig kopiert ist.
 
-
-
 Normalerweise ignoriert die Funktion die Breite und Hîhe des Zielrasters und
-
 geht von den Maûen des Quellrasters aus. Wenn ein Raster skaliert werden
-
 soll,  muss daher das oberste Bit im VerknÅpfungsmodus gesetzt werden
-
 ((!I)vr_mode(!i)|0x8000). Die Funktion beachtet dann unterschiedliche
-
 Ausmaûe und skaliert das Raster. Ob der jeweilige Treiber Raster skalieren
-
 kann, sollte per vq_extnd ((!I)work_out(!i)[30]) ermittelt werden; das
-
 oberste Bit im VerknÅpfungsmodus darf nur gesetzt werden, wenn der Treiber
-
 Åber diese FÑhigkeit verfÅgt.
 
-
-
 (!B)Wichtig:(!b) Raster im Standardformat (!I)kînnen und dÅrfen(!i) nicht
-
 kopiert werden, da man im allgemeinen keine Informationen Åber das
-
 gerÑtespezifische Format hat. Daher sollte ggfs. die Funktion vr_trnfm
-
 benutzt werden.
 
-
-
 (!B)Hinweis zu NVDI:(!b) In Ñlteren Druckertreibern hat diese Funktion
-
 leider einen Fehler, der dazu fÅhrt, daû Bitmaps, die nur eine Zeile hoch
-
 sind, evtl. nicht ausgegeben werden. Aus diesem Grund sollte die Åbergebene
-
 Bitmap mindestens zwei Zeilen hoch sein.
 
-
-
 !item [Ergebnis:]
-
 Die Funktion liefert kein Ergebnis.
 
-
-
 !item [VerfÅgbar:]
-
 Supported by all screen drivers.
 
-
-
 !item [Gruppe:]
-
 Rasterfunktionen
 
-
-
 !item [Querverweis:]
-
 (!link [Binding] [Bindings fÅr vro_cpyfm]) ~ vrt_cpyfm ~ vr_trnfm ~ Rasterformate
 
-
-
 (!ende_liste)
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Bindings fÅr vro_cpyfm
-
 !ignore_index
-
-
 
 (!begin_liste) [Umsetzung]
 
-
-
 !item [C:]
-
 void vro_cpyfm ( int16_t handle, int16_t vr_mode, int16_t *pxyarray, MFDB *psrcMFDB,
-
                  MFDB *pdesMFDB );
 
-
-
 !item [Umsetzung:]
-
 !begin_verbatim
-
 void vro_cpyfm (int16_t handle, int16_t vr_mode,
-
                 int16_t *pxyarray, MFDB *psrcMFDB,
-
                 MFDB *pdesMFDB)
-
 {
-
    intin[0]    = vr_mode;
-
    ptsin[0..7] = pxyarray[0..7];
-
    iptr (psrcMFDB);
-
    iptr2 (pdesMFDB);
 
-
-
    contrl[0] = 109;
-
    contrl[1] = 4;
-
    contrl[3] = 1;
-
    contrl[6] = handle;
 
-
-
    vdi ();
-
 }
-
 !end_verbatim
 
-
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Adresse !! Feldelement !! Belegung
-
 !hline
-
 contrl    !! contrl[0]    !! 109   # Opcode der Funktion
-
 contrl+2  !! contrl[1]    !! 4     # EintrÑge in ptsin
-
 contrl+4  !! contrl[2]    !! 0     # EintrÑge in ptsout
-
 contrl+6  !! contrl[3]    !! 1     # EintrÑge in intin
-
 contrl+8  !! contrl[4]    !! 0     # EintrÑge in intout
-
 contrl+12 !! contrl[6]    !! handle
-
 contrl+14 !! contrl[7,8]  !! psrcMFDB
-
 contrl+18 !! contrl[9,10] !! pdesMFDB
-
 intin     !! intin[0]     !! vr_mode
-
 ptsin     !! ptsin[0..7]  !! pxyarray[0..7]
-
 !end_table
 
-
-
 (!ende_liste)
-
 !end_node
 
-
-
 !endif
-

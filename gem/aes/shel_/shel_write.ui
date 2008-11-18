@@ -1,2076 +1,1038 @@
 !iflang [english]
 
-
-
 !begin_node shel_write
-
-
 
 (!begin_liste) [Availability]
 
-
-
 !item [Name:]
-
 ØShell writeÆ - Launch another application.
 
-
-
 !item [Opcode:]
-
 121
 
-
-
 !item [Syntax:]
-
 int16_t shel_write ( int16_t sh_wdoex, int16_t sh_wisgr, int16_t sh_wiscr,
-
                   int8_t *sh_wpcmd, int8_t *sh_wptail );
 
-
-
 !item [Description:]
-
 The call shel_write permits launching another program. As of (!nolink [AES])
-
 version 4.0 this function was expanded greatly, so now one can also perform
-
 tasks such as the Shutdown of the system, changing screen resolution,
-
 (!nolink [AES]) broadcasting and a number of other functions.
 
-
-
 The parameter (!I)sh_wdoex(!i) determines the action to be performed, the
-
 remaining parameters depend in essence on (!I)sh_wdoex.(!i) The following
-
 apply:
 
-
-
 !begin_xlist !short [sh_wdoe]
-
 !item [sh_wdoex]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Launch application(!b)
-
 (!nl)
-
 The value of the parameter (!I)sh_wisgr(!i) (launch in graphic mode, yes/no) is
-
 set automatically by the (!nolink [AES]), by comparing the file extension with
-
 the contents of (!nolink [AES]) environmental variables GEMEXT, TOSEXT and ACCEXT
-
 !item [1]
-
 (!B)Launch application im (!nolink [GEM/TOS]) mode(!b)
-
 (!nl)
-
 The parameter (!I)sh_wisgr(!i) sets the mode in which the program is to be
-
 launched; the following apply:
-
 !begin_xlist !short [sh_wisgr = 0:]
-
 !item [sh_wisgr = 0:]
-
 Launch as (!nolink [TOS]) program
-
 !item [sh_wisgr = 1:]
-
 Launch as (!nolink [GEM]) program
-
 !end_xlist
-
 !item [2]
-
 (!B)Reserved(!b)
-
 !item [3]
-
 (!B)Start accessory(!b)
-
 (!nl)
-
 A program is to be launched as a desk accessory
-
 !end_xlist
-
-
 
 In the parameters (!I)sh_wpcmd(!i) and (!I)sh_wptail(!i) one should pass the
-
 filename of the program to be launched and a pointer to the command line tail
-
 respectively. The default directory will be chosen as the directory that
-
 contains the program to be launched (Exception: extended mode with bit 10 set -
-
 see below).
 
-
-
 The function returns the (!nolink [AES]) ID of the launched process. A value of
-
 0 in this connection denotes that an error has occurred. With the parameter
-
 (!I)sh_wiscr(!i) one can specify whether (!B)parameters via ARGV(!b) should be
-
 passed to the launched program. The following apply:
 
-
-
 sh_wiscr = 0: Do not use ARGV procedure (!nl)
-
 sh_wiscr = 1: Use (!nolink [ARGV procedure])
 
-
-
 !label Parallel launching of programs
-
 Under MagiC, on the other hand, one can specify whether a program is to be
-
 started in (!B)(!link [single-mode][Single-mode])(!b) (or in parallel). The
-
 following apply:
 
-
-
 sh_wiscr = 100:  (!B)Execute program in parallel(!b)
-
 (!nl)
-
 The new application inherits all standard paths and files from the current
-
 application. An error-code is returned only in case of memory shortage during
-
 the installation; a notification at the termination of the new application
-
 (death-of-child) does not exist (*).
 
-
-
 !label Single-mode
-
 sh_wiscr = 101:  (!B)Execute program in single-mode(!b)
-
 (!nl)
-
 This mode corresponds to (!I)sh_wiscr(!i) with the value 1, except that before
-
 the program is called all applica!-tions apart from those with ID 0 and ID 1
-
 (SCRENMGR) are frozen. Those applications will be thawed out again at the
-
 termination of the program, as long as that does not make a new shel_write call
-
 of a single-mode character. (!B)The exact recipe for the single-mode is:(!b)
 
-
-
 !begin_itemize !short
-
 !item Ensure that I am application #0 (i.e. ap_id == 0)
-
 !item Set paths and drive for the new program
-
 !item shel_write (TRUE, sh_wisgr, 101, sh_wpcmd, sh_wptail)
-
 !item All important settings to temporary file or shell-buffer
-
 !item appl_exit, v_clsvwk, Pterm0 execute
-
 !end_itemize
 
-
-
 One should also note that as of (!nolink [MagiC]) 2, in single-mode the current
-
 paths of the caller are passed to the parent and with that to the new program.
-
 The caller's paths are destroyed subsequently, though this is not critical as the
-
 program will normally follow shel_write with a Pterm call (*).
 
-
-
 In (!B)extended mode(!b) one can further specify the launching of programs via
-
 the special bits of the parameter (!I)sh_wdoex.(!i) The low byte stays
-
 untouched here, and for the high byte the following apply:
 
-
-
 !begin_table [c|l]
-
 sh_wdoex Bit !! Meaning
-
 !hline
-
  8 !! Value of Psetlimit
-
  9 !! Value of Prenice
-
 10 !! Default directory
-
 11 !! Environment string
-
 12 !! Reserved
-
 13 !! Reserved
-
 14 !! Reserved
-
 15 !! Reserved
-
 !end_table
-
-
 
 In this extended mode, the parameter (!I)sh_wpcmd(!i) is taken as a pointer to
-
 a set of 32-bit (LONG) values. Each of the above-named bits is assigned a LONG
-
 value which is valid when the corresponding bit is set. The set of 32-bit
-
 values is allocated as follows:
 
-
-
 !begin_xlist !short [Elemen]
-
 !item [Element]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [[0!]]
-
 Pointer to the name of the program
-
 !item [[1!]]
-
 Value of Psetlimit (bit 8)
-
 !item [[2!]]
-
 Value of Prenice (bit 9)
-
 !item [[3!]]
-
 Pointer to the default directory; a NULL-pointer in this connection means that
-
 the directory in which the program to be launched lies is selected as the
-
 default directory (bit 10)
-
 !item [[4!]]
-
 Pointer to the environment of the application (bit 11)
-
 !end_xlist
-
-
 
 (!B)Note:(!b) The elements [1], [2] and [3] are ignored up to (!nolink [MagiC])
-
 3; element [1] however is supported from MagiC 4 onwards. The default directory
-
 is set much simpler under (!nolink [MagiC]), as the new program inherits all
-
 paths on all drives from the calling program. Geneva can only set bit 8.
 
-
-
 (!B)In newer (!nolink [AES]) versions the following additional modes are
-
 available:(!b)
 
-
-
 !begin_xlist [sh_wdoe]
-
 !item [sh_wdoex]
-
 Meaning
-
 !item [~]
-
 ~
-
 !label Shutdown mode
-
 !item [4]
-
 (!B)Set Shutdown mode(!b)
-
 (!nl)
-
 This command puts the system into the normal or Shutdown mode, depending on
-
 the parameter (!I)sh_wiscr.(!i) The following apply:
 
-
-
 !begin_xlist !short [sh_wisc]
-
 !item [sh_wiscr]
-
 Meaning
-
 !item [~]
-
 ~
-
 !label Shutdown, Terminate
-
 !item [0]
-
 (!B)Terminate Shutdown sequence(!b)
-
 (!nl)
-
 A started Shutdown can only be terminated by that process that also started
-
 this sequence
-
 !label Shutdown, Partial
-
 !item [1]
-
 (!B)Partial Shutdown(!b)
-
 (!nl)
-
 With the exception of the caller, all applications are checked by the
-
 (!nolink [AES]) on whether they understand the message AP_TERM; if this is
-
 the case, then the (!nolink [AES]) sends the messages (!nolink [AP_TERM]) or
-
 AC_CLOSE to the programs or accessories. The caller receives none of these
-
 messages.
-
 !label Shutdown, Complete
-
 !item [2]
-
 (!B)Complete Shutdown(!b)
-
 (!nl)
-
 With the exception of the caller, all applications and accessories are checked
-
 by the (!nolink [AES]) on whether they understand the message AP_TERM; if this
-
 is the case, then the (!nolink [AES]) sends the messages (!nolink [AP_TERM])
-
 or (!nolink [AC_CLOSE]) to the programs or accessories. Accessories receive
-
 the (!nolink [AP_TERM]) message also after the receipt of the
-
 (!nolink [AC_CLOSE]) message. The caller receives none of these messages.
-
 !end_xlist
 
-
-
 In (!nolink [N.AES]) there is an extended call: (!nl)
-
 shel_write(4, shutart, 0, &ignorant, NULL);
 
-
-
 (!I)ignorant(!i) is here an integer whose address is passed as the fourth
-
 parameter of the shel_write call. In case of error the return value of the
-
 function shel_write is 0 as before, but in addition, (!I)ignorant(!i) will hold
-
 the apid (application ID) of the application that has not understood
-
 (!nolink [AP_TERM]), or -1 if a Shutdown is already running, or -2 if invalid
-
 parameters were passed.
 
-
-
 !label Resolution change
-
 !item [5]
-
 (!B)Resolution change(!b)
-
 (!nl)
-
 The application invites the (!nolink [AES]) to change the resolution. If the
-
 (!nolink [AES]) agrees to the change, it attempts to close down the system
-
 (Shutdown). Any active applications can now either terminate themselves, or tell
-
 the (!nolink [AES]) with an AP_TFAIL message that they are not in a position to
-
 do so. The parameters (!I)sh_wisgr(!i) and (!I)sh_wiscr(!i) are dependent on
-
 one another. The following apply:
 
-
-
 !begin_xlist !short [sh_wisc]
-
 !item [sh_wiscr]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [0]
-
 The parameter (!I)sh_wisgr(!i) is the ID of the physical device on which the
-
 'Open workstation' call of the (!nolink [VDI]) is executed. The current physical
-
 device number can be obtained with Getrez + 2 as usual; the following values are
-
 available:
-
 !begin_table [l l l r]
-
 2 !! = !! ST-Low    !!  (320*200)
-
 3 !! = !! ST-Medium !!  (640*200)
-
 4 !! = !! ST-High   !!  (640*400)
-
 6 !! = !! TT-Medium !!  (640*480)
-
 8 !! = !! TT-High   !! (1280*960)
-
 9 !! = !! TT-Low    !!  (320*480)
-
 !end_table
-
 !item [1]
-
 The parameter (!I)sh_wisgr(!i) is the int16_t for the video mode of the Falcon030
-
 !item [>2]
-
 Reserved for future purposes
-
 !end_xlist
-
-
 
 In (!nolink [N.AES]) there is an extended call: (!nl)
-
 shel_write(5, vmode, falconflag, &ignorant, NULL); (!nl)
-
 As a resolution change always first starts a complete Shutdown internally, it
-
 could be that here too not all applications understand AP_TERM and so the
-
 resolution change fails prematurely. Similar to the Mode 4 extension
-
 mentioned above, here too the application ID of a non-understander will be held
-
 in (!I)ignorant(!i), or a -1 if a (!nolink [Shutdown]) is running already, or
-
 -2 if a faulty parameter (e.g. an invalid resolution) was passed.
 
-
-
 !item [6]
-
 (!B)unknown(!b)
 
-
-
 !label Broadcasting of the AES
-
 !label AES Broadcasting
-
 !item [7]
-
 (!B)AES broadcasting(!b)
-
 (!nl)
-
 The application would like to send a message to all other applications present
-
 in the system. Excepted from receipt are only the (!nolink [AES]), the
-
 (!link [screen-manager][The screen-manager]), as well as the sender of the
-
 message itself.
 
-
-
 The parameter (!I)sh_wpcmd(!i) is a pointer to a 16-byte sized message buffer
-
 that contains the data to be sent.
 
-
-
 !label Manipulate AES environment
-
 !label Manipulate environment of the AES
-
 !item [8]
-
 (!B)Manipulation of the (!nolink [AES]) environment(!b)
-
 (!nl)
-
 This command permits the modification of the (!nolink [AES]) environment. The
-
 parameter (!I)sh_wisgr(!i) describes the desired action. The following apply:
 
-
-
 !begin_xlist !short [sh_wisg]
-
 !item [sh_wisgr]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Get size of environment buffer(!b) This is returned as the function result
-
 !item [1]
-
 (!B)Insertion/Removal of strings(!b) The parameter (!I)sh_wpcmd(!i) is a
-
 pointer to the environment string. The syntax for insertion or removal runs:
-
 'NEW=STRING\0' or NEW=\0'.
-
 !item [2]
-
 (!B)Copy contents of the environment buffer(!b) (!nl)
-
 The parameter (!I)sh_wpcmd(!i) is a pointer to the receiving buffer, which has
-
 a size of (!I)sh_wiscr(!i) bytes. The function returns the number of bytes that
-
 could not be copied.
-
 !end_xlist
-
-
 
 !item [9]
-
 (!B)Show supported messages(!b)
-
 (!nl)
-
 The application tells the (!nolink [AES]), which (new) messages are understood.
-
 This happens via the set bits of the parameter (!I)sh_wisgr.(!i)
-
 !label NM_INHIBIT_HIDE
-
 !begin_xlist !short [Bit 0:]
-
 !item [Bit 0:]
-
 AP_TERM
-
 !item [Bit 1:]
-
 NM_INHIBIT_HIDE (as of (!nolink [XaAES]) 2005-01-16) (!nl)
-
 Prevents the application from being hidden. Useful for some 'desktop' utilities
-
 like Taskbar.
-
 !end_xlist
-
 All other bits (2-15) are not defined at present.
 
-
-
 !item [10]
-
 (!B)Send message to the (!nolink [AES])(!b)
-
 (!nl)
-
 The application wants to send a message to the (!nolink [AES]). The parameter
-
 (!I)sh_wpcmd(!i) is a pointer to a 16-byte sized message buffer.
 
-
-
 !begin_description
-
 !item [Geneva]
-
 A program can cause a windowed dialog to scroll by sending a WM_ARROWED
-
 message to Geneva. Example:
-
 !begin_verbatim
-
   int16_t msg[8];
 
-
-
   msg[0] = WM_ARROWED;
-
   msg[3] = window_handle;
-
   msg[4] = WA_UPPAGE;
-
   shel_write( SHW_SENDTOAES, 0, 0, (int8_t *)msg, 0L );
-
 !end_verbatim
-
 !end_description
 
-
-
 !label Threads, Creation of
-
 !item [20]
-
 (!B)Create new thread(!b)
-
 (!nl)
-
 With this opcode the application can create a new thread. The following apply:
 
-
-
 !begin_xlist !short [Paramete]
-
 !item [Parameter]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [sh_wisgr]
-
 !begin_xlist !short [0 =]
-
 !item [0 =]
-
 Launch program in VT52 window of the application, if one is open
-
 !item [1 =]
-
 Don't open a new window
-
 !item [2 =]
-
 Open a new VT52 window
-
 !end_xlist
-
 !item [sh_wiscr]
-
 0
-
 !item [sh_wpcmd]
-
 Pointer to THREADINFO structure
-
 !item [sh_wptail]
-
 Parameter of type (void *) for the Thread function
-
 !end_xlist
-
-
 
 With a successful call the application ID of the new thread will be returned (*).
 
-
-
 !label Threads, Ending of
-
 !item [21]
-
 (!B)End thread(!b)
-
 (!nl)
-
 With this opcode a thread can end itself. For this one sets the parameters of
-
 (!I)sh_wisgr(!i), (!I)sh_wiscr(!i) and (!I)sh_wptail(!i) to the values 0 or
-
 NULL; with (!I)sh_wpcmd(!i) one can specify an error-code to be returned.
 
-
-
 Normally an execution of this function is not necessary, since the thread ends
-
 itself automatically at the end of its procedure (i.e. with the CPU command RTS).
-
 (!B)Important:(!b) If the thread has made a Pexec call, then the running process
-
 must first be terminated with Pterm, before the thread can end itself (*).
 
-
-
 !item [22]
-
 (!B)Terminate thread(!b)
-
 (!nl)
-
 With this opcode a thread can also be ended by the main program. For this one
-
 passes in the parameter (!I)sh_wiscr(!i) the application's ID of the thread,
-
 and sets the remaining parame!-ters to the value 0 or NULL.
 
-
-
 Normally this function is not necessary, as with the termination of the main
-
 program all associated threads are ended as well. The function was executed
-
 successfully when the value 1 is returned as a result. One should note, however,
-
 that if in the meantime the thread has performed a Pexec, only that program will
-
 be terminated with Pterm (EBREAK); the thread itself is only ended when the
-
 caller has received a THR_EXIT (*).
 
-
-
 !label XSHW_RUNANY
-
 !item [224]
-
 (!B)Run an application(!b) (Geneva as of Update 004)
-
 (!nl)
-
 Run an application, letting Geneva determine the type; this is identical to mode
-
 0, except that the XSHD_FLAGS bit of (!I)sw_doex(!i) can also be set (see below)
 
-
-
 !label XSHW_RUNAPP
-
 !item [225]
-
 (!B)Run an application(!b) (Geneva as of Update 004)
-
 (!nl)
-
 This is identical to mode 1,
-
 except that the XSHD_FLAGS bit of (!I)sw_doex(!i) can also be set.
 
-
-
 !label XSHW_RUNACC
-
 !item [227]
-
 (!B)Run a desk accessory.(!b) (Geneva as of Update 004)
-
 (!nl)
-
 This is identical to mode 3, except that the XSHD_FLAGS bit of
-
 (!I)sw_doex(!i) can also be set.
 
-
-
 When XSHD_FLAGS (1<<15) is added to (!I)sw_doex(!i), this means that the last
-
 LONGword of the SHWRCMD passed in the (!I)sh_wpcmd(!i) parameter contains the
-
 Geneva program flags to use when executing the application. It is strongly
-
 recommended that a program using XSHD_FLAGS inquire the current flags for the
-
 application and only change the ones it needs to change, rather than making
-
 most of the flags zero or some other random value. See the x_appl_flags section
-
 for an example.
-
-
 
 !end_xlist
 
-
-
 (!B)Note:(!b) As of MagiC 3, the following specialities are available:
 
-
-
 !begin_itemize
-
 !item If a character string is passed in (!I)sh_wptail(!i) that starts with the
-
  value 255 and is terminated with '\0', the actual length of the command line is
-
  determined by the (!nolink [AES]) and passed at full length to the DOS. DOS
-
  constructs from this an ARGV parameter in the environment. If the command line
-
  is shorter than 127 bytes, it is passed via the basepage and with shel_read, else
-
  it consists only of the byte with the value 127.
 
-
-
 !item If a character string is passed in (!I)sh_wptail(!i) that starts with the
-
  value 254, then the (!nolink [AES]) expects after this a character string
-
  'ARGV=something' and a '\0'-separated and with '\0\0'-terminated list of
-
  parameters. This is passed completely to the DOS, which constructs an ARGV
-
  parameter from this. If the command line is shorter than 127 bytes, it
-
  is passed via the basepage and with (!nolink [shel_read]), where the NULLbytes
-
  are replaced with spaces, else it consists only of the byte with the value 127.
-
 !end_itemize
 
-
-
 The presence of the additional features can be inquired with
-
 (!link [appl_getinfo][%apgi_10]) (opcode 10).
-
                
-
 The shel_write opcodes marked with (*) are at present available only in
-
 (!nolink [MagiC]).
 
-
-
 !label shel_write and Single-TOS
-
 (!B)Warning:(!b) If one launches a new (!nolink [AES]) process under Single-
-
 (!nolink [TOS]) with (!nolink [shel_write]), then this will be launched
-
 only after the termination of the running process.
 
-
-
 !item [(!nolink [Return]) value:]
-
 An error has arisen only if the value 0 is returned.
 
-
-
 !item [Availability:]
-
 All (!nolink [AES]) versions.
 
-
-
 !item [Group:]
-
 Shell library
 
-
-
 !item [See Also:]
-
 (!link [Binding] [Bindings for shel_write]) ~
-
 (!link [Shutdown mechanism][General remarks about shutdown]) ~
-
 Threads in MagiC
 
-
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings for shel_write
-
 !ignore_index
-
-
 
 (!begin_liste) [GEM-Arrays]
 
-
-
 !item [C:]
-
 int16_t shel_write ( int16_t sh_wdoex, int16_t sh_wisgr, int16_t sh_wiscr,
-
                   int8_t *sh_wpcmd, int8_t *sh_wptail );
 
-
-
 !item [Binding:]
-
 !begin_verbatim
-
 int16_t shel_write (int16_t sh_wdoex, int16_t sh_wisgr,
-
                     int16_t sh_wiscr, int8_t *sh_wpcmd,
-
                     int8_t *sh_wptail)
-
 {
-
    int_in[0]  = sh_wdoex;
-
    int_in[1]  = sh_wisgr;
-
    int_in[2]  = sh_wiscr;
-
    addr_in[0] = sh_wpcmd;
-
    addr_in[1] = sh_wptail;
 
-
-
    return ( crys_if(121) );
-
 }
-
 !end_verbatim
 
-
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Address !! Element !! (!nolink [Contents])
-
 !hline
-
 control   !! control[0] !! 121   # Function opcode
-
 control+2 !! control[1] !! 3     # Entry in int_in
-
 control+4 !! control[2] !! 1     # Entry in int_out
-
 control+6 !! control[3] !! 2     # Entry in addr_in
-
 control+8 !! control[4] !! 0     # Entry in addr_out
-
 int_in    !! int_in[0]  !! sh_wdoex
-
 int_in+2  !! int_in[1]  !! sh_wisgr
-
 int_in+4  !! int_in[2]  !! sh_wiscr
-
 addr_in   !! addr_in[0] !! sh_wpcmd
-
 addr_in+4 !! addr_in[1] !! sh_wptail
-
 int_out   !! int_out[0] !! Return value
-
 !end_table
 
-
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node shel_write
-
-
 
 (!begin_liste) [Beschreibung]
 
-
-
 !item [Name:]
-
 ØShell writeÆ - startet eine andere Applikation.
 
-
-
 !item [AES-Nummer:]
-
 121
 
-
-
 !item [Deklaration:]
-
 int16_t shel_write ( int16_t sh_wdoex, int16_t sh_wisgr, int16_t sh_wiscr,
-
                   int8_t *sh_wpcmd, int8_t *sh_wptail );
 
-
-
 !item [Beschreibung:]
-
 Die Funktion ermîglicht das Starten eines anderen Programms. Ab AES-Version
-
 4.0 wurde diese Funktion stark erweitert. So lassen sich nun auch Aufgaben
-
 wie ein Herunterfahren des Systems (Shutdown), ein Auflîsungswechsel,
-
 AES-Broadcasting und andere Dinge realisieren.
 
-
-
 Der Parameter (!I)sh_wdoex(!i) bestimmt die auszufÅhrende Aktion, die
-
 restlichen Parameter sind im wesentlichen von (!I)sh_wdoex(!i) abhÑngig. Es
-
 gilt:
 
-
-
 !begin_xlist !short [sh_wdoe]
-
 !item [sh_wdoex]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Applikation starten(!b)
-
 (!nl)
-
 Der Wert des Parameters (!I)sh_wisgr(!i) (Starten im Grafikmodus, ja oder
-
 nein) wird automatisch vom (!nolink [AES]) gesetzt, indem die File-Extension mit den
-
 Inhalten der AES-Environmentvariablen GEMEXT, TOSEXT und ACCEXT verglichen
-
 wird.
-
 !item [1]
-
 (!B)Applikation im GEM/TOS Modus starten(!b)
-
 (!nl)
-
 Der Parameter (!I)sh_wisgr(!i) legt dabei den Modus fest, in dem das
-
 Programm gestartet werden soll. Es gilt:
-
 !begin_xlist !short [sh_wisgr = 0:]
-
 !item [sh_wisgr = 0:]
-
 als TOS-Programm starten
-
 !item [sh_wisgr = 1:]
-
 als (!nolink [GEM])-Programm starten
-
 !end_xlist
-
 !item [2]
-
 (!B)reserviert(!b)
-
 !item [3]
-
 (!B)Accessorie starten(!b)
-
 (!nl)
-
 Ein Programm soll als Accessorie gestartet werden.
-
 !end_xlist
-
-
 
 In den Parametern (!I)sh_wpcmd(!i) und (!I)sh_wptail(!i) sind dabei der Name
-
 des zu startenden Programms bzw. ein Zeiger auf die Kommandozeile zu
-
 Åbergeben. Als Default-Verzeichnis wird dabei das Verzeichnis gewÑhlt, in
-
 dem sich das zu startende Programm befindet (Ausnahme: erweiterter Modus mit
-
 gesetztem Bit-10, s.u.).
 
-
-
 Die Funktion liefert die (!nolink [AES])-ID des gestarteten Prozesses zurÅck. Ein Wert
-
 von 0 zeigt in diesem Zusammenhang einen Fehler an. öber den Parameter
-
 (!I)sh_wiscr(!i) kann spezifiziert werden, ob (!B)Parameter per ARGV(!b) an
-
 das gestartete Programm Åbergeben werden sollen. Es gilt:
 
-
-
 sh_wiscr = 0: ARGV-Verfahren nicht benutzen (!nl)
-
 sh_wiscr = 1: (!nolink [ARGV-Verfahren]) benutzen
 
-
-
 !label Paralleles Starten von Programmen
-
 Unter MagiC kann hingegen angegeben werden, ob ein Programm im
-
 (!B)Single-Modus(!b) (oder parallel) gestartet werden soll. Es gilt:
 
-
-
 sh_wiscr = 100:  (!B)Programm parallel ausfÅhren(!b)
-
 (!nl)
-
 Die neue Applikation erbt alle Standardpfade und -dateien von der aktuellen
-
 Applikation. Ein Fehlercode wird nur dann zurÅckgeliefert, falls bereits
-
 beim Einrichten ein Speicherplatzmangel aufgetreten ist; eine Benachrichtung
-
 beim Beenden der neuen Applikation (Death-of-Child) existiert nicht (*).
 
-
-
 !label Single-Modus
-
 sh_wiscr = 101:  (!B)Programm im Single-Modus ausfÅhren(!b)
-
 (!nl)
-
 Dieser Modus entspricht (!I)sh_wiscr(!i) mit dem Wert 1, mit der Ausnahme,
-
 daû vor Aufruf des Programms alle Applikationen auûer denjenigen mit ID-0
-
 und ID-1 (SCRENMGR) eingefroren werden. Die Programme werden nach Beendigung
-
 des Programms wieder aufgetaut, wenn dieses nicht seinerseits einen neuen
-
 shel_write-Aufruf mit Singlemode Charakter ausgefÅhrt hat. (!B)Das genaue
-
 Kochrezept fÅr den Single-Modus lautet:(!b)
 
-
-
 !begin_itemize !short
-
 !item sicherstellen, daû man die Applikation mit ID-0 ist
-
 !item Pfade und Laufwerk fÅr das neue Programm setzen
-
 !item shel_write (TRUE, sh_wisgr, 101, sh_wpcmd, sh_wptail)
-
 !item wichtige Einstellungen in Datei/Shell-Puffer sichern
-
 !item appl_exit, v_clsvwk, Pterm0 ausfÅhren
-
 !end_itemize
 
-
-
 Beachtet werden sollte noch, daû ab (!nolink [MagiC]) 2 im Single-Modus die aktuellen
-
 Pfade des Aufrufers an den Parent und damit an das neue Programm Åbergeben
-
 werden. Die Pfade des Aufrufers sind anschlieûend zerstîrt, was aber
-
 unkritisch ist, da dieser auf den shel_write i.a. ein Pterm folgen lÑût (*).
 
-
-
 Im (!B)erweiterten Modus(!b), kann Åber spezielle Bits des Parameters
-
 (!I)sh_wdoex(!i) das Starten von Programmen weiter spezifiziert werden. Das
-
 Low-Byte bleibt dabei unangetastet, und fÅr das High-Byte gilt:
 
-
-
 !begin_table [c|l]
-
 sh_wdoex Bit !! Bedeutung
-
 !hline
-
  8 !! Wert von Psetlimit
-
  9 !! Wert von Prenice
-
 10 !! Default-Verzeichnis
-
 11 !! Environment-String
-
 12 !! reserviert
-
 13 !! reserviert
-
 14 !! reserviert
-
 15 !! reserviert
-
 !end_table
 
-
-
 In diesem erweiterten Modus wird der Parameter (!I)sh_wpcmd(!i) als Zeiger
-
 auf eine Menge von 32bit (Long-)Werten aufgefaût. Jedem der o.g. Bits ist
-
 dabei ein Long-Wert zugewiesen, der gÅltig ist, wenn das entsprechende Bit
-
 gesetzt ist. Die Menge der 32bit Werte ist folgendermaûen belegt:
 
-
-
 !begin_xlist !short [Elemen]
-
 !item [Element]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [[0!]]
-
 Zeiger auf den Namen des Programms
-
 !item [[1!]]
-
 Wert von Psetlimit (Bit-8)
-
 !item [[2!]]
-
 Wert von Prenice   (Bit-9)
-
 !item [[3!]]
-
 Zeiger auf das Default-Verzeichnis.
-
 (!nl)
-
 Ein Nullzeiger bedeutet in diesem Zusammenhang, daû als Default-Verzeichnis
-
 dasjenige gewÑhlt wird, indem sich das zu startende Programm befindet.
-
 (Bit-10)
-
 !item [[4!]]
-
 Zeiger auf das Environment der Applikation (Bit-11)
-
 !end_xlist
 
-
-
 (!B)Hinweis:(!b) Die Elemente [1],[2] und [3] werden bis (!nolink [MagiC]) 3 ignoriert;
-
 Element [1] wird jedoch ab MagiC 4 unterstÅtzt. Das Default-Verzeichnis wird
-
 unter (!nolink [MagiC]) viel einfacher gesetzt, denn das neue Programm erbt alle Pfade
-
 auf allen Laufwerken vom aufrufenden Programm. (!nl)
-
 Bei Geneva wird nur Bit 8 beachtet.
 
 
-
-
-
 (!B)In neueren (!nolink [AES])-Versionen stehen darÅber hinaus die folgenden Modi zur
-
 VerfÅgung(!b).
 
-
-
 !begin_xlist [sh_wdoe]
-
 !item [sh_wdoex]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !label Shutdown Modus
-
 !item [4]
-
 (!B)Shutdown-Modus setzen(!b)
-
 (!nl)
-
 Dieses Kommando versetzt das System in AbhÑngigkeit des Parameters
-
 (!I)sh_wiscr(!i) in den Normal bzw. Shutdown Modus. Es gilt:
 
-
-
 !begin_xlist !short [sh_wiscr]
-
 !item [sh_wiscr]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !label Shutdown abbrechen
-
 !item [0]
-
 (!B)Shutdown Sequenz abbrechen(!b)
-
 (!nl)
-
 Ein begonnener Shutdown kann nur von dem Prozess beendet werden, der diese
-
 Sequenz auch gestartet hat.
-
 !label Shutdown, partieller
-
 !item [1]
-
 (!B)Partieller Shutdown(!b)
-
 (!nl)
-
 Mit Ausnahme des Aufrufers werden alle Applikationen vom (!nolink [AES]) daraufhin
-
 ÅberprÅft, ob sie die Meldung AP_TERM verstehen. Wenn dies der Fall ist,
-
 schickt das (!nolink [AES]) die Meldungen (!nolink [AP_TERM]) bzw. AC_CLOSE an die
-
 Programme bzw. Accessories. Der Aufrufer erhÑlt keine dieser Meldungen.
-
 !label Shutdown, vollstÑndiger
-
 !item [2]
-
 (!B)VollstÑndiger Shutdown(!b)
-
 (!nl)
-
 Mit Ausnahme des Aufrufers werden alle Applikationen und Accessories vom
-
 AES daraufhin ÅberprÅft, ob sie die Meldung AP_TERM verstehen. Wenn dies der
-
 Fall ist, schickt das (!nolink [AES]) die Meldungen (!nolink [AP_TERM]) bzw.
-
 (!nolink [AC_CLOSE]) an die
-
 Programme bzw. Accessories. Accessories erhalten die (!nolink [AP_TERM]) Nachricht
-
 zusÑtzlich nach Erhalt der (!nolink [AC_CLOSE]) Message. Der Aufrufer erhÑlt keine
-
 dieser Meldungen.
-
 !end_xlist
 
-
-
 In N.AES gibt es einen erweiterten Aufruf: (!nl)
-
 shel_write(4, shutart, 0, &ignorant, NULL);
 
-
-
 (!I)ignorant(!i) ist hierbei ein Integer, dessen Adresse als vierter Parameter des
-
 shel_write-Aufrufs Åbergeben wird. Im Fehlerfall ist der RÅckgabewert der
-
 Funktion shel_write wie bisher 0, zusÑtzlich wird jedoch in (!I)ignorant(!i) die Applikations-ID
-
 (apid) der Applikation hinterlegt, die AP_TERM nicht verstanden hat
-
 bzw. -1, wenn bereits ein Shutdown lÑuft oder -2, wenn ungÅltige Parameter
-
 Åbergeben wurden.
-
-
 
 !label Auflîsungswechsel
-
 !item [5]
-
 (!B)Auflîsungswechsel(!b)
-
 (!nl)
-
 Die Applikation fordert das (!nolink [AES]) auf, die Auflîsung zu wechseln. Falls das
-
 (!nolink [AES]) dem Wechsel zustimmt, versucht es, das System herunterzufahren
-
 (Shutdown). Die aktiven Applikationen kînnen sich nun entweder beenden,
-
 oder durch eine AP_TFAIL Nachricht dem AES mitteilen, daû sie hierzu nicht
-
 in der Lage sind. Die Parameter (!I)sh_wisgr(!i) und (!I)sh_wiscr(!i) sind
-
 dabei voneinander abhÑngig. Es gilt:
 
-
-
 !begin_xlist !short [sh_wisc]
-
 !item [sh_wiscr]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [0]
-
 Der Parameter (!I)sh_wisgr(!i) ist die ID des physikalischen GerÑtes, auf
-
 dem der Open-Workstation Aufruf des VDI ausgefÅhrt wird. Die aktuelle
-
 physikalische GerÑtenummer kann wie Åblich per Getrez() + 2 ermittelt
-
 werden; es stehen folgende Werte zur VerfÅgung:
-
 !begin_table [l l l r]
-
 2 !! = !! ST-Low    !!  (320*200)
-
 3 !! = !! ST-Medium !!  (640*200)
-
 4 !! = !! ST-High   !!  (640*400)
-
 6 !! = !! TT-Medium !!  (640*480)
-
 8 !! = !! TT-High   !! (1280*960)
-
 9 !! = !! TT-Low    !!  (320*480)
-
 !end_table
-
 !item [1]
-
 Der Parameter (!I)sh_wisgr(!i) ist das int16_t fÅr den Video-Modus des Falcon.
-
 !item [>2]
-
 fÅr zukÅnftige Zwecke reserviert
-
 !end_xlist
-
-
 
 In N.AES gibt es einen erweiterten Aufruf: (!nl)
-
 shel_write(5, vmode, falconflag, &ignorant, NULL); (!nl)
-
 Da ein Auflîsungswechsel intern zunÑchst immer einen vollstÑndigen Shutdown
-
 startet, kann es auch hier geschehen, daû nicht alle Anwendungen AP_TERM
-
 verstehen und der Auflîsungswechsel somit frÅhzeitig fehlschlÑgt. Analog zur
-
 obigen Modus-4-Erweiterung wird auch hier die Applikations-ID eines
-
 VerstÑndnislosen in (!I)ignorant(!i) hinterlegt, eine -1, wenn bereits ein (!nolink [Shutdown])
-
 lÑuft oder -2, wenn fehlerhafte Parameter (z.B. unerlaubte Auflîsungen)
-
 Åbergeben wurden.
 
-
-
 !item [6]
-
 (!B)unbekannt(!b)
 
-
-
 !label Broadcasting des AES
-
 !label AES-Broadcasting
-
 !item [7]
-
 (!B)AES-Broadcasting(!b)
-
 (!nl)
-
 Die Applikation mîchte eine Nachricht an alle anderen im System vorhandenen
-
 Applikationen schicken. Als EmpfÑnger ausgenommen sind nur das AES, der
-
 Screen-Manager, sowie der Absender der Nachricht selbst.
 
-
-
 Der Parameter (!I)sh_wpcmd(!i) ist ein Zeiger auf einen 16 Bytes groûen
-
 Nachrichtenpuffer, der die zu sendenden Daten enthÑlt.
 
-
-
 !label AES-Environment manipulieren
-
 !label Environment des AES manipulieren
-
 !item [8]
-
 (!B)Manipulation des (!nolink [AES])-Environments(!b)
-
 (!nl)
-
 Dieses Kommando erlaubt die Modifikation des AES-Environments. Der Parameter
-
 (!I)sh_wisgr(!i) beschreibt die gewÅnschte Aktion. Es gilt:
 
-
-
 !begin_xlist !short [sh_wisg]
-
 !item [sh_wisgr]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Grîûe des Environment-Puffers erfragen(!b). Diese wird als
-
 Funktionsergebnis zurÅckgeliefert.
-
 !item [1]
-
 (!B)EinfÅgen/Entfernen von Strings(!b). Der Parameter (!I)sh_wpcmd(!i) ist
-
 ein Zeiger auf den Environment-String. Die Syntax zum EinfÅgen bzw.
-
 Entfernen lautet 'NEW=STRING\0' bzw. 'NEW=\0'.
-
 !item [2]
-
 (!B)Inhalt des Environment-Puffers kopieren(!b). Der Parameter
-
 (!I)sh_wpcmd(!i) ist ein Zeiger auf den aufnehmenden Puffer, der eine Grîûe
-
 von (!I)sh_wiscr(!i) Bytes besitzt. Die Funktion liefert die Anzahl der
-
 Bytes zurÅck, die nicht kopiert werden konnten.
-
 !end_xlist
-
-
 
 !item [9]
-
 (!B)UnterstÅtzte Nachrichten anzeigen(!b)
-
 (!nl)
-
 Die Applikation teilt dem (!nolink [AES]) mit, welche (neuen) Nachrichten verstanden
-
 werden. Dies geschieht Åber gesetzte Bits des Parameters (!I)sh_wisgr(!i).
-
 !label NM_INHIBIT_HIDE
-
 !begin_xlist !short [Bit 0:]
-
 !item [Bit 0:]
-
 AP_TERM
-
 !item [Bit 1:]
-
 NM_INHIBIT_HIDE (since XaAES 2005-01-16) (!nl)
-
 SchÅtzt eine Application davor versteckt zu werden. NÅtzlich fÅr Desktop Utillity
-
 wie Taskbar oder StartMe Up.
-
 !end_xlist
-
 Alle anderen Bits (2-15) sind z.Zt. nicht definiert.
 
-
-
 !item [10]
-
 (!B)Nachricht an (!nolink [AES]) senden(!b)
-
 (!nl)
-
 Die Applikation will eine Nachricht an das (!nolink [AES]) schicken. Der Parameter
-
 (!I)sh_wpcmd(!i) ist ein Zeiger auf den 16 Bytes groûen Nachrichtenpuffer.
 
-
-
 !begin_description
-
 !item [Geneva]
-
 A program can cause a windowed dialog to scroll by sending a WM_ARROWED
-
 message to Geneva. Example:
-
 !begin_verbatim
-
 int16_t msg[8];
 
-
-
 msg[0] = WM_ARROWED;
-
 msg[3] = window_handle;
-
 msg[4] = WA_UPPAGE;
-
 shel_write( SHW_SENDTOAES, 0, 0, (int8_t *)msg, 0L );
-
 !end_verbatim
-
 !end_description
 
-
-
 !label Threads, Erzeugen von
-
 !item [20]
-
 (!B)Neuen Thread erzeugen(!b)
-
 (!nl)
-
 Mit diesem Opcode kann die Applikation einen neuen Thread erzeugen. Dabei
-
 gilt:
 
-
-
 !begin_xlist !short [Paramete]
-
 !item [Parameter]
-
 Bedeutung
-
 !item [~]
-
 ~
-
 !item [sh_wisgr]
-
 !begin_xlist !short [0 =]
-
 !item [0 =]
-
 Starte Programm im VT52 Fenster der Applikation, falls eines geîffnet ist.
-
 !item [1 =]
-
 îffne kein neues Fenster
-
 !item [2 =]
-
 îffne neues VT52-Fenster
-
 !end_xlist
-
 !item [sh_wiscr]
-
 0
-
 !item [sh_wpcmd]
-
 Zeiger auf THREADINFO-Struktur
-
 !item [sh_wptail]
-
 Parameter vom Typ (void *) fÅr die Thread-Funktion.
-
 !end_xlist
-
-
 
 Bei einem erfolgreichen Aufruf wird als Ergebnis die Applikations-ID des
-
 neuen Threads zurÅckgeliefert (*).
 
-
-
 !label Threads, Beenden von
-
 !item [21]
-
 (!B)Thread beenden(!b)
-
 (!nl)
-
 Mit diesem Opcode kann sich ein Thread selbst beenden. Dazu setzt man die
-
 Parameter (!I)sh_wisgr(!i) (!I)sh_wiscr(!i) und (!I)sh_wptail(!i) auf die
-
 Werte 0 bzw. NULL; Åber (!I)sh_wpcmd(!i) kann ein zurÅckzuliefernder
-
 Fehlercode angegeben werden.
 
-
-
 Normalerweise ist ein AusfÅhren dieser Funktion nicht notwendig, da sich der
-
 Thread automatisch mit dem Ende seiner Prozedur (d.h. mit dem CPU-Befehl
-
 RTS) selbst beendet. (!B)Wichtig:(!b) Wenn der Thread einen Pexec-Aufruf
-
 durchgefÅhrt hat, so muss zuerst der laufende Prozess per Pterm beendet
-
 werden, bevor sich der Thread beenden kann (*).
 
-
-
 !item [22]
-
 (!B)Thread terminieren(!b)
-
 (!nl)
-
 Mit diesem Opcode kann ein Thread auch vom Hauptprogramm beendet werden.
-
 Dazu Åbergibt man im Parameter (!I)sh_wiscr(!i) die Applikations-ID des
-
 Thread, und setzt die Åbrigen Parameter auf den Wert 0 bzw. NULL.
 
-
-
 Normalerweise ist diese Funktion nicht notwendig, da mit dem Beenden des
-
 Hauptprogramms automatisch auch alle zugehîrigen Threads beendet werden. Die
-
 Funktion wurde erfolgreich ausgefÅhrt, wenn als Ergebnis der Wert 1
-
 zurÅckgeliefert wird. Zu beachten ist jedoch, daû fÅr den Fall, daû der
-
 Thread inzwischen ein Pexec ausgefÅhrt hat, nur dieses Programm per Pterm
-
 (EBREAK) beendet wird; der Thread selbst ist erst dann beendet, wenn der
-
 Aufrufer ein THR_EXIT empfangen hat (*).
 
-
-
 !label XSHW_RUNANY
-
 !item [224]
-
 (!B)Run an application(!b) (Geneva since Update 004)
-
 (!nl)
-
 Run an application, letting Geneva determine the
-
 type. This is identical to mode 0, except that the XSHD_FLAGS bit
-
 of (!I)sw_doex(!i) can also be set (see below).
 
-
-
 !label XSHW_RUNAPP
-
 !item [225]
-
 (!B)Run an application(!b) (Geneva since Update 004)
-
 (!nl)
-
 This is identical to mode 1,
-
 except that the XSHD_FLAGS bit of (!I)sw_doex(!i) can also be set.
 
-
-
 !label XSHW_RUNACC
-
 !item [227]
-
 (!B)Run a desk accessory.(!b) (Geneva since Update 004)
-
 (!nl)
-
 This is identical to mode 3, except that the XSHD_FLAGS bit of
-
 (!I)sw_doex(!i) can also be set.
 
-
-
 When XSHD_FLAGS (1<<15) is added to the (!I)sw_doex(!i), this means that the
-
 last longword of the SHWRCMD passed in the (!I)sh_wpcmd(!i) parameter contains
-
 the Geneva program flags to use when executing the application. (!nl)
-
 It is strongly recommended that a program using XSHD_FLAGS inquire the
-
 current flags for the application and only change the ones it needs to
-
 change, rather than making most of the flags zero or some other random
-
 value. See the x_appl_flags section, below, for an example.
-
-
 
 !end_xlist
 
-
-
 (!B)Hinweis:(!b) Ab MagiC 3 stehen die folgenden Besonderheiten zur
-
 VerfÅgung:
 
-
-
 !begin_itemize
-
 !item Wird in (!I)sh_wptail(!i) eine Zeichenkette Åbergeben, die mit dem
-
       Wert 255 beginnt und mit '\0' abgeschlossen ist, wird die tatsÑchliche
-
       LÑnge der Kommandozeile vom AES bestimmt und in ganzer LÑnge ans DOS
-
       weitergereicht. Das DOS konstruiert hieraus einen ARGV-Parameter im
-
       Environment. Ist die Kommandozeile kÅrzer als 127 Bytes, wird sie Åber
-
       Basepage und per shel_read Åbergeben, ansonsten besteht sie nur aus
-
       dem Byte mit dem Wert 127.
-
 !item Wird in (!I)sh_wptail(!i) eine Zeichenkette Åbergeben, die mit dem
-
       Wert 254 beginnt, erwartet das AES dahinter die Zeichenkette
-
       "ARGV=irgendwas" und eine durch '\0' getrennte und durch "\0\0"
-
       abgeschlossene Liste von Parametern. Diese wird vollstÑndig dem DOS
-
       Åbergeben, das daraus einen ARGV-Parameter konstruiert. Ist die
-
       Kommandozeile kÅrzer als 127 Bytes, wird sie Åber Basepage und per
-
       (!nolink [shel_read]) Åbergeben, wobei die Nullbytes durch Leerstellen ersetzt
-
       werden, ansonsten besteht sie nur aus dem Byte mit dem Wert 127.
-
 !end_itemize
 
-
-
 Das Vorhandensein der zusÑtzlichen Features kann per (!link [appl_getinfo][%apgi_10])
-
 (Opcode 10) erfragt werden.
 
-
-
 Die mit (*) gekennzeichneten Opcodes von shel_write
-
 stehen z.Zt. nur in (!nolink [MagiC]) zur VerfÅgung.
 
 
-
-
-
 !label shel_write und Single-TOS
-
 (!B)Achtung:(!b) Startet man ein neuen AES-Prozeû unter Singel-TOS mit
-
 (!nolink [shel_write])
-
 wird dieser aber erst nach Beendigung des eigenen Prozesses gestartet.
 
-
-
 !item [Ergebnis:]
-
 Ein Fehler ist nur dann aufgetreten, wenn als Ergebnis 0 zurÅckgegeben wird.
 
-
-
 !item [VerfÅgbar:]
-
 In allen (!nolink [AES]) Versionen.
 
-
-
 !item [Gruppe:]
-
 (!link [Shell-Kommunikation][Shellfunktionen])
 
-
-
 !item [Querverweis:]
-
 (!link [Binding] [Bindings fÅr shel_write]) ~
-
 (!link [Shutdown Mechanismus][Allgemeines zum Shutdown]) ~
-
 Threads in MagiC
 
-
-
 (!ende_liste)
-
-
-
-
 
 
 
 !begin_node Bindings fÅr shel_write
-
 !ignore_index
-
-
 
 (!begin_liste) [GEM-Arrays]
 
-
-
 !item [C:]
-
 int16_t shel_write ( int16_t sh_wdoex, int16_t sh_wisgr, int16_t sh_wiscr,
-
                   int8_t *sh_wpcmd, int8_t *sh_wptail );
 
-
-
 !item [Umsetzung:]
-
 !begin_verbatim
-
 int16_t shel_write (int16_t sh_wdoex, int16_t sh_wisgr,
-
                     int16_t sh_wiscr, int8_t *sh_wpcmd,
-
                     int8_t *sh_wptail)
-
 {
-
    int_in[0]  = sh_wdoex;
-
    int_in[1]  = sh_wisgr;
-
    int_in[2]  = sh_wiscr;
-
    addr_in[0] = sh_wpcmd;
-
    addr_in[1] = sh_wptail;
 
-
-
    return ( crys_if(121) );
-
 }
-
 !end_verbatim
 
-
-
 !item [GEM-Arrays:]
-
 !begin_table [l l l]
-
 Adresse !! Feldelement !! Belegung
-
 !hline
-
 control   !! control[0] !! 121   # Opcode der Funktion
-
 control+2 !! control[1] !! 3     # EintrÑge in int_in
-
 control+4 !! control[2] !! 1     # EintrÑge in int_out
-
 control+6 !! control[3] !! 2     # EintrÑge in addr_in
-
 control+8 !! control[4] !! 0     # EintrÑge in addr_out
-
 int_in    !! int_in[0]  !! sh_wdoex
-
 int_in+2  !! int_in[1]  !! sh_wisgr
-
 int_in+4  !! int_in[2]  !! sh_wiscr
-
 addr_in   !! addr_in[0] !! sh_wpcmd
-
 addr_in+4 !! addr_in[1] !! sh_wptail
-
 int_out   !! int_out[0] !! Return-Wert
-
 !end_table
 
-
-
 (!ende_liste)
-
 !end_node
-
 !end_node
-
-
 
 !endif
-

@@ -1,773 +1,387 @@
 !iflang [english]
 
-
-
 !begin_node form_error in N.AES
 
-
-
 The form_error function has been extended in (!nolink [N.AES]), so that a sensible
-
 message can be output for all (!nolink [GEMDOS]) errors for a (!nolink [form_error]) call.
 
-
-
 An (!nolink [N.AES form_error]) code is calculated from a (!nolink [GEMDOS])
-
 error-code with:
-
-
 
      formcode = !~gemdoscode - 30
 
-
-
 !~ ist bitweises NOT
 
-
-
 In the '(!nolink [form_error]) codes' table (below) all possible
-
 (!nolink [N.AES form_error])
-
 codes are listed next to the corresponding (!nolink [GEMDOS]) errors. The first
-
 column holds the (!nolink [form_error]) code and the name of the associated
-
 object in the system resource, the second column the corresponding
-
 (!nolink [GEMDOS]) error and the third column a short description of the error.
 
-
-
 Please note that not all (!nolink [form_error]) codes have a (!nolink [GEMDOS]) error
-
 assigned to them.
 
 
-
-
-
 !table_caption* form_error-Codes
-
 !begin_table [|l|l|l|] !hline
-
 Code   !!          (!nolink [GEMDOS]) error !! Meaning 
-
 !hline
-
           0 ERR_TOSERR  !! ~ !!~
-
           1 ERR_INVFN   !!  -32 EINVFN   !!  Invalid function 
-
           2 ERR_NOTFOUND !!  -33 EFILNF  !!  File not found 
-
           3 ERR_NOTFOUND !! -34 EPTHNF   !!  Path not found 
-
           4 ERR_NHNDL    !!  -35 ENHNDL  !!  No more handles 
-
           5 ERR_ACCDN    !!  -36 EACCDN  !!  Access denied 
-
           6 ERR_IHNDL    !!  -37 EIHNDL  !!  Invalid handle 
-
           8 ERR_NSMEM    !!  -39 ENSMEM  !!  Insufficient memory 
-
           9 ERR_IMBA     !!  -40 EIMBA   !!  Invalid memory block address 
-
           15 ERR_DRIVE   !!  -46 EDRIVE  !!  Invalid drive specification 
-
           17 ERR_XDEV    !!  -48 EXDEV   !!  Cross device rename 
-
           18 ERR_NOTFOUND !!  -49 ENMFIL !!  No more files (fsnext) 
-
           27 ERR_LOCKING  !! -58 ELOCKED !!  Record is locked already 
-
           28 ERR_LOCKING !!  -59 ENSLOCK !!  Invalid lock removal request 
-
           33 ERR_TOSERR  !!  -64 ERANGE  !!  Range error 
-
           34 ERR_INTRN   !!  -65 EINTRN  !!  Internal error 
-
           35 ERR_PLFMT   !!  -66 EPLFMT  !!  Invalid program load format 
-
           36 ERR_GSBF    !!  -67 EGSBF   !!  Memory block growth failure 
-
           49 ERR_LOOP    !!  -80 ELOOP   !!  Too many symbolic links 
-
           50 ERR_PIPE    !!  -81 EPIPE   !!  Write to a broken pipe 
-
 !hline
-
 !end_table
 
-
-
 For each of the various form_errors there is also a corresponding
-
 alert box in the system resource file N_AESSYS.RSC, whose symbolic
-
 constant starts with 'ERR_' and is also listed in the first column
-
 of the '(!nolink [form_error]) codes' table.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The N.AES cookie
-
 !label N_AESINFO
 
-
-
 (!nolink [N.AES]) creates a cookie with the name 'nAES'. Its value is a pointer
-
 to a structure (readable), which is made up as follows:
 
-
-
 !begin_verbatim
-
 typedef struct {
-
     unsigned int    version;
-
     unsigned int    date;
-
     unsigned int    time;
-
     unsigned int    flags;
-
     CNF_VAR         **config;
-
     unsigned long   unused_2;
-
 } N_AESINFO;
-
 !end_verbatim
 
-
-
 !begin_xlist [date/time:]
-
 !item [version:] The hexadecimal-coded version number of (!nolink [N.AES]). A value
-
              of 0x0058 would mean a version number 0.5.8, a value of
-
              0x0107 the version 1.0.7
 
-
-
 !item [date/time:] The creation date and the creation time in (!nolink [TOS]) format,
-
              i.e. as returned by Tgetdate and Tgettime.
 
-
-
              (!B)Note:(!b) (!nl)
-
              The time that is output on booting (!nolink [N.AES]) corresponds to
-
              the time of compilation of a given (!nolink [N.AES]) source file;
-
              the time value that is found in the cookie is set by
-
              means of a patch program and is actually the relevant
-
              specification.
 
-
-
 !item [flags:]      Bit mask, whose bits have the following meaning: (!nl)
-
 !begin_xlist [Bit ~00 =] !short
-
              !item [Bit ~0 =] 0: ST-version (!nl)
-
              !item [Bit ~0 =] 1: TT030-version (compiler option '68020') (!nl)
-
              !item [Bit ~1 =] 0: Normal version (!nl)
-
              !item [Bit ~1 =] 1: Debug version
-
 						 !item [Bit 15 =] If this bit is TRUE then this cookie was
-
                               created by (!nolink [XaAES])
-
 !end_xlist
 
-
-
 !item [config:] Pointer to a list of the CNF variables, which may be
-
              altered while the system is running. Memory is allocated
-
              as ((!nolink [global])). The bundled N_CONTRL.CPX uses it.
 
 
-
-
-
 !begin_verbatim
-
 /* cnf types */
-
 #define CNF_TEND  0   /* Marks the end of the list. */
-
 #define CNF_TBOOL 1   /* True/false.                */
-
 #define CNF_TWORD 2   /* 16-bit signed value        */
-
 #define CNF_TLONG 3
-
 /* Further ones may follow!  */
-
-
 
 typedef enum {false, true} bool;
 
-
-
 typedef struct
-
 {
-
   union cnf_typ { bool b; WORD w; LONG l; }
-
           val;            /* The contents           */
-
   WORD    typ;            /* Type, CNF_T...         */
-
   BYTE    text[22];       /* Name, as in N_AES.CNF. */
-
 } CNF_INF;
 
-
-
 typedef struct
-
 {
-
   BYTE    typ[16];  /* Category, text from the strings *
-
                      * of the dialog tree CNF_TREE of  *
-
                      * N_AESSYS.RSC.                   *
-
                      * e.g. 'Fenster' or 'System'.     */
-
   CNF_INF *cnf_inf; /* The variables themselves        */
-
 } CNF_VAR;
-
 !end_verbatim
-
         The end of the list is signalled by a NULL-pointer.
 
-
-
 !item [unused_2:]   Free space for later (!nolink [N.AES]) versions
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node The N.AES configuration file
-
 !label N_AES.CNF
 
-
-
 The configuration file N_AES.CNF that (!nolink [N.AES]) reads in and evaluates at
-
 system startup contains the user-definable settings (CNF variables)
-
 and commands (CNF commands).
 
-
-
 Please do not get frightened by the wide variety of setting options!
-
 The bundled configuration file contains standard values for the
-
 individual variables and should be able to be used by you at first
-
 without changes. Once you have become a little familiar with (!nolink [N.AES]),
-
 you can alter various settings at a later time to suit your taste.
 
-
-
 The configuration file is not retained in memory at run-time but just
-
 evaluated once at the start, after which the memory it occupies is
-
 released. Hence one need not (and should not) economize with comments
-
 here.
 
-
-
 A comment is introduced by a '#' character at the start of a line and
-
 continues to the end of this line. Everything contained in such a
-
 comment line will be ignored when evaluating the configuration file.
-
 Equally, any empty lines will be skipped during evaluation.
 
-
-
 The specifications possible in the configuration file may be divided
-
 into three groups:
-
 !begin_itemize
-
    !item With the aid of the CNF variables the global operating parameters
-
      of (!nolink [N.AES]) are set, which cannot be altered at run-time at present.
-
      For example, with the help of these variables one can specify
-
      the size of the icon windows.
 
-
-
    !item The CNF commands are executed shortly after the reading in of
-
      the configuration file and take effect immediately. Thus with
-
      the help of these commands one can launch programs or set the
-
      environmental variables.
 
-
-
    !item The CNF debug variables have a meaning only in a special (!nolink [N.AES])
-
      version, which is not a part of the normal distribution.
-
 !end_itemize
 
 
-
-
-
 Note about the variables: Please proceed with particular care when
-
 altering settings that affect the system (sstacksize, mpipesize,
-
 qsbchars, ...). Values that are too small or too large may give rise
-
 to unwanted effects, or even to faulty behaviour of (!nolink [N.AES]).
 
-
-
 # Die CNF-Variablen
-
 # CNF-Befehle
-
 # Farbangaben
-
 # CNF-Debugvariablen
-
 !end_node
-
-
 
 !else
 
-
-
 !begin_node form_error in N.AES
 
-
-
 Die (!nolink [form_error])-Funktion ist erweitert worden, so daû fÅr sÑmtliche 
-
 (!nolink [GEMDOS])-Fehler eine vernÅnftige Nachricht bei einem Aufruf von 
-
 (!nolink [form_error]) ausgegeben werden kann.
-
-
 
 Ein form_error()-Code berechnet sich aus einem (!nolink [GEMDOS])-Fehlercode durch:
 
-
-
      formcode = !~gemdoscode - 30
-
-
 
 !~ ist bitweises NOT
 
-
-
 In der Tabelle "(!nolink [form_error])-Codes" werden alle mîglichen form_error-Codes den 
-
 entsprechenden (!nolink [GEMDOS])-Fehlern gegenÅbergestellt. In der ersten Spalte steht der 
-
 (!nolink [form_error])-Code und der Name des zugehîrigen Objektes in der Systemressource, in
-
 der zweiten Spalte der entsprechende (!nolink [GEMDOS])-Fehler und in der dritten Spalte 
-
 eine kurze Beschreibung des Fehlers.
 
-
-
 Bitte beachten Sie, daû nicht allen (!nolink [form_error])-Codes ein (!nolink [GEMDOS])-Fehler 
-
 zugeordnet ist.
 
-
-
 !table_caption* form_error-Codes
-
 !begin_table [|l|l|l|] !hline
-
 Code   !!          (!nolink [GEMDOS])-Fehler !! Bedeutung 
-
 !hline
-
           0 ERR_TOSERR  !! ~ !!~
-
           1 ERR_INVFN   !!  -32 EINVFN   !!  invalid function 
-
           2 ERR_NOTFOUND !!  -33 EFILNF  !!   file not found 
-
           3 ERR_NOTFOUND !! -34 EPTHNF   !!  path not found 
-
           4 ERR_NHNDL    !!  -35 ENHNDL  !!   no more handles 
-
           5 ERR_ACCDN    !!  -36 EACCDN  !!   access denied 
-
           6 ERR_IHNDL    !!  -37 EIHNDL  !!   invalid handle 
-
           8 ERR_NSMEM    !!  -39 ENSMEM  !!   insufficient memory 
-
           9 ERR_IMBA     !!  -40 EIMBA   !!  invalid memory block address 
-
           15 ERR_DRIVE   !!  -46 EDRIVE  !!   invalid drive specification 
-
           17 ERR_XDEV    !!  -48 EXDEV   !!   cross device rename 
-
           18 ERR_NOTFOUND !!  -49 ENMFIL !!    no more files (fsnext) 
-
           27 ERR_LOCKING  !! -58 ELOCKED !!   record is locked already 
-
           28 ERR_LOCKING !!  -59 ENSLOCK !!   invalid lock removal request 
-
           33 ERR_TOSERR  !!  -64 ERANGE  !!   range error 
-
           34 ERR_INTRN   !!  -65 EINTRN  !!   internal error 
-
           35 ERR_PLFMT   !!  -66 EPLFMT  !!   invalid program load format 
-
           36 ERR_GSBF    !!  -67 EGSBF   !!   memory block growth failure 
-
           49 ERR_LOOP    !!  -80 ELOOP   !!   too many symbolic links 
-
           50 ERR_PIPE    !!  -81 EPIPE   !!   write to a broken pipe 
-
 !hline
-
 !end_table
 
 
-
-
-
 Jedem der verschiedenen form_errors entspricht auch eine entsprechende Alertbox 
-
 in der Systemressourcedatei N_AESSYS.RSC, deren symbolische Konstante mit 'ERR_'
-
 beginnt und auch in der Tabelle "(!nolink [form_error])-Codes" in der ersten Spalte 
-
 angegeben ist.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Der N.AES-Cookie
-
 !label N_AESINFO
 
-
-
 (!nolink [N.AES]) legt einen Cookie mit dem Namen 'nAES' an. Sein Wert ist ein Zeiger auf 
-
 eine Struktur (readable), die folgendermaûen aufgebaut ist:
 
-
-
 !begin_verbatim
-
 typedef struct {
-
     unsigned int    version;
-
     unsigned int    date;
-
     unsigned int    time;
-
     unsigned int    flags;
-
     CNF_VAR         **config;
-
     unsigned long   unused_2;
-
 } N_AESINFO;
-
 !end_verbatim
 
-
-
 !begin_xlist [date/time:]
-
 !item [version:]    Die hexadezimal codierte Versionsnummer von N.AES.
-
              Ein Wert von 0x0058 wÅrde Versionsnummer 0.5.8 bedeuten, ein Wert 
-
              von 0x0107 die Version 1.0.7
 
-
-
 !item [date/time:]  Das Erstelldatum und die Erstellzeit im TOS-Format, d.h so, wie es 
-
              Tgetdate und Tgettime liefern.
-
              
-
              (!B)Hinweis:(!b) (!nl)
-
              Die beim Booten von (!nolink [N.AES]) ausgegebene Zeit entspricht dem Zeitpunkt
-
              der Compilation einer bestimmten Quelldatei von (!nolink [N.AES]), die 
-
              Zeitangabe, die man im Cookie vorfindet, wird mittels eines 
-
              Patchprogrammes gesetzt und ist die eigentlich relevante Angabe.
 
-
-
 !item [flags:]      Bitmaske, deren Bits folgende Bedeutung haben: (!nl)
-
 !begin_xlist [Bit ~00 =] !short
-
              !item [Bit ~0 =] 0: ST-Version (!nl)
-
              !item [Bit ~0 =] 1: TT-Version (Compileroption '68020') (!nl)
-
              !item [Bit ~1 =] 0: normale Version (!nl)
-
              !item [Bit ~1 =] 1: Debug-Version
-
 						 !item [Bit 15 =] Wenn diese Bit TRUE ist wurde der Cookie von XaAES angelegt.
-
 !end_xlist
 
-
-
 !item [config:]     Zeiger auf eine Liste der CNF-Variablen, die wÑhrend das System 
-
              lÑuft geÑndert werden kînnen. Der Speicher ist ((!nolink [global])) alloziert. 
-
              Das mitgelieferte N_CONTRL.CPX macht gebrauch davon.
 
 
-
-
-
 !begin_verbatim
-
 /* cnf types */
-
 #define CNF_TEND  0   /* Kennzeichnet das Ende der Liste. */
-
 #define CNF_TBOOL 1   /* true/false.                      */
-
 #define CNF_TWORD 2   /* 16 bit signed wert.              */
-
 #define CNF_TLONG 3
-
 /* weitere kînnen folgen! */
-
-
 
 typedef enum {false, true} bool;
 
-
-
 typedef struct
-
 {
-
   union cnf_typ { bool b; WORD w; LONG l; }
-
           val;            /* der Inhalt.             */
-
   WORD    typ;            /* Typ, CNF_T...           */
-
   BYTE    text[22];       /* Name, wie in N_AES.CNF. */
-
 } CNF_INF;
 
-
-
 typedef struct
-
 {
-
   BYTE    typ[16];  /* Kategorie, Text aus den Strings *
-
                      * des Dialog-Baums CNF_TREE der   *
-
                      * N_AESSYS.RSC.                   *
-
                      * zB. "Fenster" oder "System".    */
-
   CNF_INF *cnf_inf; /* Die Variablen eben.             */
-
 } CNF_VAR;
-
 !end_verbatim
-
              Das Ende der Liste wird durch einen NULL-Zeiger signalisiert.
 
-
-
 !item [unused_2:]   Freiplatz fÅr spÑtere (!nolink [N.AES])-Versionen
-
 !end_xlist
 
-
-
 !end_node
-
-
-
 
 
 !begin_node Die N.AES-Konfigurationsdatei
-
 !label N_AES.CNF
 
-
-
 Die Konfigurationsdatei N_AES.CNF, die (!nolink [N.AES]) beim Systemstart einliest und 
-
 auswertet, enthÑlt die benutzerdefinierbaren Einstellungen (CNF-Variablen) und 
-
 Kommandos (CNF-Befehle).
 
-
-
 Bitte erschrecken Sie nicht vor der Vielfalt der Einstellungsmîglichkeiten! Die 
-
 mitgelieferte Konfigurationsdatei enthÑlt Standardwerte fÅr die einzelnen 
-
 Variablen und sollte von Ihnen zunÑchst ohne énderungen eingesetzt werden kîn- 
-
 nen. Haben Sie sich ein wenig mit N.AES vertraut gemacht, kînnen Sie die 
-
 verschiedenen Einstellungen zu einem spÑteren Zeitpunkt nach Ihrem Geschmack 
-
 verÑndern.
 
-
-
 Die Konfigurationsdatei wird zur Laufzeit nicht im Speicher gehalten, sondern zu
-
 Beginn einmalig ausgewertet und danach der fÅr sie benîtigte Speicher wieder 
-
 freigegeben. Daher braucht (und sollte) man hier auch nicht mit Kommentaren zu 
-
 sparen.
 
-
-
 Ein Kommentar wird durch das Zeichen # am Anfang einer Zeile eingeleitet und 
-
 reicht bis zum Ende dieser Zeile. Alles, was in einer solchen Kommentarzeile 
-
 steht, wird bei der Auswertung der Konfigurationsdatei ignoriert. Ebenso werden 
-
 Leerzeilen bei der Auswertung Åbergangen.
 
-
-
 Die in der Konfigurationsdatei mîglichen Angaben lassen sich in drei Gruppen 
-
 einteilen:
-
 !begin_itemize
-
    !item Mit Hilfe der CNF-Variablen werden die globalen Betriebsparameter von (!nolink [N.AES])
-
      festgelegt, welche zur Laufzeit momentan nicht mehr geÑndert werden kînnen.
-
      Zum Beispiel kann mit Hilfe dieser Variablen die Grîûe der Iconfenster 
-
      festgelegt werden.
 
-
-
    !item Die CNF-Befehle werden kurz nach dem Einlesen der Konfigurationsdatei 
-
      ausgefÅhrt und haben eine unmittelbare Wirkung. So kînnen mit Hilfe dieser 
-
      Kommandos Programme gestartet oder Umgebungsvariablen gesetzt werden.
 
-
-
    !item Die CNF-Debugvariablen haben nur in einer speziellen (!nolink [N.AES])-Version eine 
-
      Bedeutung, welche nicht Bestandteil der Distribution ist.
-
 !end_itemize
 
 
-
-
-
 Anmerkung zu den Variablen:
-
 Bitte gehen Sie besonders vorsichtig beim éndern von Einstellungen vor, die das 
-
 System betreffen (sstacksize, mpipesize, qsbchars, ...). Zu kleine oder zu groûe 
-
 Werte kînnen eventuell ungewÅnschte Effekte hervorrufen oder sogar zum 
-
 Fehlverhalten von (!nolink [N.AES]) fÅhren.
 
-
-
 # Die CNF-Variablen
-
 # CNF-Befehle
-
 # Farbangaben
-
 # CNF-Debugvariablen
-
 !end_node
-
-
 
 !endif

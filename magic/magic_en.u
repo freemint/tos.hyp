@@ -1,2325 +1,1163 @@
 !begin_node MagiC
-
 !ignore_subtoc
 
-
-
 ... is a largely (!nolink [TOS])-compatible operating system from Application
-
 Systems Heidelberg, which can offer preemptive multitasking as well
-
 as a range of further features. The prime argument (!I)for(!i) MagiC is
-
 doubtless the fact that it is the only (compatible) operating system
-
 that is still being developed further (at the time this was written),
-
 and in addition offers the use of modern hardware (the Power-PC). The
-
 latter was achieved with a port of MagiC to the Apple platform as
-
 (!nolink [MagiC]) Mac. At a later stage, MagiC was also ported to the PC platform
-
 under Windows, known as (!nolink [MagiC]) PC.
-
-
 
 This section describes the following points:
 
-
-
 !begin_itemize !short
-
 !item Accessories in MagiC
-
 !item (!link [AUTOEXEC.BAT file] [The AUTOEXEC.BAT file in MagiC])
-
 !item MagiC's DFS-concept
-
 !item (!link [Error-messages of MagiC] [Special error-messages in MagiC])
-
 !item (!link [Iconification] [Iconification in MagiC])
-
 !item (!link [MAGX.INF file of MagiC] [Make-up of the MAGX.INF file])
-
 !item (!link [Shutdown] [General remarks about shutdown])
-
 !item (!link [Smart redraw] [Smart redraw in MagiC])
-
 !item Test for MagiC
-
 !item VFAT-XFS in MagiC
-
 !item Additional programs for MagiC
-
 !item Extract from MagiC's BIOS
-
 !item (!link [Peculiarities of the 3D-look] [Notes about MagiC's 3D-look])
-
 !item (!link [Input fields] [Input fields in MagiC])
-
 !item (!link [Background-DMA] [The background-DMA of MagiC])
-
 !item (!link [Drive U:] [The drive U: in MagiC])
-
 !item Semaphores in MagiC
-
 !item Single-mode
-
 !item (!link [Task-manager] [The task-manager of MagiC])
-
 !item (!link [Threads][Threads in MagiC])
-
 !item MagiC's XFS-concept
-
 !item Shared libraries
-
 !end_itemize
 
-
-
 (!B)Note:(!b) One should not hide the fact here that MagiC (at least the
-
 earlier versions) has (!I)clear weaknesses(!i) compared to Atari's MultiTOS:
-
 The functionality of the (!nolink [AES]) Version 4.0 has not been reached yet,
-
 many (!nolink [GEMDOS]) functions are not implemented, and also the interface for
-
 installing alternative filesystems can be described as unfortunate
-
 in comparison to the MultiTOS solution.
-
-
 
 See also: About the BIOS ~ About the XBIOS ~ GEM ~ About the VDI
 
 
 
-
-
-
-
 !begin_node AESVARS, Pointer to AESVARS
 
-
-
 !label DOMagixAESVars
-
 !begin_verbatim
-
 /* The following code obtains the pointer to the AESVARS structure of
-
    MagiC in a reliable manner.
 
-
-
    The routine is particularly important as the relevant components
-
    in the MagX cookie do not yet have a valid value at boot-up. */
 
 
-
-
-
 AESVARS* DOMagixAESVars (VOID)
-
 {
-
     LOCAL WORD have_it = 0;
-
     LOCAL AESVARS *ap = 0;
 
-
-
     if (!have_it)
-
     {
-
         OSHEADER *O;
-
-
 
         have_it = 1;
 
-
-
         O = (OSHEADER *) Supexec (get_osheader);
-
         ap = (AESVARS *) O->os_magic;
 
-
-
         if (!get_cookie ('MagX', NULL) ||
-
             ap->magic != 0x87654321L || ap->magic2 != 'MAGX')
-
               ap = 0;
-
     }
-
-
 
     return (ap);
 
-
-
 } /* DOMagixAESVars */
-
 !end_verbatim
 
-
-
 See also: Test for MagiC ~ (!link [get_cookie][Sample code])
-
 !end_node
-
-
-
 
 
 !begin_node MAGX_COOKIE, status_bits
 
-
-
 A bit-vector, which is defined as follows:
 
-
-
 !begin_table [l l l]
-
 Bit-00 !! = !! (!nolink [MagiC]) task-manager active at present?
-
 Bit-01 !! = !! Reserved
-
 .. !! ~
-
 Bit-31 !! = !! Reserved
-
 !end_table
 
-
-
 (!B)Warning:(!b) The specified bits in this LONG value are read-only, i.e.
-
 the may (!I)not(!i) be changed.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Extract from MagiC's BIOS
 
-
-
 !begin_verbatim
-
 *******************************
-
 ******* ACSI ******************
-
 *******************************
-
-
-
 
 
 * Interrupt control :
-
 *
-
 * Everything works via input I5 of the ST-MFP, has the interrupt #7
-
 * (activated with bit 7 of ierb)
-
 * Polling via bit 5 of gpip
-
 * First aer for bit 5 must be 0, i.e. interrupt is only triggered
-
 * during the transition of 1 to 0
-
 * Second activate interrupt _mfpint (7) and set vector (address $11c)
-
 *
-
-
 
 **********************************************************************
-
 *
-
 * Lock the FDC/ACSI-DMA -
-
 * and then free it again
-
 * No register (apart from d0 at dma_end) is altered
-
 *
-
 * For the time in which AES has not yet been initialized, evnt_sem
-
 * cannot block, as act_appl is always NULL
-
 *
-
-
 
 dma_begin:
-
  movem.l  d1-d2/a0-a2,-(sp)
-
  lea      dma_sem,a0
-
  moveq    #0,d1               ; No timeout
-
  moveq    #SEM_SET,d0
-
  jsr      evnt_sem
-
  st       flock
-
  movem.l  (sp)+,d1-d2/a0-a2
-
  rts
-
-
 
 dma_end:
-
  movem.l  d0-d2/a0-a2,-(sp)
-
  lea      dma_sem,a0
-
  moveq    #SEM_FREE,d0
-
  jsr      evnt_sem
-
  clr.w    flock
-
  movem.l  (sp)+,d0-d2/a0-a2
-
  rts
-
-
-
 
 
 **********************************************************************
-
 *
-
 * long wait_ACSI( d0 = long ticks_200hz )
-
 *
-
 * Return value: 0    OK
-
 *              -1    Timeout
-
 *              -2    Bus error
-
 *
-
-
 
 wait_ACSI:
-
  movem.l  d1-d2/a0-a2,-(sp)
-
  tst.w    pe_slice            ; Preemptive?
-
  bmi.b    wdma_no_yield       ; No, busy waiting
-
  move.l   act_appl,d2
-
  ble.b    wdma_no_yield       ; Current application invalid
-
-
 
 * New routine via evnt_IO and MFP interrupt
 
-
-
  lsr.l    #2,d0               ; (!nolink [AES]): 50Hz instead of 200Hz
-
 wdma_new:
-
  move     sr,d1
-
  ori      #$700,sr
-
  btst     #5,gpip             ; Finished?
-
  beq.b    wdma_ok2            ; Yes, enable interrupt
-
 ; Set up interrupt
-
  pea      int_mfp7_unsel(pc)
-
  move.l   d2,imfp7_appl       ; act_appl
-
  move.l   sp,imfp7_unsel
-
 ; Release interrupt
-
  move.w   d1,sr
-
 ; Wait for interrupt
-
  move.l   sp,a0
-
 ;move.w   d0,d0               ; Timeout in 50Hz ticks
-
  jsr      evnt_IO
-
  addq.l   #4,sp
-
 wdma_end:
-
  movem.l  (sp)+,d1-d2/a0-a2
-
  rts
-
-
 
 * Old routine with busy waiting via _hz_200
 
-
-
 wdma_no_yield:
-
  add.l    _hz_200,d0
-
 wdma_loop:
-
  btst     #5,gpip
-
  beq.b    wdma_ok
-
  cmp.l    _hz_200,d0
-
  bcc.b    wdma_loop
-
 wdma_timeout:
-
  moveq    #-1,d0              ; Timeout
-
  bra.b    wdma_end
-
 wdma_ok2:
-
  move.w   d1,sr
-
 wdma_ok:
-
  moveq    #0,d0               ; OK
-
  bra.b    wdma_end
-
-
-
 
 
 **********************************************************************
-
 *
-
 * Interrupt routine for MFP, interrupt channel #7 = I/O-port 5
-
 * (DMA/FDC busy)
-
 *
-
 * Return value: 0 (OK)
-
 *
-
-
 
 int_mfp7:
-
  tst.l    imfp7_unsel                   ; Interrupt activated?
-
  beq.b    imfp7_end                     ; No, continue
-
  movem.l  d0-d2/a0-a2,-(sp)
 
-
-
  move.l   imfp7_unsel,a0
-
  clr.l    imfp7_unsel                   ; Deactivate interrupt
-
  clr.l    (a0)                          ; Mark as arrived
 
-
-
  move.l   imfp7_appl,a0
-
  jsr      appl_IOcomplete               ; Awake waiting APP
-
  movem.l  (sp)+,d0-d2/a0-a2
-
 imfp7_end:
-
  move.b   #$7f,isrb                     ; Clear service-bit
-
  rte
 
 
-
-
-
 **********************************************************************
-
 *
-
 * void int_mfp7_unsel( a0 = long *unselect, a1 = APPL *ap );
-
 *
-
 * Deactivates the interrupt again if it has not arrived
-
 * Return value: -1 (timeout)
-
 *
-
-
 
 int_mfp7_unsel:
-
  clr.l    imfp7_unsel                   ; Deactivate interrupt
-
  moveq    #-1,d0
-
  move.l   d0,(a0)                       ; Not arrived
-
  rts
 
 
 
-
-
-
-
 *******************************
-
 ******* SCSI ******************
-
 *******************************
-
-
-
 
 
 * Interrupt control:
-
 *
-
 * SCSI-DMA bus error: Input I5 of the TT-MFP
-
 * First aer for bit 5 must be 0, i.e. interrupt is triggered at the
-
 * transition of 1 to 0
-
 * Polling via bit 5 of gpip
-
 * Interrupt #7 of the TT-MFP (address $15c)
 
-
-
 * SCSI: Input I7 of the TT-MFP
-
 * First aer for bit 7 must be 1, i.e. interrupt is triggered at the
-
 * transition of 0 to 1
-
 * Polling via bit 7 of gpip
-
 * Interrupt #15 of the TT-MFP (address $17c)
 
-
-
 * During the transmission, the operating type register $fff785 of
-
 * the ncr 5380 manifestly has to have bit 3 (enable process interrupt)
-
 * set
 
-
-
 **********************************************************************
-
 *
-
 * Interrupt routine for TT-MFP, interrupt channel #7 = I/O-port 5
-
 * (SCSI-DMA bus error)
-
 *
-
 * Return value: -2
-
 *
-
-
 
 int_scsidma:
-
  tst.l    ncrdma_unsel                  ; Interrupt activated?
-
  beq.b    incrdma_end                   ; No, continue
-
  movem.l  d0-d2/a0-a2,-(sp)
-
-
 
  moveq    #-2,d0                        ; Arrived (error)
-
  move.l   ncrdma_unsel,a0
-
  clr.l    ncrdma_unsel                  ; Deactivate interrupt
-
  move.l   d0,(a0)                       ; Mark as arrived
 
-
-
  move.l   ncrdma_appl,a0
-
  jsr      appl_IOcomplete               ; Awake waiting APP
-
  movem.l  (sp)+,d0-d2/a0-a2
-
 incrdma_end :
-
  move.b   #$7f,isrb+$80                 ; Clear service-bit (TT-MFP)
-
  rte
 
 
-
-
-
 **********************************************************************
-
 *
-
 * Interrupt routine for TT-MFP, interrupt channel #15 = I/O-port 7
-
 * (SCSI)
-
 *
-
 * Return value: 0
-
 *
-
-
 
 int_ncr:
-
  tst.l    ncrdma_unsel                  ; Interrupt activated?
-
  beq.b    incr_end                      ; No, continue
-
  movem.l  d0-d2/a0-a2,-(sp)
 
-
-
  move.l   ncrdma_unsel,a0
-
  clr.l    ncrdma_unsel                  ; Deactivate interrupt
-
  clr.l    (a0)                          ; Mark as arrived
 
-
-
  move.l   ncrdma_appl,a0
-
  jsr      appl_IOcomplete               ; Awake waiting APP
-
  movem.l  (sp)+,d0-d2/a0-a2
-
 incr_end:
-
  move.b   #$7f,isra+$80                 ; Clear service-bit (TT-MFP)
-
  rte
 
 
-
-
-
 **********************************************************************
-
 *
-
 * void incrdma_unsel( a0 = long *unselect, a1 = APPL *ap );
-
 *
-
 * Deactivates the interrupt again if it has not arrived
-
 * (Return value: -1)
-
 *
-
-
 
 incrdma_unsel:
-
  clr.l    ncrdma_unsel                  ; Deactivate interrupt
-
  moveq    #-1,d0 ; Timeout
-
  move.l   d0,(a0)                       ; Not arrived
-
  rts
 
 
-
-
-
 **********************************************************************
-
 *
-
 * long wait_NCR( d0 = long ticks_200hz )
-
 *
-
 * Return value: 0    OK
-
 *              -2    Bus error
-
 *              -1    Timeout
-
 *
-
 * No register apart fro d0 altered
-
 *
-
-
 
 wait_NCR:
-
  movem.l  d1-d2/a0-a2,-(sp)
-
  tst.w    pe_slice            ; Preemptive?
-
  bmi.b    wncr_no_yield       ; No, busy waiting
-
  move.l   act_appl,d2
-
  ble.b    wncr_no_yield       ; Current application invalid
-
-
 
 * New routine via evnt_IO and MFP interrupt
 
-
-
  lsr.l    #2,d0               ; AES: 50Hz instead of 200Hz
-
 wncr_new:
-
  move     sr,d1
-
  ori      #$700,sr
-
  btst     #5,gpip+$80         ; DMA bus error?
-
  beq.b    wncr_err2           ; Yes, return(-2)
-
  btst     #7,gpip+$80         ; Finished?
-
  bne.b    wncr_ok2            ; Yes, enable interrupt, return(0)
-
 ; Set u0 interrupt
-
  pea      incrdma_unsel(pc)
-
  move.l   d2,ncrdma_appl      ; act_appl
-
  move.l   sp,ncrdma_unsel
-
 ; Release interrupt
-
  move.w   d1,sr
-
 ; Wait for interrupt
-
  move.l   sp,a0
-
 ;move.w   d0,d0               ; Timeout in 50Hz ticks
-
  jsr      evnt_IO
-
  addq.l   #4,sp
-
 wncr_end:
-
  movem.l  (sp)+,d1-d2/a0-a2
-
  rts
-
-
 
 * Old routine with busy waiting via _hz_200
 
-
-
 wncr_no_yield:
-
  add.l    _hz_200,d0
-
 wncr_loop:
-
  btst     #5,gpip+$80
-
  beq.b    wncr_err
-
  btst     #7,gpip+$80
-
  bne.b    wncr_ok
-
  cmp.l    _hz_200,d0
-
  bcc.b    wncr_loop
-
  moveq    #-1,d0                   ; Timeout
-
  bra.b    wncr_end
-
 wncr_ok2:
-
  move.w   d1,sr
-
 wncr_ok:
-
  moveq    #0,d0
-
  bra.b    wncr_end
-
 wncr_err2:
-
  move.w   d1,sr
-
 wncr_err:
-
  moveq    #-2,d0
-
  bra.b    wncr_end
-
-
-
 
 
 **********************************************************************
-
 *
-
 * Lock the NCR-SCSI
-
 *
-
 * No register apart from d0 altered
-
 *
-
 * and release it again
-
 *
-
 * No register is altered
-
 *
-
 * For the time in which (!nolink [AES]) has not yet been initialized, evnt_sem
-
 * cannot block, as act_appl is always NULL
 
-
-
 ncr_begin:
-
  movem.l  d1-d2/a0-a2,-(sp)
-
  lea      ncr_sem,a0
-
  moveq    #0,d1               ; No timeout
-
  moveq    #SEM_SET,d0
-
  jsr      evnt_sem
-
  movem.l  (sp)+,d1-d2/a0-a2
-
  rts
-
-
 
 ncr_end:
-
  movem.l  d0-d2/a0-a2,-(sp)
-
  lea      ncr_sem,a0
-
  moveq    #SEM_FREE,d0
-
  jsr      evnt_sem
-
  movem.l  (sp)+,d0-d2/a0-a2
-
  rts
-
 !end_verbatim
 
-
-
 (!B)Warning:(!b) The routines given here can naturally change again at any
-
 time!!
 
-
-
 See also: MagiC ~ About the GEMDOS ~ About the BIOS ~
-
 (!link [MagiC's XFS-concept][MagiC's XFS-concept])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The AUTOEXEC.BAT file in MagiC
-
 !label AUTOEXEC.BAT in MagiC
 
-
-
 Due to the forwards- or backwards-sorted AUTO folder on the Apple
-
 Macintosh (keyword: (!nolink [MagiC]) Mac) there is now also an alternative for
-
 Atari machines:
 
-
-
 If a file named AUTOEXEC.BAT is found in the AUTO folder during the
-
 boot process, then all programs that are listed in it line-by-line
-
 will be executed. Empty lines are permitted, program names will be
-
 adopted up to the first space character. Thus comments can be entered
-
 (separated by a space character from the programs). The programs may
-
 include (!I)absolute(!i) paths; if these are absent then they will be looked
-
 for in the AUTO folder.
 
-
-
 The root directory serves here as the current directly, as usual.
-
 Due to this feature there is therefore a (!nolink [MagiC])-specific AUTO folder
-
 collection, as the AUTOEXEC.BAT is ignored by other operating systems.
 
-
-
 See also: _autopath ~ (!link [System variables][The system variables])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Notes about MagiC's 3D-look
 
-
-
 From MagiC 3 onwards a 3D-look is available for objects, which however
-
 differs in some details from the Atari variant. The most important
-
 points is summary:
 
-
-
 !begin_itemize
-
 !item The 3D-look is only available in resolutions with (!I)at least 16
-
      colours(!i)
-
 !item While in (!nolink [TOS]) 4.0 one can use objc_sysvar to influence the
-
      behaviour of indicators and activators as well as colours,
-
      (!nolink [MagiC]) permits only interrogation of the data. For the colours,
-
      (!nolink [MagiC]) always uses colour numbers 8 and 9 (light or dark grey).
-
 !item Activators are always shown as depressed for SELECTED, while
-
      indicators or background objects are colourized
-
 !item Indicators and background objects are treated in the same way
-
 !item 3D effects can be applied to all object types, which includes
-
      text input fields, headings, group frames etc.
-
 !item 3D objects do not get an additional border and hence do not alter
-
      their size. Depending on the border width they stand out better,
-
      and in some circumstances may also have an additional border and
-
      shadow. The headings should have a height of 1+3 instead of the
-
      previous 1+2, so that everything looks tidy.
-
 !item The object status DRAW3D is ignored
-
 !item Ornamental borders for dialog boxes will be created only if an
-
      inner border of 2 pixels and OUTLINED was selected
-
 !end_itemize
-
-
 
 See also: About the AES ~ GEM ~ Style guidelines
 
 
 
-
-
-
-
 !begin_node Input fields in MagiC
-
 !label Input fields in MagiC
-
 !label Editable fields in MagiC
 
-
-
 The input fields in (!nolink [MagiC]) offer natively many functions which would
-
 otherwise have to be programmed laboriously by hand. Amongst others
-
 these are:
 
-
-
 !begin_itemize !short
-
 !item Exact cursor positioning with the mouse
-
 !item Keyboard shortcuts to move the cursor to the previous/next word
-
      or to the start/end of the line
-
 !item Insert/overwrite mode
-
 !item Deletion to end of line
-
 !item Cut, Copy, Paste
-
 !item Input fields with small fonts are possible
-
 !end_itemize
 
-
-
 The functions for [Help], [Undo], [Shift]-[up-arrow], [Shift]-[down-
-
 arrow] and [Ctrl]-[Q] are contained in form_keybd (however they are
-
 ignored if the relevant object is (!nolink [DISABLED])), the cursor positioning
-
 with the mouse is performed by form_do or form_xdo and objc_edit
-
 and the remaining functions by objc_edit.
 
-
-
 Those who would like to find delight in the corresponding functions
-
 must use the associated (!nolink [AES]) calls.
 
-
-
 See also: About the AES ~ GEM ~ Style guidelines ~
-
 (!link [Scrollable input fields][Scrollable input fields])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Scrollable input fields
 
-
-
 !begin_verbatim
-
 /*******************************************************************
-
 *
-
 * This sample program demonstrates the use of scrollable
-
 * input fields in MagiC 3.
-
 *
-
 *******************************************************************/
 
-
-
 #include <aes.h>
-
 #include <tos.h>
-
 #include <string.h>
-
 #include <magx.h>
-
 #include "magxlib.h"
-
 #include "edscroll.h"
-
-
 
 #define TLEN  30
 
-
-
 int  do_dialog    (OBJECT *dialog);
 
-
-
 void main()
-
 {
-
   OBJECT *adr_dialog;
-
   ULONG crdate;
-
   int is_scroll;
 
-
-
   XTED xted;
-
   char tmplt[TLEN+1],txt[TLEN+1];
 
 
-
-
-
   /* Check whether the system can scrolledit */
-
   /* ------------------------------------------ */
 
-
-
   is_scroll = ((0 < get_MagiC_ver(&crdate)) &&
-
     (crdate >= 0x19950829L));
 
-
-
      /* Register application with the AES */
-
      /* ----------------------------- */
 
-
-
      if   (appl_init() < 0)
-
           Pterm(1);
 
-
-
      /* Resourcedatei laden */
-
      /* ------------------- */
-
      if   (!rsrc_load("edscroll.rsc"))
-
      {
-
           form_alert(1, "[3][ \"EDSCROLL.RSC\"|not found!][Cancel]");
-
           goto err;
-
      }
-
-
 
      rsrc_gaddr(0, EDIT, &adr_dialog);
 
-
-
   /* Initialize scroll TEDINFO  */
-
   /* ----------------------------- */
 
-
-
   init_scrlted(adr_dialog+EDITTXT, is_scroll, &xted,
-
         txt, tmplt, TLEN);
-
-
 
   strcpy(txt, "Beispiel");
 
-
-
   /* Dialog */
-
   /* ------ */
 
-
-
      wind_update(BEG_MCTRL);
-
      graf_mouse(ARROW, 0L);
-
      do_dialog(adr_dialog);
-
      wind_update(END_MCTRL);
-
      rsrc_free();
 
-
-
   err:
-
      appl_exit();
-
      Pterm0();
-
 }
-
-
-
 
 
 /****************************************************************
-
 *
-
 * do_dialog
-
 *
-
 ****************************************************************/
 
-
-
 int do_dialog(OBJECT *dialog)
-
 {
-
      int cx, cy, cw, ch;
-
      int exitbutton;
 
-
-
      form_center(dialog, &cx, &cy, &cw, &ch);
-
      form_dial(FMD_START, 0,0,0,0, cx, cy, cw, ch);
-
      objc_draw(dialog, ROOT, MAX_DEPTH, cx, cy, cw, ch);
-
      exitbutton = 0x7f & form_do(dialog, 0);
-
      form_dial(FMD_FINISH, 0,0,0,0,cx, cy, cw, ch);
-
      return(exitbutton);
-
 }
-
-
-
 
 
 /*******************************************************************
-
 *
-
 * Ascertain MagiC version
-
 * =======================
-
 *
-
 * If <crdate> != NULL, the creation date will be returned
-
 * in the form yyyymmdd. With '<' and '>' one can then
-
 * ascertain directly whether a given function is available
-
 * in the MagiC version in question.
-
 *
-
 * Return value:  0     No MagiC installed
-
 *               -1     Still in AUTO folder
-
 *           0x0a0b     Version a.b
-
 *
-
 *******************************************************************/
 
-
-
 WORD get_MagiC_ver(ULONG *crdate)
-
 {
-
   ULONG *cookie;
-
   AESVARS *av;
 
-
-
   cookie = get_cookie('MagX');
-
   if  (!cookie)
-
     return(0);
-
   else
-
   {
-
     av = ((MAGX_COOKIE *) (*cookie))->aesvars;
-
     if  (!av)
-
       return(-1);
-
     else if (crdate)
-
     {
-
       *crdate = av->date << 16L;                /* yyyy0000 */
-
       *crdate |= av->date >> 24L;               /* yyyy00dd */
-
       *crdate |= (av->date >> 8L) & 0xff00L;    /* yyyymmdd */
-
       return(av->version);
-
     }
-
   }
-
 }
-
-
-
 
 
 /****************************************************************
-
 *
-
 * Makes an F(BOX)TEXT object scrollable if MagiC is running.
-
 *
-
 * If <is_scroll> is FALSE, only the text field will be converted
-
 * to a user character string.
-
 *
-
 * In the RCS, the text field should be left empty, but the template
-
 * and the validation character string have to be input, as the RCS
-
 * will strike otherwise.
-
 * For scrolling fields a new template has to be created, as the
-
 * one registered in the .RSC file cannot be used since it is too
-
 * short. The template created here consists only of '_' characters,
-
 * since this covers 99.9% of all applications for scrolling objects.
-
 * The length of the validation string is immaterial. i.e. has to be
-
 * at least 1, as the AES automatically duplicates the validation
-
 * string until the length of the text field has been filled.
-
 *
-
 * The maximum length for the input character string is in every case
-
 * (TEDINFO.te_txtlen - 1).
-
 *
-
 ****************************************************************/
 
-
-
 void init_scrlted(OBJECT *o, WORD is_scroll, XTED *xted,
-
         char *txt, char *tmplt, WORD len)
-
 {
-
   TEDINFO *t;
 
-
-
   t = o->ob_spec.tedinfo;
-
   t->te_just = TE_LEFT;   /* Important! */
-
   t->te_ptext = txt;
-
   if  (is_scroll)
-
   {
-
     memset(tmplt, '_', len);  /* New template */
-
     tmplt[len] = '\0';
-
     xted->xte_ptmplt = tmplt;
-
     xted->xte_pvalid = t->te_pvalid;
-
     xted->xte_vislen = t->te_tmplen - 1;
-
     xted->xte_scroll = 0;
 
-
-
     t->te_tmplen = len+1;
-
     t->te_ptmplt = NULL;
-
     t->te_pvalid = (void *) xted;
-
   }
-
   t->te_txtlen = t->te_tmplen;
-
 }
-
 !end_verbatim
 
-
-
 See also: About the AES ~ Input fields in MagiC ~ GEM ~ TEDINFO
-
 !end_node
-
-
-
-
 
 
 
 !include magic/magicerr.u
 
 
-
-
-
 !begin_node The background-DMA of MagiC
-
 !label Background-DMA in MagiC
 
-
-
 As of MagiC 3, the whole of the DOS, inclusive of access to DOS file!-
-
 systems, is reentrant and runs in the background. Thus it is possible
-
 to edit files on Drive A: without perceptibly slowing down the
-
 computer at floppy disk accesses. A prerequisite for this, however,
-
 are floppy and hard drive routines that work in the background.
 
-
-
 So that the hard disk driver does not need to make these functions
-
 available, the (!nolink [BIOS]) of (!nolink [MagiC]) contains all the required functions.
-
 Via the (!link [MagX cookie][Cookie, MagX]) (component (!I)hddrv_functions(!i))
-
 one obtains access to the following structure, which contains pointers to the
-
 important routines of the background-DMA:
 
-
-
 !begin_verbatim
-
 typedef struct
-
 {
-
     LONG dma_begin ( VOID);
-
     LONG dma_end   ( VOID );
-
     LONG dma_wait  ( d0 = LONG ticks_200hz );
-
     LONG ncr_begin ( VOID );
-
     LONG ncr_end   ( VOID );
-
     LONG ncr_wait  ( d0 = LONG ticks_200hz );
-
 } HDFUNCS;
-
 !end_verbatim
 
-
-
 (!B)Note:(!b) Directly before the structure (2 bytes before) lies a WORD that
-
 gives the length of the table in LONGs (in this case 6). All of the 6
-
 pointers lie in the system variables region and may be changed in case
-
 of need. The internal functions for the floppy drive also jump via the
-
 6 pointers. (!B)Important:(!b) The (!I)hddrv_functions(!i) pointer in
-
 (!link [MagX cookie][Cookie, MagX]) may not be altered!
 
-
-
 At boot-time the preemptive multitasking is switched off (actually
-
 the multitasking itself is switched off) but the routines also work
-
 before installation of the (!nolink [AES]), whereby the wait routines then
-
 do a 'busy waiting' (as they do when switching off the preemptive
-
 multitasking), and the semaphore routines simply do nothing (apart
-
 from setting and clearing flock).
 
-
-
 This hypertext contains
-
 (!link [extracts from MagiC's BIOS][Extract from MagiC's BIOS]) that should
-
 demonstrate how the whole thing works. A few words about this:
 
-
-
 !begin_itemize
-
 !item The routines acsi_xxx are both for ACSI and FDC, i.e. dma_begin
-
      sets (!nolink [flock]), dma_end clears it again
-
 !item The routines ncr_xxx are for TT-SCSI
-
 !item The functions xxx_begin reserve the relevant semaphores.
-
      The following applies for the return values:
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [-1]
-
 Semaphore is already in possession
-
 !item [~0]
-
 Ok
-
 !end_xlist
-
       Apart from d0, the routines do not alter any registers
-
 !item The functions xxx_end release the semaphores again; here too no
-
      registers are altered
-
 !item dma_wait waits for an interrupt of the ACSI-DMA (or FDC)
-
      controller; ncr_wait is for the SCSI bus of the Atari-TT. The
-
      following applies for the return values:
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [-2]
-
 Bus error (interrupt of TT-SCSI)
-
 !item [-1]
-
 Timeout
-
 !item [~0]
-
 Ok
-
 !end_xlist
-
 !end_itemize
 
-
-
 See also: About the BIOS ~ About the GEMDOS ~ MagiC's XFS-concept
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Iconification in MagiC
 
-
-
 (!nolink [MagiC]) (from Version 3.0 onwards), like MultiTOS, permits the
-
 iconification of windows. One should note the following for this:
 
-
-
 !label Iconification, Algorithm during
-
 The algorithm for setting the position of the iconified windows works
-
 in a different way to MultiTOS; (!nolink [MagiC]) searches through the current
-
 positions of already iconified windows and places the new window in
-
 a free position. A position is free (!I)only(!i) if it does not intersect
-
 with the new position.
 
-
-
 !label Iconification, Elements after
-
 !label Iconification, Size after
-
 The (!nolink [AES]) explicitly sends a redraw message during un-/iconification,
-
 even if the size has (!I)not(!i) altered. The iconified window has as its
-
 (!link [components][The components of a window]) only a Mover and a title. Its
-
 total size comprises (as
-
 under MultiTOS) 72x72 pixels in all. This size should however not be
-
 taken as fixed; it could possibly change in later versions. For this
-
 reason the size of an iconified window should be obtained from the
-
 (!nolink [WM_ICONIFY]) message, or with (!nolink [wind_get])((!nolink [WF_ICONIFY])).
 
 
-
-
-
 See also: wind_get ~ wind_set ~ WM_ICONIFY ~ WM_ALLICONIFY ~
-
 WM_UNICONIFY ~ (!link [Shortcuts][Iconification, Shortcuts for])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The drive U: in MagiC
 
-
-
 Under MagiC, a drive U: is created during the DOS initializtion. So
-
 that its existence is recognized by current programs, the relevant
-
 bit in _drvbits is set; however, no corresponding (!nolink [BIOS]) drive exists.
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image drv_u
-
 !else
-
 !image (!picture_path)\drv_u
-
 !endif
-
 !else
-
 !image (!picture_path)\drv_u
-
 !endif
-
-
 
 Within the pseudo-drive, there are some special directories, namely:
 
-
-
 !begin_itemize !short
-
 !item (!link [U:\\DEV][The directory U:\DEV])    ~(Devices)
-
 !item (!link [U:\\\PIPE][The directory U:\PIPE])  ((!nolink [Pipes]))
-
 !item (!link [U:\\PROC][The directory U:\PROC])  (Processes)
-
 !item (!link [U:\\SHM][The directory U:\SHM])    ~((!nolink [Shared memory]))
-
 !end_itemize
 
-
-
 In contrast to MiNT, however, these are not special filesystems,
-
 but just subdirectories of the DFS for Drive U:. Depending on the
-
 particular subdirectory, the U-DFS creates various file-types and
-
 -drivers. As the directory (!nolink [control]) is encumbent on the DOS_XFS, write
-
 accesses to a workstation, for instance, are logged in the directory
-
 by the file date-stamp. This even goes so far that a write access to
-
 the root of drive A: alters the file date-stamp of U:\A automatically.
 
-
-
 All directories are restricted to a maxium of 32 entries at present,
-
 and Dfree calls only return the value NULL. In the root directory one
-
 can create, besides existing files, only symbolic links (via Fsymlink).
 
-
-
 Before every access to drive U:, newly added drives will be added via
-
 symbolic links, or no longer existing ones removed; this is recognized
-
 via _drvbits. A symbolic link for drive X: is registered as standard
-
 under the name U:\X, and points to the directory X:\. Symbolic links
-
 can be renamed or deleted (even a renamed link will be deleted if the
-
 relevant bit in the system variables _drvbits is cleared).
 
-
-
 (!B)Warning:(!b) MiNT does not incorporate the drives as symbolic links, so
-
 one can set down the following command order:
 
-
-
 !begin_xlist !short [Dgetpath ]
-
 !item [(!nolink [Dsetdrv])]  U:
-
 !item [(!nolink [Dsetpath])] U:\A
-
 !item [(!nolink [Dgetpath])] ==> U:\A
-
 !item [(!nolink [Dsetpath])] ..
-
 !item [(!nolink [Dgetpath])] ==> U:\
-
 !end_xlist
-
-
 
 With a symbolic link, on the other hand, one really changes the path,
-
 i.e. in the third line A:\ appears as the current path. To overcome
-
 this problem, there is special treatment in the kernel which enable
-
 the above (!nolink [control]) order in (!nolink [MagiC]) as well. However there
-
 is a problem with this: The symbolic link may not be renamed, as otherwise the
-
 following happens:
 
-
-
 !begin_xlist !short [Dgetpath ]
-
 !item [(!nolink [Frename])]  U:\A U:\FLOPPY
-
 !item [(!nolink [Dsetdrv])]  U:
-
 !item [(!nolink [Dsetpath])] U:\FLOPPY
-
 !item [(!nolink [Dgetpath])] ==> U:\A
-
 !item [(!nolink [Dsetpath])] ..
-
 !item [(!nolink [Dgetpath])] ==> U:\
-
 !end_xlist
 
-
-
 Because all file functions on U: work in exactly the same way as on
-
 a floppy disk, it is possible to rename directories such as U:\DEV.
-
 (!B)Warning:(!b) This should be avoided if at all possible, since otherwise
-
 user programs will not be able to find their device drivers.
 
-
-
 See also: About the BIOS ~ About the GEMDOS ~
-
 MagiC's XFS-concept ~
-
 (!link [Test for pipes][Pipes, Test for])
-
-
-
-
 
 
 
 !begin_node The directory U:\DEV
 
-
-
 In this directory the device drivers are entered. We are dealing here
-
 with pseudo-files, which are only known to DOS but not the (!nolink [BIOS]).
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image drv_udev
-
 !else
-
 !image (!picture_path)\drv_udev
-
 !endif
-
 !else
-
 !image (!picture_path)\drv_udev
-
 !endif
-
-
 
 The well-known device names too are found in this directory, as the
-
 following apply:
 
-
-
 !begin_itemize !short
-
 !item CON: (Handle -1) ==> U:\DEV\CON
-
 !item AUX: (Handle -2) ==> U:\DEV\AUX
-
 !item PRN: (Handle -3) ==> U:\DEV\PRN
-
 !item NUL: (Handle -4) ==> U:\DEV\NULL
-
 !end_itemize
-
-
 
 Because the devices installed here can be accessed with the normal
-
 (!nolink [GEMDOS]) file functions, it is possile to output a text document to a
-
 printer simply by saving with Fwrite, for instance. Filenames such
-
 as CON: are converted automatically by the kernel into the correct
-
 form (in this case: U:\DEV\CON).
 
-
-
 Depending on the computer model, the following devices are available
-
 by default:
 
-
-
 !begin_xlist !short [SERIAL1]
-
 !item [Device]
-
 Description
-
 !item [~]
-
 ~
-
 !item [AUX]
-
 (!nolink [BIOS]) device 2
-
 !item [CON]
-
 Console
-
 !item [LAN]
-
 (!nolink [BIOS]) device 7, generally SCC, channel A
-
 !item [MIDI]
-
 (!nolink [BIOS]) device 3; with output status on the other hand the device with
-
 the index 4
-
 !item [MODEM1]
-
 (!nolink [BIOS]) device 6, generally the serial port realised with the
-
 ST-MFP, on the Falcon030 the SCC with channel B
-
 !item [MODEM2]
-
 (!nolink [BIOS]) device 7, generally SCC, channel B
-
 !item [NULL]
-
 Empty pseudo-file, always returns during writing the status OK and during reading
-
 the value EOF (no character available)
-
 !item [PRN]
-
 (!nolink [BIOS]) device 0, during output it will abort at a timeout
-
 !item [SERIAL1]
-
 (!nolink [BIOS]) device 8, generally the TT-MFP
-
 !item [SERIAL2]
-
 (!nolink [BIOS]) device 9, generally SCC, channel A
-
 !end_xlist
 
-
-
 Apart from CON:, all devices operate in 'raw-mode', which means that
-
 (!nolink [control]) sequences such as [Control]-[C] are ignored.
 
-
-
 Further devices can be created and entered at any time with Dcntl; due
-
 to the incompatible driver format, however, one must use the opcode
-
 DEV_M_INSTALL and not the otherwise usual DEV_INSTALL. The devices
-
 present can be renamed and deleted with the usual methods; in contrast
-
 to MiNT, the deletion of a device is performed via the device driver
-
 itself, which withdraws from the relevant system vectors and releases
-
 the occupied memory or can terminate itself. A further difference to
-
 MiNT is that (!nolink [MagiC]) makes the full functionality of the DOS filesystem
-
 available, i.e.:
 
-
-
 !begin_itemize !short
-
 !item No more than one device with the same name may exist
-
 !item Write accesses are monitored by changes of the file date-stamp
-
 !item Write-protected devices may not be written to, deleted or renamed
-
 !end_itemize
 
-
-
 (!B)Note:(!b) With (!nolink [Fcreate]) one can not create files here; however it is
-
 possible to create symbolic links with Fsymlink.
 
-
-
 See also:  About the BIOS ~ About the GEMDOS ~ MagiC's XFS-concept
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The directory U:\PIPE
-
 !label Pipes
 
-
-
 In this directory pipes are stored; these are temporary files that are
-
 used particularly for data exchange between processes.
 
-
-
 One differentiates between (!I)unidirectional(!i) and (!I)bidirectional(!i) pipes:
-
 the former allow data to flow only in one direction, the latter can
-
 transmit in both directions, though not simultaneously. Bidirectional
-
 pipes are used in the Drag&Drop protocol, for instance. Pipes return
-
 when reading via (!nolink [Fread]) basically EOF ((!B)E(!b)nd (!B)O(!b)f (!B)F(!b)ile)
-
 if they are empty or if no write process is present. Similarly, during writing with
-
 Fwrite the value EOF is returned if no read process is present.
 
-
-
 The access for this is purely asynchronous, i.e. aplications wait for
-
 the read or write, and awake another application again if necessary.
-
 Pipes are deleted automatically when the last program using them has
-
 closed the file that represents them.
 
-
-
 (!B)Note:(!b) (!nolink [MagiC]) supports a maximum of 32 pipes simultaneously. An Fseek on
-
 pipes leads basically to the return value of 0L, i.e. the file pointer
-
 cannot be influenced. In directories, pipes appear with a length of
-
 2 or 4k and the date of their creation. If an ID > 31 is returned on
-
 opening of a pipe, the system function Fselect cannot be used.
-
-
 
 (!B)In addition, as of (!nolink [MagiC]) 3 the following is to be heeded:(!b)
 
-
-
 !begin_itemize
-
 !item Pipes with mode 4 (pseudo-TTYs) are not supported. (!nolink [MagiC]) knows
-
      only uni- and bidirectional pipes and for mode 4 creates a
-
      bidirectional pipe. The main reason for pipes at present is the
-
      (!nolink [Drag&Drop protocol]).
-
 !item Pipes return for Finstat/Foutstat the number of bytes present
-
      or still free in the block
-
 !item If a pipe is closed, then all waiting programs are awakened, to
-
      prevent any possible (!I)deadlocks(!i)
-
 !end_itemize
 
-
-
 See also: (!nl)
-
 Fcreate ~  Fread ~  Fwrite ~  Fclose ~ Fpipe ~  (!link [Test for pipes][Pipes, Test for])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The directory U:\PROC
-
 !label Name of a process
-
 !label Process, Name of a
-
 !label _PNAM"
 
-
-
 This directory gives an oveview of the processes currently active in
-
 the system. Each entry consists of the following components:
 
-
-
 !begin_itemize !short
-
 !item The process name
-
 !item The process ID (PID)
-
 !item The current memory usage
-
 !item Date and time of creation of the process
-
 !end_itemize
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image drvuproc
-
 !else
-
 !image (!picture_path)\drvuproc
-
 !endif
-
 !else
-
 !image (!picture_path)\drvuproc
-
 !endif
-
-
 
 In the above illustration,  for instance, the process (!I)XCONTROL(!i) has
-
 the PID 4 and occupies 93460 bytes of memory at present.
 
-
-
 Process IDs are allocated at program launch and released again on
-
 termination. The deletion of a file in this directory results in the
-
 corresponding process being destroyed (via the (!nolink [AES]) program manager).
 
-
-
 (!B)Note:(!b) The MiNT-conform process attributes (special file attributes)
-
 are not supported by (!nolink [MagiC]) at present. The name of a process can be
-
 obtained also via the environmental variable (!I)_PNAM(!i); the process ID
-
 is found also in the basepage.
 
-
-
 See also: GEM ~ Style guidelines ~ (!link [Task-manager][The task-manager of MagiC])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The directory U:\SHM
-
 !label Shared memory
 
-
-
 This directory serves as 'storage' for shared memory; so here one can
-
 create files that represent blocks of memory which other processes
-
 may access.
 
-
-
 By using shared memory it is very ease to realise (!I)inter-process
-
 communication(!i) (IPC).
 
-
-
 See also: Fcntl ~ SHMGETBLK ~ SHMSETBLK
-
 !end_node
-
 !end_node
-
-
-
-
 
 
 
 !include magic\magicinf.u
 
 
-
-
-
 !begin_node Semaphores in MagiC
 
-
-
 Under MagiC, semaphores are released when the program (more exactly
-
 the application) terminates. In contrast to MiNT this applies also to
-
 the semaphores allocated with Psemaphore.
 
-
-
 (!nolink [MagiC]) supports with (!nolink [Psemaphore]) only modes 2 and 3 at present, and
-
 recognizes the following system semaphores:
 
-
-
 !begin_xlist !short [Semaphore]
-
 !item [Semaphore]
-
 Meaning
-
 !item [~]
-
 ~
 
-
-
 !label Semaphore, _DMA
-
 !item [_DMA]
-
 (!B)ACSI and FDC(!b)
-
 (!nl)
-
 On receipt of these semaphores one must not forget to set the system variable
-
 flock, and also to release this again after the semaphore is released
 
-
-
 !label Semaphore, _NCR
-
 !item [_NCR]
-
 (!B)SCSI of the Atari-TT(!b)
 
-
-
 !label Semaphore, _SCR
-
 !item [_SCR]
-
 (!B)(!nolink [AES]) screen(!b) (used by wind_update)
-
 !end_xlist
 
-
-
 See also:
-
 About the GEMDOS ~ Process functions ~ Signals
-
 !end_node
-
-
-
 
 
 !include magic\shutdown\shutdown.u
@@ -2327,366 +1165,182 @@ About the GEMDOS ~ Process functions ~ Signals
 
 
 
-
-
-
-
-
 !begin_node Smart redraw in MagiC
-
 !label Smart redraw
 
-
-
 (!nolink [MagiC]) follows the philosophy that speed should not be obtained by
-
 brutal means such as graphics processors etc., but rather by applying
-
 a bit of thought. Above all, this includes only ever doing as much as
-
 necessary. While (!nolink [TOS]) on changing the current window, or on closing or
-
 moving it, has a predilection of redrawing the (!I)whole(!i) window or even
-
 quite innocent, non-participating windows, (!nolink [MagiC]) effectively avoids
-
 doing this. Though this unattractive (!nolink [TOS]) behaviour is not documented
-
 anywhere, unfortunately programs and libraries exist (perhaps those
-
 from the book '(!I)Vom Anf„nger zum (!nolink [GEM])-Profi(!i)'), which use the feature
-
 that (!nolink [TOS]) always redraws the window when enlarging it.
 
-
-
 (!B)An example of this:(!b) Let us assume that five columns fit in a window
-
 next to each other, which are also displayed. If the user now reduces
-
 the window so that only four columns fit in it, the user program re-
-
 sorts its data and subsequently itself causes a redraw of the window
-
 (since (!nolink [TOS]) does (!I)not(!i) redraw a window when it is reduced). On the other
-
 hand if the user enlarges the window to 7 columns wide, the program
-
 again re-sorts the data, but in this case does (!I)not(!i) cause a redraw of
-
 the window. Due to this behaviour, which should really be described
-
 as a failure of (!nolink [TOS]) to (!I)always completely(!i) redraw the window in this
-
 case, output will then take place.
 
-
-
 (!nolink [MagiC]) now always redraws only the minimum required part of the window;
-
 when enlarging a window, that would be at most two rectangles at the
-
 right and bottom. For the programs that make use of the error in (!nolink [TOS])
-
 described above, there will be a (!I)discrepancy between the logical and
-
 physical screen contents.(!i)
 
-
-
 It would have been far simpler to just forgo distinguishing the case
-
 'window larger or smaller than before' and always cause a redraw when
-
 re-sorting.  As, even in (!nolink [TOS]), the operating system always aggregates
-
 redraws, a possibly superfluous redraw (!I)never(!i) has any repercussions.
 
-
-
 Incidentally, the described effect arises also when enlarging the
-
 window if the lowest line or rightmost column is displayed.
 
-
-
 (!B)Here too an example:(!b) A 100-line text is displayed in a window with a
-
 height of 20 lines; as the scroll-bar is right at the bottom, lines
-
 80 to 100 will be displayed in the window. If the window is now
-
 enlarged downwards so that there is room for around 30 lines, then
-
 one could actually only drag out a white area, since there are no
-
 further data below line 100. To avoid this, most programs scroll their
-
 data in this situation, in our example 10 lines upwards. As a result
-
 the program now displays the lines 70 to 100; but as this is based
-
 on a (!nolink [TOS]) error, it does (!I)not(!i) cause a redraw, which of course readily
-
 leads to confusion under (!nolink [MagiC]).
 
-
-
 Here too a general redraw of the window during re-sorting under (!nolink [TOS])
-
 as well would not only be clean but also have no side-effects, as (!nolink [TOS])
-
 too avoids unnecessary redraws in this case. In a direct comparison
-
 between 'Smart redraw' and '(!nolink [TOS]) redraw', which are to be seen
-
 literally as opposites, the former shows itself to have appreciably
-
 faster, calmer and cleaner screen build-up that can compete favourably
-
 with the  (!I)Macintosh(!i) system and which would not be possible in this
-
 form under (!nolink [TOS]) even with a blitter and 68040 processor. Therefore it
-
 is strongly recommended that you do not ruin this elegant solution by
-
 taking advantage of undocumented properties of (!nolink [TOS]).
 
-
-
 (!B)If you are using programs that exhibit the faulty behaviour described
-
 above, then you should proceed as follows:(!b)
 
-
-
 !begin_itemize !short
-
 !item In MagxConf ACC/CPX, deactivate the 'Smart Redraw' switch
-
 !item Stimulate the author of the affected program to remedy this error
-
 !end_itemize
 
-
-
 See also:
-
 Switch Smart redraw on/off ~ GEM ~ Style guidelines
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The task-manager of MagiC
 
-
-
 With the task-manager of MagiC one can perform various tasks, such as
-
 the freezing, unfreezing or terminating processes, for instance.
-
 The task-manager is called by the [Control]-[Alternate]-[Esc] key
-
 combination. After the call a list of all programs in memory appears,
-
 which is built up as follows:
 
-
-
 !ifdest [html]
-
 !ifset [No_Bilder_Pfad]
-
 !image taskman_en
-
 !else
-
 !image (!picture_path)\taskman_en
-
 !endif
-
 !else
-
 !image (!picture_path)\taskman_en
-
 !endif
-
-
 
 (!B)Note:(!b) Below this list there is a menu making a series of commands
-
 available for controlling the system. Since the mouse is unavailable,
-
 selection must be made by pressing the listed shortcut key (shown
-
 below each command). In detail:
 
-
-
 !begin_xlist !short [prev, next]
-
 !item [Command]
-
 Meaning
-
 !item [~]
-
 ~
-
 !item [Control]
-
 (!nolink [MagiC]) attempts to give the selected application  (!nolink [control])
-
         over the screen and mouse -  this may help with deadlocks
-
              in some circumstances
-
 !item [freeze]
-
 The selected application is frozen; it is then invisible
-
 to all other programs and is not assigned any CPU time
-
 !item [OK]
-
 Return to normal operation; the task-manager is exited
-
 without performing any action
-
 !item [prev, next]
-
 One line of the above-mentioned list is always shown in
-
 inverse video - which one this is can be set with the
-
 cursor up/down keys; any following commands refer to the
-
 application that is selected in this way. Applications
-
 with a set ID can also be seleceted by typing in the
-
 corresponding number.
-
 !item [Switch]
-
 The menu bar of the selected application will be activated
-
 !item [Terminate]
-
 The selected application is kicked out of the memory,
-
 which usually results in all of its data being lost;
-
 sometimes this may lead to a crash, so this function
-
 should be used with particular care
-
 !item [unfreeze]
-
 With this command the frozen applicationen is unfrozen
-
 again; you can then continue your work at the position
-
 where it was frozen previously
-
 !end_xlist
 
-
-
 See also:
-
 Process functions ~
-
 (!link [U:\\PROC][The directory U:\PROC])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Test for MagiC
 
-
-
 !begin_verbatim
-
 /*  The following code tess whether MagiC is installed, and returns
-
     one of the following values:
 
-
-
     -1 = No MagiC present
-
     -2 = MagiC installed, but MagiC-AES inactive, i.e. MagiC is only
-
          being used as a fast filesystem
-
     >0 = MagiC present and MagiC-AES active. The return value contains
-
          the BCD-coded version number  */
 
-
-
 GLOBAL WORD InqMagX (VOID)
-
 {
-
     MAGX_COOKIE *cv;
 
-
-
     if (get_cookie ("MagX", (LONG) &cv))
-
     {
-
         if (cv->aesvars)
-
             return (cv->aesvars->version);
-
         else
-
            return (-2);
-
     }
-
     else
-
        return (-1);
-
 } /* InqMagX */
-
 !end_verbatim
 
-
-
 (!B)Note:(!b) Programs launched from the AUTO folder can (!I)not(!i) obtain (!nolink [MagiC])'s
-
 version number with the aid of this routine, since the (!nolink [AES]) is not yet
-
 initialized at boot-time. In this case one should fall back on the
-
 function DoMagixAESVars.
 
-
-
 See also:
-
 Cookie jar ~ Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
@@ -2694,841 +1348,420 @@ Cookie jar ~ Cookie and XBRA list
 
 
 
-
-
-
-
 !begin_node Additional programs for MagiC
 
-
-
 On the MagiC floppy there are also a number of programs for various
-
 purposes. In detail:
 
-
-
 !begin_xlist [Program]
-
 !item [Program]
-
 Meaning
-
 !item [~]
-
 ~
 
-
-
 !label ADDMEM
-
 !label Expand memory, internal
-
 !item [ADDMEM]
-
 Corresponds to FOLDR100 required for (!nolink [TOS]), and makes
-
 additional memory available to the system for internal
-
 management of the data. The installation of this program
-
 is (!I)not(!i) mandatory, but whould be undertaken if the message
-
 'Out of internal memory' appears.
 
-
-
 !label APPLICAT
-
 !item [APPLICAT]
-
 This program is, to some extent, an offloaded function of
-
 the MagXDesk desktop and hence should only be called by
-
 the latter; in particular it is (!I)not(!i) suited for direct
-
 launching with a (!nolink [double-click]) on the program icon. It
-
 enables the allocation of icons to files, as well as the
-
 installation of applications for certain file-types.
 
-
-
 !label FLP_PAR
-
 !label Floppy parallel operation
-
 !label Parallel operation of floppy
-
 !item [FLP_PAR]
-
 With this pair of programs one can configure parallel
-
 operation of the floppy drive. The following apply:
-
 !begin_xlist !short
-
 !item [FLP_PAR0 =]
-
 Switch off parallel operation
-
 !item [FLP_PAR1 =]
-
 Switch on parallel operation
-
 !end_xlist
-
  (No longer included with (!nolink [MagiC]) 5 onwards.)
 
 
-
-
-
 !label HARDCOPY
-
 !label Install Hardcopy routines
-
 !item [HARDCOPY]
-
 The internal hardcopy routine for 9-pin Epson printers has
-
 been thrown out of the (!nolink [BIOS]). Instead of the [Alt]-[Help]
-
 routine, Scrdmp and Prtblk, only dummy routines remain.
 
-
-
 The included HARDCOPY.PRG program installs the hardcopy
-
 functions previously integrated in the (!nolink [BIOS]). The program
-
 can be launched only under (!nolink [MagiC]). (!B)Warning:(!b) It has no
-
 inquiry function for the (!nolink [MagiC]) version and may (!I)not(!i) be
-
 launched under (!nolink [MagiC]) Version 2.0 or older 3.0 versions.
 
-
-
 !label MAGXBOOT
-
 !label MagiC, Boot programs for
-
 !item [MAGXBOOT]
-
 The program is included in two versions (magxboot.prg and
-
 magxboot32.prg). The version of the program suitable for
-
 your system is copied to the AUTO folder and launches or
-
 installs (!nolink [MagiC]) at booting; hence it should lie as early as
-
 possible in the AUTO folder, so that all other programs
-
 are informed that (!nolink [MagiC]) is running. In addition booting
-
 then goes faster, as after a cold start magxboot then
-
 performs an additional warm start.
 
-
-
 The difference between the two launch programs is that
-
 magxboot32 loads the file 'magic.ram' into memory in such
-
 a way that it can be protected with Outside.prg (a virtual
-
 memory management application), magx2rom etc. from being
-
 overwritten by any programs that may run amok. However,
-
 this works only on computers with a 68030 and up processor
-
 and PMMU, such as the TT030 and Falcon030 series.
 
-
-
 !label MAGXCONF
-
 !item [MAGXCONF]
-
 The CPX module or desk accessory permits the configuration
-
 of several features of (!nolink [MagiC]). In detail:
-
 !begin_blist !short []
 
-
-
 !label Fastload
-
 !item [Fastload]
-
 (!nl)
-
 This switches on fast reading of floppy disks; as it
-
 does not affect writing, it can really be left switched
-
 on permanently.
 
-
-
 !label TOS-compatibility
-
 !item [(!nolink [TOS])-compatibility]
-
 (!nl)
-
 Due to the fact that (!nolink [MagiC]) can allow several programs
-
 to run simultaneously, one has to take strict safety
-
 precautions. Unfortunately there are still programs
-
 that make faulty system calls, which can give rise to
-
 problems during multitasking in some circumstances. On
-
 the other hand some programs rely on errors in (!nolink [TOS])
-
 and so do not run correctly if they were launched under
-
 (!nolink [MagiC]). Thus some of these safety precautions may be
-
 switched off to persuade such programs to cooperate -
-
 as this naturally compromises operational safety, such
-
 programs should be swapped as quickly as possible for
-
 compliant newer versions or alternatives.
-
 !label Switch Smart redraw on/off
-
 !item [(!nolink [Smart redraw])]
-
 (!nl)
-
 (De-)activates the faster screen buildup under (!nolink [MagiC]).
-
 Some (mostly older) programs rely on certain properties
-
 of (!nolink [TOS]) during window redraws, that (because they are
-
 unnecessary or faulty) no longer exist under (!nolink [MagiC]). To
-
 persuade such programs to cooperate, the more elegant
-
 Smart redraw mechanism of (!nolink [MagiC]) can be switched off.
-
 !label Switch grow-boxes on/off
-
 !label Switch shrink-boxes on/off
-
 !item [Grow- and Shrink Boxes]
-
 (!nl)
-
 This can switch on or off the growing and shrinking
-
 rectangles that appear in some programs before the
-
 opening/closing of windows and dialogs. Switching them
-
 off can lead to small speed gains on some computers,
-
 but has no other repercussions.
-
 !label Switch background DMA on/off
-
 !item [Floppy Background DMA]
-
 (!nl)
-
 With this switch the background operation of the floppy
-
 drive can be switched on or off. When switched on, you
-
 can perform other tasks while using read, write or
-
 format operations on the floppy. STs and Falcon030s
-
 need a suitable hard disk driver (such as HDDRIVER)
-
 with this capability.
-
 !label Switch on Pulldown menus
-
 !label Switch off Dropdown menus
-
 !item [Pulldown menus]
-
 (!nl)
-
 If this switch is active then the menus only drop down
-
 after being clicked on with the mouse, so no longer
-
 open undesirably when brushed accidentally with the
-
 mouse pointer, say during movement of a window. This
-
 behaviour is known from the Apple Macintosh, for
-
 instance.
-
 !end_blist
 
-
-
 !label MGCOPY
-
 !item [MGCOPY]
-
 This program is, to some extent, an offloaded function of
-
 the MagXDesk desktop and hence should only be called by
-
 the latter; in particular it is not suited for direct
-
 launching with a (!nolink [double-click]) on the program icon. The
-
 program takes on the copying and moving of files and
-
 folders; the makeup of the command line or the format of
-
 the sent messages is not documented, and hence can alter
-
 at any time.
 
-
-
 !label MGFORMAT
-
 !label Formatieren im Hintergrund
-
 !item [MGFORMAT]
-
 With this program one can format floppy disks, and do this
-
 (!I)without(!i) blocking the computer while this is done. For the
-
 creation of the boot sector, incidentally, Protobt is not
-
 used any more; for 720k floppies an MSDOS format having
-
 730,112 bytes free is created.
 
-
-
 !label MGSEARCH
-
 !item [MGSEARCH]
-
 This program is, to some extent, an offloaded function of
-
 the MagXDesk desktop and hence should only be called by
-
 the latter; in particular it is not suited for direct
-
 launching with a (!nolink [double-click]) on the program icon. The
-
 tool represents a file searcher, somewhat like the one
-
 that is built into the (!nolink [TOS]) 2.06 desktop. This module too
-
 is not, or only conditionally, suited for direct launch
-
 with a double-click on the program icon, as the drives to
-
 be searched through are set in the desktop and with a
-
 direct launch only the current drive will be searched.
 
-
-
 !label SHUTDOWN
-
 !item [SHUTDOWN]
-
 This is the program normally called from the desktop when
-
 you select the (!I)Shutdown(!i) menu entry (or activate the key
-
 combination [Alternate]-[Control]-[Delete]), which ensures
-
 that all applications still running save their data and
-
 then terminate.
-
 !label SHUTDOWN.INF
-
 The file (!I)SHUTDOWN.INF(!i) serves as the configuration file
-
 for this program, and, besides comments (introduced with
-
 the character '#') contains the following commands:
-
 !begin_itemize !short
-
 !item (!B)ignore <prg>:(!b) For uncritical old programs. These are
-
      (!I)not(!i) warned by SHUTDOWN, so that a rundown of the
-
      system is possible nevertheless. (!B)Caution:(!b) Programs
-
      such as these do not save their data, so it can be
-
      sensible to terminate them manually in individual
-
      cases (before the system is closed down).
-
 !item (!B)terminate <prg>:(!b) Special case for XCONTROL. Programs
-
      itemized in this way will be 'force terminated'; for
-
      data safety the same applies as for (!B)ignore(!b) above.
-
 !item (!B)timeout <time>:(!b) Maximum reaction time for modern
-
      programs. A value of 0 means 'wait for ever'.
-
 !end_itemize
-
-
 
 !label TSLICE
-
 !label Timeslices for Multitasking
-
 !label Multitasking, Timeslices for
-
 !item [TSLICE]
-
 With this CPX module one can first of all switch off the
-
 preemptive multitasking, after which the system operates
-
 in cooperative multitasking (when tasks are switched only
-
 when the currently running program makes a system call).
-
 Secondly, one can set here the timeslice length as well as
-
 the background priority.
 
-
-
 To visualise preemptive multitasking, imagine a clock
-
 with its clock-face divided into a number of equally-sized
-
 pie-slices, which are then distributed amongst the running
-
 programs. The parameter (!B)Timeslice length(!b) then determines
-
 the size of the pie-slices; if one selects a small value,
-
 changes will take place more frequently, which of course
-
 costs time but divides the allocated CPU-time more evenly;
-
 if one selects a large value, then the calculating process
-
 is interrupted less often, but the individual programs also
-
 must wait longer before they are re-allocated a pie-slice,
-
 which in extreme cases can cause judder in scrolling, for
-
 instance.
 
-
-
 The parameter (!B)Background priority(!b) determines how many more
-
 pie-slices the program owning the topped window receives,
-
 since this is manifestly the one currently in use and so
-
 should react faster than any of the programs running in
-
 the background.
 
-
-
 In practice a timeslice length of 5-10ms (milliseconds)
-
 and a background priority of 1:20 to 1:32 have proved to
-
 be suitable. Incidentally, these values can also be set
-
 with the '#_TSL' entry directly in the MAGX.INF file.
 
-
-
 !label VFATCONF
-
 !label VFAT, Configuration for
-
 !item [VFATCONF]
-
 With this program one can determine on which hard drive
-
 partitions long filenames in the VFAT format of Windows95
-
 should be supported. The program works from (!nolink [MagiC]) Version
-
 4.02 of 16.02.96 onwards. Further details about VFATCONF
-
 can be obtained from the original (!nolink [MagiC]) documentation.
 
-
-
 !label WBDAEMON
-
 !label Writeback-demon
-
 !item [WBDAEMON]
-
 The writeback-demon is a program that delays the write
-
 accesses of all running applications to hard or floppy
-
 disks until the CPU is not being used intensively; further
-
 changes of data do not have to be written to disk but can
-
 be read directly from the (much faster) volatile memory
-
 cache in the computer. Only if no further changes are
-
 being made for a certain time will the disk be updated in
-
 one go, so noticeably speeding up the system. To install,
-
 copy the WBDAEMON.PRG into the \GEMSYS\MAGUC\START folder
-
 and reboot the system.
 
-
-
 Using the writeback-demon is now safe in principle, since
-
 it can no longer be frozen. Previously the launch of a
-
 single-tasking application always resulted in the WBDAEMON
-
 being frozen and until it was unfrozen the cache was not
-
 written back. Just make sure not to eject floppy disk or
-
 interchangeable hard drive media before writing has been
-
 completed (normally 2 seconds after the last access), and
-
 always use the SHUTDOWN procedure rather than simply
-
 switching off the computer when you finish your work.
 
-
-
 In contrast to Ataris where this program is only optional,
-
 its use on a (!B)Macintosh(!b) is explicitly recommended; this is
-
 because on this platform it increases both the speed (!I)and(!i)
-
 data safety of the filesystem.
 
-
-
 !label WDIALOG
-
 !item [WDIALOG]
-
 This program is a system extension making (!nolink [MagiC])-compatible
-
 (!nolink [AES]) extensions (such as (!link [window-][Window-dialogs]) and (!link [print-][Print dialogs]) dialogs,
-
 (!link [list boxes][List boxes]), (!link [font selection][Font selection]) available under some older
-
 operating systems as well. The program is (!nolink [installed]) by
-
 copying WDIALOG.PRG into the AUTO folder and re-booting
-
 the system. From experience it is recommended that the
-
 AUTO folder has WDIALOG lying (!I)before(!i) NVDI.
 
-
-
 !label XMEN_MGR
-
 !label Menu functions, extended
-
 !item [XMEN_MGR]
-
 This program arose for compatibility to the extended menu
-
 functions of MultiTOS and hence need only be used when
-
 required. It installs the following functions:
-
 !begin_itemize !short
-
 !item menu_attach
-
 !item menu_istart
-
 !item menu_popup
-
 !item menu_settings
-
 !end_itemize
-
 The function appl_getinfo returns the value TRUE for the
-
 relevant subfunctions when this program is (!nolink [installed]).
-
 !end_xlist
 
-
-
 See also:
-
 MagiC ~ GEM ~ Style guidelines
-
 !end_node
 
 
 
-
-
-
-
 !include magic/DFS/dfs.u
-
 !include magic/XFS/xfs.u
-
-
-
-
 
 
 
 !begin_node VFAT-XFS in MagiC
 
-
-
 As of Version 5.0 (!nolink [MagiC]) supports a VFAT-XFS, with whose help long
-
 filenames in Windows95 format can be used on the Atari.
-
-
 
 (!B)Advantages of this concept:(!b)
 
-
-
 !begin_itemize
-
 !item Existing partitions need not be reformatted; the long filenames
-
      are thus available directly
-
 !item Files created in this way may be exchanged directly between
-
      MagiC and Windows95 (or higher), and the use of such files is
-
      also possible without an installed VFAT-XFS (important in case
-
      one boots without (!nolink [MagiC]) at times, for instance)
-
 !item As VFAT is based on the FAT concept, simple implementation was
-
      possible without any appreciable memory overheads
-
 !end_itemize
-
-
 
 (!B)Disadvantages of this concept:(!b)
 
-
-
 !begin_itemize
-
 !item VFAT has inherited all problems from FAT, so the known cluster
-
      fracturing also exists under VFAT, for instance
-
 !item There are more modern concepts that are both faster and safer
-
 !item  On the Atari there are at present no programs that can repair
-
      volumes with long filenames; these would have to delete all the
-
      filename entries that are incomplete, or followed by a wrong
-
      main entry
-
 !end_itemize
-
-
 
 (!B)Technical description of the VFAT system:(!b)
 
-
-
 !begin_verbatim
-
 typedef struct
-
 {
-
     BYTE   head;       /* Bit 0..4: Number, Bit 6: Endofname */
-
     UBYTE  name1[10];  /* 5 Unicode characters               */
-
     BYTE   attr;       /* Attribute (0x0f)                   */
-
     BYTE   unused;     /* Unused at present                  */
-
     BYTE   chksum;     /* Checksum of the short name         */
-
     UBYTE  name2[12];  /* 6 Unicode characters               */
-
     WORD   stcl;       /* First cluster (0)                  */
-
     UBYTE  name3[4];   /* 2 Unicode characters               */
-
 } LDIR;
-
 !end_verbatim
 
-
-
 (!B)Note:(!b) Here (!I)head(!i) is for the first entry e.g 0x01, for the second 0x02
-
 and for the third 0x43, if the name requires three entries.
 
-
-
 One can store 13 characters for each entry. The entries with the long
-
 filename always lie immediately before the main (8+3) entry. The
-
 ##5# '(8+3)' addiert - IMHO klarer
-
 Unicode characters are in the Intel format. In the last entry, any
-
 unused characters after the NULL-byte are filled with 0xff, 0xff.
-
 The order of the entries is reversed, i.e. the last 13 characters of
-
 the long name lie physically in the first position. The last directory
-
 entry, which is flagged by a set bit 6 in the (!I)head(!i) field, lies
-
 physically in the first position.
 
-
-
 The component (!I)stcl(!i) is always zero; (!I)chksum(!i) is calculated from the
-
 short name (in an internal format) through right-rotation in turn of
-
 the previous result and addition of the 11 characters. Linux uses
-
 the field (!I)unused(!i) to store flags for upper/lowercase. The current
-
 Windows version however always writes zeros to this field, and (!nolink [MagiC])
-
 behaves in the same way. Further notes:
 
-
-
 !begin_itemize
-
 !item The renaming of files with identical names apart from lower/upper
-
      case is possible. (!B)Example:(!b) By renaming 'test.txt' to 'TEST.TXT',
-
      the long name is discarded automatically.
-
 !item The conversion Unicode <-> ASCII is implemented according to the
-
      NVDI mapping
-
 !item If a file is copied from a VFAT partition with long filenames
-
      enabled to one with a normal FAT (where they are not), its name
-
      will be truncated to the 8+3 format. (!B)Example:(!b) Copying a file
-
      'longfilename.txt' to a FAT partition will make it appear in the
-
      directory as 'LONGFILE.TXT'. If an attempt is then made to copy
-
      the file 'longfilenameS.txt' to the same directory, the usual
-
      name conflict dialog will appear, inviting the user to rename
-
      the copy to avoid duplicating a filename.
 
-
-
 !item If the parition type is changed from VFAT to normal FAT (using
-
      VFATCONF.PRG, say), any long filenames will be truncated; this
-
      is indicated by a tilde '~' character followed by a numeral at
-
      the end of the shortened name. If two or more such files start
-
      with the same characters, the numeral will be incremented each
-
      time. (!B)Example:(!b) A directory containing 'longfilename.txt' and
-
      'longfilenameS.txt' when changed from a VFAT to a FAT partition
-
      will display 'LONGFI~1.TXT' and 'LONGFI~2.TXT'. The same applies
-
      to directory names.
 
-
-
 !item In the creation of the short name, spaces are replaced by under!-
-
      scores. (!B)Example:(!b) 'Wassili Kandinsky.app' -> 'WASSILI_.APP'.
-
 !item The VFAT-XFS can also move folders within the directory structure
-
      (irrespective of whether long names are allowed or not).
-
-
 
 !end_itemize
 
-
-
 See also:
-
 MagiC's XFS-concept ~  VFATCONF
-
 !end_node
-
-
 
 !include magic/sharelib.u
 
-
-
 !end_node
-

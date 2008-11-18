@@ -1,1072 +1,536 @@
 !iflang [english]
 
-
-
 !begin_node The CAB protocol
 
-
-
 The CAB protocol consists of a series of (!nolink [AES]) messages with whose aid
-
 any (!nolink [GEM]) programs can devolve certain tasks to CAB, or coordinate
-
 certain actions with CAB.
 
-
-
 The contents of the environmental variable BROWSER= (if defined) holds
-
 CAB's access path. If CAB is not already in memory, then a program can
-
 launch CAB subsequently via this variable.
 
-
-
 A possible application: If one offers further current information or
-
 updates for one's own programs on the internet, one could use the CAB
-
 protocol to provide access to this information from within these
-
 programs with little effort. CAB then takes care of the download of
-
 the data and its presentation.
 
 
-
-
-
 (!B)Description of the messages(!b)
-
 !label CAB_HELLO
-
 (!U)CAB_HELLO  (0xCAB8)  (message from CAB)(!u) (!nl)
-
 CAB transmits after its launch the following message to all running
-
 programs:
-
 !begin_verbatim
-
 msg[0] = 0xCAB8
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = Version of the CAB protocol (0x0100 corresponds to V1.00)
-
 msg[4] = Bit-vector with the internet protocols supported by CAB
-
          (CAB.OVL):
-
              Bit 0: HTTP
-
              Bit 1: FTP
-
              Bit 2: GOPHER
-
              Bit 3: WAIS
-
              Bit 4: MAILTO
-
              Bit 5: NNTP
-
              Bit 6: TELNET
-
              Bit 7-15: 0 (reserved)
-
 msg[5] = Bit-vector with the CAB protocol messages supported by CAB:
-
              Bit 0: CAB_VIEW
-
              Bit 1: CAB_MAIL, CAB_MAILSENT
-
              Bit 2: CAB_REQUESTSTATUS, CAB_RELEASESTATUS, CAB_STATUS,
-
                     CAB_EXIT
-
              Bit 3-15: 0 (reserved)
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_SUPPORT
-
 (!U)CAB_SUPPORT  (0xCABB)  (message to CAB)(!u) (!nl)
-
 If this message is sent to CAB, then CAB sends back the message
-
 CAB_HELLO. If CAB_HELLO is not returned, then an old version of CAB
-
 is being used that does not yet support the CAB protocol. All programs
-
 that are interested in the information that CAB_HELLO delivers should
-
 send CAB_SUPPORT to CAB after their launch. If CAB is only launched
-
 later, then CAB_HELLO is sent automatically to the program.
-
 !begin_verbatim
-
 msg[0] = 0xCABB
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_VIEW
-
 (!U)CAB_VIEW (0xCAB3)  (message to CAB)(!u) (!nl)
-
 Similar to VA_START, but instead of a fielname a URL is passed. CAB
-
 then displays this file.
-
 !begin_verbatim
-
 msg[0] = 0xCAB3
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
-
 msg[3] = \ Pointer to the URL
-
 msg[4] = /
-
 msg[5] = If a 1 was entered here CAB displays the URL in a new window;
-
          if a 0 was entered, the top CAB window will be used
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_REQUESTSTATUS
-
 (!U)CAB_REQUESTSTATUS (0xCAB5)  (message to CAB)(!u) (!nl)
-
 This can be sent to CAB to check whether CAB is currently online or
-
 offline. CAB subsequently sends the message CAB_STATUS at each change
-
 of the online/offline state.
-
 !begin_verbatim
-
 msg[0] = 0xCAB5
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_RELEASESTATUS
-
 (!U)CAB_RELEASESTATUS (0xCAB7)  (message to CAB)(!u) (!nl)
-
 This should be sent to CAB when a program is no longer interested in
-
 the on/offline information that was requested with CAB_REQUESTSTATUS
-
 (e.g. because it terminates itself).
-
 !begin_verbatim
-
 msg[0] = 0xCAB7
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_STATUS
-
 (!U)CAB_STATUS (0xCAB6)  (message from CAB)(!u) (!nl)
-
 This is sent by CAB to all programs that have registered themselves
-
 with CAB_REQUESTSTATUS.
-
 !begin_verbatim
-
 msg[0] = 0xCAB6
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
-
 msg[3] = 1 if CAB online; 0 if CAB offline
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_EXIT
-
 (!U)CAB_EXIT (0xCAB1)  (message from CAB)(!u) (!nl)
-
 This is sent by CAB as soon as CAB terminates to all programs that
-
 have registered themselves with CAB_REQUESTSTATUS. Before this a
-
 CAB_STATUS is sent in which the offline state is reported.
-
 !begin_verbatim
-
 msg[0] = 0xCAB1
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_MAIL
-
 (!U)CAB_MAIL (0xCAB9)  (message to CAB)(!u) (!nl)
-
 This can be sent to CAB to transmit mails.
-
 !begin_verbatim
-
 msg[0] = 0xCAB9
-
 msg[1] = ID of the PRG
-
 msg[2] = 0
 
-
-
 msg[3] = \ Pointer to the URL; a subject can be appended directly to
-
 msg[4] = / the URL, separated by a question mark
 
-
-
 msg[5] = \ Pointer to a file holding the mail contents, or NULL (in
-
 msg[6] = / which case CAB opens an editor into which the mail can be
-
            entered)
 
-
-
 msg[7] = Bit-vector with further options:
-
              Bit 0: 0 if the mail file is to be sent immediately, or 1
-
                     if the mail file is still to be edited/altered in
-
                     CAB by the user
-
              Bit 1: With 1 the mail file will be deleted after it has
-
                     been sent, while 0 means it will be retained
-
              Bit 2-15: 0 (reserved)
-
 !end_verbatim
-
-
-
 
 
 !label CAB_MAILSENT
-
 (!U)CAB_MAILSENT (0xCABA)  (message from CAB)(!u) (!nl)
-
 This is sent by CAB to the program that has sent CAB_MAIL and contains
-
 infomation whether sending of the mail worked correctly or not.
-
 !begin_verbatim
-
 msg[0] = 0xCABA
-
 msg[1] = ID of CAB
-
 msg[2] = 0
-
 msg[3] = 1 if the mail was sent without error; 0 if an error occurred
-
          (in which case one can find the cause of the error in msg[4])
-
 msg[4] = Contains an error number if msg[3]=0
-
               0: No URL specified
-
               1: Offline, net connection failed, server not accessible
-
               2: User has aborted the action (if the mail is to be
-
                  modified in CAB, the user has the option of aborting
-
                  the action)
-
               3: GEMDOS error on accessing the mail file
-
               4: Editor for modifying the file could not be called
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
-
 
 
 
 (!B)Special messages for 'Cache-Tools'(!b) (!nl)
-
 !label CAB_CHANGED
-
 (!U)CAB_CHANGED (0xCAB0)  (message to/from CAB)(!u) (!nl)
-
 The cache (or CACHE.CAB) has been changed and should be read in anew.
-
 !begin_verbatim
-
 msg[0] = 0xCAB0
-
 msg[1] = ID of CAB/the PRG
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 (!U)CAB_EXIT (0xCAB1)  (message to/from CAB)(!u) (!nl)
-
 CAB or the Cache-Tool terminates itself (as information for the other
-
 PRG in each case).
-
 !begin_verbatim
-
 msg[0] = 0xCAB1
-
 msg[1] = ID of CAB/the PRG
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_PATH
-
 (!U)CAB_PATH (0xCAB2)  (message from CAB)(!u) (!nl)
-
 The local HTML directory and/or the cache directory was altered.
-
 Further information is available in the Cache-Tools documentation.
-
 !begin_verbatim
-
 msg[0] = 0xCAB2
-
 msg[1] = ID of CAB
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_TERM
-
 (!U)CAB_TERM (0xCAB4)  (message from CAB)(!u) (!nl)
-
 The Cache-Tool should terminate itself.
-
 !begin_verbatim
-
 msg[0] = 0xCAB4
-
 msg[1] = ID of CAB
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
 
 !end_node
 
-
-
 !else
-
-
 
 !begin_node Das CAB-Protokoll
 
-
-
 Das CAB-Protokoll besteht aus einer Reihe von AES-Messages mit deren
-
 Hilfe beliebige GEM-Programme bestimmte Aufgaben an CAB Åbertragen kînnen,
-
 bzw. bestimmte Aktionen mit CAB koordinieren kînnen.
 
-
-
 Der Inhalt der Environment-Variablen BROWSER= (sofern definiert) enthÑlt
-
 den Zugriffspfad von CAB. Sollte sich CAB nicht im Speicher befinden kann
-
 ein Programm Åber diese Variable CAB selbst nachstarten.
 
-
-
 Eine mîgliche Anwendung:
-
 Falls man im Internet weitere aktuelle Informationen oder Updates zu
-
 eigenen Programmen anbietet, kînnte man mit dem CAB-Protokoll ohne groûen
-
 Aufwand den Zugriff auf diese Informationen aus diesen Programmen heraus
-
 ermîglichen. CAB erledigt dann den Download der Daten und die Darstellung.
 
 
-
-
-
 (!B)Die Beschreibung der Messages(!b)
-
 !label CAB_HELLO
-
 (!U)CAB_HELLO  (0xCAB8)  (Nachricht von CAB)(!u) (!nl)
-
 CAB verschickt nach seinem Start an alle laufenden Programme diese
-
 Nachricht
-
 !begin_verbatim
-
 msg[0] = 0xCAB8
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = Version des CAB-Protokolls (0x0100 entspricht V1.00)
-
 msg[4] = Bitvektor mit den von CAB (CAB.OVL) unterstÅtzten Internet-
-
          Protokollen
-
              Bit 0: HTTP
-
              Bit 1: FTP
-
              Bit 2: GOPHER
-
              Bit 3: WAIS
-
              Bit 4: MAILTO
-
              Bit 5: NNTP
-
              Bit 6: TELNET
-
              Bit 7-15: 0 (reserviert)
-
 msg[5] = Bitvektor mit den von CAB unterstÅtzten Nachrichten des
-
          CAB-Protokolls.
-
              Bit 0: CAB_VIEW
-
              Bit 1: CAB_MAIL, CAB_MAILSENT
-
              Bit 2: CAB_REQUESTSTATUS, CAB_RELEASESTATUS, CAB_STATUS,
-
                     CAB_EXIT
-
              Bit 3-15: 0 (reserviert)
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_SUPPORT
-
 (!U)CAB_SUPPORT  (0xCABB)  (Nachricht an CAB)(!u) (!nl)
-
 Wird diese Nachricht an CAB geschickt, sendet CAB die Nachricht CAB_HELLO
-
 zurÅck. Bleibt CAB_HELLO aus, wird noch eine alte Version von CAB benutzt
-
 welche das CAB-Protokoll noch nicht unterstÅtzt.
-
 Alle Programme, die an den Informationen interessiert sind, die CAB_HELLO
-
 liefert, sollten nach dem Start CAB_SUPPORT an CAB senden. Wird CAB erst
-
 spÑter gestartet, wird CAB_HELLO automatisch an das Programm geschickt.
-
 !begin_verbatim
-
 msg[0] = 0xCABB
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_VIEW
-
 (!U)CAB_VIEW (0xCAB3)  (Nachricht an CAB)(!u) (!nl)
-
 éhnlich wie VA_START aber statt eines Dateinamens wird eine URL Åbergeben.
-
 CAB zeigt diese Datei dann an.
-
 !begin_verbatim
-
 msg[0] = 0xCAB3
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
-
 msg[3] = \ Zeiger auf die URL
-
 msg[4] = /
-
 msg[5] = Wenn hier 1 eingetragen wurde, stellt CAB die URL in einem neuen
-
          Fenster dar, wenn 0 eingetragen wurde wird das oberste CAB-
-
          Fenster benutzt.
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_REQUESTSTATUS
-
 (!U)CAB_REQUESTSTATUS (0xCAB5)  (Nachricht an CAB)(!u) (!nl)
-
 Kann an CAB geschickt werden, um zu erfahren ob CAB zur Zeit online oder
-
 offline ist. CAB schickt daraufhin bei jeder énderung des On-/Offline-
-
 Statuses die Message CAB_STATUS.
-
 !begin_verbatim
-
 msg[0] = 0xCAB5
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_RELEASESTATUS
-
 (!U)CAB_RELEASESTATUS (0xCAB7)  (Nachricht an CAB)(!u) (!nl)
-
 Sollte an CAB geschickt werden, wenn ein Programm nicht mehr an den
-
 on/offline- Informationen interessiert ist, die mit CAB_REQUESTSTATUS
-
 angefordert wurden (z.B. weil es sich beendet).
-
 !begin_verbatim
-
 msg[0] = 0xCAB7
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_STATUS
-
 (!U)CAB_STATUS (0xCAB6)  (Nachricht von CAB)(!u) (!nl)
-
 Wird von CAB an alle Programme verschickt, die sich mit CAB_REQUESTSTATUS
-
 angemeldet haben.
-
 !begin_verbatim
-
 msg[0] = 0xCAB6
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = 1 falls CAB online; 0 falls CAB offline.
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_EXIT
-
 (!U)CAB_EXIT (0xCAB1)  (Nachricht von CAB)(!u) (!nl)
-
 Wird von CAB an alle Programme geschickt, die sich mit CAB_REQUESTSTATUS
-
 angemeldet haben, sobald sich CAB beendet. Vorher wird auch noch ein
-
 CAB_STATUS gesendet, in dem der offline-Zustand gemeldet wird.
-
 !begin_verbatim
-
 msg[0] = 0xCAB1
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_MAIL
-
 (!U)CAB_MAIL (0xCAB9)  (Nachricht an CAB)(!u) (!nl)
-
 Kann an CAB geschickt werden, um Mails zu verschicken.
-
 !begin_verbatim
-
 msg[0] = 0xCAB9
-
 msg[1] = Id des PRGs
-
 msg[2] = 0
 
-
-
 msg[3] = \ Zeiger auf die URL. Ein 'Betreff' (Subject) kann, durch ein
-
 msg[4] = / Fragezeichen getrennt, direkt an die URL gehÑngt werden.
 
-
-
 msg[5] = \ Zeiger auf eine Datei, die den Mailinhalt enthÑlt oder
-
 msg[6] = / null (dann îffnet CAB einen Editor, in dem die Mail eingegeben
-
            wird).
 
-
-
 msg[7] = Bitvektor mit weiteren Optionen.
-
              Bit 0: 0 falls die Maildatei sofort verschickt werden soll,
-
                     oder 1 falls die Maildatei vom Benutzer noch in CAB
-
                     bearbeitet/geÑndert werden soll.
-
              Bit 1: bei 1 wird die Maildatei gelîscht, nachdem sie verschickt
-
                     wurde, bei 0 bleibt sie erhalten.
-
              Bit 2-15: 0 (reserviert)
-
 !end_verbatim
-
-
-
 
 
 !label CAB_MAILSENT
-
 (!U)CAB_MAILSENT (0xCABA)  (Nachricht von CAB)(!u) (!nl)
-
 Wird von CAB an das Programm geschickt, welches CAB_MAIL gesendet hat und
-
 enthÑlt Informationen, ob das Verschicken der Mail geklappt hat oder nicht.
-
 !begin_verbatim
-
 msg[0] = 0xCABA
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = 1 falls die Mail ohne Fehler verschickt wurde; 0 bei Fehler (in
-
          diesem Fall ist in msg[4] die Fehlerursache zu erfahren).
-
 msg[4] = EnthÑlt eine Fehlernummer, falls msg[3]=0
-
               0: Keine URL angegeben.
-
               1: Offline, Netzverbindung gestîrt, Server nicht erreichbar.
-
               2: Benutzer hat Aktion abgebrochen (Falls die Mail in CAB
-
                  bearbeitet werden sollte, hat der Benutzer die
-
                  Mîglichkeit die Aktion abzubrechen)
-
               3: GEMDOS-Fehler beim Zugriff auf die Maildatei.
-
               4: Editor zum Bearbeiten konnte nicht aufgerufen werden.
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
-
 
 
 
 (!B)Spezielle Messages fÅr 'Cache-Tools'(!b) (!nl)
-
 !label CAB_CHANGED
-
 (!U)CAB_CHANGED (0xCAB0)  (Nachricht an/von CAB)(!u) (!nl)
-
 Der Cache (bzw. CACHE.CAB) wurde verÑndert und soll neu eingelesen werden.
-
 !begin_verbatim
-
 msg[0] = 0xCAB0
-
 msg[1] = Id von CAB/des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 (!U)CAB_EXIT (0xCAB1)  (Nachricht an/von CAB)(!u) (!nl)
-
 CAB oder das Cache-Tool beendet sich (als Info fÅr das jeweils andere PRG)
-
 !begin_verbatim
-
 msg[0] = 0xCAB1
-
 msg[1] = Id von CAB/des PRGs
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_PATH
-
 (!U)CAB_PATH (0xCAB2)  (Nachricht von CAB)(!u) (!nl)
-
 Die lokalen HTML-Verzeichnisse und/oder das Cache-Verzeichnis wurde
-
 geÑndert. NÑhere Infos sind in der Cache-Tools-Dokumentation zu erfahren.
-
 !begin_verbatim
-
 msg[0] = 0xCAB2
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
-
 
 
 !label CAB_TERM
-
 (!U)CAB_TERM (0xCAB4)  (Nachricht von CAB)(!u) (!nl)
-
 Das Cache-Tool soll sich beenden.
-
 !begin_verbatim
-
 msg[0] = 0xCAB4
-
 msg[1] = Id von CAB
-
 msg[2] = 0
-
 msg[3] = 0
-
 msg[4] = 0
-
 msg[5] = 0
-
 msg[6] = 0
-
 msg[7] = 0
-
 !end_verbatim
-
-
 
 !end_node
 
-
-
 !endif
-

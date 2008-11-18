@@ -1,2466 +1,1233 @@
 !begin_node MagiC Mac specifics
-
 !ignore_subtoc
 
-
-
 (!nolink [MagiC]) Mac is an implementation of MagiC known on the Atari platform
-
 for the hardware of the Apple (Power-) Macintosh computers. This
-
 section describes the following points:
 
-
-
 !begin_itemize !short
-
 !item (!link [General remarks] [General remarks about MagiC Mac])
-
 !item (!link [Pecularities with Power-Macs] [MagiC Mac and Power-Macs])
-
 !item (!link [Cookies] [Cookies under MagiC Mac])
-
 !item (!link [Filesystems] [Filesystems under MagiC Mac])
-
 !item (!link [Restrictions of the operating system functions] [Restrictions of MagiC Mac])
-
 !item Exceptions under MagiC Mac
-
 !item Clean programming
-
 !item (!link [Shutdown] [The shutdown process in MagiC Mac])
-
 !item XCMDs under MagiC Mac
-
 !item Cooperation between MagiC and the MacOS
-
 !end_itemize
 
-
-
 Those having questions or missing some features for the Atari-Mac
-
 interface should first approach the author of the (!nolink [MagiC]) Mac kernel
-
 before tinkering with the internals, since any changes may no longer
-
 work in the next (!nolink [MagiC]) Mac version.
 
-
-
 # 2005-10-19: Delete because the Mailbox is down many since years.
-
 #
-
 # Eine stets aktualisierte Version der Programmierdokumentation zu MagiC Mac
-
 # inklusive Beispielprogrammen (Pure C und CodeWarrior) ist in der ASH-Mailbox
-
 # (06221-303671) zu finden oder kann beim Autor des Kernels von MagiC Mac
-
 # angefordert werden: Dazu bitte an diesen eine Nachricht schicken, dass man
-
 # in Zukunft automatisch die jeweils aktualisierte Version der Dokumentation
-
 # als E-Mail erhalten m”chte. Dabei bitte auch angeben, ob ein Macintosh
-
 # vorhanden ist (dann kommen auch die Beispiel-Sourcen zur Verwendung von
-
 # MacOS-Routinen) oder ob nur die rein ATARI-seitigen Informationen gewnscht
-
 # werden.
 
 
-
-
-
 See also: About the GEMDOS ~ About the BIOS ~ XBIOS ~ GEM
-
-
-
-
 
 
 
 !begin_node General remarks about MagiC Mac
 
-
-
 The core of the 'emulation' of the Atari environment on the Macintosh
-
 lies in the reprogramming of the PMMU. Both Atari as well as Macintosh
-
 programs assume that they will find certain variables (the so-called
-
 (!link [system variables][The system variables])) in the lowest 2 kB of the address space. However,
-
 when an Atari program is running it expects other values there than,
-
 say, the Mac operating system. The so-called kernel of (!nolink [MagiC]) Mac makes
-
 sure that - depending on whether a Mac or an Atari routine is running
-
 at the time - suitable system variables are present in that lower
-
 address space. This is done with appropriate programming of the PMMU,
-
 a coprocessor for memory management.
 
-
-
 (!B)So there are two MMU modes:(!b) The Mac- and the Atari-mode. By means of
-
 two routines one can switch back and forth between them. Starting
-
 from taking the Mac-mode as the normal mode, the following changes
-
 occur when switching to the Atari-mode:
 
-
-
 !begin_itemize
-
 !item A memory block that was allocated somewhere on the Macintosh heap
-
      is inserted from address $0 into the Atari address space. This
-
      block is between 4 and 32 kB long and is guaranteed to hold only
-
      the exception vector table and the documented
-
      (!link [system variables][The system variables]).
-
 !item Address space from $00FF8000 to $00FFFFFF (and correspondingly
-
      $FFFF8000 to $FFFFFFFF) is blanked out. On the Atari this is
-
      the I/O address space, which is not normally available on the
-
      Macintosh (which at most has RAM there).
 
-
-
      So that programs do not erroneously address this space as RAM,
-
      if the Macintosh has some there, this blanking out leads to a
-
      bus error at each access. It is however possible that special
-
      Atari-compatible hardware has been installed in the Macintosh,
-
      whereupon this hardware then blends in this address space at the
-
      relevant positions. (!B)This means:(!b) A program that recognizes that
-
      it is running under (!nolink [MagiC]) on the Mac should (!I)not(!i) automatically
-
      assume that no Atari hardware is present in the I/O area, but
-
      should continue to check with a test access (by diversion of the
-
      bus error vector) whether access to the module is possible.
-
 !item RAM that belongs neither to the TPA of (!nolink [MagiC]), nor to the (!nolink [MagiC])
-
      OS or the kernel data and routines is not present in the Atari
-
      address space, i.e. accesses outside the area specially reserved
-
      for Atari programs lead to a bus error. This protects other
-
      Macintosh applications better from faulty Atari programs. This
-
      protection however works (!I)only(!i) with 68k machines, (!I)not(!i) with
-
      PowerPCs!
-
 !end_itemize
 
-
-
 See also: Program launch and TPA
-
 !end_node
-
-
-
 
 
 !begin_node MagiC Mac and Power-Macs
 
-
-
 (!nolink [MagiC]) Mac naturally also runs on the new PCI machines from Apple
-
 (Power Macintosh 7600, 8200, 8500 and 9500). (!B)When using this hardware
-
 the following points should be borne in mind:(!b)
 
-
-
 !begin_itemize
-
 !item  The address areas not used by (!nolink [MagiC]), but present in the Mac
-
      address space, can (!I)not(!i) be blanked out and so also (!I)not(!i) protected
-
      from access. This means that accesses outside the TPA and the
-
      program and heap area of (!nolink [MagiC]) Mac will (!I)not(!i) have bus errors
-
      reported, as is the case with 68k computers.
-
 !item  With the PowerMac models since mid-1995 the upper address area
-
      is used for PCI cards and/or ROM. So on accessing the Atari I/O
-
      area in $FFFF8000 - $FFFFFFFF one gets (!I)no(!i) bus errors but only
-
      (!B)undefined data(!b). Unfortunately this cannot be changed. It is
-
      recommended therefore that programs access the I/O area only in
-
      the range $00FF8000 - $00FFFFFF, to either check for the presence
-
      of component modules (by making an access to them and checking
-
      whether this leads to a bus error), or work with the hardware
-
      extension (!I)McSTout(!i) in case it is also made available for the
-
      PCI-Macs. Programs can recognize these circumstances by the state
-
      of bit 5 in (!link [Cookie.flags1][%mmcookie_flgs1]).
-
 !end_itemize
 
-
-
 See also: Program launch and TPA
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Cookies under MagiC Mac
 
-
-
 (!nolink [MagiC]) Mac naturally also supports the cookie jar, and creates the
-
 following cookies:
 
-
-
 !begin_xlist !short [Cookie]
-
 !item [Cookie]
-
 Cookie  Meaning in (!nolink [MagiC]) Mac
-
 !item [~]
-
 ~
-
 !item [(!link [_CPU][Cookie, _CPU])]
-
 Contains the value 20, 30 or 40. On 68000 machines MM does not run; on PowerPC
-
 machines a 68020 will be indicated
-
 !item [(!link [_FDC][Cookie, _FDC])]
-
 $014D6163 - The last 3 bytes result in the text 'Mac'
-
 !item [(!link [_FPU][Cookie, _FPU])]
-
 The usual values; with a 68040 there will only be an 8 here if the associated
-
 FPU software is installed as well
-
 !item [(!link [_MCH][Cookie, _MCH])]
-
 No Atari-compatible hardware present (-1)
-
 !item [(!link [_SND][Cookie, _SND])]
-
 0.
-
 !item [(!link [_VDO][Cookie, _VDO])]
-
 No Atari-compatible video hardware present (-1)
-
 !item [(!link [MagX][Cookie, MagX])]
-
 Same as in MagiC
-
 !item [(!link [MgMc][Cookie, MgMc])]
-
 Points to a (!link [MgMcCookie][The MagiC Mac cookie]) structure
-
 !item [(!link [MNAM][Cookie, MNAM])]
-
 Pointer to NULL-terminated string with the name of the computer; this only
-
 serves as information for the user
-
 !item [(!link [PMMU][Cookie, PMMU])]
-
 NULL; shows that the MMU is engaged and may not be used by other programs
-
 !end_xlist
 
-
-
 See also: Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Filesystems under MagiC Mac
 
-
-
 (!nolink [MagiC]) Mac, just like (!nolink [MagiC]), permits the incorporation of alternative
-
 filesystems. At present the following systems are supported:
 
-
-
 !begin_itemize
-
 !item (!B)FAT filesystems according to (!nolink [TOS]) conventions:(!b) This allows floppy
-
      disks as well as hard disks in the usual Atari format to be
-
      accessed with all (!nolink [TOS]) functions ((!nolink [GEMDOS]), but also e.g. @{"Rwabs" ignore}).
-
 !item (!B)Mac filesystems:(!b) As these do not have a FAT, access to these
-
      drives is only possible via (!nolink [GEMDOS]), but not via (!nolink [BIOS]).
-
 !end_itemize
-
-
 
 (!B)The Mac filesystem under (!nolink [MagiC]) Mac:(!b)
 
-
-
 As the (!nolink [GEMDOS]) functions are mapped directly to the Mac filesystem
-
 functions for the most part, all file formats usable under MacOS can
-
 be used under (!nolink [MagiC]) Mac as well, i.e. once one can 'mount' a drive on
-
 the Mac, it is (or its folder contents are) also installable under MM.
-
 Thanks to this one can also use (!nolink [CD]])-ROMs or network drives without any
-
 further drivers in (!nolink [MagiC]) Mac as a rule. (!nolink [MagiC]) Mac also allows the Mac-
-
 typical ejection of a floppy disk, for instance.
 
-
-
 See also: MagiC's XFS-concept ~ Dpathconf
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Restrictions of MagiC Mac
 
-
-
 (!nolink [MagiC]) Mac does (!I)not(!i) implement all functions that (!nolink [MagiC]) offers for
-
 Ataris. (!nolink [AES, VDI and GEMDOS]) are implemented completely, but there are
-
 restrictions with (!nolink [BIOS]) and (!nolink [BIOS]). However it is possible to restore
-
 some of the functionalities with add-ons such as (!I)McSTout(!i) or a sound
-
 driver.
 
-
-
 !begin_itemize
-
 Unimplemented or ignored functions with (!nolink [BIOS]):
-
 (!nl)
-
       (!nolink [Initmouse]), (!nolink [Mfpint]), (!nolink [Ikbdws]), (!nolink [Jdisint]),
-
       (!nolink [Jenabint]), (!nolink [Giaccess]), (!nolink [Offgibit]),
-
       (!nolink [Ongibit]), (!nolink [Xbtimer]), (!nolink [Dosound]).
-
 !end_itemize
-
-
 
 (!B)Additionally there are restrictions with some functions, mainly in
-
 connection with the filesystem and the devices:(!b)
 
-
-
 !begin_itemize
-
 !item The MIDI workstation is not usable at present unless the hardware
-
      extension (!I)McSTout(!i) with MIDI option is installed. It may also be
-
      that MIDI will be realized in the future via one of the serial
-
      ports of the Mac, so all that one can say is: Whether MIDI can be
-
      used must be established by the user - a program cannot recognize
-
      that by itself in practice. The same applies for (!nolink [Midiws]).
-
 !item The IKBD workstation is not present
-
 !item If (!nolink [Getbpb]) returns 0 it may be that a Mac-formatted floppy disk
-
      is in the drive, which (!I)nevertheless(!i) can be accessed with the
-
      file functions via drive A:
-
 !item If a Mac-formatted disk is in the floppy drive, then (!nolink [Rwabs]) will
-
      return an error ('Drive not ready'); the files on the disk can,
-
      if necessary, be accessed (!I)nevertheless(!i) with the (!nolink [GEMDOS]) file
-
      functions
-
 !item (!nolink [Drvmap]) also returns set bits for the drives that are Mac-
-
      formatted and so are only addressable via (!nolink [GEMDOS]) and not with
-
      Rwabs
-
 !item (!nolink [Getrez]) always returns 2 (ST-High), so is unusable
-
 !item (!nolink [Setscreen]) can only alter the physical address if the user has
-
      launched (!nolink [MagiC]) Mac in ST-resolution emulation mode (e.g. ST-High).
-
      To recognize whether this is the case one should first attempt
-
      to alter the address with (!nolink [Setscreen]) and then check with
-
      (!nolink [Physbase]) whether the address let itself be altered.
-
 !item (!nolink [Floprd]), (!nolink [Flopwr]), snd (!nolink [Flopver]) do not work if Mac-formatted disks
-
      are inserted (implemented only as of MM 1.2.2). The bad sector
-
      list of (!nolink [Flopver]) reports in case of error all sectors of the
-
      track as defective, as the exact track can not be ascertained.
-
 !item Flopfmt can format floppy disks as of MM 1.2.2, but only with
-
      80 tracks, 2 sides and depending on the inserted disk, 9 or 18
-
      sectors per track. With the (!link [MgMc cookie][Cookie, MgMc]) one can check what kind
-
      of disk (DD or HD) is in the drive. (!B)Don't be surprised:(!b) The Mac
-
      only offers a function to format (!I)all tracks at once.(!i) Hence this
-
      is solved with MM in such a way that a (!nolink [Flopfmt]) call for track 0
-
      (or 79, depending on where one starts) will format the whole disk
-
      and a (!nolink [Flopfmt]) call for the remaining tracks will do nothing, so
-
      that the function returns immediately with an error-code 0. In
-
      the case of a formatting problem, an error is reported for all
-
      tracks. As a result the disk to be formatted must be completely
-
      in order.
-
 !item Rsconf: The MPF-specific parameters are ignored
-
 !item Puntaes knows several modes, (!nolink [MagiC]) Mac is terminated if
-
    necessary
-
 !end_itemize
 
-
-
 See also: About the GEMDOS ~ About the BIOS ~ XBIOS ~ GEM
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Exceptions under MagiC Mac
 
-
-
 As on a real Atari, an Atari program running under (!nolink [MagiC]) Mac can use
-
 the exception vectors, namely divert them. Actually the program may
-
 use only the exception vectors between $0 and $400 for this, not those
-
 to which the VBR points (because that points elsewhere!). Those who
-
 do not adhere to this may run into difficulties with later versions
-
 of (!nolink [MagiC]) Mac. Programs that use the (!link [PMMU][Cookie, PMMU]), e.g. (!I)OUTSIDE(!i) can (!I)not(!i) run
-
 under (!nolink [MagiC]) Mac.
 
-
-
 (!B)The following Atari interrupts are simulated by the kernel at
-
 present:(!b)
 
-
-
 !begin_itemize
-
 !item $070: Autovector interupt Level 4 (VBL)
-
 !item $114: MFP interrupt 5 (200 Hz system timer)
-
 !item $118: MFP interrupt 6 (IKBD). Actually only the event of key presses and
-
      mouse movements is simulated here, i.e. the interrupt handler obtains the
-
      specific type of the event in some other way than on the Atari.
-
 !end_itemize
 
-
-
 Due to the Mac hardware, however, the interrupts may appear with
-
 (!I)different priorities(!i); consequently the interrupt mask of the SR has
-
 other values to that on an Atari in some circumstances. The vector at
-
 $400 (etv_timer) will also be jumped to by the (!nolink [MagiC]) OS, of course,
-
 as a subroutine of the interrupt handler for MFP interrupt 5, in just
-
 the same way as on an original Atari.
 
-
-
 Likewise a program that would like to experience mouse or keyboard
-
 events can use the (!nolink [BIOS]) function Kbdvbase to hook itself into the
-
 event vectors in exactly the same way as on the Atari.
 
-
-
 (!B)Another important note about interrupts:(!b) So that the keyboard, mouse
-
 and timer work properly on a Mac, the interrupt mask (in CPU register
-
 SR) must always be zero. On an Atari, on the other hand, it normally
-
 stands at three. Programs containing code such as MOVE #$2300,SR for
-
 instance, would put a Macintosh into a (!I)sleep state(!i), which only a
-
 reset can remedy. Those who want to alter the interrupt mask only
-
 occasionally should do it this way (works equally well on an Atari
-
 and Mac):
 
-
-
 !begin_verbatim
-
   MOVE SR,-(a7)    ; Store old SR
-
   ORI  #$0700,SR   ; Block all interrupts for a critical access
-
   ...
-
   MOVE (a7)+,SR    ; At end, restore old SR
-
 !end_verbatim
 
-
-
 Those who definitely want to return the computer to its basic state
-
 should (!I)not(!i) use MOVE #$2300,SR but better MOVE #$2000,SR. On the Atari
-
 the SR will then be increased to $2300 just before the HBL interrupt
-
 routine. In this way the same code achieves te same result on both
-
 machines.
 
-
-
 If interrupt or other asynchronous routines are installed by means of
-
 MacOS functions and then these functions are to switch from the Mac-
-
 mode to the Atari-mode, then several things need to be heeded, which
-
 are described in greater detail below:
 
-
-
 !begin_itemize
-
 !item Setting of a semaphore (see intrLock/intrUnlock)
-
 !item Query whether an Atari-mode switch is even possible at the time
-
      (see atariModePossible)
-
 !item  Deinstallation of the routine at the termination of (!nolink [MagiC]) Mac
-
      (see macAppSwitch)
-
 !item Before switching into the Atari-mode one must ensure that the
-
      stack pointer (SP) lies within the Atari address space, since
-
      otherwise a double bus error arises and the CPU will come to a
-
      standstill
 
-
-
      (!B)Note:(!b) First: It may be that the call of the routine by the MacOS
-
      occurs at a time when another Mac application is running, in
-
      which case the current stack is (!I)not(!i) that of (!nolink [MagiC]) Mac.
-
      Second: With the 68k machines, in Atari-mode only the address
-
      space of the 2 TPAs, the lowest 32 kB, if necessary the I/O area
-
      as well as the area of the (!nolink [MagiC]) Mac application is visible; other
-
      memory of MacOS and other Mac applications is blanked out, and
-
      only bus errors will arise if access is attempted. (!B)To sum up:(!b)
-
      To make sure that the SP lies in the Atari address space when
-
      switching into the Atari MMU mode, one must previously reserve
-
      a stack area for this and then use that. To ensure that the stack
-
      is large enough (1-2 kB are (!I)clearly not enough!(!i)) one should
-
      heed the cookie value minStackSize!
-
 !item Always switch to supervisor-mode before 'modeAtari' is called
-
      (else it won't run under virtual memory). The following code is
-
      suggested for this:
-
 !begin_verbatim
-
              clr     d0
-
              move    sr,d0
-
              btst    #13,d0
-
              bne     ok1
-
              moveq   #8,d0        ;   Enter supervisor-mode
-
              dc.w    $A08D        ;   _DebugUtil
-
        ok1:
-
              move    d0,-(a7)     ;   Save the old mode
-
-
 
              ; Here now modeAtari ... Call modeMac etc.
 
-
-
              move.w  (a7)+,sr     ;   Restore old mode
-
 !end_verbatim
-
 !item Mac subroutines may only alter the registers d0-d2/a0/a1 as a
-
      rule, though not (as often usual on the Atari), a2!
-
 !end_itemize
 
-
-
 See also: Program launch and TPA ~
-
 (!link [Reset-vector][Hooking into the reset vector]) ~
-
 (!link [System variables][The system variables])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Clean programming
 
-
-
 Even if the specific implementation of (!link [MagiC Mac][MagiC Mac specifics]) is not of interest
-
 to every Atari programmer, there are some basic rules that one should
-
 adhere to on the Atari level to be as certain as possible that the
-
 programs can run also under (!nolink [MagiC]) Mac. Here the following points
-
 can be mentioned, amongst others:
 
-
-
 !label Code, self-modifying
-
 !label Self-modifying code
-
 !label CPU cache purging
-
 !label Cache purging, CPU
-
 !label Purging of the CPU cache
-
 !label MC680x0 cache purging
 
-
-
 !begin_itemize
-
 !item (!B)Self-modifying code(!b)
-
 (!nl)
-
      When code (also applies for XBRA vectors) is altered, it is
-
      imperative that the CPU cache is purged. Although by testing
-
      one can ascertain whether this is not necessary on a 68020 with
-
      its small cache, one can never be certain: On the Mac there is a
-
      68k emulator for the PowerPC machines that simulates a 68020,
-
      which, first, has a larger cache than a real 68020 (inclusive of
-
      a data cache which is otherwise present only with the 68030),
-
      and second also compiles the code into PowerPC code.
 
-
-
      If the code of an Atari program is then changed, the emulator can
-
      only recognize this is a command for cache purging is executed.
-
      Equally, a cache purge is necessay as a rule with the 68040/60
-
      CPUs! Here is the code with which the whole cache is purged in
-
      such cases:
 
-
-
 !begin_xlist !short [Prozessor]
-
 !item [Prozessor]
-
 Code
-
 !item [~]
-
 ~
-
 !item [68020/30]
-
 !begin_verbatim
-
       MOVE  CACR,D
-
       ORI.W #$0808,D0
-
       MOVE  D0,CACR
-
 !end_verbatim
-
 (!U)or also like this:(!u)
-
 !begin_verbatim
-
       DC.W  $4E7A,$0002,$0040,$0808,$4E7B,$0002
-
 !end_verbatim
-
 !item [68040/60]
-
 !begin_verbatim
-
       NOP
-
       CPUSHA DC/IC
-
 !end_verbatim
-
 (!U)or:(!u)
-
 !begin_verbatim
-
       DC.W   $4E71,$F4F8
-
 !end_verbatim
-
 !end_xlist
 
-
-
      The processor type should be obtained for this by inspection of
-
      the (!link [_CPU][Cookie, _CPU]) cookie.
-
 !item (!B)Blocking interrupts(!b)
-
 (!nl)
-
      If the interrupts have to be bloked for a short time, then (!I)never(!i)
-
      set the SR afterwards to the fixed value $2300, but save the old
-
      SR if possible before the blocking (say onto the stack) and then
-
      load it back again afterwards. If it is imperative that a reset
-
      of the SR is to take place irrerspective of the old SR, then set
-
      the interrupt mask to zero and (!I)not(!i) to three, so for instance
-
      MOVE #$2000,SR instead of MOVE #$2300,SR. The Atari operating
-
      system then automatically looks after converting the mask value
-
      to 3, while the mask remains on 0 for the Mac; because otherwise
-
      nothing works any more.
-
 !item (!B)Hardware accesses(!b)
-
 (!nl)
-
      Before programming certain hardware registers directly (e.g. the
-
      Centronics port for printing), one should check the (!link [_MCH][Cookie, _MCH]) cookie.
-
      If its value is $FFFFFFFF (dec. -1), then it means that (!I)no(!i)
-
      Atari hardware is present (so that the program is running on the
-
      Macintosh, for instance) and therefore one shouldn't even try to
-
      access the hardware since there may well be RAM there, which of
-
      course may (!I)not(!i) be altered by such accesses.
-
 !item (!B)Supervisor-mode(!b)
-
 (!nl)
-
      Since multitasking operating systems such as MultiTOS and MagiC
-
      have came into use, no program should arbitrarily change the
-
      supervisor stack pointer, say to obtain a larger stack, as this
-
      could lead to incalculable system crashes (on the PCI Macs, for
-
      instance, a very large supervisor stack is required: at least
-
      8 MB, but in some circumstances even 24 MB - only the operating
-
      system can know this and install it correctly). (!B)Important:(!b) To
-
      get into the supervisor-mode, (!I)never(!i) use the (!nolink [GEMDOS]) function
-
      Super, but use Supexec from the (!nolink [BIOS]) instead. Only Supexec
-
      can ensure that a sufficiently large supervisor stack will be
-
      used.
-
 !end_itemize
 
-
-
 See also: (!nl)
-
 (!link [Programming guidelines][Three important programming rules]) ~
-
 Style guidelines ~ XBRA procedure
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The shutdown process in MagiC Mac
-
 !label Shutdown in MagiC Mac
 
-
-
 Under (!link [MagiC Mac][MagiC Mac specifics]) the shutdown process will be taken on by the program
-
 'shutdown.prg'; if this was able to terminate all currently active
-
 (Atari) programs, then (!nolink [MagiC]) Mac itself will be terminated as well.
-
 Some programmers might find it of interest how one can terminate
-
 (!nolink [MagiC]) Mac (!I)without a query.(!i) This can be done in two steps:
 
-
-
 !begin_itemize !short
-
 !item Switch to the Macintosh-mode (with modeMac)
-
 !item Execute the Mac routine (!I)ExitToShell.(!i)
-
 !end_itemize
-
-
 
 (!B)In Pure-C this could look as follows, for instance:(!b)
 
-
-
 !begin_verbatim
-
   static pascal void ExitToShell (void) 0xA9F4;
-
   MgMcCookie *mgmc;
-
   ...
-
   ...
-
   get_cookie ("MgMc", &mgmc); /* Pointer to MgMc cookie structure    */
-
   mgmc->modeMac ();           /* Switch to Mac-mode                  */
-
   ExitToShell ();             /* Terminates MM at once without query */
-
 !end_verbatim
 
-
-
 This information could be important if you want to program your own
-
 shutdown.prg.
 
-
-
 See also:
-
 (!nl)
-
 General remarks about shutdown ~  shel_write ~
-
 Shutdown in MultiTOS     ~  Shutdown in MagiC ~
-
 (!link [Shutdown at the receiver][Shutdown as seen by the application]) ~
-
 (!link [Shutdown at the initiator][Shutdown as seen by the initiator]) ~
-
 !end_node
-
-
-
 
 
 !begin_node XCMDs under MagiC Mac
 
-
-
 XCMDs are small external code modules for (!I)Macintosh(!i) applications.
-
 As a rule these can be created fairly easily with the development
-
 tools under MacOS (e.g. with Metrowerks' (!I)CodeWarrior(!i) or Symantec C).
-
 As of version 1.2.2 (!nolink [MagiC]) Mac also permits the simple use of such code
-
 modules by programs that run under MagiC. This greatly simplifies the
-
 development of programs or drivers that want to use the Macintosh
-
 functions, as these portions can then be created with a Macintosh
-
 compiler, rather than having to recreate the interfaces laboriously
-
 under an Atari development system.
 
-
-
 An example of such a XCMD can be found in the (!I)'Demo XCMD'(!i) folder of
-
 the original (!nolink [MagiC]) Mac documentation. The created module can then
-
 just be placed in the (!I)(!nolink [MagiC]) Mac XCMDs(!i) folder. This folder must lie
-
 in the same directory as the (!nolink [MagiC]) Mac application. At the launch of
-
 (!nolink [MagiC]) Mac this folder is searched through for files with the filetype
-
 'xCmd' and the XCMD resources contained in it loaded and executed.
-
 These XCMDs can then register themselves with (!nolink [MagiC]) Mac and so become
-
 available for (!nolink [MagiC]) programs.
 
-
-
 (!B)An application is shown by the Pure-C program in the 'MGMC_API' folder
-
 of the original (!nolink [MagiC]) Mac documentation(!b). This shows how easily an
-
 installed XCMD can be opened and called. The functions offered here
-
 by the cookie (xcmdMgrPtr) go automatically into the supervisor-mode
-
 if required and switch to the Mac environment (with callMacContext),
-
 and also  (!nolink [control]) parameter passing. The call of the XCMD functions
-
 in this way is therefore permitted only when the Atari-mode is active
-
 and if the call is not made from an interrupt.
 
-
-
 If the XCMD functions are to be called from interrupts or in Mac-mode,
-
 one can use 'xcmdMgrPtr->getAdr' to get the entry address of the XCMD
-
 dispatcher and then jump to it directly.
 
-
-
 Further information for XCMDs can be found in the source text
-
 'Demo XCMD.c' of the original (!nolink [MagiC]) Mac documentation.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node Cooperation between MagiC and the MacOS
 
-
-
 (!nolink [MagiC]) Mac hooks itself directly into all interrupt vectors that the
-
 Macintosh uses. If MagiC is running and a hardware interrupt occurs,
-
 (!nolink [MagiC]) Mac switches the MMU back into the normal Macintosh-mode. At the
-
 end of the IntrRoutine one will be switched back into the Atari-mode
-
 and the programs running under (!nolink [MagiC]) will continue. As long as the
-
 Mac-mode is active, (!nolink [MagiC]) Mac does (!I)not(!i) meddle further with the
-
 Intr-processing, but does so only when the Atari-mode is active.
 
-
-
 Whenever a switch is made from the Mac-mode back to the Atari-mode, a
-
 check is made whether a given amount of time has passed (measured in
-
 ticks; a tick is around 1/60s), in order to then perform periodic
-
 tasks. These tasks are called Mac-tasks here.
-
-
 
 (!B)Mac-tasks perform the following, amongst others:(!b)
 
-
-
 !begin_itemize
-
 !item Poll the Mac events (functions GetOSEvent or WaitNextEvent)
-
 !item Evaluate [Command]-[Q] and [Command]-[W]
-
 !item Evaluate external Apple events, e.g. Suspend/Resume (switch
-
      (!nolink [MagiC]) Mac into the background) and terminated externals
-
 !item Cede CPU time to other Mac applications (with WaitNextEvent)
-
 !end_itemize
-
-
 
 The decision whether to use GetOSEvent or WaitNextEvent (WNE) for
-
 polling the events can be set via 'Preferences' and also by a cookie
-
 function. Only if WNE is used will CPU time be allocated to other
-
 Mac applications as well.
 
-
-
 Mac-tasks can be executed only if it is certain that no other MacOS
-
 function is being processed at the time, since the MacOS is not
-
 reentrant. (!B)Mac-tasks are therefore performed only if all of the
-
 following conditions apply:(!b)
 
-
-
 !begin_itemize
-
 !item After the interruption (an interrupt or a modeAtari call) the
-
      Atari-mode will be active and the interrupt-level mask is zero,
-
      i.e. there is (!I)no(!i) other interrupt being handled (to ensure this,
-
      Intr-handlers that switch from Mac-mode into the Atari-mode have
-
      to use (!nolink [intrLock]) correctly, see below)
-
 !item No routine in the Mac-context is being executed at the time
-
      (callMacContext)
-
 !item (!nolink [MagiC]) Mac is (!I)not(!i) in the process of terminating itself
-
 !end_itemize
-
 !end_node
-
-
-
-
 
 
 
 !begin_node The MagiC Mac cookie
 
-
-
 The (!nolink [MagiC]) Mac operating system [a port of MagiC to the hardware of the
-
 Apple (Power) Macintosh] creates a cookie (!link [MgMc][Cookie, MgMc]), which points to the
-
 following structure:
 
-
-
 !label %mmcookie_flgs1
-
 !label MgMcCookie
-
 !begin_verbatim
-
 typedef struct
-
 {
-
   SHORT   vers;                 /* Version identifier in BCD format    */
-
   SHORT   size;                 /* Size of the structure in bytes      */
-
   LONG    flags1;               /* Various flags:                      */
-
                                 /*  Bit 0: 640*400 emulation active    */
-
                                 /*  Bit 1: Right-[Shift] possible      */
-
                                 /*  Bit 2: 2-button mouse              */
-
                                 /*  Bit 3: 68k emulation on a Power-PC */
-
                                 /*  Bit 4: Upper I/O area not present  */
-
                                 /*  Bit 5: Lower I/O area not present  */
-
                                 /*                                     */
-
                                 /* Note: Bit 2 is only available as of */
-
                                 /* Version 1.01, bit 3 from Version    */
-
                                 /* 1.05 on and the following only as   */
-
                                 /* of Version 1.10                     */
-
   PixMap  *scrnPMPtr;           /* Pointer to screen description       */
-
   BOOLEAN *updatePalette;       /* Is to be set to restore the         */
-
                                 /* colour tables                       */
-
   ProcPtr modeMac;              /* MMU switching to Mac-mode           */
-
   ProcPtr modeAtari;            /* MMU switching to Atari-mode         */
-
   ProcPtr getBaseMode;          /* Returns the MMU-mode in d0.W        */
-
                                 /* The following apply:                */
-
                                 /*  0 = Macintosh                      */
-
                                 /*  <> 0 = Atari                       */
-
   ProcPtr getIntrCount;         /* Returns interrupt semaphore-counter */
-
                                 /* in d0.L (0 = free)                  */
-
   ProcPtr intrLock;             /* Increments inter. semaphore-counter */
-
   ProcPtr intrUnlock;           /* Decrements inter. semaphore-counter */
-
   ProcPtr callMacContext;       /* Executes routine in Mac-context;    */
-
                                 /* Proc-adr. on stack                  */
-
                                 /*                                     */
-
                                 /* Warning: Registers d0-d2/a0/a1/a5   */
-
                                 /* and a7 will be destroyed            */
-
   Ptr     atariZeroPage;        /* Pointer to Atari memory area,       */
-
                                 /* $0-$800 in Macintosh address space  */
-
   Ptr     macA5;                /* Value of a5-register in Mac-context */
-
   ProcPtr macAppSwitch;         /* Called by the MagiC kernel (d0/4(a7)*/
-
                                 /* The following apply:                */
-
                                 /*  0 = Suspend                        */
-
                                 /*  1 = Resume                         */
-
                                 /*  2 = Quit                           */
-
                                 /*  3/4 = atariModePossible alternates */
-
   ProcPtr controlSwitch;        /* Called by the MagiC kernel (d0/4(a7)*/
-
                                 /* The following apply:                */
-
                                 /*  0 = Hide Atari screen              */
-
                                 /*  1 = Show Atari screen              */
-
   LONG    hardwareAttr1;        /* Undefined at present                */
-
   LONG    hardwareAttr2;        /* Undefined at present                */
-
   Ptr     magiC_BP;             /* BASEPAGE of the MagiC OS            */
-
   Ptr     auxOutName;           /* Pascal string for AUX-out workstation*/
-
   Ptr     auxInName;            /* Pascal string for AUX-in workstation */
-
   ProcPtr auxControl;           /* Called by the MagiC kernel (d0/4(a7)*/
-
                                 /* The following apply:                */
-
                                 /*  0 = Suspend                        */
-
                                 /*  1 = Resume                         */
-
                                 /*  2 = Quit                           */
-
   PrintDesc *printDescPtr;
-
   GenProc   configKernel;       /* Call (C-convention) Atari-mode      */
-
   BOOLEAN   *atariModePossible; /* Pointer to a flag showing whether   */
-
                                 /* the call of modeAtari is permitted  */
-
                                 /* at the time                         */
-
   MacVersion *versionOfMacAppl; /* Version of the MagiC Mac application*/
-
                                 /* (as of Version 1.06)                */
-
   VOID       *hwEmulSupport;    /* Internal use (as of Version 1.07)   */
-
   FlpDrvInfo *floppyDrvInfoPtr; /* Points to information for drives A: */
-
                                 /* and B: (as of Version 1.07)         */
-
   XCMDgrRec *xcmdMgrPtr;        /* XCMD interface (as of Version 1.08) */
-
   ProcPtr   giveTimeToMac;      /* Call in Mac-context if idle         */
-
   LONG      minStackSize;       /* Minimum supervisor stack size       */
-
   GenProc   ext;                /* Help routines, call from Atari-mode */
-
   GenProc   extMac;             /* As for 'ext' but call from Mac-mode */
-
   ProcPtr   stackLoad;          /* (As of 1.11 / MagiC Mac 2.0)        */
-
   ProcPtr   stackUnload;        /* (As of 1.11 / MagiC Mac 2.0)        */
-
   LONG      reserved[3];        /* Undefined at present                */
-
 } MgMcCookie;
-
 !end_verbatim
-
-
 
 (!B)(!nolink [Notes]):(!b)
 
-
-
 !begin_itemize
-
 !item The components (!I)(!nolink [giveTimeToMac])(!i) and (!I)(!nolink [minStackSize])(!i)
-
      are available only as of Version 1.09; all further components only from
-
      Version 1.10 onwards
-
 !item Unused bits and undefined values are always zero!
-
 !item All pointers remain constant, i.e. it is permitted to copy the
-
      pointer contents and then work with them
-
 !item Call according to C-convention means that parameters are passed
-
      on the stack and that registers d0-d2/a0-a2 may be destroyed
-
 !end_itemize
 
-
-
 See also:
-
 (!nl)
-
 MagiC Mac type conventions ~ Cookie and XBRA list
-
-
 
 !begin_node MagiC Mac type conventions
 
-
-
 Here follows a list of type conventions that play a role in connection
-
 with (!nolink [MagiC]) Mac:
 
-
-
 !begin_verbatim
-
 typedef char Boolean;
-
 typedef char *Ptr, **Handle;
-
 typedef unsigned char *StringPtr;
-
 typedef void PixMap;
-
 typedef Handle THPrint;
-
 typedef void (*ProcPtr)(void);
 
-
-
 typedef long cdecl (*GenProc) (short function, void *data);
-
 typedef Boolean cdecl (*PrSetupProc) (Boolean alwaysInteractively);
-
 !end_verbatim
 
-
-
 (!B)Note:(!b) The XCMD structures are contained in the file 'MgMc_API.h' of
-
 the original documentation for (!nolink [MagiC]) Mac.
 
-
-
 See also: (!link [Type definitions in MagiC][Type definitions])
-
 !end_node
-
-
-
 
 
 !begin_node mmc_flg1_bit4
 
-
-
 The lower I/O area ($00FF8000-$00FFFFFF) is (!I)not(!i) present as such,
-
 i.e. quite normal RAM may reside there, just as in any other place.
-
 In that case (!I)no(!i) distinction will be made between ST-RAM and TT-RAM -
-
 the whole of the RAM used by (!nolink [MagiC]) Mac, even that above 16 MB, will
-
 be made available as (!B)ST-RAM(!b).
 
-
-
 This means, of course, that in this case programs can make (!I)no(!i) I/O
-
 accesses to this area! If this bit is cleared (not set), a program
-
 can make accesses there nevertheless and count on a bus error if no
-
 Atari-compatible hardware (such as (!I)McSTout(!i), say) is installed there.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node mmc_flg1_bit5
 
-
-
 The upper I/O area ($FFFF8000-$FFFFFFFF) is (!I)not(!i) accessible as such
-
 (see MagiC Mac and Power-Macs); on accessing it one does (!I)not(!i) get a
-
 bus error, but data from the Macintosh-ROM.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node auxControl
 
-
-
 This is intended for the HSMODEM driver: The WORD parameter on the
-
 stack determines whether the ports are to be released (2 = close
-
 completely, 0 = close, but hold DTR if necessary) or if reassignment
-
 of the ports is permitted (value = 1). Between value-0 and value-1
-
 the names (auxInPort, auxOutPort) may have changed.
 
-
-
 (!B)Note:(!b) The call should be made in Atari supervisor-mode, the USP is
-
 undefined.
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node callMacContext
 
-
-
 This serves to produce the required Macintosh environment for calling
-
 any MacOS routines. (!B)The routine must be called in Mac-mode and
-
 in supervisor-mode and not from an interrupt.(!b)
 
-
-
 For this one should pass on the stack the address of the routine that
-
 is to be called as a subroutine in the Mac context. The normal user
-
 stack of (!nolink [MagiC]) Mac is used for the called routine; in addition the
-
 register a5 is loaded with macA5 and if virtual memory is active, a
-
 switch is made to user-mode. As this function alters the stack, it is
-
 (!I)not(!i) possible to pass parameters via the stack. The registers
-
 d0-d2/a0/a1/a5/a7 are altered both at the call and also at the return
-
 of the subroutine (although a5/a7 after return from 'callMacContext'
-
 have the same values as before the call). The other registers are (!I)not(!i)
-
 altered and can be used for parameter passing and returns.
 
-
-
 The execution of this subroutine implicitly brings calls of intrLock
-
 and intrUnlock with it, meaning that during this no Mac-tasks will be
-
 processed, even if one switches into Atari-mode occasionally. To allow
-
 processing of Mac-tasks despite of this, one can call the function
-
 'giveTimeToMac'.
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node configKernel
 
-
-
 This offers access to some settings that are otherwise accessible only
-
 interactively from the Macintosh side. For this one passes as a rule
-
 a function number in the (!I)function(!i) parameter and a pointer to a
-
 variable in the (!I)data(!i) parameter, which has to contain the value to be
-
 set before the call, or -1 in case no new value is to be set.
 
-
-
 After the call the variable contains the current value. The settings
-
 will be adopted in the 'Preferences' if nothing else is specified.
-
 The functions:
 
-
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Description
-
 !item [~]
-
 ~
-
 !item [1]
-
 (!I)data(!i) points to a byte that determines whether the 200Hz timer
-
 is to be simulated by the MacOS timer. (!B)The following apply:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! No
-
 1 !! = !! Yes (default)
-
 !end_table
-
 !item [2]
-
 Determines whether Mac background processes are to be called.
-
 (!B)The following apply:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! No
-
 1 !! = !! Yes
-
 !end_table
-
 !item [3]
-
 Determines whether the IDLE state for (!I)Powerbooks(!i) is permitted.
-
 (!B)The followinng apply:(!b)
-
 !begin_table [l l l]
-
 0 !! = !! No
-
 1 !! = !! Yes
-
 !end_table
-
 !item [4]
-
 Similar to (1), for the flag 'UnlockMemOnMacSide' (see also
-
 under atariModePossible): If this is non-zero, the memory
-
 occupied by (!nolink [MagiC]) Mac for the TPA is released for offloading,
-
 as long as virtual memory is active. Otherwise it cannot be
-
 offloaded. This is not saved in the 'Preferences' at present.
-
 !end_xlist
 
-
-
 See also: Program launch and TPA ~
-
 (!link [The MagiC Mac cookie][Cookie, MgMc])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node controlSwitch
 
-
-
 Here Atari routines can hook themselves in with the XBRA procedure.
-
 They are then called in Atari-mode (supervisor-mode) when one of the
-
 specified events occurs. This is required, for instance, when an Atari
-
 program wants to make use of certain Macintosh routines. For example,
-
 a program using the sound routines of the Mac can be told in this way
-
 when (!nolink [MagiC]) Mac has been terminated to close the sound channels and to
-
 release the occupied memory.
 
-
-
 The following values are passed in d0.W and on the stack (and must
-
 also remain there):
 
-
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Description
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Hide(!b)
-
 (!nl)
-
 Mouse and keyboard  (!nolink [control]) for (!nolink [MagiC]) are suspended, because a
-
 Mac dialog is opened, for instance; in that case there should
-
 be no output to the screen either (e.g. for interrupt routines)
-
 as otherwise these could overwrite the Macintosh dialog
-
 !item [1]
-
 (!B)Show(!b)
-
 (!nl)
-
 The opposite of Hide
-
 !end_xlist
 
-
-
 (!B)Note:(!b) The routine has to be called in Atari supervisor-mode, the
-
 USP is undefined.
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node getBaseMode
 
-
-
 If getBaseMode is called in an interrupt, the function returns the
-
 mode that existed at the instant before the interrupt was handled.
-
 !end_node
-
-
-
-
 
 
 
 !begin_node intrLock
 
-
-
 This must be called before switching to Atari-mode from a Macintosh
-
 routine that could run in an interrupt. In addition, one has to count
-
 on the fact that before the switch a foreign stack is active which
-
 does (!I)not(!i) belong to the address space of the Atari-mode.
 
-
-
 Therefore one has to switch beforehand to a stack (see minStackSize)
-
 from the Atari address space. After switching back to the Macinntosh-
-
 mode one has to call intrUnlock, of course.
 
-
-
 With the aid of these intr-semaphores one can recognize when the CPU
-
 executes commands under (!nolink [MagiC]) in a non-interrupt state. This state
-
 (!I)has(!i) to be recognized, because only then can the Macintosh background
-
 processes and other Macintosh routines be called without risk by the
-
 (!nolink [MagiC]) Mac kernel through its interrupt  (!nolink [control]) routines. (While the
-
 interrupt routines or Macintosh routines are being processed, no Mac
-
 routines may be called by the (!nolink [MagiC]) Mac kernel, because the MacOS is
-
 not reentrant. During this time no Mac events are handled; even
-
 [Command]-[W]/[Q] do not function at that time).
 
-
-
 See also: The MagiC Mac cookie ~  System-Cookies
-
 !end_node
-
-
-
-
 
 
 
 !begin_node macAppSwitch
 
-
-
 Here Atari routines can hook themselves in with the XBRA procedure.
-
 They are then called in Atari-mode (supervisor-mode) when one of the
-
 specified events occurs. This is required, for instance, when an Atari
-
 program wants to make use of certain Macintosh routines. For example,
-
 a program using the sound routines of the Mac can be told in this way
-
 when (!nolink [MagiC]) Mac has been terminated to close the sound channels and to
-
 release the occupied memory.
 
-
-
 The following values are passed in d0.W and on the stack (and must
-
 also remain there):
 
-
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Description
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)Suspend(!b)
-
 (!nl)
-
 (!nolink [MagiC]) Mac is placed in the background - a different Macintosh
-
 application comes to the foreground (e.g. the Finder)
-
 !item [1]
-
 (!B)Resume(!b)
-
 (!nl)
-
 (!nolink [MagiC]) Mac is the foreground application again on the Macintosh
-
 side
-
 !item [2]
-
 (!B)Quit(!b)
-
 (!nl)
-
 (!nolink [MagiC]) Mac is terminated
-
 !item [3]
-
 Flag atariModePossible becomes FALSE afterwards
-
 !item [4]
-
 Flag (!nolink [atariModePossible]) is TRUE again
-
 !end_xlist
 
-
-
 (!B)Note:(!b) The routine has to be called in Atari supervisor-mode, the
-
 USP is undefined.
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node atariModePossible
 
-
-
 This points to a byte indicating whether a switch from the Mac to the
-
 Atari MMU-mode is possible at that instant (0=forbidden, 1=allowed).
-
 So long as the Macintosh is running without virtual memory (VM) (also
-
 without RAM-doubler), the 'modeAtari' call is always possible; however
-
 if VM is active and also the 'UnlockMemOnMacSide' flag is non-zero,
-
 then on switching from the (!nolink [MagiC]) to the Mac screen the memory occupied
-
 by MM ((!nolink [MagiC]) Mac) for the TPA will be released for offloading.
 
-
-
 However, as soon as the VM management offloads a block, the MMU tables
-
 calculated by MM are no longer valid and must be calculated anew prior
-
 to the next switch to the Atari-mode. This is not done automatically,
-
 however, but only when switching back to the Atari screen. For this
-
 reason interrupt and other asynchronous routines that are installed
-
 under (!nolink [MagiC]) Mac by MacOS functions may (!I)not(!i) perform Atari-mode
-
 switches under the described circumstances.
 
-
-
 Atari programs that hook into the Atari vectors (e.g. the VBL vector
-
 at $70) need not take all of this into account, since in cases when
-
 the MMU tables become invalid the Atari interrupts will not even be
-
 simulated any more. In cases where one should take further measures
-
 before or after the status of the flags alters one can install also
-
 a routine via macAppSwitch that then indicates this event with the
-
 values 3 and 4 in d0.W).
 
-
-
 See also: Program launch and TPA ~
-
 (!link [The MagiC Mac cookie][Cookie, MgMc])
-
 !end_node
-
-
-
-
 
 
 
 !begin_node modeAtari
 
-
-
 Before this function can be called the following conditions have to
-
 be fulfilled:
 
-
-
 !begin_itemize
-
 !item The Mac-mode must be active
-
 !item The CPU must be in the supervisor-mode. Under virtual memory, Mac
-
      programs and also the Mac interrupt routines run in user-mode.
-
      If one wants to switch occasionally to the Atari-mode from
-
      there, one has to change to the supervisor-mode beforehand.
-
      See 'EnterSupervisorMode'.
-
 !item The current stack must lie in Atari address space, else the CPU
-
      freezes immediately due to a double bus error if the program is
-
      running on a 68k computer - because then other areas, including
-
      the stack area, are no longer addressable. Please see also
-
      minStackSize for this.
-
 !item atariModePossible must indicate that MMU switching is permitted.
-
      Otherwise, with MacsBug installed, the following message appears:
-
      'Fatal Error: Atari-mode currently not available (MMU tables
-
      invalid)'.
-
 !end_itemize
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node modeMac
 
-
-
 This can be called at any time, also in interrupt routines, as long as
-
 the program is in the Atari-mode and in supervisor-mode at the time.
-
 After the call the whole Mac address space can be accessed.
 
-
-
 The memory that starts in Atari-mode at address zero, starts in the
-
 Mac-mode at the position to which (!I)atariZeroPage(!i) points. If a switch
-
 was made from a normal Atari application to the Mac-mode with modeMac,
-
 then only those MacOS routines may be called that may also be called
-
 in an interrupt (see 'Inside Macintosh'); if necessary one also has
-
 to place in register a5 the value from macA5. Other routines should
-
 be called only with callMacContext, particularly those that use the
-
 QuitDraw routines - if appropriate this has to be tried out. If a call
-
 of (!nolink [callMacContext]) is required, this can be recognized often by the
-
 fact that bus errors occur otherwise, or no texts appear in dialog
-
 boxes etc.
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node versionOfMacAppl
 
-
-
 With this one obtains the version identifier of the running (!nolink [MagiC]) Mac
-
 application (i.e. the ID that can also be displayed in the Finder).
-
 At last programs can adjust themselves to the MM versions!
-
 !end_node
-
-
-
-
 
 
 
 !begin_node giveTimeToMac
 
-
-
 This serves for ceding time to Mac event handling of (!nolink [MagiC]) Mac if the
-
 computer spends too long in Mac-mode (sensible from 1/60s onwards),
-
 e.g. while waiting for completion of asynchronous processes.
 
-
-
 (!B)'giveTimeToMac' can be called as often as desired(!b); the Mac events
-
 are in any case only polled as frequently as set in the Preferences
-
 (normal: every 1/60s, which is also the maximum frequency). In order
-
 to call the routine, the complete Mac context must be fashioned, i.e.
-
 the applications stack must be active and a5 set accordingly (this is
-
 achieved for instance with callMacContext). The routine performs no
-
 other actions that do not happen otherwise as well when the Atari-mode
-
 is active and during this the Mac events are polled automatically in
-
 turn. A specialty is that the routine does not evaluate a pending Quit
-
 (!nolink [command]), so that the routine that calls 'giveTimeToMac' can assume
-
 that it will be its turn again immediately (as long as a fatal error
-
 does not occur).
 
-
-
 See also:(!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node minStackSize
 
-
-
 This specifies the minimum size for the supervisor stack, in case a
-
 program has to reserve such stack space itself (for example when a
-
 callback routine is called from MacOS and this then wants to call a
-
 routine in Atari-mode, because one has to ensure there that the SP
-
 when switching to the Atari-mode lies within the Atari address space
-
 and this can only be effected with an own, local stack).
 
-
-
 (!B)Warning:(!b) It is imperative that one keeps to this value, because though
-
 5 kb suffice on the older 68k machines as a rule, on the newer PCI
-
 PowerMacs over 12 kb is required when the network (Ether-Talk) is
-
 active! However, it is best if one forgoes the creation of one's own
-
 supervisor stack completely, to avoid such problems in the future. In
-
 case of doubt one should contact the author of the (!nolink [MagiC]) Mac kernel!
 
-
-
 See also:(!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node ext
 
-
-
 This offers various help functions of the (!nolink [MagiC]) Mac kernel. The call
-
 has to be made from Atari-mode (user- or supervisor-mode). Calls from
-
 interrupts are (!I)not(!i) permitted.
 
-
-
 For this one passes a function number in the (!I)function(!i) parameter and a
-
 pointer to possibly additionally required data in the (!I)data(!i) parameter.
-
 On calling undefined function numbers the return value of the function
-
 will always be -1. The functions:
 
-
-
 !begin_xlist !short [Value]
-
 !item [Value]
-
 Description
-
 !item [~]
-
 ~
-
 !item [0]
-
 (!B)extMax(!b)
-
 (!nl)
-
 (!I)data(!i) is unused (pass NULL!), the return will be the highest
-
        implemented function number.
-
 !item [1]
-
 (!B)extAlert(!b)
-
 (!nl)
-
 Displays a generic Mac dialog (alert). (!I)data(!i) points to a NULL-
-
        terminated string (255 characters maximum!) that is displayed
-
        in the dialog. (!B)Warning:(!b) Umlauts and other accented characters
-
        must have Mac codings. For newlines simply insert a CR. (!nl)
-
        Return value: Always zero.
-
 !item [2]
-
 (!B)extAUXOpenErr(!b)
-
 (!nl)
-
 Displays a Mac alert with a text (adapted to the language in
-
        use) that the serial port cannot be opened because it is
-
        occupied (is required by HSMODEM/MACM1). (!I)data(!i) is unused.
-
        Return value: Always zero.
-
 !item [3]
-
 (!B)extFSSpecToPath(!b)
-
 (!nl)
-
 Converts a Macintosh filepath to a (!nolink [GEMDOS])-conform path.
-
        (!I)data(!i) points to the following structure: First an FSSpec (see
-
        Mac docs), followed by a buffer with room for 256 characters.
-
        This buffer is filled by a C-string that describes a complete
-
        pathname, with which the file can be accessed via (!nolink [GEMDOS]) file
-
        functions. It may be a good idea later that this path goes via
-
        the pseudo-drive 'u:\', in which all currently present Mac
-
        drives are then available. One must also take into account that
-
        we are dealing with file and folder names that do not fit into
-
        the 8+3 scheme. (!nl)
-
        If we are dealing with a folder, then the path is terminated
-
        with '\' in any case. If a path cannot be obtained, say because
-
        none of the configured (!nolink [MagiC]) drives 'sees' the relevant folder,
-
        the function returns the value -2. On success, a 0 is returned.
-
-
 
 !end_xlist
 
-
-
 (!B)Warning:(!b) This function may take some time under certain circumstances,
-
 as all the directories used by MM may have to be searched through;
-
 therefore do not airily call it up continuously if you can avoid it!
 
-
-
 See also: (!link [The MagiC Mac cookie][Cookie, MgMc]) ~
-
 Cookie and XBRA list
-
 !end_node
-
-
-
-
 
 
 
 !begin_node extMac
 
-
-
 Corresponds to 'ext', though the call must be made in the Mac context
-
 (see 'callMacContext'). It is advantageous if, due to call of other
-
 Mac functions, the program is already in the Mac-mode. Calls from
-
 interrupts are not permitted as a rule.
-
 !end_node
-
-
-
 
 
 !begin_node stackLoad
 
-
-
 (!I)stackLoad(!i) activates a new CPU stack (a7).
 
-
-
 This is required when one wants to call a routine in the Atari context
-
 from a Mac context during which an arbitrary CPU stack is active, i.e.
-
 before a mode-change with 'modeAtari' has been performed. A switch to
-
 another stack is necessary then, because the memory area that a7 is
-
 currently using may be blanked out through the switch to Atari-mode,
-
 which could lead to the CPU freezing (see also the relevant parts of
-
 'Exceptions under MagiC Mac').
 
-
-
 Instead of simply placing the a7 onto the new stack, one should use
-
 'stackLoad'. Basically this function does the same thing, but it also
-
 informs the MacOS about this (by setting some global variables). As a
-
 result the MacOS does not check a7 periodically in the meantime. The
-
 reason is because otherwise, with certain MacOS versions (prior to 7.5
-
 and again as of 7.5.3), the MacOS would issue a stack overflow message
-
 even though this has not occurred.
 
-
-
 If virtual memory is active, this call also prevents this stack area
-
 being offloaded, which could result in the computer freezing in some
-
 circumstances.
 
-
-
 Usage: In a0 one should pass a pointer to a MemArea structure (see
-
 above). This must contain a pointer to the start (lowest address) of
-
 the stack as well as its length (respect 'minStackSize'!). The routine
-
 will destroy the registers a0 and a1 and sets a7 to the value of
-
 <MemArea.start+MemArea.length>.
-
 !end_node
-
-
 
 !begin_node stackUnload
-
 The inverse of 'stackLoad'. This is to be called if the stack that was
-
 active previously is to be used again.
 
-
-
 The routine destroys the register a0 (a7 receives again the value it
-
 had before the stackLoad call).
+!end_node
 
 !end_node
 
-
-
 !end_node
-
-
-
-!end_node
-
