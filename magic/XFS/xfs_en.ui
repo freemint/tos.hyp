@@ -209,7 +209,6 @@ xfs_dcntl:      DS.L      1    /* Required for Dcntl                  */
 See also:
 (!link [Make-up of a DFS][The make-up of a DFS]) ~
 MagiC's XFS-concept
-!end_node
 
 
 
@@ -1520,7 +1519,7 @@ without xfs_dta_drive being initialized, then the result is indeterminate.
 MagiC's XFS-concept
 
 (!ende_liste)
-
+!end_node
 
 
 !begin_node xfs_snext
@@ -1755,7 +1754,6 @@ dd_refcnt:   DS.W      1    /* 0x04: Ref. counter for standard paths */
 
 See also:
 MagiC's XFS-concept
-!end_node
 
 
 
@@ -1924,6 +1922,49 @@ number (one WORD in each case).
 This entry is (!I)mandatory only for(!i) (!B)DOS filesystems(!b) (i.e. already for
 a derived object) and contains a pointer to the (!link [DFS][MagiC's DFS-concept])
 subdriver.
+!end_node
+!end_node
+
+
+
+!begin_node The Disk Transfer Area (DTA) for XFSs
+
+The DTA is used by the old DOS functions Fsfirst and Fsnext, whose
+clumsy conception by the MS-DOS originators still weighs down the
+system like a curse. For the kernel the structure looks as follows:
+
+!begin_verbatim
+dta_res1:        DS.B    20    /* 0x00: Not used by the kernel   */
+dta_drive:       DS.B     1    /* 0x14: Logical drive            */
+dta_attribute:   DS.B     1    /* 0x15: Found attribute          */
+dta_time:        DS.W     1    /* 0x16: Found time               */
+dta_date:        DS.W     1    /* 0x18: Found date               */
+dta_len:         DS.L     1    /* 0x1a: Found length             */
+dta_name:        DS.B    14    /* 0x1e: Found filename           */
+!end_verbatim
+
+(!B)Note:(!b) The components (!I)dta_attribute(!i) to (!I)dta_name(!i) represent the
+documented user area; this has to be handled according to (!nolink [GEMDOS])
+specifications.
+
+See also:
+MagiC's XFS-concept
+
+
+
+!begin_node xfs_dta_res1
+
+dta_res1 (from XFS) is not used by the kernel. Here the
+(!link [XFS][MagiC's XFS-concept]) may muck about.
+!end_node
+
+
+
+!begin_node xfs_dta_drive
+
+xfs_dta_drive contains the associated (!B)logical(!b) drive (0 corresponds to
+drive A: etc). With this information the kernel can decide at Fsnext
+which (!link [XFS][MagiC's XFS-concept]) has to perform the task.
 !end_node
 !end_node
 
@@ -2192,49 +2233,6 @@ fields are valid initially only for the prototype (!link [FD][The File Descripto
 opening ((!B)ddev_open(!b)) the data are copied explicitly from the prototype
 FD into the clone.
 !end_node
-!end_node
-
-
-
-!begin_node The Disk Transfer Area (DTA) for XFSs
-
-The DTA is used by the old DOS functions Fsfirst and Fsnext, whose
-clumsy conception by the MS-DOS originators still weighs down the
-system like a curse. For the kernel the structure looks as follows:
-
-!begin_verbatim
-dta_res1:        DS.B    20    /* 0x00: Not used by the kernel   */
-dta_drive:       DS.B     1    /* 0x14: Logical drive            */
-dta_attribute:   DS.B     1    /* 0x15: Found attribute          */
-dta_time:        DS.W     1    /* 0x16: Found time               */
-dta_date:        DS.W     1    /* 0x18: Found date               */
-dta_len:         DS.L     1    /* 0x1a: Found length             */
-dta_name:        DS.B    14    /* 0x1e: Found filename           */
-!end_verbatim
-
-(!B)Note:(!b) The components (!I)dta_attribute(!i) to (!I)dta_name(!i) represent the
-documented user area; this has to be handled according to (!nolink [GEMDOS])
-specifications.
-
-See also:
-MagiC's XFS-concept
-!end_node
-
-
-
-!begin_node xfs_dta_res1
-
-dta_res1 (from XFS) is not used by the kernel. Here the
-(!link [XFS][MagiC's XFS-concept]) may muck about.
-!end_node
-
-
-
-!begin_node xfs_dta_drive
-
-xfs_dta_drive contains the associated (!B)logical(!b) drive (0 corresponds to
-drive A: etc). With this information the kernel can decide at Fsnext
-which (!link [XFS][MagiC's XFS-concept]) has to perform the task.
 !end_node
 
 
@@ -2641,6 +2639,9 @@ d0 !! = !! long count
 a1 !! = !! char *buffer
 -> d0 !! = !! long amount
 !end_table
+!end_node
+!end_node
+!end_node
 
 
 
@@ -2657,6 +2658,7 @@ the installation of an XFS, namely with:
 kernel = (!B)Dcntl(KER_GETINFO, NULL, NULL)(!b).
 
 The deinstallation of an XFS is (!I)not(!i) provided for.
+!end_node
 
 
 
@@ -2682,15 +2684,15 @@ device driver). The build-up of the kernel structure in detail:
 !begin_verbatim
 typedef struct
 {
-  WORD mxk_version;
+  WORD   mxk_version;
   VOID (*mxk_fast_clrmem)      ( void *von, void *bis );
   BYTE (*mxk_toupper)          ( char c );
   VOID (*mxk__sprintf)         ( char *dest, char *source, LONG *p );
-  VOID *mxk_act_pd;
-  APPL *mxk_act_appl;
-  APPL *mxk_keyb_app;
-  WORD *mxk_pe_slice;
-  WORD *mxk_pe_timer;
+  VOID  *mxk_mxk_act_pd;
+  APPL  *mxk_act_appl;
+  APPL  *mxk_keyb_app;
+  WORD  *mxk_pe_slice;
+  WORD  *mxk_pe_timer;
   VOID (*mxk_appl_yield)       ( void );
   VOID (*mxk_appl_suspend)     ( void );
   VOID (*mxk_appl_begcritic)   ( void );
@@ -2701,22 +2703,21 @@ typedef struct
   VOID (*mxk_appl_IOcomplete)  ( APPL *ap );
   LONG (*mxk_evnt_sem)         ( WORD mode, void *sem, LONG timeout );
   VOID (*mxk_Pfree)            ( void *pd );
-  WORD mxk_int_msize;
-  VOID *mxk_int_malloc         ( void );
-  VOID mxk_int_mfree           ( void *memblk );
-  VOID mxk_resv_intmem         ( void *mem, LONG bytes );
-  LONG mxk_diskchange          ( WORD drv );
-  LONG mxk_DMD_rdevinit        ( DMD *dmd );
-  LONG mxk_proc_info           ( WORD code, PD *pd );
-  LONG mxk_mxalloc             ( d0 = LONG amount, d1 = WORD mode, a0 = PD *pd );
-  LONG mxk_mfree               ( a0 = void *block );
-  LONG mxk_mshrink             ( d0 = LONG newlen, a0 = void *block );
+  WORD   mxk_int_msize;
+  VOID  *mxk_int_malloc        ( void );
+  VOID   mxk_int_mfree         ( void *memblk );
+  VOID   mxk_resv_intmem       ( void *mem, LONG bytes );
+  LONG   mxk_diskchange        ( WORD drv );
+  LONG   mxk_DMD_rdevinit      ( DMD *dmd );
+  LONG   mxk_proc_info         ( WORD code, PD *pd );
+  LONG   mxk_mxalloc           ( d0 = LONG amount, d1 = WORD mode, a0 = PD *pd );
+  LONG   mxk_mfree             ( a0 = void *block );
+  LONG   mxk_mshrink           ( d0 = LONG newlen, a0 = void *block );
 } MX_KERNEL;
 !end_verbatim
 
 See also:
 MagiC's XFS-concept
-!end_node
 
 
 
