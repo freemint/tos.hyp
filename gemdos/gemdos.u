@@ -1,3 +1,6 @@
+# Source: ph_res1 from the MagiC docu for the shared library in the sourcecode
+#         PH_BIT3.C.
+
 !iflang [english]
 
 
@@ -786,8 +789,89 @@ return the type PIPE?
 !end_node
 
 
+!begin_node The program format
+!label GEMDOS, Program format under
+A program file under (!nolink [GEMDOS]) consists of the following segments:
+
+!begin_itemize !short
+!item Header
+!item TEXT, DATA and BSS segment
+!item Symbol table (optional)
+!item Relocation table (optional)
+!end_itemize
+
+(!B)The header is built up as follows:(!b)
+!label PH
+!label Program header
+!label Header of a program
+!begin_verbatim
+typedef struct
+{
+   WORD  ph_branch;        /* Branch to start of the program  */
+                           /* (must be 0x601a!)               */
+
+   LONG  ph_tlen;          /* Length of the TEXT segment      */
+   LONG  ph_dlen;          /* Length of the DATA segment      */
+   LONG  ph_blen;          /* Length of the BSS segment       */
+   LONG  ph_slen;          /* Length of the symbol table      */
+   LONG  ph_res1;          /* Reserved, should be 0;          */
+                           /* Required by PureC               */
+   LONG  ph_prgflags;      /* Program flags                   */
+   WORD  ph_absflag;       /* 0 = Relocation info present     */
+} PH;
+!end_verbatim
+!label Symbol table
+A symbol table in (!I)Digital Research format(!i) consists of a series of 14
+byte long entries, made up of the symbol name (maximum 8 bytes; any shorter
+names are terminated with a 0!), a 2 byte long symbol type and the actual
+symbol value (4 bytes). The supported symbol types are summarized in the
+following table:
+
+!begin_table [l|l]
+Value !! Symbol type
+!hline
+0x0100 !! In the BSS
+0x0200 !! In program text
+0x0280 !! Start of an object module
+0x02c0 !! Start of a library
+0x0400 !! In DATA segment
+0x0800 !! External
+0x1000 !! Register
+0x2000 !! Globales Symbol
+0x4000 !! Equated
+0x8000 !! Defined
+!end_table
+!label Relocation table
+Many development systems (e.g. Pure-C) however use their own (usually more
+efficient) symbol format. As programs under (!nolink [TOS]) may be loaded at
+any arbitrary location in working memory (and must be capable of running
+there), a program file normally contains a (!I)relocation table,(!i) with
+whose aid the addresses specified in the program code can be recalculated to
+the segments actually allocated.
+
+Whether relocation information is present or not can be gathered from the
+element (!I)ph_absflag(!i) of the program header (see above). Basically only
+a relocation of 32-bit values (i.e. addresses) is possible; prior to
+(!nolink [GEMDOS]) Version 0.15 (or (!nolink [TOS]) Version 1.04) the
+relocation information was limited to a maximum of 32 kbytes.
+
+The relocation table itself starts with a 32-bit value which marks the
+offset of the first value to be relocated (!I)relative(!i) to the start of
+the TEXT segment. Single bytes are then used for all following offsets.
+(!B)To be able to handle offsets greater than 255 correctly, one proceeds as
+follows:(!b) If a 1 is found as an offset (this is not possible due to the
+characteristics of the MC-680x0 processor family) then the value 254 is
+added automatically to the offset. For very large offsets this procedure can
+of course be repeated. Incidentally, an (!I)empty(!i) relocation table is
+flagged with a LONG value of 0.
+
+See also:
+Fcntl ~ ARHEADER ~ OHEADER ~ OSHEADER  ~ PSETFLAGS ~ The program flags
+
+
 !begin_node The program flags
 !label Flags of a program
+!label ph_prgflags
 
 With program flags one is dealing with a bit-vector within the program
 header, which is built up as follows:
@@ -807,7 +891,8 @@ RAM
 If this bit is set, memory requests via Malloc may be allocated from
 alternate RAM
 !item [~~~3]
-Reserved, should be NULL
+Reserved, should be NULL (!nl)
+Used for the (!link [Shared library][How do I write a library?]).
 
 !label Memory protection
 !label Protection, Memory
@@ -860,87 +945,7 @@ represent allocations between 128 kbyte and 2 Mbyte.
 See also:
 (!link [Program header][The program format]) ~ Program launch and TPA
 !end_node
-
-
-!begin_node The program format
-!label GEMDOS, Program format under
-A program file under (!nolink [GEMDOS]) consists of the following segments:
-
-!begin_itemize !short
-!item Header
-!item TEXT, DATA and BSS segment
-!item Symbol table (optional)
-!item Relocation table (optional)
-!end_itemize
-
-(!B)The header is built up as follows:(!b)
-!label PH
-!label Program header
-!label Header of a program
-!begin_verbatim
-typedef struct
-{
-   WORD  ph_branch;        /* Branch to start of the program  */
-                           /* (must be 0x601a!)               */
-
-   LONG  ph_tlen;          /* Length of the TEXT segment      */
-   LONG  ph_dlen;          /* Length of the DATA segment      */
-   LONG  ph_blen;          /* Length of the BSS segment       */
-   LONG  ph_slen;          /* Length of the symbol table      */
-   LONG  ph_res1;          /* Reserved, should be 0           */
-   LONG  ph_prgflags;      /* Program flags                   */
-   WORD  ph_absflag;       /* 0 = Relocation info present     */
-} PH;
-!end_verbatim
-!label Symbol table
-A symbol table in (!I)Digital Research format(!i) consists of a series of 14
-byte long entries, made up of the symbol name (maximum 8 bytes; any shorter
-names are terminated with a 0!), a 2 byte long symbol type and the actual
-symbol value (4 bytes). The supported symbol types are summarized in the
-following table:
-
-!begin_table [l|l]
-Value !! Symbol type
-!hline
-0x0100 !! In the BSS
-0x0200 !! In program text
-0x0280 !! Start of an object module
-0x02c0 !! Start of a library
-0x0400 !! In DATA segment
-0x0800 !! External
-0x1000 !! Register
-0x2000 !! Globales Symbol
-0x4000 !! Equated
-0x8000 !! Defined
-!end_table
-!label Relocation table
-Many development systems (e.g. Pure-C) however use their own (usually more
-efficient) symbol format. As programs under (!nolink [TOS]) may be loaded at
-any arbitrary location in working memory (and must be capable of running
-there), a program file normally contains a (!I)relocation table,(!i) with
-whose aid the addresses specified in the program code can be recalculated to
-the segments actually allocated.
-
-Whether relocation information is present or not can be gathered from the
-element (!I)ph_absflag(!i) of the program header (see above). Basically only
-a relocation of 32-bit values (i.e. addresses) is possible; prior to
-(!nolink [GEMDOS]) Version 0.15 (or (!nolink [TOS]) Version 1.04) the
-relocation information was limited to a maximum of 32 kbytes.
-
-The relocation table itself starts with a 32-bit value which marks the
-offset of the first value to be relocated (!I)relative(!i) to the start of
-the TEXT segment. Single bytes are then used for all following offsets.
-(!B)To be able to handle offsets greater than 255 correctly, one proceeds as
-follows:(!b) If a 1 is found as an offset (this is not possible due to the
-characteristics of the MC-680x0 processor family) then the value 254 is
-added automatically to the offset. For very large offsets this procedure can
-of course be repeated. Incidentally, an (!I)empty(!i) relocation table is
-flagged with a LONG value of 0.
-
-See also:
-Fcntl ~ ARHEADER ~ OHEADER ~ OSHEADER  ~ PSETFLAGS
 !end_node
-
 
 !begin_node Program launch and TPA
 !label TPA and Program launch
@@ -1831,8 +1836,92 @@ Fxattr nach einem Fcreate den Typ PIPE zurÅck?
 !end_node
 
 
+!begin_node Das Programmformat
+!label GEMDOS, Programmformat unter
+Eine Programmdatei besteht unter GEMDOS aus den folgenden Komponenten:
+
+!begin_itemize !short
+!item Header
+!item Text-, DATA- und BSS-Segment
+!item Symboltabelle (optional)
+!item Relokationstabelle (optional)
+!end_itemize
+
+(!B)Der Header ist dabei wie folgt aufgebaut:(!b)
+!label PH
+!label Programmheader
+!label Header eines Programms
+!begin_verbatim
+typedef struct
+{
+   WORD  ph_branch;        /* Branch zum Anfang des Programms  */
+                           /* (muû 0x601a sein!)               */
+
+   LONG  ph_tlen;          /* LÑnge  des TEXT - Segments       */
+   LONG  ph_dlen;          /* LÑnge  des DATA - Segments       */
+   LONG  ph_blen;          /* LÑnge  des BSS  - Segments       */
+   LONG  ph_slen;          /* LÑnge  der Symboltabelle         */
+   LONG  ph_res1;          /* reserviert, sollte 0 sein        */
+                           /* wird von PureC benîtigt          */
+   LONG  ph_prgflags;      /* Programmflags                    */
+   WORD  ph_absflag;       /* 0 = Relozierungsinf. vorhanden   */
+} PH;
+!end_verbatim
+!label Symboltabelle
+Eine Symboltabelle im (!I)Digital-Research-Format(!i) besteht aus jeweils 14
+Bytes langen EintrÑgen, die aus dem Symbolnamen (maximal 8 Bytes; lediglich
+kÅrzere Namen sind mit einer 0 abgeschlossen!), einem 2 Bytes langen
+Symboltyp und dem eigentlichen Symbolwert (4 Bytes) bestehen. Die
+unterstÅtzten Symboltypen sind in der folgenden Tabelle zusammengefaût:
+
+!begin_table [l|l]
+Wert !! Symboltyp
+!hline
+0x0100 !! in der BSS
+0x0200 !! im Programmtext
+0x0280 !! Start eines Objektmoduls
+0x02c0 !! Start einer Library
+0x0400 !! im DATA-Bereich
+0x0800 !! External
+0x1000 !! Register
+0x2000 !! Globales Symbol
+0x4000 !! Equated
+0x8000 !! Defined
+!end_table
+!label Relokationstabelle
+Viele Entwicklungssysteme (z.B. Pure-C) benutzen allerdings ein eigenes
+(i.d.R. leistungsfÑhigeres) Symbolformat. Da Programme unter TOS an eine
+beliebige Stelle des Arbeitsspeichers geladen werden kînnen (und dort
+ablauffÑhig sein mÅssen), enthÑlt eine Programmdatei normalerweise eine
+(!I)Relokationstabelle(!i), mit deren Hilfe die im Programmcode angegebenen
+(!nolink [Adressen]) auf die tatsÑchlich zugewiesenen Bereiche umgerechnet
+werden
+kînnen.
+
+Ob Relokations-Informationen vorhanden sind oder nicht, kann der Komponente
+(!I)ph_absflag(!i) des Programmheaders (s.o.) entnommen werden. Es ist
+grundsÑtzlich nur eine Relozierung von 32-Bit-Werten (d.h.
+(!nolink [Adressen])) mîglich; vor GEMDOS-Version 0.15 (bzw. TOS-Version
+1.04) durften die Relozierungsinformationen nur maximal 32 Kbyte umfassen.
+
+Die Relokationstabelle selbst beginnt mit einem 32-Bit-Wert, welcher den
+Offset des ersten zu relozierenden Wertes (!I)relativ(!i) zum Beginn des
+Textsegmentes markiert. FÅr alle folgenden Offsets werden dann einzelne
+Bytes benutzt. (!B)Um auch AbstÑnde grîûer als 255 korrekt handhaben zu
+kînnen, wird dabei wie folgt verfahren:(!b) Wird als Offset eine 1 gefunden
+(dies ist aufgrund der Charakteristika der MC-680x0 Prozessorfamilie
+unmîglich), wird automatisch zum Offset der Wert 254 addiert. FÅr besonders
+groûe AbstÑnde kann dieser Vorgang natÅrlich auch wiederholt werden. Eine
+(!I)leere(!i) Relokationstabelle wird Åbrigens durch einen Long-Wert von 0
+gekennzeichnet.
+
+Querverweis:
+Fcntl ~ (!link [ARHEADER][Archivheader (ARHEADER)]) ~ OHEADER ~
+OSHEADER ~ PSETFLAGS ~ Die Programmflags
+
 !begin_node Die Programmflags
 !label Flags eines Programms
+!label ph_prgflags
 
 Bei den Programmflags handelt es sich um einen Bitvektor innerhalb des
 Programmheaders, der wie folgt aufgebaut ist:
@@ -1852,7 +1941,8 @@ geladen werden.
 Wenn dieses Bit gesetzt ist, dÅrfen Speicheranforderungen per Malloc aus dem
 Alternate-RAM bedient werden.
 !item [~~~3]
-reserviert, sollte Null sein.
+reserviert, sollte Null sein. (!nl)
+Wird fÅr die (!link [Shared Library][Wie schreibe ich eine Shared Libraries?]) benutzt.
 
 !label Memory-Protection
 !label Protection, Memory-
@@ -1915,90 +2005,6 @@ Querverweis:
 (!link [Programmheader][GEMDOS, Programmformat unter]) ~
 Programmstart und TPA
 !end_node
-
-
-!begin_node Das Programmformat
-!label GEMDOS, Programmformat unter
-Eine Programmdatei besteht unter GEMDOS aus den folgenden Komponenten:
-
-!begin_itemize !short
-!item Header
-!item Text-, DATA- und BSS-Segment
-!item Symboltabelle (optional)
-!item Relokationstabelle (optional)
-!end_itemize
-
-(!B)Der Header ist dabei wie folgt aufgebaut:(!b)
-!label PH
-!label Programmheader
-!label Header eines Programms
-!begin_verbatim
-typedef struct
-{
-   WORD  ph_branch;        /* Branch zum Anfang des Programms  */
-                           /* (muû 0x601a sein!)               */
-
-   LONG  ph_tlen;          /* LÑnge  des TEXT - Segments       */
-   LONG  ph_dlen;          /* LÑnge  des DATA - Segments       */
-   LONG  ph_blen;          /* LÑnge  des BSS  - Segments       */
-   LONG  ph_slen;          /* LÑnge  der Symboltabelle         */
-   LONG  ph_res1;          /* reserviert, sollte 0 sein        */
-   LONG  ph_prgflags;      /* Programmflags                    */
-   WORD  ph_absflag;       /* 0 = Relozierungsinf. vorhanden   */
-} PH;
-!end_verbatim
-!label Symboltabelle
-Eine Symboltabelle im (!I)Digital-Research-Format(!i) besteht aus jeweils 14
-Bytes langen EintrÑgen, die aus dem Symbolnamen (maximal 8 Bytes; lediglich
-kÅrzere Namen sind mit einer 0 abgeschlossen!), einem 2 Bytes langen
-Symboltyp und dem eigentlichen Symbolwert (4 Bytes) bestehen. Die
-unterstÅtzten Symboltypen sind in der folgenden Tabelle zusammengefaût:
-
-!begin_table [l|l]
-Wert !! Symboltyp
-!hline
-0x0100 !! in der BSS
-0x0200 !! im Programmtext
-0x0280 !! Start eines Objektmoduls
-0x02c0 !! Start einer Library
-0x0400 !! im DATA-Bereich
-0x0800 !! External
-0x1000 !! Register
-0x2000 !! Globales Symbol
-0x4000 !! Equated
-0x8000 !! Defined
-!end_table
-!label Relokationstabelle
-Viele Entwicklungssysteme (z.B. Pure-C) benutzen allerdings ein eigenes
-(i.d.R. leistungsfÑhigeres) Symbolformat. Da Programme unter TOS an eine
-beliebige Stelle des Arbeitsspeichers geladen werden kînnen (und dort
-ablauffÑhig sein mÅssen), enthÑlt eine Programmdatei normalerweise eine
-(!I)Relokationstabelle(!i), mit deren Hilfe die im Programmcode angegebenen
-(!nolink [Adressen]) auf die tatsÑchlich zugewiesenen Bereiche umgerechnet
-werden
-kînnen.
-
-Ob Relokations-Informationen vorhanden sind oder nicht, kann der Komponente
-(!I)ph_absflag(!i) des Programmheaders (s.o.) entnommen werden. Es ist
-grundsÑtzlich nur eine Relozierung von 32-Bit-Werten (d.h.
-(!nolink [Adressen])) mîglich; vor GEMDOS-Version 0.15 (bzw. TOS-Version
-1.04) durften die Relozierungsinformationen nur maximal 32 Kbyte umfassen.
-
-Die Relokationstabelle selbst beginnt mit einem 32-Bit-Wert, welcher den
-Offset des ersten zu relozierenden Wertes (!I)relativ(!i) zum Beginn des
-Textsegmentes markiert. FÅr alle folgenden Offsets werden dann einzelne
-Bytes benutzt. (!B)Um auch AbstÑnde grîûer als 255 korrekt handhaben zu
-kînnen, wird dabei wie folgt verfahren:(!b) Wird als Offset eine 1 gefunden
-(dies ist aufgrund der Charakteristika der MC-680x0 Prozessorfamilie
-unmîglich), wird automatisch zum Offset der Wert 254 addiert. FÅr besonders
-groûe AbstÑnde kann dieser Vorgang natÅrlich auch wiederholt werden. Eine
-(!I)leere(!i) Relokationstabelle wird Åbrigens durch einen Long-Wert von 0
-gekennzeichnet.
-
-Querverweis:
-Fcntl ~ (!link [ARHEADER][Archivheader (ARHEADER)]) ~ OHEADER ~
-OSHEADER ~ PSETFLAGS
-
 !end_node
 
 
