@@ -1,3 +1,5 @@
+# OSHEADER: Address from p_root and p_run from the "ATARI Profibuch ST-STE-TT"
+
 !iflang [english]
 
 !begin_node Type definitions
@@ -398,18 +400,16 @@ typedef struct _osheader
     GEM_MUPB   *os_magic;       /* GEM memory-usage parameter block     */
     int32_t     os_date;        /* TOS date (English !) in BCD format   */
     uint16_t    os_conf;        /* Various configuration bits           */
-    uint16_t    os_dosdate;     /* TOS date in GEMDOS format           */
+    uint16_t    os_dosdate;     /* TOS date in GEMDOS format            */
 
     /* The following components are available only as of TOS Version
        1.02 (Blitter-TOS)               */
     int8_t    **p_root;         /* Base address of the GEMDOS pool      */
-    int8_t    **pkbshift;       /* Pointer to BIOS Kbshift variable     */
+    int8_t    **pkbshift;       /* Pointer to BIOS Kbshift variable
                                    (for TOS 1.00 see Kbshift)           */
-    BASEPAGE  **p_run;          /* Address of the variables containing  */
-                                   a pointer to the current @GEMDOS     */
+    BASEPAGE  **p_run;          /* Address of the variables containing
+                                   a pointer to the current GEMDOS
                                    process.                             */
-                                   With older TOS versions the address  */
-                                   of p_run is 0x602C.                  */
     int8_t     *p_rsv2;         /* Reserved                             */
 
     /* Only available with EmuTOS */
@@ -419,7 +419,10 @@ typedef struct _osheader
 
 The structure also appears under the name SYSHDR.
 
-(!B)Note:(!b) The component (!I)os_conf(!i) contains the so-called NTSC/PAL flag
+!begin_xlist [os_conf]
+
+!item [os_conf]
+The component (!I)os_conf(!i) contains the so-called NTSC/PAL flag
 in its lowest bit; if this bit is set, then the machine has a PAL
 video system, if cleared NTSC. The remaining bits contain a country
 identifier, which can serve to denote the language used for menus etc.
@@ -444,11 +447,40 @@ Value !! Country
 14 !! Holland
 15 !! CSR
 16 !! Hungary
+127 !! All countries are supported.
 !end_table
 
 (!B)Warning:(!b) To obtain the language in use, one should fall back (!I)not(!i)
 to the OSHEADER if possible, but use the (!link [_AKP][Cookie, _AKP]) cookie or the
 function appl_getinfo (opcode 3).
+
+!item [p_root]
+With older TOS versions the address of (!I)p_root(!i) is 0x56FA.
+
+!item [p_run]
+!begin_verbatim
+BASEPAGE **GetRun (void)
+{
+  int32_t savessp = Super (0L);
+  OSHEADER *O = *((OSHEADER **)(0x4f2L);
+  Super ((void *) savessp );
+
+  O = O->os_beg;   /* wegen eines Fehlers in alter AHDI-Version */
+
+  if (O->os_version < 0x102)
+  {
+    if ((O->os_conf >> 1) == 4)      /* PAL-Modus wegshiften */
+      return ((BASEPAGE **)0x873c);  /* Spanisches TOS 1.0   */
+    else
+      return ((BASEPAGE **)0x602c);
+  }
+  else
+    return O->p_run;
+}
+!end_verbatim
+
+!end_xlist
+
 
 See also:
 Kbshift ~  _sysbase ~ (!link [System variables][The system variables]) ~
@@ -987,9 +1019,7 @@ typedef struct _osheader
                                    Fr TOS 1.00 siehe Kbshift           */
     BASEPAGE  **p_run;          /* Adresse der Variablen, die einen
                                    Zeiger auf den aktuellen GEMDOS-
-                                   Prozess enth„lt.
-                                   Bei „lteren TOS-Versionen ist die
-                                   Adresse von p_run 0x602C.            */
+                                   Prozess enth„lt.                     */
     int8_t     *p_rsv2;         /* reserviert                           */
 
     /* Nur verfgbar mit EmuTOS */
@@ -999,7 +1029,12 @@ typedef struct _osheader
 
 Die Struktur tauch auch unter dem Namen SYSHDR auf.
 
-(!B)Hinweis:(!b) Die Komponente (!I)os_conf(!i) enth„lt im untersten Bit das
+(!B)Hinweis:(!b)
+
+!begin_xlist [os_conf]
+
+!item [os_conf]
+Die Komponente (!I)os_conf(!i) enth„lt im untersten Bit das
 sogenannte NTSC/PAL-Flag; ist dieses Bit gesetzt, so handelt es sich um ein
 PAL-Videosystem. Die restlichen Bits beinhalten eine L„nderkennung, die z.B.
 dazu dienen kann, die zu benutzende Sprache zu erkennen. Es gilt die
@@ -1025,12 +1060,40 @@ Wert !! Land
 14 !! Niederlande
 15 !! CSSR
 16 !! Ungarn
+127 !! Alle L„nder werden unetrsttzt.
 !end_table
 
 (!B)Achtung:(!b) Um die zu benutzende Sprache zu ermitteln, sollte nach
 M”glichkeit (!I)nicht(!i) auf den OSHEADER, sondern auf den
 (!link [_AKP][Cookie, _AKP])-Cookie bzw.
 auf die Funktion appl_getinfo (Opcode 3) zurckgegriffen werden.
+
+!item [p_root]
+Bei TOS 1.00 befindet sich der Zeiger bei der Adresse 0x56FA.
+
+!item [p_run]
+!begin_verbatim
+BASEPAGE **GetRun (void)
+{
+  int32_t savessp = Super (0L);
+  OSHEADER *O = *((OSHEADER **)(0x4f2L);
+  Super ((void *) savessp );
+
+  O = O->os_beg;   /* wegen eines Fehlers in alter AHDI-Version */
+
+  if (O->os_version < 0x102)
+  {
+    if ((O->os_conf >> 1) == 4)      /* PAL-Modus wegshiften */
+      return ((BASEPAGE **)0x873c);  /* Spanisches TOS 1.0   */
+    else
+      return ((BASEPAGE **)0x0x602c);
+  }
+  else
+    return O->p_run;
+}
+!end_verbatim
+
+!end_xlist
 
 Querverweis:
 Kbshift ~  _sysbase ~
