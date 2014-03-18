@@ -1,0 +1,332 @@
+!iflang [english]
+
+!begin_node appl_get_cicon
+(!begin_liste) [Availability]
+!item [Name:]
+¯Application get Cicon® -
+
+!item [Opcode:]
+131
+!item [Syntax:]
+int16_t appl_get_cicon(int16_t type,char *name,int16_t size,
+                       int_16_t *cicon_width,int16_t *cicon_height,
+                       CICON **cicon_data);
+
+!item [Description:]
+The goal of this function is to provide cicon server (24 bit true color for MyAES or 32 picture)
+This function provide only CICON data with bitmap and mask and not a full object icon. Data provide by this
+function should be relocated and copy, AES not keep in memory CICON block provided that should be copy.
+
+!item [type]
+    type&0xFF : kind of icon type: (!nl)
+!begin_xlist !compressed [0 ]
+  !item [0 :] Application icon
+  !item [1 :] File extension icon
+  !item [2 :] Reserved
+  !item [3 :] Load PNG file as icon from specific path
+  !item [4 :] Other icon (any other specific icon)
+!end_xlist
+ (!nl)
+
+If type&0x100 = 0 cicon_data return a CICON block as need by AES for display color icon
+else cicon_data return a simple bitmap block in ARBG format with 8 bit transparency (this
+format is not recognize by AES)
+
+!item [name]
+name of the cicon to load, some exemple: (!nl)
+        with type&0xFF:
+
+!begin_xlist !compressed [0 ]
+  !item [0 :] name = "purec"
+  !item [1 :] name = "html"
+  !item [3 :] name = "C:\myprog\mypng\pngname.png"
+  !item [4 :] name = "computer"
+!end_xlist
+
+!item [size]
+Size of the cicon to load, there is 3 different case:
+!begin_xlist !compressed [size = 0]
+  !item [size > 0] is the size of the icon requested and should be a multiple of 16
+  !item [size = 0] the default cicon size is requested and is set by aes configuration
+  !item [size = -1] the return cicon can be of any size and can change from a cicon to another
+!end_xlist
+
+!item [cicon_width]
+cicon width return
+
+!item [cicon_height]
+cicon height return
+
+!item [cicon_data]
+Return block of type CICON + mask + icon bitmap if type&0x100 = 0 else a bitmap 32 bit
+        with alpha chanel in the format ARGB 8 bits per chanel.
+ (!nl)
+
+relocation of cicon_data, cicon_data provide CICON block + mask + bitmap (!nl)
+ (!nl)
+
+    num_planes : number of planes (!nl)
+
+    *col_data, *col_mask, *sel_data, *sel_mask : provide relative position from the start of cicon_data
+          and should be relocated (!nl)
+ (!nl)
+
+            As the block can be free by the AES you should copy the block for your need, the size of the block to
+            copy is:
+!begin_verbatim
+number_of_block = 0
+if(cicon_data->col_data) number_of_block++;
+if(cicon_data->col_mask) number_of_block++;
+if(cicon_data->sel_data) number_of_block++;
+if(cicon_data->sel_mask) number_of_block++;
+
+size = sizeof(CICON) + (cicon_data->num_planes * cicon_width * cicon_height * number_of_block)/8 + cicon_width*cicon_height;
+
+CICON *newcicon;
+newcicon = malloc(size);
+memcpy(newcicon,cicon_data);
+if(cicon_data->col_data) newcicon->col_data += newcicon;
+if(cicon_data->col_mask) newcicon->col_mask += newcicon;
+if(cicon_data->sel_data) newcicon->sel_data += newcicon;
+if(cicon_data->sel_mask) newcicon->sel_mask += newcicon;
+!end_verbatim
+ (!nl)
+
+In the case of 32 bits bitmap size of the bloc = cicon_width * cicon_height * 4
+
+!item [(!nolink [Return]) value:]
+A return value of 0 indicates an error, with a value of 1 no error has arisen.
+
+!item [Availability:]
+Since MyAES 0.96 beta1
+
+!item [Group:]
+Application library
+
+!item [See also:]
+(!link [Binding] [Bindings for appl_get_cicon])
+(!ende_liste)
+
+
+
+!begin_node Bindings for appl_get_cicon
+!ignore_index
+(!begin_liste) [GEM-Arrays]
+!item [C:]
+int16_t appl_get_cicon(int16_t type,char *name,int16_t size,
+                       int_16_t *cicon_width,int16_t *cicon_height,
+                       CICON **cicon_data);
+!item [Binding:]
+!begin_verbatim
+int16_t appl_get_cicon (int16_t type,const char *name,int16_t size,
+                        int16_t *cicon_width,int16_t *cicon_height
+                        CICON **cicon_data)
+{
+   int_in[0] = type;
+   int_in[1] = size;
+
+   addr_in[0] = name;
+
+   addr_out[0] = (void *)cicon_data;
+
+   crys_if (131);
+
+   *cicon_width = int_out[1];
+   *cicon_height = int_out[2];
+
+   return ( int_out[0] );
+}
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Address !! Element !! (!nolink [Contents])
+!hline
+control   !! control[0] !! 131   # Function opcode
+control+2 !! control[1] !! 2     # Entry in int_in
+control+4 !! control[2] !! 3     # Entry in int_out
+control+6 !! control[3] !! 1     # Entry in addr_in
+control+8 !! control[4] !! 1     # Entry in addr_out
+int_in    !! int_in[0]  !! type
+int_in+2  !! int_in[1]  !! size
+addr_in   !! addr_in[0] !! name
+int_out   !! int_out[0] !! Return value
+int_out+2 !! int_out[1] !! cicon_width
+int_out+4 !! int_out[2] !! cicon_height
+addr_out  !! addr_out[0]!! cicon_data
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+!else
+
+!begin_node appl_get_cicon
+(!begin_liste) [Beschreibung]
+!item [Name:]
+¯Application get Cicon® -
+
+!item [AES-Nummer:]
+131
+!item [Deklaration:]
+int16_t appl_get_cicon(int16_t type,char *name,int16_t size,
+                       int_16_t *cicon_width,int16_t *cicon_height,
+                       CICON **cicon_data);
+
+!item [Beschreibung:]
+The goal of this function is to provide cicon server (24 bit true color for MyAES or 32 picture)
+This function provide only CICON data with bitmap and mask and not a full object icon. Data provide by this
+function should be relocated and copy, AES not keep in memory CICON block provided that should be copy.
+
+!begin_xlist !compressed [cicon_heigh]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+
+!item [type]
+    type&0xFF : kind of icon type: (!nl)
+!begin_xlist !compressed [0 ]
+  !item [0 :] Application icon
+  !item [1 :] File extension icon
+  !item [2 :] Reserved
+  !item [3 :] Load PNG file as icon from specific path
+  !item [4 :] Other icon (any other specific icon)
+!end_xlist
+ (!nl)
+
+If type&0x100 = 0 cicon_data return a CICON block as need by AES for display color icon
+else cicon_data return a simple bitmap block in ARBG format with 8 bit transparency (this
+format is not recognize by AES)
+
+!item [name]
+name of the cicon to load, some exemple: (!nl)
+        with type&0xFF:
+
+!begin_xlist !compressed [0 ]
+  !item [0 :] name = "purec"
+  !item [1 :] name = "html"
+  !item [3 :] name = "C:\myprog\mypng\pngname.png"
+  !item [4 :] name = "computer"
+!end_xlist
+
+!item [size]
+Size of the cicon to load, there is 3 different case:
+!begin_xlist !compressed [size = 0]
+  !item [size > 0] is the size of the icon requested and should be a multiple of 16
+  !item [size = 0] the default cicon size is requested and is set by aes configuration
+  !item [size = -1] the return cicon can be of any size and can change from a cicon to another
+!end_xlist
+
+!item [cicon_width]
+cicon width return
+
+!item [cicon_height]
+cicon height return
+
+!item [cicon_data]
+Return block of type CICON + mask + icon bitmap if type&0x100 = 0 else a bitmap 32 bit
+        with alpha chanel in the format ARGB 8 bits per chanel.
+ (!nl)
+
+Relocation of cicon_data, cicon_data provide CICON block + mask + bitmap (!nl)
+ (!nl)
+
+    num_planes : number of planes (!nl)
+
+    *col_data, *col_mask, *sel_data, *sel_mask: provide relative position from the start of cicon_data
+          and should be relocated (!nl)
+ (!nl)
+
+As the block can be free by the AES you should copy the block for your need, the size of the block to
+copy is:
+!begin_verbatim
+number_of_block = 0
+if(cicon_data->col_data) number_of_block++;
+if(cicon_data->col_mask) number_of_block++;
+if(cicon_data->sel_data) number_of_block++;
+if(cicon_data->sel_mask) number_of_block++;
+
+size = sizeof(CICON) + (cicon_data->num_planes * cicon_width * cicon_height * number_of_block)/8 + cicon_width*cicon_height;
+
+CICON *newcicon;
+newcicon = malloc(size);
+memcpy(newcicon,cicon_data);
+if(cicon_data->col_data) newcicon->col_data += newcicon;
+if(cicon_data->col_mask) newcicon->col_mask += newcicon;
+if(cicon_data->sel_data) newcicon->sel_data += newcicon;
+if(cicon_data->sel_mask) newcicon->sel_mask += newcicon;
+!end_verbatim
+ (!nl)
+
+In the case of 32 bits bitmap size of the bloc = cicon_width * cicon_height * 4
+
+!end_xlist
+
+
+
+!item [Ergebnis:]
+Ein Fehler ist aufgetreten, wenn als Ergebnis 0 zurckgegeben wird. Bei einem Ergebnis von 1
+ist alles OK.
+
+!item [Verfgbar:]
+Seit MyAES 0.96 beta1
+
+!item [Gruppe:]
+(!link [Applikationen][Applikationsfunktionen])
+!item [Querverweis:]
+(!link [Binding] [Bindings fr appl_get_cicon])
+(!ende_liste)
+
+
+
+!begin_node Bindings fr appl_get_cicon
+!ignore_index
+(!begin_liste) [GEM-Arrays]
+!item [C:]
+int16_t appl_get_cicon(int16_t type,char *name,int16_t size,
+                       int_16_t *cicon_width,int16_t *cicon_height,
+                       CICON **cicon_data);
+
+!item [Umsetzung:]
+!begin_verbatim
+int16_t appl_get_cicon (int16_t type,const char *name,int16_t size,
+                        int16_t *cicon_width,int16_t *cicon_height
+                        CICON **cicon_data)
+{
+   int_in[0] = type;
+   int_in[1] = size;
+
+   addr_in[0] = name;
+
+   addr_out[0] = (void *)cicon_data;
+
+   crys_if (131);
+
+   *cicon_width = int_out[1];
+   *cicon_height = int_out[2];
+
+   return ( int_out[0] );
+}
+!end_verbatim
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 131   # Opcode der Funktion
+control+2 !! control[1] !! 2     # Eintr„ge in int_in
+control+4 !! control[2] !! 3     # Eintr„ge in int_out
+control+6 !! control[3] !! 1     # Eintr„ge in addr_in
+control+8 !! control[4] !! 1     # Eintr„ge in addr_out
+int_in    !! int_in[0]  !! type
+int_in+2  !! int_in[1]  !! size
+addr_in   !! addr_in[0] !! name
+int_out   !! int_out[0] !! Return-Wert
+int_out+2 !! int_out[1] !! cicon_width
+int_out+4 !! int_out[2] !! cicon_height
+addr_out  !! addr_out[0]!! cicon_data
+!end_table
+(!ende_liste)
+!end_node
+!end_node
+
+!endif
