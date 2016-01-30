@@ -14,9 +14,9 @@
 void (!nolink [Setscreen])( void *par1, void *par2, int16_t rez, int16_t command );
 
 !item [Description:]
-This (!nolink [XBIOS]) routine corresponds to the Setscreen 
+This (!nolink [XBIOS]) routine corresponds to the Setscreen
 function with additional parameters, and serves for
-altering the screen resolution and screen memory 
+altering the screen resolution and screen memory
 addresses.
 !begin_table [l|l]
 Parameter !! Meaning
@@ -29,12 +29,6 @@ command !! Command
 
 The following values are defined for (!I)command(!i):
 !begin_xlist [CMD_ALLOCPAG]
-
-!item [CMD_GETMODE (0)]
-Getting current mode
-
-int32_t mode; (!nl)
-(!nolink [Setscreen])(-1,&mode,0x564E,CMD_GETMODE);
 
 !item [CMD_SETMODE (1)]
 Set new graphic mode
@@ -144,7 +138,7 @@ Test a graphic mode
 int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32; /* 800*600*16M */
 Setscreen(-1,modecode,0x564E,CMD_TESTMODE);
 !end_verbatim
-Only the BIOS is initialised, and a screen test arrives 
+Only the BIOS is initialised, and a screen test arrives
 with colored wide lines.
 
 This function not exist inside the MilanTOS.
@@ -156,9 +150,158 @@ Copy screenpage
 Vsetscreen(-1,0,0x564E,CMD_COPYPAGE);
 Copy first screenpage to second screenpage
 Vsetscreen(-1,1,0x564E,CMD_COPYPAGE);
-Copy second screenpage to first screenpage        
-!end_verbatim            
+Copy second screenpage to first screenpage
+!end_verbatim
 This function not exist inside the MilanTOS.
+
+!label CMD_FILLMEM
+!item [CMD_FILLMEM (12)]
+Fill memory on the graphics card
+!begin_verbatim
+SCRFILLMEMBLK blk;
+blk.size=sizeof(SCRFILLMEMBLK);
+blk.blk_op = BLK_COPY;
+blk.blk_color = 0x112233;  /* background fill color */
+
+Vsetscreen(-1,&blk,0x564E,CMD_SETMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Fill a block with a color with the GPU at (blk_x,
+blk_y), size is blk_w, blk_h. (!nl)
+Note that this structure has the same size and same entry
+the the structure SCRMEMBLK for the entry for size,
+blk_status, blk_x, blk_y, blk_y, blk_w and blk_h for use
+the allocated structure with a cast.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_COPYMEM
+!item [CMD_COPYMEM (13)]
+Copy memory on the graphics card
+!begin_verbatim
+SCRCOPYMEMBLK blk;
+blk.size=sizeof(SCRCOPYMEMBLK);
+
+Vsetscreen(-1,&blk,0x564E,CMD_COPYMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Copy a block with the GPU at (blk_src_x, blk_src_y)
+to (blk_dst_x, blk_dst_y), size is blk_w, blk_h. (!nl)
+Note that this structure has the same size and same entry
+the the structure SCRMEMBLK for the entry for size,
+blk_status, blk_x, blk_y, blk_y, blk_w and blk_h for use
+the allocated structure with a cast when blk_x is
+blk_dst_x and blk_y is blk_dst_y.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_TEXTUREMEM
+!item [CMD_TEXTUREMEM (14)]
+Put texture in memory on the graphics card
+!begin_verbatim
+SCRTEXTUREMEMBLK blk;
+blk.size=sizeof(SCRTEXTUREMEMBLK);
+
+Vsetscreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Copy a 65K texture from CPU local area to a 65K screen
+or an ARGB texture to a 32M screen pixel format multiple
+times (best results are with little source texture and
+big screen for destination).
+
+This function need a texture support inside the TOS. (!nl)
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_GETVERSION
+!item [CMD_GETVERSION (15)]
+!begin_verbatim
+/* if the function is not implemented, 0x0100 is the first release */
+long version = 0x0100;
+Vsetscreen(-1,&version,0x564E,CMD_GETVERSION);
+!end_verbatim
+
+(!nolink [Return ])  the version of the video XBIOS.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_LINEMEM
+!item [CMD_LINEMEM (16)]
+Draw line on the graphics card
+!begin_verbatim
+SCRLINEMEMBLK blk;
+blk.size=sizeof(SCRLINEMEMBLK);
+blk.blk_fbcolor = 0x112233;  /* foreground fill color */
+blk.blk_bgcolor = 0;  /* background fill color */
+blk.blk_pattern = 0xffffffff;  /* solid line */
+
+Vsetscreen(-1,&blk,0x564E,CMD_LINEMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+
+Draw a line with colors with the GPU at (blk_x1,
+blk_y1) to (blk_x2, blk_y2).
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_CLIPMEM
+!item [CMD_CLIPMEM (17)]
+Set clipping rectangle on the graphic card
+!begin_verbatim
+SCRCLIPMEMBLK blk;
+blk.size=sizeof(SCRCLIPMEMBLK);
+blk.blk_clip_on = 1; /* clipping flag 1:on,
+                                      0:off */
+
+Vsetscreen(-1,&blk,0x564E,CMD_CLIPMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+
+Enable or diable clipping rectange at (blk_x, blk_y),
+size is blk_w, blk_h.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_SYNCMEM
+!item [CMD_SYNCMEM (18)]
+Wait an empty GPU fifo for sync the drawing engine with the memory.
+!begin_verbatim
+Vsetscreen(-1,-1,0x564E,CMD_SYNCMEM);
+!end_verbatim
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+!label CMD_BLANK
+!item [CMD_BLANK (19)]
+Blank / unblank screen.
+!begin_verbatim
+int32_t blank = 1; /* (0): unblank
+                      (1): blank normal
+                      (2): VSYNC suspend
+                      (3): HSYNC suspend
+                      (4): powerdown */
+Vsetscreen(-1,blank,0x564E,CMD_BLANK);
+!end_verbatim
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
 
 !end_xlist
 
@@ -215,6 +358,7 @@ Getting current mode
 
 int32_t mode; (!nl)
 (!nolink [Setscreen])(-1,&mode,0x564E,CMD_GETMODE);
+This function is identical to Vsetmode(-1);
 
 !item [CMD_SETMODE (1)]
 Set new graphic mode
@@ -303,7 +447,7 @@ Setscreen(logbase,physbase,0x564E,CMD_SETADR);
 !end_verbatim
 
 !item [CMD_ENUMMODES (9)]
-Requests all available modes, since 13.01.2000
+Requests all available modes
 !begin_verbatim
 int32_t cdecl enumfunc(SCREENINFO *inf,int32_t flag)
 {
@@ -324,7 +468,7 @@ Test a graphic mode
 int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32; /* 800*600*16M */
 Setscreen(-1,modecode,0x564E,CMD_TESTMODE);
 !end_verbatim
-Only the BIOS is initialised, and a screen test arrives 
+Only the BIOS is initialised, and a screen test arrives
 with colored wide lines.
 
 This function not exist inside the MilanTOS.
@@ -336,9 +480,158 @@ Copy screenpage
 Vsetscreen(-1,0,0x564E,CMD_COPYPAGE);
 Copy first screenpage to second screenpage
 Vsetscreen(-1,1,0x564E,CMD_COPYPAGE);
-Copy second screenpage to first screenpage        
-!end_verbatim            
+Copy second screenpage to first screenpage
+!end_verbatim
 This function not exist inside the MilanTOS.
+
+!label CMD_FILLMEM
+!item [CMD_FILLMEM (12)]
+Fill memory on the graphics card
+!begin_verbatim
+SCRFILLMEMBLK blk;
+blk.size=sizeof(SCRFILLMEMBLK);
+blk.blk_op = BLK_COPY;
+blk.blk_color = 0x112233;  /* background fill color */
+
+Vsetscreen(-1,&blk,0x564E,CMD_SETMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Fill a block with a color with the GPU at (blk_x,
+blk_y), size is blk_w, blk_h. (!nl)
+Note that this structure has the same size and same entry
+the the structure SCRMEMBLK for the entry for size,
+blk_status, blk_x, blk_y, blk_y, blk_w and blk_h for use
+the allocated structure with a cast.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_COPYMEM
+!item [CMD_COPYMEM (13)]
+Copy memory on the graphics card
+!begin_verbatim
+SCRCOPYMEMBLK blk;
+blk.size=sizeof(SCRCOPYMEMBLK);
+
+Vsetscreen(-1,&blk,0x564E,CMD_COPYMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Copy a block with the GPU at (blk_src_x, blk_src_y)
+to (blk_dst_x, blk_dst_y), size is blk_w, blk_h. (!nl)
+Note that this structure has the same size and same entry
+the the structure SCRMEMBLK for the entry for size,
+blk_status, blk_x, blk_y, blk_y, blk_w and blk_h for use
+the allocated structure with a cast when blk_x is
+blk_dst_x and blk_y is blk_dst_y.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_TEXTUREMEM
+!item [CMD_TEXTUREMEM (14)]
+Put texture in memory on the graphics card
+!begin_verbatim
+SCRTEXTUREMEMBLK blk;
+blk.size=sizeof(SCRTEXTUREMEMBLK);
+
+Vsetscreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+Copy a 65K texture from CPU local area to a 65K screen
+or an ARGB texture to a 32M screen pixel format multiple
+times (best results are with little source texture and
+big screen for destination).
+
+This function need a texture support inside the TOS. (!nl)
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_GETVERSION
+!item [CMD_GETVERSION (15)]
+!begin_verbatim
+/* if the function is not implemented, 0x0100 is the first release */
+long version = 0x0100;
+Vsetscreen(-1,&version,0x564E,CMD_GETVERSION);
+!end_verbatim
+
+(!nolink [Return ])  the version of the video XBIOS.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_LINEMEM
+!item [CMD_LINEMEM (16)]
+Draw line on the graphics card
+!begin_verbatim
+SCRLINEMEMBLK blk;
+blk.size=sizeof(SCRLINEMEMBLK);
+blk.blk_fbcolor = 0x112233;  /* foreground fill color */
+blk.blk_bgcolor = 0;  /* background fill color */
+blk.blk_pattern = 0xffffffff;  /* solid line */
+
+Vsetscreen(-1,&blk,0x564E,CMD_LINEMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+
+Draw a line with colors with the GPU at (blk_x1,
+blk_y1) to (blk_x2, blk_y2).
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_CLIPMEM
+!item [CMD_CLIPMEM (17)]
+Set clipping rectangle on the graphic card
+!begin_verbatim
+SCRCLIPMEMBLK blk;
+blk.size=sizeof(SCRCLIPMEMBLK);
+blk.blk_clip_on = 1; /* clipping flag 1:on,
+                                      0:off */
+
+Vsetscreen(-1,&blk,0x564E,CMD_CLIPMEM);
+if(blk.blk_status == BLK_OK)
+  puts("OK");
+!end_verbatim
+
+Enable or diable clipping rectange at (blk_x, blk_y),
+size is blk_w, blk_h.
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+
+!label CMD_SYNCMEM
+!item [CMD_SYNCMEM (18)]
+Wait an empty GPU fifo for sync the drawing engine with the memory.
+!begin_verbatim
+Vsetscreen(-1,-1,0x564E,CMD_SYNCMEM);
+!end_verbatim
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
+
+!label CMD_BLANK
+!item [CMD_BLANK (19)]
+Blank / unblank screen.
+!begin_verbatim
+int32_t blank = 1; /* (0): unblank
+                      (1): blank normal
+                      (2): VSYNC suspend
+                      (3): HSYNC suspend
+                      (4): powerdown */
+Vsetscreen(-1,blank,0x564E,CMD_BLANK);
+!end_verbatim
+
+This function exists since the version 0x0101 of the video XBIOS and is not
+inside the MilanTOS.
 
 !end_xlist
 
