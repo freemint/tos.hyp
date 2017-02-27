@@ -1,0 +1,38 @@
+os: linux
+compiler: gcc
+
+env:
+  global:
+    - GIT_NAME: "FreeMiNT Project"
+    - GIT_EMAIL: "freemint-list@mail.atariforge.org"
+    - GIT_REPOSITORY: "git@github.com:freemint/tos.hyp.git"
+
+before_install:
+  - openssl aes-256-cbc -K $encrypted_e5cfea0e0f2e_key -iv $encrypted_e5cfea0e0f2e_iv -in .travis/deploy-key.enc -out .travis/deploy-key -d
+
+before_script:
+  - svn co "svn://udo-open-source.org/UDO/trunk" "/tmp/udo"
+  - cd "/tmp/udo/Source" && make -f Makefile.linux && cd -
+  - export PATH=$PATH:"/tmp/udo/Source"
+
+script:
+  - mkdir -p "gh-pages/de/bilder" "gh-pages/en/bilder"
+  - cp -r "bilder/gif" "gh-pages/de/bilder"
+  - cp -r "bilder/gif" "gh-pages/en/bilder"
+  - cp "html/tos_hyp.gif" "gh-pages"
+  - udo --html -o "$PWD/gh-pages/index.html" "$PWD/html/tos_hyp.u"
+  - udo --html -o "$PWD/gh-pages/de/index.html" "$PWD/tos_hyp.u"
+  - sed -e 's/^#!language english/!language english/;' -e 's/^!language german/#!language german/;' config.u > config.u.tmp && mv config.u.tmp config.u
+  - udo --html -o "$PWD/gh-pages/en/index.html" "$PWD/tos_hyp.u"
+  
+after_success:
+  - eval "$(ssh-agent -s)"
+  - chmod 600 ".travis/deploy-key"
+  - ssh-add ".travis/deploy-key"
+  
+  # publish only on master
+  - if [ "${TRAVIS_PULL_REQUEST}" = "false" -a "${TRAVIS_BRANCH}" = "master" -a "${TRAVIS_REPO_SLUG}" = "freemint/tos.hyp" ];
+    then
+      cd gh-pages && git init && git config user.name "${GIT_NAME}" && git config user.email "${GIT_EMAIL}" &&
+      git add . && git commit -m "Publish ${TRAVIS_COMMIT}" && git push --force "${GIT_REPOSITORY}" master:gh-pages;
+    fi
