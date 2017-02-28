@@ -12,18 +12,43 @@ before_install:
 
 before_script:
   - svn co "svn://udo-open-source.org/UDO/trunk" "/tmp/udo"
-  - cd "/tmp/udo/Source" && make -f Makefile.linux && cd -
+  - cd "/tmp/udo/Source" && make -f Makefile.linux
   - export PATH=$PATH:"/tmp/udo/Source"
+  - cd -
+  
+  - cd "/tmp"
+  - wget "http://tho-otto.de/download/hcp-0.9.9-linux.tar.bz2"
+  - tar xjf hcp-0.9.9-linux.tar.bz2
+  - export PATH=$PATH:"/tmp/hcp-0.9.9/bin"
+  - cd -
 
 script:
-  - mkdir -p "gh-pages/de/bilder" "gh-pages/en/bilder"
+  - mkdir -p "gh-pages/de/bilder" "gh-pages/en/bilder" "gh-pages/archives"
   - cp -r "bilder/gif" "gh-pages/de/bilder"
   - cp -r "bilder/gif" "gh-pages/en/bilder"
   - cp "html/tos_hyp.gif" "gh-pages"
   - udo --html -o "$PWD/gh-pages/index.html" "$PWD/html/tos_hyp.u"
-  - udo --html -o "$PWD/gh-pages/de/index.html" "$PWD/tos_hyp.u"
-  - sed -e 's/^#!language english/!language english/;' -e 's/^!language german/#!language german/;' config.u > config.u.tmp && mv config.u.tmp config.u
-  - udo --html -o "$PWD/gh-pages/en/index.html" "$PWD/tos_hyp.u"
+  - udo --html --tree -D GERMAN -o "$PWD/gh-pages/de/index.html" "$PWD/tos_hyp.u"
+  - udo --stg -D GERMAN -o "$PWD/gh-pages/archives/tos_hyp_de.stg" "$PWD/tos_hyp.u" || true
+  - hcp -o "gh-pages/archives/tos_hyp_de.hyp" "gh-pages/archives/tos_hyp_de.stg" || true
+
+  - cd "gh-pages/archives"
+  - mv "tos_hyp_de.hyp" "tos_hyp.hyp"
+  - mv "tos_hyp_de.ref" "tos_hyp.ref"
+  - zip -9 tos_hyp_de.zip "tos_hyp.hyp" "tos_hyp.ref"
+  - rm -f *.stg *.uhs *.uls *.hyp *.ref
+  - cd -
+
+  - udo --html --tree -D ENGLISH -o "$PWD/gh-pages/en/index.html" "$PWD/tos_hyp.u"
+  - udo --stg -D ENGLISH -o "$PWD/gh-pages/archives/tos_hyp_en.stg" "$PWD/tos_hyp.u" || true
+  - hcp -o "gh-pages/archives/tos_hyp_en.hyp" "gh-pages/archives/tos_hyp_en.stg" || true
+  
+  - cd "gh-pages/archives"
+  - mv "tos_hyp_en.hyp" "tos_hyp.hyp"
+  - mv "tos_hyp_en.ref" "tos_hyp.ref"
+  - zip -9 tos_hyp_en.zip "tos_hyp.hyp" "tos_hyp.ref"
+  - rm -f *.stg *.uhs *.uls *.hyp *.ref
+  - cd -
   
 after_success:
   - eval "$(ssh-agent -s)"
