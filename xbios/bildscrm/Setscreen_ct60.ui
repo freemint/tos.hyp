@@ -23,12 +23,18 @@ Parameter !! Meaning
 !hline
 par1 !! Depending on function - see below
 par2 !! Depending on function - see below
-rez !! Always 0x564E ('VN' for Vsetscreen New)
+rez !! Always 0x564E ('VN' for VsetScreen New)
 command !! Command
 !end_table
 
 The following values are defined for (!I)command(!i):
-!begin_xlist [CMD_ALLOCPAG]
+!begin_description [CMD_ALLOCPAG]
+
+!item [CMD_GETMODE (0)]
+Getting current mode
+
+int32_t mode; (!nl)
+Setscreen(-1,&mode,0x564E,CMD_GETMODE);
 
 !item [CMD_SETMODE (1)]
 Set new graphic mode
@@ -36,16 +42,19 @@ Set new graphic mode
 int32_t mode=0x1023   /* 800*608*16 */ (!nl)
 (!nolink [Setscreen])(-1,mode,0x564E,CMD_SETMODE)
 
-This function is identical to Vsetscreen(0,0,3,modecode); (!nl)
+This function is identical to VsetScreen(0, 0, 3, modecode); (!nl)
 BIOS and VDI will be initialised. Not the AES.
 
 !item [CMD_GETINFO (2)]
 Get screen info structure for mode
 !begin_verbatim
 SCREENINFO si;
-si.size = sizeof(SCREENINFO); /* Structure size has to be set         */
-si.devID =0x1022;             /* ID of the mode or 0 for current mode */
-si.scrFlags=0;                /* status of the operation              */
+/* Structure size has to be set         */
+si.size = sizeof(SCREENINFO); 
+/* ID of the mode or 0 for current mode */
+si.devID =0x1022;             
+/* status of the operation              */
+si.scrFlags=0;                
 Setscreen(-1,&si,0x564E,CMD_GETINFO);
 if(si.scrFlags & SCRINFO_OK)
   puts("OK");
@@ -56,7 +65,8 @@ else
 !item [CMD_ALLOCPAGE (3)]
 Allocate screenpage
 !begin_verbatim
-int32_t adr=0;          /* Frame address or -1 */
+/* Frame address or -1 */
+int32_t adr=0;
 Setscreen(-1,mode,0x564E,CMD_ALLOCPAGE);
 if(adr)
   puts("OK");
@@ -88,7 +98,8 @@ Allocate memory on the graphics card
 SCRMEMBLK blk;
 
 blk.size=sizeof(SCRMEMBLK);
-blk.blk_y=200;     /* alloc a block of 200 lines*/
+/* alloc a block of 200 lines*/
+blk.blk_y=200;
 
 Setscreen(-1,&blk,0x564E,CMD_ALLOCMEM);
 if(blk.blk_start)
@@ -110,8 +121,10 @@ blk of the block to be released.
 !item [CMD_SETADR (8)]
 Set screen to fixed address
 !begin_verbatim
-int32_t logbase=blk.blk_start;   /* logical address or -1  */
-int32_t physbase=blk.blk_start;  /* physical address or -1 */
+/* logical address or -1  */
+int32_t logbase=blk.blk_start;
+/* physical address or -1 */
+int32_t physbase=blk.blk_start;
 
 Setscreen(logbase,physbase,0x564E,CMD_SETADR);
 !end_verbatim
@@ -135,7 +148,8 @@ The parameters are handed over to the stack using the C standard.
 !item [CMD_TESTMODE (10)]
 Test a graphic mode
 !begin_verbatim
-int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32; /* 800*600*16M */
+/* 800*600*16M */
+int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32;
 Setscreen(-1,modecode,0x564E,CMD_TESTMODE);
 !end_verbatim
 Only the BIOS is initialised, and a screen test arrives
@@ -147,9 +161,9 @@ This function not exist inside the MilanTOS.
 !item [CMD_COPYPAGE (11)]
 Copy screenpage
 !begin_verbatim
-Vsetscreen(-1,0,0x564E,CMD_COPYPAGE);
+VsetScreen(-1,0,0x564E,CMD_COPYPAGE);
 Copy first screenpage to second screenpage
-Vsetscreen(-1,1,0x564E,CMD_COPYPAGE);
+VsetScreen(-1,1,0x564E,CMD_COPYPAGE);
 Copy second screenpage to first screenpage
 !end_verbatim
 This function not exist inside the MilanTOS.
@@ -163,7 +177,7 @@ blk.size=sizeof(SCRFILLMEMBLK);
 blk.blk_op = BLK_COPY;
 blk.blk_color = 0x112233;  /* background fill color */
 
-Vsetscreen(-1,&blk,0x564E,CMD_SETMEM);
+VsetScreen(-1,&blk,0x564E,CMD_SETMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -185,7 +199,7 @@ Copy memory on the graphics card
 SCRCOPYMEMBLK blk;
 blk.size=sizeof(SCRCOPYMEMBLK);
 
-Vsetscreen(-1,&blk,0x564E,CMD_COPYMEM);
+VsetScreen(-1,&blk,0x564E,CMD_COPYMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -208,7 +222,7 @@ Put texture in memory on the graphics card
 SCRTEXTUREMEMBLK blk;
 blk.size=sizeof(SCRTEXTUREMEMBLK);
 
-Vsetscreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
+VsetScreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -227,7 +241,7 @@ inside the MilanTOS.
 !begin_verbatim
 /* if the function is not implemented, 0x0100 is the first release */
 long version = 0x0100;
-Vsetscreen(-1,&version,0x564E,CMD_GETVERSION);
+VsetScreen(-1,&version,0x564E,CMD_GETVERSION);
 !end_verbatim
 
 (!nolink [Return ])  the version of the video XBIOS.
@@ -246,7 +260,7 @@ blk.blk_fbcolor = 0x112233;  /* foreground fill color */
 blk.blk_bgcolor = 0;  /* background fill color */
 blk.blk_pattern = 0xffffffff;  /* solid line */
 
-Vsetscreen(-1,&blk,0x564E,CMD_LINEMEM);
+VsetScreen(-1,&blk,0x564E,CMD_LINEMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -267,7 +281,7 @@ blk.size=sizeof(SCRCLIPMEMBLK);
 blk.blk_clip_on = 1; /* clipping flag 1:on,
                                       0:off */
 
-Vsetscreen(-1,&blk,0x564E,CMD_CLIPMEM);
+VsetScreen(-1,&blk,0x564E,CMD_CLIPMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -283,7 +297,7 @@ inside the MilanTOS.
 !item [CMD_SYNCMEM (18)]
 Wait an empty GPU fifo for sync the drawing engine with the memory.
 !begin_verbatim
-Vsetscreen(-1,-1,0x564E,CMD_SYNCMEM);
+VsetScreen(-1,-1,0x564E,CMD_SYNCMEM);
 !end_verbatim
 This function exists since the version 0x0101 of the video XBIOS and is not
 inside the MilanTOS.
@@ -297,13 +311,13 @@ int32_t blank = 1; /* (0): unblank
                       (2): VSYNC suspend
                       (3): HSYNC suspend
                       (4): powerdown */
-Vsetscreen(-1,blank,0x564E,CMD_BLANK);
+VsetScreen(-1,blank,0x564E,CMD_BLANK);
 !end_verbatim
 
 This function exists since the version 0x0101 of the video XBIOS and is not
 inside the MilanTOS.
 
-!end_xlist
+!end_description
 
 !item [(!nolink [Return]) value:]
 Nothing (or current modecode in (!nolink [TOS]) mode)
@@ -316,7 +330,7 @@ ct60 (2007-01-24).
 Screen functions
 
 !item [See Also:]
-Setscreen ~ VSetscreen ~ Setscreen, Milan
+Setscreen ~ VsetScreen ~ Setscreen, Milan
 
 (!ende_liste)
 
@@ -346,19 +360,19 @@ Parameter !! Bedeutung
 !hline
 par1 !! Je nach Funktion, s.u.
 par2 !! Je nach Funktion, s.u.
-rez !! immer 0x564E ('VN' fÅr Vsetscreen New)
+rez !! immer 0x564E ('VN' fÅr VsetScreen New)
 command !! Kommando
 !end_table
 
 Folgende Werte sind fÅr (!I)command(!i) definiert:
-!begin_xlist [CMD_ALLOCPAG]
+!begin_description [CMD_ALLOCPAG]
 
 !item [CMD_GETMODE (0)]
 Getting current mode
 
 int32_t mode; (!nl)
 (!nolink [Setscreen])(-1,&mode,0x564E,CMD_GETMODE);
-This function is identical to Vsetmode(-1);
+This function is identical to VsetMode(-1);
 
 !item [CMD_SETMODE (1)]
 Set new graphic mode
@@ -366,16 +380,19 @@ Set new graphic mode
 int32_t mode=0x1023   /* 800*608*16 */ (!nl)
 (!nolink [Setscreen])(-1,mode,0x564E,CMD_SETMODE)
 
-This function is identical to Vsetscreen(0,0,3,modecode); (!nl)
+This function is identical to VsetScreen(0, 0, 3, modecode); (!nl)
 BIOS and VDI will be initialised. Not the AES.
 
 !item [CMD_GETINFO (2)]
 Get screen info structure for mode
 !begin_verbatim
 SCREENINFO si;
-si.size = sizeof(SCREENINFO); /* Structure size has to be set         */
-si.devID =0x1022;             /* ID of the mode or 0 for current mode */
-si.scrFlags=0;                /* status of the operation              */
+/* Structure size has to be set         */
+si.size = sizeof(SCREENINFO);
+/* ID of the mode or 0 for current mode */
+si.devID =0x1022;             
+/* status of the operation              */
+si.scrFlags=0;                
 Setscreen(-1,&si,0x564E,CMD_GETINFO);
 if(si.scrFlags & SCRINFO_OK)
   puts("OK");
@@ -386,7 +403,8 @@ else
 !item [CMD_ALLOCPAGE (3)]
 Allocate screenpage
 !begin_verbatim
-int32_t adr=0;          /* Frame address or -1 */
+/* Frame address or -1 */
+int32_t adr=0;
 Setscreen(-1,mode,0x564E,CMD_ALLOCPAGE);
 if(adr)
   puts("OK");
@@ -418,7 +436,8 @@ Allocate memory on the graphics card
 SCRMEMBLK blk;
 
 blk.size=sizeof(SCRMEMBLK);
-blk.blk_y=200;     /* alloc a block of 200 lines*/
+/* alloc a block of 200 lines*/
+blk.blk_y=200;
 
 Setscreen(-1,&blk,0x564E,CMD_ALLOCMEM);
 if(blk.blk_start)
@@ -440,14 +459,16 @@ blk of the block to be released.
 !item [CMD_SETADR (8)]
 Set screen to fixed address
 !begin_verbatim
-int32_t logbase=blk.blk_start;   /* logical address or -1  */
-int32_t physbase=blk.blk_start;  /* physical address or -1 */
+/* logical address or -1  */
+int32_t logbase=blk.blk_start;
+/* physical address or -1 */
+int32_t physbase=blk.blk_start;
 
 Setscreen(logbase,physbase,0x564E,CMD_SETADR);
 !end_verbatim
 
 !item [CMD_ENUMMODES (9)]
-Requests all available modes
+Requests all available modes, since 13.01.2000
 !begin_verbatim
 int32_t cdecl enumfunc(SCREENINFO *inf,int32_t flag)
 {
@@ -465,7 +486,8 @@ The parameters are handed over to the stack using the C standard.
 !item [CMD_TESTMODE (10)]
 Test a graphic mode
 !begin_verbatim
-int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32; /* 800*600*16M */
+/* 800*600*16M */
+int32_t modecode=VESA_600+HORFLAG2+VGA+COL80+BPS32;
 Setscreen(-1,modecode,0x564E,CMD_TESTMODE);
 !end_verbatim
 Only the BIOS is initialised, and a screen test arrives
@@ -477,9 +499,9 @@ This function not exist inside the MilanTOS.
 !item [CMD_COPYPAGE (11)]
 Copy screenpage
 !begin_verbatim
-Vsetscreen(-1,0,0x564E,CMD_COPYPAGE);
+VsetScreen(-1,0,0x564E,CMD_COPYPAGE);
 Copy first screenpage to second screenpage
-Vsetscreen(-1,1,0x564E,CMD_COPYPAGE);
+VsetScreen(-1,1,0x564E,CMD_COPYPAGE);
 Copy second screenpage to first screenpage
 !end_verbatim
 This function not exist inside the MilanTOS.
@@ -493,7 +515,7 @@ blk.size=sizeof(SCRFILLMEMBLK);
 blk.blk_op = BLK_COPY;
 blk.blk_color = 0x112233;  /* background fill color */
 
-Vsetscreen(-1,&blk,0x564E,CMD_SETMEM);
+VsetScreen(-1,&blk,0x564E,CMD_SETMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -515,7 +537,7 @@ Copy memory on the graphics card
 SCRCOPYMEMBLK blk;
 blk.size=sizeof(SCRCOPYMEMBLK);
 
-Vsetscreen(-1,&blk,0x564E,CMD_COPYMEM);
+VsetScreen(-1,&blk,0x564E,CMD_COPYMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -538,7 +560,7 @@ Put texture in memory on the graphics card
 SCRTEXTUREMEMBLK blk;
 blk.size=sizeof(SCRTEXTUREMEMBLK);
 
-Vsetscreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
+VsetScreen(-1,&blk,0x564E,CMD_TEXTUREMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -557,7 +579,7 @@ inside the MilanTOS.
 !begin_verbatim
 /* if the function is not implemented, 0x0100 is the first release */
 long version = 0x0100;
-Vsetscreen(-1,&version,0x564E,CMD_GETVERSION);
+VsetScreen(-1,&version,0x564E,CMD_GETVERSION);
 !end_verbatim
 
 (!nolink [Return ])  the version of the video XBIOS.
@@ -576,7 +598,7 @@ blk.blk_fbcolor = 0x112233;  /* foreground fill color */
 blk.blk_bgcolor = 0;  /* background fill color */
 blk.blk_pattern = 0xffffffff;  /* solid line */
 
-Vsetscreen(-1,&blk,0x564E,CMD_LINEMEM);
+VsetScreen(-1,&blk,0x564E,CMD_LINEMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -597,7 +619,7 @@ blk.size=sizeof(SCRCLIPMEMBLK);
 blk.blk_clip_on = 1; /* clipping flag 1:on,
                                       0:off */
 
-Vsetscreen(-1,&blk,0x564E,CMD_CLIPMEM);
+VsetScreen(-1,&blk,0x564E,CMD_CLIPMEM);
 if(blk.blk_status == BLK_OK)
   puts("OK");
 !end_verbatim
@@ -613,7 +635,7 @@ inside the MilanTOS.
 !item [CMD_SYNCMEM (18)]
 Wait an empty GPU fifo for sync the drawing engine with the memory.
 !begin_verbatim
-Vsetscreen(-1,-1,0x564E,CMD_SYNCMEM);
+VsetScreen(-1,-1,0x564E,CMD_SYNCMEM);
 !end_verbatim
 This function exists since the version 0x0101 of the video XBIOS and is not
 inside the MilanTOS.
@@ -627,13 +649,13 @@ int32_t blank = 1; /* (0): unblank
                       (2): VSYNC suspend
                       (3): HSYNC suspend
                       (4): powerdown */
-Vsetscreen(-1,blank,0x564E,CMD_BLANK);
+VsetScreen(-1,blank,0x564E,CMD_BLANK);
 !end_verbatim
 
 This function exists since the version 0x0101 of the video XBIOS and is not
 inside the MilanTOS.
 
-!end_xlist
+!end_description
 
 !item [Ergebnis:]
 Nothing (or current modecode in (!nolink [TOS]) mode)
@@ -646,7 +668,7 @@ ct60 (2007-01-24).
 Bildschirmfunktionen
 
 !item [Querverweis:]
-Setscreen ~ VSetscreen ~ Setscreen, Milan
+Setscreen ~ VsetScreen ~ Setscreen, Milan
 
 (!ende_liste)
 
