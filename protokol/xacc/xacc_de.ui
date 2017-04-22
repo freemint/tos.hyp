@@ -1,14 +1,21 @@
+!ifset tos_hyp
 !begin_node XAcc
+!else
+!begin_node Introduction
+!endif
+
+!html_name proto_xacc
 
 The XAcc protocol was originally designed for non-multitasking versions of
 GEM to allow data exchange between the main application and any number of
 accessories. Since the AES did not provide a function to find the
-application ids (apids) of other applications without knowing their names,
+application IDs (apIDs) of other applications without knowing their names,
 XAcc had to rely on the undocumented feature that the main application
-always has the apid 0. Therefore XAcc in its present form does not work in
+always has the apID 0. Therefore XAcc in its present
+(!FOOTNOTE [1] [refers to the XAcc definition before "Classic XAcc"]) form does not work in
 a multitasking environment. However, (!nolink [AES]) 4.0 provides the new
 function
-appl_search, which allows any application to find the apids of all other
+appl_search, which allows any application to find the apIDs of all other
 applications running concurrently. This makes it possible to design a
 modified XAcc that does not use any 'dirty tricks'. This document contains
 a proposal for such a modified XAcc; the changes with respect to the
@@ -18,9 +25,11 @@ still be with us for a while, applications are encouraged to implement both
 'traditional' and 'modern' XAcc, depending on the version number of the
 (!nolink [AES]).
 
-!subtoc [all]
+!ifset tos_hyp
+!subtoc [all] !depth 0
+!endif
 
-!begin_node Purpose
+!begin_node Purpose of XAcc
 
 The GEM (!nolink [AES]) functions appl_write and appl_read can be used to exchange
 data between GEM applications running concurrently. In practice however,
@@ -29,7 +38,7 @@ some problems need to be solved to make good use of these two functions:
 !item There are no standard messages for exchanging data. Their definition is
   the main goal of XAcc.
 
-!item appl_write needs the receiver's application identifier (apid). The
+!item appl_write needs the receiver's application identifier (apID). The
   only way to get this (before (!nolink [AES]) 4.0) is to call appl_find, which
   needs the receiver's name. Thus communication is only possible if
   the sender knows the receiver's name. (!nl)
@@ -44,7 +53,8 @@ some problems need to be solved to make good use of these two functions:
   them back after the accessory is finished. (!nl)
   Another advantage would be that after an accessory has been called,
   the main application could check if something has been written to the
-  clipboard or if other changes to the environment have been made.
+  clipboard (!FOOTNOTE [2] [a special non-XAcc message - SC_CHANGED - has been introduced for this purpose]) or
+  if other changes to the environment have been made.
 
   With multitasking GEM, the situation has changed in several important
   ways. The possibility of using several 'main' applications in parallel
@@ -69,13 +79,13 @@ problems. It was designed for two distinct purposes:
 !end_itemize
 A potential problem caused by this protocol should be mentioned at this
 point: for single-tasking GEM versions, it relies on the currently
-undocumented fact that the main application's apid is always zero. Without
+undocumented fact that the main application's apID is always zero. Without
 this assumption there is no way to exchange data without using appl_find.
 Although this fact is not documented, it holds for all single-tasking
 versions of (!nolink [GEM]) in existence until now, both for MS-DOS and
 the Atari ST
 (this information was confirmed by Digital Research Germany). Of course
-the main application's apid may be different in future versions, although
+the main application's apID may be different in future versions, although
 there is no reason to change the current behaviour for single-tasking
 systems. For AES 4.0 (and later) the above assumption is not needed anyway,
 so no compatibility problems are to be expected in the future.
@@ -84,14 +94,20 @@ A further requirement is that all programs not using this protocol must
 ignore its messages. This should not be a serious problem, as all (!nolink [GEM])
 applications should ignore messages they do not understand. At the time
 of writing no programs are known to violate this rule.
-!end_node
+!end_node /* Purpose of XAcc */
+
+!ifnset tos_hyp
+!end_node /* Introduction */
+!endif
 
 !begin_node Classic XAcc
 
 The "classic" XAcc protocoll was finally defined on November 28, 1992.
 All known XAcc applications implement the protocol this way.
 
+!ifset tos_hyp
 !subtoc [all]
+!endif
 
 !begin_node XAcc message groups
 
@@ -102,14 +118,15 @@ All known XAcc applications implement the protocol this way.
 Both main applications and accessories can have widely different needs for
 communication with other programs. Therefore (!nolink [XAcc]) defines several
 groups
-of related messages that deal with a certain range of data types.
+of related messages (!FOOTNOTE [3] [Note: The "levels" used in previous XAcc versions have been replaced by this new concept. Compatibility issues are discussed in a special section at the end of this document.]) that deal
+with a certain range of data types.
 The message groups always indicate the messages understood by a
 program, not the messages it might send to other ones. If a program
 supports a certain message group, it must correctly respond to all
 corresponding messages, whether it can actually use the supplied data
 or not.
 
-In addition to message groups, there are the so-called "basic messages",
+In addition to XAcc message groups, there are the so-called "basic messages",
 which must be supported by any (!nolink [XAcc])-aware program, and
 program-specific so-called "special messages".
 
@@ -125,8 +142,9 @@ the GEM metafile format and the GEM bit-image file format.
 !end_xlist
 Future extensions might include sound or spreadsheet data. In addition,
 a message group could be defined to handle command interchange between
-applications, e.g. for a "drag&drop" protocol.
-!end_node
+applications, e.g. for a "Drag&Drop" protocol
+(!FOOTNOTE [4] [meanwhile Atari has introduced the MultiTOS drag&drop protocol]).
+!end_node /* XAcc message groups */
 
 !begin_node XAcc messages
 
@@ -138,14 +156,16 @@ from 0x800. The latter ones may only be sent after the receiver has been
 identified and is known to understand them. The following description is
 only concerned with standard messages.
 In addition to XAcc standard messages, the AES messages normally sent
-by the screen manager may be used. The most useful ones are AC_OPEN
+by the (!SCREEN_MANAGER) may be used. The most useful ones are AC_OPEN
 and MN_SELECTED; the latter one requires a knowledge of the receiver
 and therefore belongs to the special messages.
 
 
+!ifset tos_hyp
 !subtoc [all]
+!endif
 
-!begin_node Basic messages
+!begin_node Basic XAcc messages
 !label ACC_ID
 !label ACC_OPEN
 !label ACC_CLOSE
@@ -164,13 +184,16 @@ the only part of (!nolink [XAcc]) which has to be implemented in a different
 way for single- and multi-tasking GEM versions. Note that the procedure
 described for 'multitasking' actually only depends on the existence of
 appl_search and hence on an AES version number >= 4.0. If some
-future single-tasking (!nolink [AES]) supports (!nolink [appl_search]),
-the "multitasking"
+future single-tasking (!nolink [AES]) supports appl_search,
+the 'multitasking'
 initialization should be used. Multitasking (!nolink [AES]) versions with a
 version number < 4.0 should never exist; to be on the safe side, applications
-should not attempt to use (!nolink [XAcc]) if such a situation is detected.
+should not attempt to use (!nolink [XAcc]) if such a situation is detected
+(!FOOTNOTE [5] [NB: ASH's MagiC (even the latest version) uses AES version 3.99 despite of supporting appl_search(!)]).
 
+!ifset tos_hyp
 !subtoc [all]
+!endif
 
 !begin_node Single-tasking GEM versions
 
@@ -178,16 +201,16 @@ The communication between the main application and the accessories is
 initiated in the following way:
 
 !begin_enumerate
-!item When a main application is started (or terminated), all accessories
-   receive an AC_CLOSE message from the (!nolink [AES]) screen manager. In response
+!item When a main application is started (or terminated), all desk accessories
+   receive an AC_CLOSE message from the (!nolink [AES]) (!SCREEN_MANAGER). In response
    they must send an identification to the main application according
    to the following format:
 !begin_verbatim
      msg[0]:  ACC_ID (0x400)
-     msg[1]:  sender's apid
+     msg[1]:  sender's apID
      msg[2]:  length of the message - 16, giving 0
      msg[3]:  program version number and message groups
-     msg[4] und msg[5]:   pointer to sender's name
+     msg[4] and msg[5]:   pointer to sender's name
      msg[6]:  menu number (menu_id) as returned by menu_register
      msg[7]:  reserved (see ACC_ACC)
 !end_verbatim
@@ -198,14 +221,15 @@ initiated in the following way:
    sender of a message must ensure that it is understood by the receiver.
    The high byte is used to indicate a program version number using an
    arbitrary encoding scheme.
+
    The pointer to the sender's name is stored in a machine-dependent
    format. The name itself is a character string following C conventions,
    i.e. a string of characters terminated by a zero byte. To avoid name
    conflicts, long names are preferred to short abbreviations. The name
    must be available at the given address at any time, it may not be
-   removed after initialisation. As the version number is stored in
-   msg[3], it should not occur again in the name.
-   [Note: see the section "Extended names" for more details on names.]
+   removed after initialization. As the version number is stored in
+   msg[3], it should not occur again in the name. (!FOOTNOTE [6] [see the section "Extended names" for more details on names.])
+
    Accessories using more than one menu entry must issue one ACC_ID
    message for each entry used. (!nolink [Accessories]) without a menu entry must
    use a number of -1.
@@ -215,7 +239,7 @@ types, they are no longer mentioned from now on.
 
 !item In response to an ACC_ID message the main application sends an
    identification back to the accessory. The format is identical, except
-   that there ist no menu number and thus msg[6] can be used for any
+   that there is no menu number and thus msg[6] can be used for any
    other purpose if neccessary. The same applies to msg[7].
 
 !item In addition to the ACC_ID message, the main application informs all
@@ -224,19 +248,19 @@ types, they are no longer mentioned from now on.
 !begin_verbatim
      msg[0]:  ACC_ACC (0x403)
      msg[3]:  program version number and message groups
-     msg[4] und msg[5]:   pointer to accessory's name
+     msg[4] and msg[5]:   pointer to accessory's name
      msg[6]:  accessory's menu number (menu_id)
-     msg[7]:  accessory's apid
+     msg[7]:  accessory's apID
 !end_verbatim
-!item An accessory receiving the ACC_ACC message from the main application
+!item A desk accessory receiving the ACC_ACC message from the main application
    sends an ACC_ID message to the thereby registered accessory, identical
    to the one previously sent to the main application.
 
 !item When an accessory is activated by receiving an AC_OPEN message, it
-   sends the following message to the main application:
+   sends the following message to the main application: (!nl)
      msg[0]:  ACC_OPEN (!nl)
    Just before the accessory returns (!nolink [control]) to another program, it
-   sends the message
+   sends the message (!nl)
      msg[0]:  ACC_CLOSE (!nl)
    When receiving ACC_OPEN, the main application restores all system
    variables it has changed to their original values (if possible and
@@ -268,7 +292,7 @@ receiving an ACC_ACC message. The main application is always informed
 about accessory activities. If in addition it proves neccessary to
 inform one accessory about the activation of another one, this can be
 accomplished by sending special messages (starting from 0x800).
-!end_node
+!end_node /* Single-tasking GEM versions */
 
 !begin_node Multitasking GEM versions
 
@@ -279,10 +303,10 @@ application or accessory (i.e. everything but system processes) it sends
 an ACC_ID message:
 !begin_verbatim
   msg[0]:  ACC_ID (0x400)
-  msg[1]:  sender's apid
+  msg[1]:  sender's apID
   msg[2]:  length of the message - 16, giving 0
   msg[3]:  program version number and message groups
-  msg[4] und msg[5]:   pointer to sender's name
+  msg[4] and msg[5]:  pointer to sender's name
   msg[6]:  menu number (menu_id) as returned by menu_register
   msg[7]:  reserved
 !end_verbatim
@@ -290,18 +314,17 @@ The low byte of msg[3] contains a bitmap indicating which message
 groups are understood by the sender. Bit zero is set for message
 group 1, bit one for message group 2, and so on. This is independent
 of the message types which the sender might itself send to others. The
-sender of message must ensure that it is understood by the receiver. The
+sender of a message must ensure that it is understood by the receiver. The
 high byte is used to indicate a program version number using an
 arbitrary encoding scheme.
 
 The pointer to the sender's name is stored in a processor-dependent
 format. The name itself is a string of characters terminated by two zero
-byte. To avoid name conflicts, long names are preferred to short
+bytes. To avoid name conflicts, long names are preferred to short
 abbreviations. The name must be available at the given address at any time,
 it may not be removed after initialization. It must also reside in
 globally accessible memory. As the version number is stored in msg[3],
-it should not occur again in the name.
-[Note: see the section "Extended names" for more details on names.]
+it should not occur again in the name. (!FOOTNOTE [6] [see the section "Extended names" for more details on names.])
 
 Applications using more than one menu entry must issue one ACC_ID
 message for each entry used. Accessories without a menu entry must
@@ -315,7 +338,7 @@ several menu entries must again send one message for each entry.
 The messages ACC_OPEN and ACC_CLOSE are not used in multitasking
 systems.
 
-Note: The only difference between ACC_ID and ACC_ACC for multitasking
+(!B)Note:(!b) The only difference between ACC_ID and ACC_ACC for multitasking
 systems is that an application receiving (!nolink [ACC_ID]) sends
 (!nolink [ACC_ACC]) as a
 reply, whereas no reply is sent on receiving (!nolink [ACC_ACC]). This prevents
@@ -330,13 +353,13 @@ about this. Therefore the message ACC_EXIT has been added to the list
 of level 0 messages. Before terminating, any application sends
 !begin_verbatim
   msg[0]:  ACC_EXIT (0x404)
-  msg[1]:  sender's apid
+  msg[1]:  sender's apID
   msg[2]:  length of the message - 16, giving 0
 !end_verbatim
 to all applications that have ever registered themselves by sending
 ACC_ID or ACC_ACC.
-!end_node
-!end_node
+!end_node /* Multitasking GEM versions */
+!end_node /* Basic XAcc messages */
 
 !begin_node Extended names
 
@@ -346,12 +369,12 @@ For example it is sometimes useful to check for a special feature that
 is not unique to a single program, but to several similar ones. This
 was the motivation for the introduction of "extended names".
 
-An "extended name" is a character string of the format
+An "extended name" is a character string of the format:
 
 'name'\0XDSC\0'string'\0'string'\0...'string'\0\0
 
-i.e. a "standard" name followed by the string "XDSC" (for "eXtended
-DeSCription"), followed by a list of strings containing additional
+i.e. a "standard" name followed by the string "XDSC" (for "e(!B)X(!b)tended
+(!B)D(!b)e(!B)SC(!b)ription"), followed by a list of strings containing additional
 information. The end of the list is marked by an additional zero byte.
 
 Each information string indicates by its first byte what kind of
@@ -371,41 +394,42 @@ information it contains. Currently the following types are defined:
       users, especially it should be in the language used for the user
       interface.
 
-   !label CD
-   !label DB
-   !label DC
-   !label DP
-   !label DT
-   !label ED
-   !label GG
-   !label MU
-   !label MV
-   !label PE
-   !label RG
-   !label SS
-   !label VG
-   !label WP
+   !label- CD
+   !label- DB
+   !label- DC
+   !label- DP
+   !label- DT
+   !label- ED
+   !label- GG
+   !label- MU
+   !label- MV
+   !label- PE
+   !label- RG
+   !label- SS
+   !label- VG
+   !label- WP
 !item ['2'] - application type (machine-readable)
 
       Currently defined are: (!nl)
-      "WP" - word processor (!nl)
+      "WP" - Word processor (!nl)
       "DP" - DTP (!nl)
-      "ED" - text editor (!nl)
-      "DB" - database (!nl)
-      "SS" - spreadsheet (!nl)
-      "RG" - raster graphics application (!nl)
-      "VG" - vector graphics application (!nl)
-      "GG" - general graphics application (!nl)
-      "MU" - music application (!nl)
+      "ED" - Text editor (!nl)
+      "DB" - Database (!nl)
+      "SS" - Spreadsheet (!nl)
+      "RG" - Raster graphics application (!nl)
+      "VG" - Vector graphics application (!nl)
+      "GG" - General graphics application (!nl)
+      "MU" - Music application (!nl)
       "CD" - CAD (!nl)
-      "DC" - data communication (!nl)
-      "DT" - desktop (!nl)
-      "PE" - programming environment
+      "DC" - Data communication (!nl)
+      "DT" - Desktop (!nl)
+      "PE" - Programming environment
 
+!label Extended feature
 !item ['X'] - extended features
       This string is used to indicate special communication capabilities
       of an application. It can be used to give more specific information
-      than the message groups understood. Since this information is meant
+      than just the message groups understood. Since this information is meant
       to be used by other applications rather than end users, short
       abbreviations are sufficient.
 
@@ -421,7 +445,7 @@ The "normal" name should be the "official" name of the program, just as it
 is used on the package, in the manual, and in similar places. It should
 be presentable to the user to let him/her decide where to send data.
 
-Example: The address database "That's Address" identifies itself with the
+(!B)Example:(!b) The address database "That's Address" identifies itself with the
 extended name (in C syntax)
 
 "That's Address\0XDSC\01database\02DB\0XMM\0XSU\0",
@@ -430,7 +454,7 @@ indicating that it is a database with features "MM" and "SU". The first
 one indicates a special mail merge mode, the second one the possibility
 of retrieving data by sending the key via ACC_TEXT.
 (Further information on this program can be obtained from its manual.)
-!end_node
+!end_node /* Extended names */
 
 !begin_node Message group 1
 
@@ -446,7 +470,7 @@ ACC_KEY  = 0x502
 !item Transmitting text data:
    !begin_verbatim
      msg[0]:  ACC_TEXT (0x501)
-     msg[4] und msg[5]:   pointer to text
+     msg[4] and msg[5]:   pointer to text
    !end_verbatim
 
    The text may contain all printable ASCII characters (code >= 32) and the
@@ -462,12 +486,12 @@ ACC_KEY  = 0x502
    acknowledges by sending
    !begin_verbatim
      msg[0]:  ACC_ACK (0x500)
-     msg[3]:  0 if the text was simply ignored, 1 if it was used in
-              some sensible way
+     msg[3]:  0 if the text was simply ignored
+              1 if it was used in some sensible way
    !end_verbatim
    The sender of a text message may not change the text nor send any
    other text messages to the same receiver until is has received the
-   acknowledge.
+   acknowledgement.
 
    The sender must make sure that the memory used to store the text
    is globally accessible.
@@ -481,18 +505,18 @@ ACC_KEY  = 0x502
 !item Simulation of a key press:
 !begin_verbatim
      msg[0]:  ACC_KEY (0x502)
-     msg[3]:  scan code of the simulated key and corresponding
-              ASCII code (as returned by evnt_keybd)
+     msg[3]:  scancode of the simulated key and corresponding
+              ASCII-code (as returned by evnt_keybd)
      msg[4]:  state of the SHIFT keys (as returned by Kbshift)
 !end_verbatim
-   This message should be regarded identical to a keyboard event. It can
+   This message should be regarded identical to a keyboard event(!FOOTNOTE [7] [AV_SENDKEY from Gemini's AV protocol is used more often]). It can
    be used to send (!nolink [control]) commands to a receiver which might have
    been issued from the keyboard. Of course this requires a knowledge
-   of the receiver as no standard keyboard command sets exist. It should
-   be noted that the receiver is free to use only the ASCII code or the
+   of the receiver, as no standard keyboard command sets exist. It should
+   be noted that the receiver is free to use only the ASCII-code or only the
    scan code, or both of them.
 
-   This message is acknowledged after its interpretation with
+   This message is acknowledged after its interpretation with:
    !begin_verbatim
      msg[0]:  ACC_ACK (0x500)
      msg[3]:  0 if ACC_KEY was ignored or a given command was not
@@ -504,7 +528,7 @@ message, the sender should have some way to recover. An accessory
 could for example stop waiting for an acknowledgement after the next
 AC_OPEN, a main application might time out after a sufficiently long
 period.
-!end_node
+!end_node /* Message group 1 */
 
 !begin_node Message group 2
 !label ACC_META
@@ -523,12 +547,12 @@ handle them anyway.
 !begin_verbatim
      msg[0]:  ACC_META (0x503)
      msg[3]:  1 for the final part, 0 otherwise
-     msg[4] und msg[5]:   pointer to data
-     msg[6] und msg[7]:   length of data (32 bit longword)
+     msg[4] and msg[5]:   pointer to data
+     msg[6] and msg[7]:   length of data (32 bit longword)
 !end_verbatim
-   The metafile data is sent in the same format as they would be stored
-   on disk. As metafiles can become quite large and especially
-   accessories often do not have sufficient memory to store them, a
+   The metafile data is sent in the same format as it would be stored
+   on disk. As metafiles can become quite large, and often
+   accessories in particular do not have sufficient memory free to store them, a
    file can be sent in several pieces. The receiver has to take care
    of assembling all parts to restore the original data, if neccessary
    by writing the parts to a file. The last part of a file is marked
@@ -536,7 +560,7 @@ handle them anyway.
    of a file. msg[6] and msg[7] contain the length of the part
    being sent, not the total length.
 
-   The receiver acknowledges each part as described for level 1.
+   The receiver acknowledges each part as described for (!link [group 1][Message group 1]).
    As for text messages, the sender must make sure that the data to
    be transferred is stored in globally accessible memory.
 
@@ -546,12 +570,13 @@ handle them anyway.
 
    otherwise identical to 1.
 !end_enumerate
-!end_node
+!end_node /* Message group 2 */
+!end_node /* XAcc messages */
 
 
 !begin_node Compatibility considerations
 
-There are two major changes with respect to the original XAcc definition:
+There are two major changes with respect to the original(!FOOTNOTE [1] [refers to the XAcc definition before "Classic XAcc"]) XAcc definition:
 !begin_enumerate
 !item "Levels" have been replaced by "message groups"
 
@@ -563,9 +588,9 @@ There are two major changes with respect to the original XAcc definition:
    There is only one situation in which a possible incompatibility could
    occur: an application following the "old" convention encounters a
    "new" application and one of them indicates 2 in the level/message
-   group byte. This would be interpretes as "graphics only" by one and
+   group byte. This would be interprets as "graphics only" by one and
    as "graphics and text" by the other. Since the number of level-2
-   applications was always extremely small (in fact, the author knows
+   applications was always extremely small (in fact, the author(!FOOTNOTE [8] [Konrad Hinsen anno 1992. But obviously the extremely small number has not increased yet.]) knows
    only of a single one), this should be no problem in practice.
 
 !item Extended names have been introduced
@@ -577,8 +602,8 @@ There are two major changes with respect to the original XAcc definition:
 
 In any case it is expected that most applications will be converted to
 the new rules soon, if only to support MultiTOS.
-!end_node
-!end_node
+!end_node /* Compatibility considerations */
+!end_node /* Classic XAcc */
 
 !begin_node Extended XAcc
 
@@ -607,7 +632,7 @@ Bei den Erweiterungen handelt es sich um:
      Ermîglicht es einer Applikation, von sich aus einen Seriendruck
      im TW zu initiieren.
 
- !item Inquiery-Protokoll
+ !item Inquiry-Protokoll
 
      Dient der Ermittlung von Informationen Åber den Aufbau einer
      Datenbank.
@@ -617,7 +642,9 @@ Bei den Erweiterungen handelt es sich um:
      Dient dem allgemeinen Datenaustausch zwischen Applikationen.
 !end_itemize
 
+!ifset tos_hyp
 !subtoc [all]
+!endif
 
 
 !begin_node MailMerge-Protokoll
@@ -640,7 +667,7 @@ Message "#N" anzufordern. Bei Empfang einer solchen Nachricht schickt
 TA fÅr jedes Adreûfeld einer Adresse eine ACC_TEXT-Message und zum
 Abschluû eines Datensatzes einen Leerstring ".
 
-!end_node
+!end_node /* MailMerge-Protokoll */
 
 
 !begin_node Remote-Mailmerge-Protokoll
@@ -691,19 +718,19 @@ const char ta2Ident[] = "That's Address ACC\0XDSC\0"
 
  !item [XSU] SuchwortÅbergabe (optional mit anschlieûendem '?')
 
- !item [XDI] Inquiery-Protokoll
+ !item [XDI] Inquiry-Protokoll
 
  !item [XRM] Remote-MailMerge
 !end_blist
-!end_node
+!end_node /* Remote-Mailmerge-Protokoll */
 
 
-!begin_node Inquiery-Protokoll
+!begin_node Inquiry-Protokoll
 !label ACC_GETDSI
 !label ACC_DSINFO
 !label ACC_FILEINFO
 
-Im Prinzip lÑuft das ganze Inquiery-Protokoll in 2 Stufen ab. Zuerst
+Im Prinzip lÑuft das ganze Inquiry-Protokoll in 2 Stufen ab. Zuerst
 werden die Daten der verfÅgbaren Datenbanken ermittelt, und
 anschlieûend (zeitlich voneinander vîllig unabhÑngig) werden die
 einzelnen Felder einer ausgewÑhlten Datenbank erfragt.
@@ -736,7 +763,7 @@ ErklÑrung der einzelnen Protokollelemente:
 !begin_blist
  !item [ACC_GETDSI]
 
-     Hiermit wird das Inquiery-Protokoll initiiert. Diese Message
+     Hiermit wird das Inquiry-Protokoll initiiert. Diese Message
      enthÑlt einen Pointer auf eine Variable des Typs
      Xacc_Dsi_Request, in dem codiert wird, welche Felder welchen Typs
      gewÅnscht sind.
@@ -793,12 +820,12 @@ ErklÑrung der einzelnen Protokollelemente:
 
 !label ACC_GETFIELDS
 !label ACC_FIELDINFO
-Wenn dieser erste Teil des Inquiery-Protokolls erfolgreich beendet
+Wenn dieser erste Teil des Inquiry-Protokolls erfolgreich beendet
 wurde, dann kann die anfragende Applikation dem Anwender die Liste der
 verfÅgbaren Datenbanken und deren Information 'auf die Nase knallen'
 und ihn eine Auswahl treffen lassen.
 
-Tut der Anwender dies, so lÑuft der 2. Part des Inquiery-Protokolls
+Tut der Anwender dies, so lÑuft der 2. Part des Inquiry-Protokolls
 los (wieder am Beispiel von TA und TW):
 
 !begin_verbatim
@@ -856,7 +883,7 @@ ErklÑrung der einzelnen Protokollelemente:
 In That's / no| Address wurden im Moment die Feldtypen FT_CHAR,
 FT_DATE und FT_TIME implementiert.
 
-!end_node
+!end_node /* Inquiry-Protokoll */
 
 
 !begin_node Request/Reply-Protokoll
@@ -885,7 +912,7 @@ Datenaustausch zu ermîglichen:
       msg[3]:     Das high-Byte ist frei fÅr Applikationsspezifische
                   Informationen und im low-Byte ist der Typ der
                   Daten codiert, die mit dieser Nachricht verschickt
-									werden:
+                  werden:
                   0x01  String, d.h. msg[4]+msg[5] ist
                         ein Pointer auf den String
                   0x02  Env-String, d.h
@@ -940,7 +967,9 @@ Applikationen, die oben beschriebene Protokollelemente unterstÅtzen,
 mÅssen in ihrer XDSC-Beschreibung das Extended-Feature "RQ" enthalten
 haben.
 
-!end_node
+!end_node /* Request/Reply-Protokoll */
+
+!end_node /* Extended XAcc */
 
 
 !begin_node Example: no|Link's XAcc protocol
@@ -1087,9 +1116,7 @@ Der Empfang einer ACC_REPLY-Message muû abschlieûend mit einer
 ACC_ACK- Message bestÑtigt werden, damit das no|Link-Accessory seine
 Resourcen wieder freigeben kann!
 
-!end_node
-
-!end_node
+!end_node /* Example: no|Link's XAcc protocol */
 
 
 !begin_node XACC.H
@@ -1140,7 +1167,7 @@ Resourcen wieder freigeben kann!
 # define ACC_REQUEST        0x480
 # define ACC_REPLY          0x481
 
-/* Inquiery Protokoll: (Extended-Feature "DI")          */
+/* Inquiry Protokoll: (Extended-Feature "DI")           */
 /*        ACC_ACK Messages sind Teil des Protokolls und */
 /*        mÅssen deshalb verstanden werden!             */
 #define ACC_GETDSI          0x510
@@ -1167,7 +1194,7 @@ Resourcen wieder freigeben kann!
 
 
 /*--------------------------------------------------------------------
-    definitions for the Inquiery protocol
+    definitions for the Inquiry protocol
 --------------------------------------------------------------------*/
 #define DSI_VERSION         0x0100
 
@@ -1291,9 +1318,100 @@ typedef struct {
 #endif    /* #ifndef __XACC__ */
 !end_verbatim
 
-!end_node
+!end_node /* XACC.H */
 
 
+!ifnset tos_hyp
+!begin_node About this hypertext
+
+!begin_node Credits
+
+Thanks to
+
+!begin_itemize
+!item Konrad Hinsen for inventing the XAcc protocol. He also wrote the
+"Classic XAcc" part.
+
+!item Jîrg Zabell from no|Software for providing the "Extended XAcc"
+information.
+
+!item Dirk Hagedorn for (!xlink [UDO] [UDO/Main] [_new]).
+!end_itemize
+
+!end_node /* Credits */
+
+!begin_node Release history
+!begin_itemize
+!item First release
+!item Known problems: "Extended XAcc", the example and some of the
+XACC.H texts are available only in German.
+
+!end_itemize
+!end_node /* Release history */
+
+!begin_node Author
+Thomas Much (!nl)
+Gerwigstrasse 46 (!nl)
+D-76131 Karlsruhe (!nl)
+Germany (!nl)
+
+Fax:   +49 / (0)721 / 62 28 21
+
+EMail: Thomas Much @ KA2                 (MausNet) (!nl)
+       Thomas_Much@ka2.maus.de (!nl)
+       Thomas.Much@stud.uni-karlsruhe.de (Internet) (!nl)
+
+WWW:   (!url [http://www.uni-karlsruhe.de/!~Thomas.Much] [http://www.uni-karlsruhe.de/~Thomas.Much])
+
+!end_node /* Author */
+
+!end_node /* About this hypertext */
+
+!endif /* tos_hyp */
+
+!ifdest [stg,amg]
+
+!begin_pnode footnote_1
+refers to the XAcc definition before "Classic XAcc"
 !end_node
 
+!begin_pnode footnote_2
+a special non-XAcc message - SC_CHANGED - has been introduced for this purpose
 !end_node
+
+!begin_pnode footnote_3
+Note: The "levels" used in previous XAcc versions have been
+replaced by this new concept. Compatibility issues are
+discussed in a special section at the end of this document.
+
+!begin_pnode footnote_4
+meanwhile Atari has introduced the MultiTOS drag&drop
+protocol
+!end_node
+
+!begin_pnode footnote_5
+NB: ASH's MagiC (even the latest version) uses AES version
+3.99 despite of supporting appl_search()
+!end_node
+
+!begin_pnode footnote_6
+see the section "Extended names" for more details on
+names.
+!end_node
+
+!begin_pnode footnote_7
+AV_SENDKEY from Gemini's AV protocol is used more often
+!end_node
+
+!begin_pnode footnote_8
+Konrad Hinsen anno 1992. But obviously the extremely small
+number has not increased yet.
+!end_node
+
+!endif
+
+
+!ifset tos_hyp
+!end_node /* XAcc */
+!endif
+
