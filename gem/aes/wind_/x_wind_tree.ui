@@ -1,0 +1,425 @@
+!iflang [english]
+
+!begin_node x_wind_tree
+
+(!begin_liste) [Availability]
+
+!item [Name:]
+ØWindow gadgetsÆ - Change window gadgets
+
+!item [Opcode:]
+29010
+
+!item [Syntax:]
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree );
+
+!item [Description:]
+!begin_xlist !compressed [Parameter]
+!item [Parameter]
+Meaning
+!item [~]
+~
+!item [mode]
+!label X_WT_GETCNT
+!label X_WT_READ
+!label X_WT_SET
+!begin_table [l|l|l]
+mode !! Value !! Meaning
+!hline
+X_WT_GETCNT   !! 0 !!  ~ Get count and flag
+X_WT_READ     !! 1 !!  ~ Copy window tree
+X_WT_SET      !! 2 !!  ~ Set new tree
+!end_table
+!item [wtree]
+Pointer to a WIND_TREE structure
+!end_xlist
+
+This function alters the way in which Geneva draws and processes the
+gadgets of a particular window. This allows a program to take control over
+how gadgets react to the mouse, and also to add new gadgets.
+
+The gadgets that make up a window are really just another OBJECT tree.
+This function allows you to modify it by (optionally) reading the current
+tree into a block of your program's memory. Geneva can then be informed
+that the modified tree (or, for that matter, any OBJECT tree) should be
+used for the window gadgets.
+
+(!B)Note:(!b) This function will only affect windows which have already been created.
+
+If all you need to do in your program is to change the fill patterns or
+colors of a gadget, it is better to use wind_set( WF_COLOR ) to accomplish
+this task, if possible.
+
+(!B)Mode 0, X_WT_GETCNT (get count & flags)(!b) (!nl)
+This mode must be used prior to mode 1. It sets the count element of the
+structure pointed to by wtree to contain the number of OBJECTS that make
+up the bendow's tree. The tree element is unchanged.
+beginning of section
+top of page
+
+(!B)Mode 1, X_WT_READ (Read the current tree into the program's
+memory)(!b) (!nl)
+This mode copies count OBJECTS of the window's current tree into the array
+of OBJECTS pointed to by the tree element. The area of memory MUST be
+large enough to hold count elements.
+
+Note that any objects in the resulting tree which have the HIDETREE
+ob_flag set are inactive, and their sizes and locations may be inaccurate.
+
+If the tree which was being copied was the default OBJECT tree used by
+Geneva, then the ob_spec fields of the second (WGMOVE) and seventh
+(WGINFO) OBJECTS in the resulting copy will be zero. If this tree is then
+set (using mode 2, below), and the X_WTFL_RESIZE bit is on, then the
+programmer MUST modify these ob_spec's to point to TEDINFO structures!
+Otherwise, Geneva will attempt to set the title and info text in bad
+memory locations.
+beginning of section
+top of page
+
+(!B)Mode 2, X_WT_SET (Set count, flags, and tree address)(!b) (!nl)
+This mode changes the attributes. If count is not less than zero, the
+window's OBJECT tree and count of objects will be set. The tree element
+must point to a static area of memory containing an OBJECT tree. The flags
+are always set, regardless of count.
+
+The following bits are defined in the flags element. By default, they are
+all set (turned on) for any window that is created. Undefined bits are
+reserved for future use and should not be modified.
+
+!begin_itemize
+!item Flags bit 0, X_WTFL_RESIZE
+
+         When set, the window's gadgets are automatically resized whenever
+         the window's size is changed. If this bit is on, the ordering of
+         the OBJECTs which make up the window's tree MUST not change.
+         However, more objects can be appended to the end of the tree.
+         When this bit is off, Geneva will never change the sizes,
+         positions, flags, colors, or text of any object in the tree.
+
+!item Flags bit 1, X_WTFL_CLICKS
+
+         When set, the window responds normally to mouse clicks on the
+         gadgets by moving the window, dragging the scroll bars, etc. When
+         this bit is off, any mouse clicks (or keyboard equivalents for
+         these actions) will be returned as either a WM_ARROWED message to
+         indicate which arrow/scroll bar gadget was chosen, or an
+         X_WM_SELECTED message for any other gadget. In this case, the
+         program is responsible for taking an appropriate action. The Task
+         Manager uses this bit in its "Keyboard..." dialog.
+
+!item Flags bit 2, X_WTFL_SLIDERS
+
+         When set, the sliders of a windowed dialog and info bar of a
+         window will act normally. When it is off, the sliders for a
+         windowed dialog will never change (even if the dialog is moved by
+         the application), and clicking on the info left/right arrows will
+         do nothing. The Task Manager uses this bit in its "Keyboard..."
+         dialog.
+!end_itemize
+
+Example:
+!begin_verbatim
+/* Get the tree for a window, and change the appearence of
+the up and down arrows */
+TEDINFO info_ted, mover_ted;
+OBJECT *tree
+WIND_TREE wt;
+int16_t handle;
+
+/* Create a window */
+if( (handle = wind_create( UPARROW|DNARROW|VSLIDE, 20, 20,
+   200, 200 )) != 0 )
+{
+  /* Get the current count and flags */
+  wt.handle = handle;  
+  x_wind_tree( X_WT_GETCNT, &wt );
+  /* Now allocate enough memory to hold the entire tree */
+  if( (tree = Malloc( wt.count*sizeof(OBJECT) )) != 0 )
+  {
+     /* And get the tree */
+     wt.tree = tree;
+     x_wind_tree( X_WT_READ, &wt );
+     /* Now, we *must* set these two TEDINFO's. The
+        contents of theTEDINFO's is not important
+        because the info and mover bars  are not used */
+     tree[WGMOVE].ob_spec.tedinfo = &mover_ted;
+     tree[WGINFO].ob_spec.tedinfo = &info_ted;
+     /* Modify the arrows. The up arrow will now be a
+        '^' character, and the down arrow will be a 'v' */
+     tree[WGUP].ob_spec.bfobspec.character = '^';
+     tree[WGDOWN].ob_spec.bfobspec.character = 'v';
+     x_wind_tree( X_WT_SET, &wt );
+     /* All done! The window can be opened now, but don't
+        forget to Mfree(tree) later on when it's closed. */
+  }
+}
+!end_verbatim
+
+!item [(!nolink [Return]) value:]
+0 = An error occurred
+
+!item [Availability:]
+The function is only available under Geneva.
+
+!item [Group:]
+Window library
+
+!item [See also:]
+(!link [Binding] [Bindings for x_wind_tree])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings for x_wind_tree
+!ignore_index
+
+(!begin_liste) [GEM-Arrays]
+
+!item [C:]
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree );
+
+!item [Binding:]
+!begin_verbatim
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree )
+{
+   int_in[0] = mode;
+   addr_in[0] = wtree;
+
+   crys_if(29010);
+
+   return ( int_out[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Address !! Element !! (!nolink [Contents])
+!hline
+control   !! control[0] !! 29010 # Function opcode
+control+2 !! control[1] !! 1     # Entry in int_in
+control+4 !! control[2] !! 1     # Entry in int_out
+control+6 !! control[3] !! 1     # Entry in addr_in
+control+8 !! control[4] !! 0     # Entry in addr_out
+int_in    !! int_in[0]  !! mode
+addr_in   !! addr_in[0] !! wtree
+int_out   !! int_out[0] !! Return value
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+!else
+
+!begin_node x_wind_tree
+
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+ØWindow gadgetsÆ - Change window gadgets
+
+!item [AES-Nummer:]
+29010
+
+!item [Deklaration:]
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree );
+
+!item [Beschreibung:]
+!begin_xlist !compressed [Parameter]
+!item [Parameter]
+Bedeutung
+!item [~]
+~
+!item [mode]
+!label X_WT_GETCNT
+!label X_WT_READ
+!label X_WT_SET
+!begin_table [l|l|l]
+mode !! Value !! Meaning
+!hline
+X_WT_GETCNT   !! 0 !!  ~ Get count and flag
+X_WT_READ     !! 1 !!  ~ Copy window tree
+X_WT_SET      !! 2 !!  ~ Set new tree
+!end_table
+!item [wtree]
+Pointer to a WIND_TREE structure
+!end_xlist
+
+This function alters the way in which Geneva draws and processes the
+gadgets of a particular window. This allows a program to take control over
+how gadgets react to the mouse, and also to add new gadgets.
+
+The gadgets that make up a window are really just another OBJECT tree.
+This function allows you to modify it by (optionally) reading the current
+tree into a block of your program's memory. Geneva can then be informed
+that the modified tree (or, for that matter, any OBJECT tree) should be
+used for the window gadgets.
+
+(!B)Note:(!b) This function will only affect windows which have already been created.
+
+If all you need to do in your program is to change the fill patterns or
+colors of a gadget, it is better to use wind_set( WF_COLOR ) to accomplish
+this task, if possible.
+
+(!B)Mode 0, X_WT_GETCNT (get count & flags)(!b) (!nl)
+This mode must be used prior to mode 1. It sets the count element of the
+structure pointed to by wtree to contain the number of OBJECTS that make
+up the bendow's tree. The tree element is unchanged.
+beginning of section
+top of page
+
+(!B)Mode 1, X_WT_READ (Read the current tree into the program's
+memory)(!b) (!nl)
+This mode copies count OBJECTS of the window's current tree into the array
+of OBJECTS pointed to by the tree element. The area of memory MUST be
+large enough to hold count elements.
+
+Note that any objects in the resulting tree which have the HIDETREE
+ob_flag set are inactive, and their sizes and locations may be inaccurate.
+
+If the tree which was being copied was the default OBJECT tree used by
+Geneva, then the ob_spec fields of the second (WGMOVE) and seventh
+(WGINFO) OBJECTS in the resulting copy will be zero. If this tree is then
+set (using mode 2, below), and the X_WTFL_RESIZE bit is on, then the
+programmer MUST modify these ob_spec's to point to TEDINFO structures!
+Otherwise, Geneva will attempt to set the title and info text in bad
+memory locations.
+beginning of section
+top of page
+
+(!B)Mode 2, X_WT_SET (Set count, flags, and tree address)(!b) (!nl)
+This mode changes the attributes. If count is not less than zero, the
+window's OBJECT tree and count of objects will be set. The tree element
+must point to a static area of memory containing an OBJECT tree. The flags
+are always set, regardless of count.
+
+The following bits are defined in the flags element. By default, they are
+all set (turned on) for any window that is created. Undefined bits are
+reserved for future use and should not be modified.
+
+!begin_itemize
+!item Flags bit 0, X_WTFL_RESIZE
+
+         When set, the window's gadgets are automatically resized whenever
+         the window's size is changed. If this bit is on, the ordering of
+         the OBJECTs which make up the window's tree MUST not change.
+         However, more objects can be appended to the end of the tree.
+         When this bit is off, Geneva will never change the sizes,
+         positions, flags, colors, or text of any object in the tree.
+
+!item Flags bit 1, X_WTFL_CLICKS
+
+         When set, the window responds normally to mouse clicks on the
+         gadgets by moving the window, dragging the scroll bars, etc. When
+         this bit is off, any mouse clicks (or keyboard equivalents for
+         these actions) will be returned as either a WM_ARROWED message to
+         indicate which arrow/scroll bar gadget was chosen, or an
+         X_WM_SELECTED message for any other gadget. In this case, the
+         program is responsible for taking an appropriate action. The Task
+         Manager uses this bit in its "Keyboard..." dialog.
+
+!item Flags bit 2, X_WTFL_SLIDERS
+
+         When set, the sliders of a windowed dialog and info bar of a
+         window will act normally. When it is off, the sliders for a
+         windowed dialog will never change (even if the dialog is moved by
+         the application), and clicking on the info left/right arrows will
+         do nothing. The Task Manager uses this bit in its "Keyboard..."
+         dialog.
+!end_itemize
+
+Example:
+!begin_verbatim
+/* Get the tree for a window, and change the appearence of
+the up and down arrows */
+TEDINFO info_ted, mover_ted;
+OBJECT *tree
+WIND_TREE wt;
+int16_t handle;
+
+/* Create a window */
+if( (handle = wind_create( UPARROW|DNARROW|VSLIDE, 20, 20,
+   200, 200 )) != 0 )
+{
+  /* Get the current count and flags */
+  wt.handle = handle;  
+  x_wind_tree( X_WT_GETCNT, &wt );
+  /* Now allocate enough memory to hold the entire tree */
+  if( (tree = Malloc( wt.count*sizeof(OBJECT) )) != 0 )
+  {
+     /* And get the tree */
+     wt.tree = tree;
+     x_wind_tree( X_WT_READ, &wt );
+     /* Now, we *must* set these two TEDINFO's. The
+        contents of theTEDINFO's is not important
+        because the info and mover bars  are not used */
+     tree[WGMOVE].ob_spec.tedinfo = &mover_ted;
+     tree[WGINFO].ob_spec.tedinfo = &info_ted;
+     /* Modify the arrows. The up arrow will now be a
+        '^' character, and the down arrow will be a 'v' */
+     tree[WGUP].ob_spec.bfobspec.character = '^';
+     tree[WGDOWN].ob_spec.bfobspec.character = 'v';
+     x_wind_tree( X_WT_SET, &wt );
+     /* All done! The window can be opened now, but don't
+        forget to Mfree(tree) later on when it's closed. */
+  }
+}
+!end_verbatim
+
+!item [Ergebnis:]
+0 = An error occurred
+
+!item [VerfÅgbar:]
+Die Funktion steht nur unter Geneva zur VerfÅgung.
+
+!item [Gruppe:]
+Fensterverwaltung
+
+!item [Querverweis:]
+(!link [Binding] [Bindings fÅr x_wind_tree])
+
+(!ende_liste)
+
+
+
+!begin_node Bindings fÅr x_wind_tree
+!ignore_index
+
+(!begin_liste) [GEM-Arrays]
+
+!item [C:]
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree );
+
+!item [Umsetzung:]
+!begin_verbatim
+int16_t x_wind_tree( int16_t mode, WIND_TREE *wtree )
+{
+   int_in[0] = mode;
+   addr_in[0] = wtree;
+
+   crys_if(29010);
+
+   return ( int_out[0] );
+}
+!end_verbatim
+
+!item [GEM-Arrays:]
+!begin_table [l l l]
+Adresse !! Feldelement !! Belegung
+!hline
+control   !! control[0] !! 29010 # Opcode der Funktion
+control+2 !! control[1] !! 1     # EintrÑge in int_in
+control+4 !! control[2] !! 1     # EintrÑge in int_out
+control+6 !! control[3] !! 1     # EintrÑge in addr_in
+control+8 !! control[4] !! 0     # EintrÑge in addr_out
+int_in    !! int_in[0]  !! mode
+addr_in   !! addr_in[0] !! wtree
+int_out   !! int_out[0] !! Return-Wert
+!end_table
+
+(!ende_liste)
+!end_node
+!end_node
+
+!endif
