@@ -1,0 +1,225 @@
+!iflang [english]
+
+!begin_node G_VECTORS
+
+!label G_vectors
+!begin_verbatim
+typedef struct G_vectors        /* Release 004 */
+{
+  int16_t used;
+  int16_t (*keypress)( int32_t *key );
+  int16_t (*app_switch)( int8_t *process_name, int16_t apid );
+  int16_t (*gen_event)(void);
+} G_VECTORS;
+!end_verbatim
+!label X_WM_VECKEY
+!label X_WM_VECSW
+!label X_WM_VECEVNT
+
+!begin_xlist [app_switch]
+!item [used:] A bitmap of which vectors in the rest of the structure are
+                 used by this version of Geneva. Currently this is 7, to
+                 indicate that the first 3 vectors are used.
+
+!item [keypress:]    This function is called whenever Geneva receives a key
+                 from the keyboard. The A0 register points to a longword
+                 containing the keycode of the key which was pressed:
+
+                 bits 31-24     23-16      15-8     7-0 (!nl)
+                      shift   scan code   unused   ASCII
+
+                 This is just like the result of Bconin(2) with the result
+                 of Kbshift(-1) stored in the high byte.
+
+                 If the (!I)keypress(!i) function changes this longword to 0L,
+                 then the keypress will be ignored. If the longword is
+                 changed to some other value, then the new value will be
+                 processed.
+
+                 If the (!I)keypress(!i) function returns a value >= 0, then the
+                 application with that ID will receive a X_WM_VECKEY
+                 message during its next event loop.
+
+!item [app_switch:]  This function is called whenever the user performs some
+                 action that causes the topmost application to change, like
+                 selecting a name from the Desk menu or topping another
+                 application's window.
+
+                 When called, the A0 register points to a string in
+                 appl_find format which is the name of the process that
+                 was switched to. The D0 register contains the application
+                 ID of the process.
+
+                 Under some circumstances, this function may be called even
+                 though the "new" application is already the topmost one.
+                 It is also possible for the "apid" in D0 to be -1, if
+                 Geneva is in the process of shutting down.
+
+                 If the (!I)app_switch(!i) function returns a value >= 0, then
+                 the application with that ID will receive a X_WM_VECSW
+                 message during its next event loop.
+
+!item [gen_event:]   This function is called continually by Geneva. It provides
+                 a way for an application to have Geneva poll a certain
+                 condition and generate an event if something occurs.
+
+                 This can take the place of using evnt_multi with small
+                 timer values in order to poll a condition, and is much
+                 more efficient. It can be used in things like a corner
+                 clock to see when the time has changed to a new minute.
+
+                 If the (!I)gen_event(!i) function returns a value >= 0, then the
+                 application with that ID will receive a X_WM_VECEVNT
+                 message during its next event loop.
+!end_xlist
+Notes about using vectors:
+!begin_itemize
+!item A vector routine can change registers D0-D2/A0-A1. All others must be
+      preserved.
+
+!item No vector routine can call the AES. The keypress and app_switch
+      vectors must not call GEMDOS functions. All other TOS services can be
+      used.
+
+!item If a vector does not wish to generate an event, then it must return a
+      negative number, like -1.
+
+!item A vector MUST follow the XBRA protocol. The only exception to this is
+      Geneva itself, which installs default vectors that do nothing but
+      return -1.
+
+!item An application is responsible for removing itself from the vector
+      chain when it terminates. Failure to do so will most likely cause a
+      crash in the future. An application should use shel_write mode 9 to
+      tell Geneva that it knows about the AP_TERM message and respond to
+      that message by removing itself from the list before quitting.
+
+!item  If your vector routine does not wish to generate an event, then it
+      should pass control through to the previous routine in the XBRA
+      chain.
+
+!item If Geneva is running without MiNT, then the vector routines are
+      always called in supervisor mode. If running with MiNT, then the CPU
+      is in user mode. When MiNT is in memory protection mode, an
+      application which uses vectors must at least be in Readable mode, and
+      should most likely in Global mode.
+!end_itemize
+
+    See the files VECTEST.C and VECTESTS.S for an example.
+
+See also: (!link [Cookie, Gnva][Cookie, Gnva])
+!end_node
+
+!else
+
+!begin_node G_VECTORS
+
+!label G_vectors
+!begin_verbatim
+typedef struct G_vectors        /* Release 004 */
+{
+  int16_t used;
+  int16_t (*keypress)( int32_t *key );
+  int16_t (*app_switch)( int8_t *process_name, int16_t apid );
+  int16_t (*gen_event)(void);
+} G_VECTORS;
+!end_verbatim
+!label X_WM_VECKEY
+!label X_WM_VECSW
+!label X_WM_VECEVNT
+
+!begin_xlist [app_switch]
+!item [used:] A bitmap of which vectors in the rest of the structure are
+                 used by this version of Geneva. Currently this is 7, to
+                 indicate that the first 3 vectors are used.
+
+!item [keypress:]    This function is called whenever Geneva receives a key
+                 from the keyboard. The A0 register points to a longword
+                 containing the keycode of the key which was pressed:
+
+                 bits 31-24     23-16      15-8     7-0 (!nl)
+                      shift   scan code   unused   ASCII
+
+                 This is just like the result of Bconin(2) with the result
+                 of Kbshift(-1) stored in the high byte.
+
+                 If the (!I)keypress(!i) function changes this longword to 0L,
+                 then the keypress will be ignored. If the longword is
+                 changed to some other value, then the new value will be
+                 processed.
+
+                 If the (!I)keypress(!i) function returns a value >= 0, then the
+                 application with that ID will receive a X_WM_VECKEY
+                 message during its next event loop.
+
+!item [app_switch:]  This function is called whenever the user performs some
+                 action that causes the topmost application to change, like
+                 selecting a name from the Desk menu or topping another
+                 application's window.
+
+                 When called, the A0 register points to a string in
+                 appl_find format which is the name of the process that
+                 was switched to. The D0 register contains the application
+                 ID of the process.
+
+                 Under some circumstances, this function may be called even
+                 though the "new" application is already the topmost one.
+                 It is also possible for the "apid" in D0 to be -1, if
+                 Geneva is in the process of shutting down.
+
+                 If the (!I)app_switch(!i) function returns a value >= 0, then
+                 the application with that ID will receive a X_WM_VECSW
+                 message during its next event loop.
+
+!item [gen_event:]   This function is called continually by Geneva. It provides
+                 a way for an application to have Geneva poll a certain
+                 condition and generate an event if something occurs.
+
+                 This can take the place of using evnt_multi with small
+                 timer values in order to poll a condition, and is much
+                 more efficient. It can be used in things like a corner
+                 clock to see when the time has changed to a new minute.
+
+                 If the (!I)gen_event(!i) function returns a value >= 0, then the
+                 application with that ID will receive a X_WM_VECEVNT
+                 message during its next event loop.
+!end_xlist
+Notes about using vectors:
+!begin_itemize
+!item A vector routine can change registers D0-D2/A0-A1. All others must be
+      preserved.
+
+!item No vector routine can call the AES. The keypress and app_switch
+      vectors must not call GEMDOS functions. All other TOS services can be
+      used.
+
+!item If a vector does not wish to generate an event, then it must return a
+      negative number, like -1.
+
+!item A vector MUST follow the XBRA protocol. The only exception to this is
+      Geneva itself, which installs default vectors that do nothing but
+      return -1.
+
+!item An application is responsible for removing itself from the vector
+      chain when it terminates. Failure to do so will most likely cause a
+      crash in the future. An application should use shel_write mode 9 to
+      tell Geneva that it knows about the AP_TERM message and respond to
+      that message by removing itself from the list before quitting.
+
+!item  If your vector routine does not wish to generate an event, then it
+      should pass control through to the previous routine in the XBRA
+      chain.
+
+!item If Geneva is running without MiNT, then the vector routines are
+      always called in supervisor mode. If running with MiNT, then the CPU
+      is in user mode. When MiNT is in memory protection mode, an
+      application which uses vectors must at least be in Readable mode, and
+      should most likely in Global mode.
+!end_itemize
+
+    See the files VECTEST.C and VECTESTS.S for an example.
+
+Querverweis: (!link [Cookie, Gnva][Cookie, Gnva])
+!end_node
+
+!endif
