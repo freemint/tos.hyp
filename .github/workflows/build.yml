@@ -1,0 +1,35 @@
+name: Linux build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install packages
+        run: |
+          ./.scripts/install-hcp.sh
+          ./.scripts/install-udo.sh
+      - name: Setup environment
+        run: ./.scripts/setup_env.sh
+      - name: build
+        run: ./.scripts/build.sh
+      - name: deploy
+        if: ${{ github.event_name == 'push' }}
+        env:
+          COMMITER_NAME: ${{ github.event.commits[0].author.name }}
+          COMMITER_EMAIL: ${{ github.event.commits[0].author.email }}
+        run: ./.scripts/deploy.sh
+      - name: Push changes
+        if: ${{ github.event_name == 'push' }}
+        uses: ad-m/github-push-action@master
+        with:
+          directory: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          force: true
