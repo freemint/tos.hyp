@@ -2,16 +2,28 @@
 !html_name emulators_magicpc
 !ignore_subtoc
 
-(!nolink [MagiC]) PC knows two interfaces with which one can call up functions of
+(!nolink [MagiC]) PC knows sveral interfaces with which one can call up functions of
 the Windows system.
 
 !begin_itemize
- !item mec0 (MPS) interface: This serves for executing any kind of
+ !item mec0 (MPS) interface: (!nl)
+     This serves for executing any kind of
      (self-written) Windows code. It is stored in a DLL and called
      via illegal opcodes from within (!nolink [MagiC]) PC.
 
- !item mec1 interface: With this a predefined set of special functions
+ !item mec1 interface: (!nl)
+     With this a predefined set of special functions
      can be called.
+
+ !item mec2 Schnittstelle: (!nl)
+       Is provided by XFS_PC.LDR.
+
+ !item mec3 Schnittstelle: (!nl)
+       Used by MPC_ACC for communication with (!nolink [MagiC])PC.
+
+ !item mecnvdi Schnittstelle: (!nl)
+       Is provided by NVDI_PC.DLL.
+
 !end_itemize
 
 !begin_node mec0 (MPS) interface
@@ -545,7 +557,8 @@ The mec1 interface makes it possible to call functions predefined
      by the emulator in Motorola code. In principle it is similar to
      the mec0 (MPS) interface, though the functions are not freely
      definable in a DLL but already predefined by the emulator.
-     Call: The functions are called uniformly by the opcode $43bf,
+
+!item Call: The functions are called uniformly by the opcode $43bf,
      followed by a function number, thus with 4 bytes total length.
      Example:
 
@@ -602,6 +615,20 @@ calls the mec1 function with the number 0x31. ($43bf is the
         ~      !!  renamed to NVDI_PC.DLL, as discussed.
         !end_table
 
+  !item [$0008]
+
+        !begin_table [l l]
+        Parameters: !! d0: unknown
+                 ~  !! d1: unknown
+                 ~  !! d2: unknown
+        !end_table
+
+  !item [$0009]
+
+        !begin_table [l l]
+        Parameters: !! a0: unknown
+        !end_table
+
   !item [$0010] void dw_addline: ~! As of 03.97
 
         Output text in new line in the debug window
@@ -618,7 +645,7 @@ calls the mec1 function with the number 0x31. ($43bf is the
         Parameters: !! a0: Pointer to the text
         !end_table
 
-  !item [$0011] void dw_formtxt:    ~! As of 03.97
+  !item [$0012] void dw_formtxt:    ~! As of 03.97
 
        Output text sprintf-like in debug window
 
@@ -628,6 +655,39 @@ calls the mec1 function with the number 0x31. ($43bf is the
              ~     !! for the format-string. The format-string
              ~     !! corresponds roughly to sprintf(format,...);
              ~     !! string pointers are not allowed, however.
+        !end_table
+
+  !item [$0020] enq_bigscreen
+
+        !begin_table [l l]
+        Parameters: !! a0: unknown
+        Return: !! d0<>0: All OK, 0=Error
+            ~   !! d1: unknown
+            ~   !! d2: unknown
+            ~   !! d3: unknown
+            ~   !! d4: unknown
+        !end_table
+
+  !item [$0021] new_bigscreen
+
+        !begin_table [l l]
+        Parameters: !! d1: unknown
+            ~   !! d2: unknown
+            ~   !! d3: unknown
+            ~   !! d4: unknown
+        !end_table
+
+  !item [$0022]
+
+        !begin_table [l l]
+        Parameters: !! d0: unknown
+        !end_table
+
+  !item [$0028]
+
+        !begin_table [l l]
+        Parameters: !! d0: unknown
+        Return: !! d0: unknown
         !end_table
 
   !item [$0031] int printer_open         ~! As of 03.97
@@ -727,6 +787,200 @@ calls the mec1 function with the number 0x31. ($43bf is the
          Return: !! Old mode (0 or 1)
         !end_table
 !end_xlist
+!end_enumerate
+
+!end_node
+
+!begin_node mec2 interface
+!begin_enumerate
+!item Concept
+
+The mec2 interface is provided by XFS_PC.LDR.
+
+!item Call: The functions are called uniformly by the opcode $45bf,
+     followed by a function number, thus with 4 bytes total length.
+     Example:
+
+dc.w   $45bf,$0001
+
+!item The functions
+
+Details about the various functions or not known yet.
+
+!end_enumerate
+
+!end_node
+
+!begin_node mec3 interface
+!begin_enumerate
+!item Concept
+
+The mec3 is used by MPC_ACC for communication with (!nolink [MagiC])PC.
+
+!item Call: The functions are called uniformly by the opcode $47bf,
+     followed by a function number, thus with 4 bytes total length.
+     Example:
+
+dc.w   $47bf,$0001
+
+!item The functions
+!begin_xlist [$0001 ]
+
+  !item [$0001] long mpc_shutdown:
+
+	Terminate (!nolink [MagiC])PC.
+
+        !begin_table [l l]
+        Parameters: !! Keine
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+  !item [$0002] long mpc_terminate:
+
+	Terminate (!nolink [MagiC])PC.
+
+        !begin_table [l l]
+        Parameters: !! Keine
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+  !item [$0010] : long start_winfile
+
+	Execute windows program.
+
+        !begin_table [l l]
+        Parameters: !! a0: pathname (must not be null)
+            ~   !! a1: command line (can be null)
+            ~   !! a2: environment (can be null)
+            ~   !! a3: current directory (can be null)
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+  !item [$0020] : long mpc_control
+
+        This function has several subfunctions, whose number is passed in d0.l
+
+        !begin_xlist [$0010 ]
+
+        !item [$0010 ] mpc_init
+
+        Tell (!nolink [MagiC])PC that MPC_ACC is active.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+        !item [$0011 ] mpc_exit
+
+        Tell (!nolink [MagiC])PC that MPC_ACC is no longer active.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+        !item [$0020 ] mpc_control
+
+        Ask (!nolink [MagiC])PC whether a shutdown should be initiated.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! d0>0: Shutdown should be started.
+        !end_table
+
+        !item [$0021 ] mpc_shutdown_start
+
+        Tell (!nolink [MagiC])PC that shutdown has started.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! d0>0: Shutdown should be started.
+        !end_table
+
+        !item [$0022 ] mpc_shutdown_completed
+
+        Tell (!nolink [MagiC])PC that shutdown has successfully completed.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! none
+        !end_table
+
+        !item [$0023 ] mpc_shutdown_cancelled
+
+        Tell (!nolink [MagiC])PC that shutdown has been canceled.
+
+        !begin_table [l l]
+        Parameters: !! none
+        Return: !! none
+        !end_table
+
+        !item [$0030 ] mpc_execute
+
+        Get filename to be executed from (!nolink [MagiC])PC.
+
+        !begin_table [l l]
+        Parameters: !! a1: pathname
+            ~   !! d1: max length for pathname
+            ~   !! a2: command line
+            ~   !! d2: max length for command line
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+        !item [$0031 ] mpc_start_exe
+
+        Execute windows program. This function is used when parameters
+        are passed via VA_START to MPC_ACC.
+
+        !begin_table [l l]
+        Parameters: !! a0: pointer to argument vector
+        Return: !! d0<>0: All OK, 0=Error
+        !end_table
+
+        !item [$0040 ] mpc_debout
+
+       Output text sprintf-like in debug window
+
+        !begin_table [l l]
+        Parameters: !! a0: Zeiger auf den Format-String
+             ~     !! d1, ... d7  Additional parameters suitable
+             ~     !! for the format-string. The format-string
+             ~     !! corresponds roughly to sprintf(format,...);
+             ~     !! string pointers are not allowed, however.
+        Return: !! none
+        !end_table
+
+        !item [others]
+        For unknown/illegal subfunction codes, -1 is returned in d0.l
+
+	!end_xlist
+
+   !item [others]
+        For unknown/illegal function codes, -1 is returned in d0.l
+
+!end_xlist
+
+!end_enumerate
+
+!end_node
+
+!begin_node mecnvdi interface
+!begin_enumerate
+!item Concept
+
+The mec2 interface is provided by NVDI_PC.DLL.
+
+!item Call: The functions are called uniformly by the opcode $41bf,
+     followed by a function number, thus with 4 bytes total length.
+     Example:
+
+dc.w   $41bf,$0001
+
+!item The functions
+
+Details about the various functions or not known yet.
+
 !end_enumerate
 
 !end_node
