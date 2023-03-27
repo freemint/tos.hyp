@@ -239,7 +239,7 @@ performed and ENOMEM is returned instead.
 S_SETCOOKIE requires root euid, EACCES is returned otherwise and no action
 is performed.
 
-The call refuses to place a cookie (a value of -1 is returned) 
+The call refuses to place a cookie (a value of -1 is returned)
 whose tag id contains a zero-byte.
 
 !label S_GETLVAL
@@ -334,15 +334,15 @@ value.
 
 Setting the timeslice requires root privileges.
 
-!label S_FORCEFASTLOAD
-!item [S_FORCEFASTLOAD(0x0013)]
+!label S_FASTLOAD
+!item [S_FASTLOAD(0x0013)]
 Allows changing the interpretation of the FASTLOAD bit in the program
 header.
 
-On Ssystem(S_FORCEFASTLOAD, 0L, 0L); the program header bit will be used as
+On Ssystem(S_FASTLOAD, 0L, 0L); the program header bit will be used as
 before, this is actually equal to FASTLOAD=NO in mint.cnf.
 
-On Ssystem(S_FORCEFASTLOAD, 1L, 0L); , the program header bit will be
+On Ssystem(S_FASTLOAD, 1L, 0L); , the program header bit will be
 ignored and fastload will be forced for all programs.
 
 (!I)arg1(!i) = -1 allows interrogation of the current state of this
@@ -473,18 +473,73 @@ possible to allocate.
 
 Root privileges are required to use this mode.
 
-!label S_CAD
-!item [S_CAD(0x0019)]
+!label S_CTRLALTDEL
+!item [S_CTRLALTDEL(0x0019)]
 Reserved for future definition.
 
-!label S_CLOCKMODE
-!item [S_CLOCKMODE(0x0064)]
-S_CLOCKMODE(0x0064) S_CLOCKMODE called with an (!I)arg1(!i) of -1 inquires
-the kernel's notion of the hardware system clock. If the command returns a
-zero, the hardware clock is considered to tick in UTC; if it returns a
-positive non-zero value, it is considered to tick in local time. Any other
-positive value of (!I)arg1(!i) sets the current clock mode. On a 0 it is
-reset to UTC, or to local time otherwise.
+!label S_DELCOOKIE
+!item [S_DELCOOKIE(0x001a)]
+Removes a tag ID specified by (!I)arg1(!i) from the cookie jar. If there
+is no slot with the specified tag ID, no action is performed and EINVAL is
+returned instead.
+
+S_DELCOOKIE requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_LOADKBD
+!item [S_LOADKBD(0x001b)]
+Load the keyboard table into memory. (!I)arg1(!i) specify the address of the
+complete path to the keyboard table or NULL. If path is NULL the default path
+of <sysdir>/keyboard.tbl is used. Returns a negative GEMDOS error-code if it
+fails. On success this call returns 0 and _AKP and _ISO cookies are updated.
+
+S_LOADKBD requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_SETEXC
+!item [S_SETEXC(0x001c)]
+Allow Setexc().  Valid (!I)argc1(!i) values are as follows:
+
+!begin_xlist !compressed
+!item [Value]
+Meaning
+!item [~]
+~
+!item [-1]
+Return the current setting
+!item [0]
+Deny all (only kernel-processes may change sys-vectors)
+!item [1]
+Deny trap-changes (numbers 0-15)
+!item [2]
+Allow all (default)
+!end_xlist
+
+Returns EBADARG if (!I)arg1(!i) is greater than 2, or 0 on success.
+
+S_SETEXC requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_GETBOOTLOG
+!item [S_GETBOOTLOG(0x001d)]
+Inquires the file path of bootlog file. (!I)arg1(!i) and (!I)arg2(!i) specify
+the address and length in bytes, respectively, of a memory buffer where a
+NULL-terminated ASCII string will be written identifying the full name of the
+bootlog file. If the memory buffer is not long enough to hold the entire
+string, the string is truncated down to the buffer size. Returns EBADARG if
+(!I)arg1(!i) is null or if (!I)arg2(!i) is 0. On success this call returns 0.
+
+S_GETBOOTLOG requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_CLOCKUTC
+!item [S_CLOCKUTC(0x0064)]
+S_CLOCKUTC called with an (!I)arg1(!i) of -1 inquires the kernel's notion of
+the hardware system clock. If the command returns a zero, the hardware clock
+is considered to tick in UTC; if it returns a positive non-zero value, it is
+considered to tick in local time. Any other positive value of (!I)arg1(!i)
+sets the current clock mode. On a 0 it is reset to UTC, or to local time
+otherwise.
 
 Although this call will never really change the setting of the hardware
 clock, due to the changed interpretation the clock seems to warp; don't play
@@ -543,9 +598,9 @@ ordinary distribution kernel.
 
 Root privileges are needed to change the debug level.
 
-!label S_DEBUGDEV
-!item [S_DEBUGDEV(0x03e9)]
-S_DEBUGDEV called with an (!I)arg1(!i) of -1 inquires the current
+!label S_DEBUGDEVICE
+!item [S_DEBUGDEVICE(0x03e9)]
+S_DEBUGDEVICE called with an (!I)arg1(!i) of -1 inquires the current
 (!nolink [BIOS]) device to output the debug information to. The order of
 defined (!nolink [BIOS]) devices is as follows:
 
@@ -565,6 +620,16 @@ much sense and may produce undesired results. The system does not restrict
 this in any way though, just assuming that you know what you're doing.
 
 Root privileges are needed to change the debug device.
+
+!label S_DEBUGKMTRACE
+!item [S_DEBUGKMTRACE(0x044c)]
+Dump out kmalloc'ed blocks with size and caller (debug kernel). (!I)arg1(!i)
+specify the address of the kmalloc'ed block to check and (!I)arg2(!i) specify
+the memory buffer where the dump will be written. Returns ENOENT if it fails.
+On success this call returns 0.
+
+S_DEBUGKMTRACE requires root euid, EPERM is returned otherwise and no action is
+performed.
 
 !label S_TIOCMGET
 !item [S_TIOCMGET(0x54f8)]
@@ -655,9 +720,9 @@ provides a safe access to supervisor memory. It's strictly encouraged to
 access GEMDOS variables and system vectors via the Ssystem(), because this
 way is considered safe for multiuser setups.
 
-(!I)arg1(!i) and (!I)arg2(!i) are long parameters specific for a 
-particular mode. If a mode doesn't use a parameter, it is 
-usually ignored, but should be set to a zero for future compatibility. 
+(!I)arg1(!i) and (!I)arg2(!i) are long parameters specific for a
+particular mode. If a mode doesn't use a parameter, it is
+usually ignored, but should be set to a zero for future compatibility.
 mode specifies a particular action as follows:
 
 !begin_xlist [S_OSNAM]
@@ -670,25 +735,25 @@ to be present if MiNT version at least 1.15 is detected.
 
 !label S_OSNAME
 !item [S_OSNAME(0x0000)]
-Identifies the operating system type. Returned longword contains a 
-32-bit positive number, which interpreted as an ASCII string gives a 
-4-character id. For MiNT the returned value is 0x4d694e54 
+Identifies the operating system type. Returned longword contains a
+32-bit positive number, which interpreted as an ASCII string gives a
+4-character id. For MiNT the returned value is 0x4d694e54
 ('MiNT').
 
 !label S_OSXNAME
 !item [S_OSXNAME(0x0001)]
-Identifies the subtype of the operating system. If this call 
-returns a zero or a negative value, that means, that no subtype is 
-available. Otherwise the returned value, when interpreted as an ASCII 
-string gives a 4-character subtype id. For FreeMiNT, being a 
+Identifies the subtype of the operating system. If this call
+returns a zero or a negative value, that means, that no subtype is
+available. Otherwise the returned value, when interpreted as an ASCII
+string gives a 4-character subtype id. For FreeMiNT, being a
 derivative of the MiNT, the returned value is 0x46726565 ('Free').
 
 If a subtype id is less than 4 characters long, it should be padded with zeros.
 
 !label S_OSVERSION
 !item [S_OSVERSION(0x0002)]
-Identifies the exact operating system version. Returned longword 
-contains a 32 bit positive version number encoded as follows: 
+Identifies the exact operating system version. Returned longword
+contains a 32 bit positive version number encoded as follows:
 
 !begin_xlist !compressed [24-31]
 !item [bits]
@@ -710,17 +775,17 @@ minor version number (0x0e for x.14)
 major version number (0x01 for 1.xx)
 !end_xlist
 
-Definition of an official release: every release for which in 
+Definition of an official release: every release for which in
 bits 0-7 a value of 0 is returned...
 
 !label S_OSHEADER
 !item [S_OSHEADER(0x0003)]
-Allows to access the TOS header in order to get some 
-information from. Current implementation allows to access the first 
-256 longwords of the header. The address of the required longword, 
-relative to the begin address of the TOS header, has to be specified as 
-arg1. Only even values are allowed (bit 0 of the 
-arg1 is masked out by the kernel). Always a whole 
+Allows to access the TOS header in order to get some
+information from. Current implementation allows to access the first
+256 longwords of the header. The address of the required longword,
+relative to the begin address of the TOS header, has to be specified as
+arg1. Only even values are allowed (bit 0 of the
+arg1 is masked out by the kernel). Always a whole
 longword is returned.
 
 !label S_OSBUILDDATE
@@ -737,12 +802,12 @@ binary year (0x07dd for 1998)
 !item [16-23]
 binary month (0x0c for the December)
 !item [24-31]
-binary day of the month 
+binary day of the month
 !end_xlist
 
 !label S_OSBUILDTIME
 !item [S_OSBUILDTIME(0x0005)]
-Returns a 32 bit positive value with the build time encoded as 
+Returns a 32 bit positive value with the build time encoded as
 follows:
 
 !begin_xlist !compressed [24-31]
@@ -762,12 +827,12 @@ day of week
 
 day of week has 1 for Monday, 2 for Tuesday... 7 for Sunday.
 
-The call should never return a zero in these bits, but if it 
+The call should never return a zero in these bits, but if it
 does, it should be interpreted as Sunday.
 
 !label S_OSCOMPILE
 !item [S_OSCOMPILE(0x0006)]
-Returns a 32-bit positive value specifying the primary CPU type the 
+Returns a 32-bit positive value specifying the primary CPU type the
 kernel has been compiled for. Encoding:
 
 !begin_xlist !compressed [16-31]
@@ -817,7 +882,7 @@ will return a 0x00 here, even if the machine is running 68040 or something.
 
 !label S_OSFEATURES
 !item [S_OSFEATURES(0x0007)]
-Returns a 32-bit positive value specifying the state of kernel 
+Returns a 32-bit positive value specifying the state of kernel
 features. Encoding:
 
 !begin_xlist !compressed [2-31]
@@ -825,10 +890,10 @@ features. Encoding:
 !item [~]    ~
 !item [0]    memory protection (1 = turned on)
 !item [1]    virtual memory (1 = turned on)
-!item [2-31] reserved for future usage 
+!item [2-31] reserved for future usage
 !end_xlist
 
-This call has an informative purpose only and you cannot toggle 
+This call has an informative purpose only and you cannot toggle
 anything with it.
 
 !label S_GETCOOKIE
@@ -836,29 +901,29 @@ anything with it.
 Fetches required information from the Cookie Jar.
 
 !begin_enumerate
-!item If arg1 is a value bigger than 65535 (0xffff), it is 
-interpreted as a tag id. The Cookie Jar is searched for such a tag, 
-then if the tag is found, the corresponding slot value is returned or 
+!item If arg1 is a value bigger than 65535 (0xffff), it is
+interpreted as a tag id. The Cookie Jar is searched for such a tag,
+then if the tag is found, the corresponding slot value is returned or
 -1 otherwise.
 
-!item If arg1 is a value between 1 and 65535, it is 
-interpreted as a slot number, not a tag id.Then the corresponding tag 
-id is fetched and returned or a value of -1 if the specified slot is 
-free or does not exist at all (a slot number past the end of the Cookie 
-Jar was specified). The first slot in the Cookie Jar is considered 
+!item If arg1 is a value between 1 and 65535, it is
+interpreted as a slot number, not a tag id.Then the corresponding tag
+id is fetched and returned or a value of -1 if the specified slot is
+free or does not exist at all (a slot number past the end of the Cookie
+Jar was specified). The first slot in the Cookie Jar is considered
 number 1.
 
-!item If arg1 is equal to a zero, then the Cookie Jar is 
-searched for the NULL cookie, then the corresponding slot value 
+!item If arg1 is equal to a zero, then the Cookie Jar is
+searched for the NULL cookie, then the corresponding slot value
 is returned.
 !end_enumerate
 
-The place where the value fetched from the Cookie Jar will be returned 
-is defined by the arg2. If this is a zero, the call 
-returns its values in the GEMDOS return value (d0). If the 
-arg2 is not a zero, it is interpreted as a pointer to a 
-memory location, where the slot tag or its value should be written to. 
-The return value is 0 (E_OK) then, if everything went OK, or -1 
+The place where the value fetched from the Cookie Jar will be returned
+is defined by the arg2. If this is a zero, the call
+returns its values in the GEMDOS return value (d0). If the
+arg2 is not a zero, it is interpreted as a pointer to a
+memory location, where the slot tag or its value should be written to.
+The return value is 0 (E_OK) then, if everything went OK, or -1
 otherwise.
 
 This behaviour (where arg2 != NULL) is not implemented in MiNT versions
@@ -866,11 +931,11 @@ below 1.14.8.
 
 !label S_SETCOOKIE
 !item [S_SETCOOKIE(0x0009)]
-Places a tag id specified by the arg1 with the value of 
-the arg2 in the Cookie Jar. If a slot with the specified 
-tag id already exists, it will be replaced with the new value. 
-NULL cookie is reallocated automatically and its value is 
-adjusted. If there are no more free slots, no action is performed and 
+Places a tag id specified by the arg1 with the value of
+the arg2 in the Cookie Jar. If a slot with the specified
+tag id already exists, it will be replaced with the new value.
+NULL cookie is reallocated automatically and its value is
+adjusted. If there are no more free slots, no action is performed and
 ENOMEM is returned instead.
 
 S_SETCOOKIE requires root euid, EACCES is returned otherwise and no action
@@ -971,15 +1036,15 @@ value.
 
 Setting the timeslice requires root privileges.
 
-!label S_FORCEFASTLOAD
-!item [S_FORCEFASTLOAD(0x0013)]
+!label S_FASTLOAD
+!item [S_FASTLOAD(0x0013)]
 Allows changing the interpretation of the FASTLOAD bit in the program
 header.
 
-On Ssystem(S_FORCEFASTLOAD, 0L, 0L); the program header bit will be used as
+On Ssystem(S_FASTLOAD, 0L, 0L); the program header bit will be used as
 before, this is actually equal to FASTLOAD=NO in mint.cnf.
 
-On Ssystem(S_FORCEFASTLOAD, 1L, 0L); , the program header bit will be
+On Ssystem(S_FASTLOAD, 1L, 0L); , the program header bit will be
 ignored and fastload will be forced for all programs.
 
 (!I)arg1(!i) = -1 allows interrogation of the current state of this
@@ -1110,18 +1175,73 @@ possible to allocate.
 
 Root privileges are required to use this mode.
 
-!label S_CAD
-!item [S_CAD(0x0019)]
+!label S_CTRLALTDEL
+!item [S_CTRLALTDEL(0x0019)]
 Reserved for future definition.
 
-!label S_CLOCKMODE
-!item [S_CLOCKMODE(0x0064)]
-S_CLOCKMODE(0x0064) S_CLOCKMODE called with an (!I)arg1(!i) of -1 inquires
-the kernel's notion of the hardware system clock. If the command returns a
-zero, the hardware clock is considered to tick in UTC; if it returns a
-positive non-zero value, it is considered to tick in local time. Any other
-positive value of (!I)arg1(!i) sets the current clock mode. On a 0 it is
-reset to UTC, or to local time otherwise.
+!label S_DELCOOKIE
+!item [S_DELCOOKIE(0x001a)]
+Removes a tag ID specified by (!I)arg1(!i) from the cookie jar. If there
+is no slot with the specified tag ID, no action is performed and EINVAL is
+returned instead.
+
+S_DELCOOKIE requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_LOADKBD
+!item [S_LOADKBD(0x001b)]
+Load the keyboard table into memory. (!I)arg1(!i) specify the address of the
+complete path to the keyboard table or NULL. If path is NULL the default path
+of <sysdir>/keyboard.tbl is used. Returns a negative GEMDOS error-code if it
+fails. On success this call returns 0 and _AKP and _ISO cookies are updated.
+
+S_LOADKBD requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_SETEXC
+!item [S_SETEXC(0x001c)]
+Allow Setexc().  Valid (!I)argc1(!i) values are as follows:
+
+!begin_xlist !compressed
+!item [Value]
+Meaning
+!item [~]
+~
+!item [-1]
+Return the current setting
+!item [0]
+Deny all (only kernel-processes may change sys-vectors)
+!item [1]
+Deny trap-changes (numbers 0-15)
+!item [2]
+Allow all (default)
+!end_xlist
+
+Returns EBADARG if (!I)arg1(!i) is greater than 2, or 0 on success.
+
+S_SETEXC requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_GETBOOTLOG
+!item [S_GETBOOTLOG(0x001d)]
+Inquires the file path of bootlog file. (!I)arg1(!i) and (!I)arg2(!i) specify
+the address and length in bytes, respectively, of a memory buffer where a
+NULL-terminated ASCII string will be written identifying the full name of the
+bootlog file. If the memory buffer is not long enough to hold the entire
+string, the string is truncated down to the buffer size. Returns EBADARG if
+(!I)arg1(!i) is null or if (!I)arg2(!i) is 0. On success this call returns 0.
+
+S_GETBOOTLOG requires root euid, EPERM is returned otherwise and no action is
+performed.
+
+!label S_CLOCKUTC
+!item [S_CLOCKUTC(0x0064)]
+S_CLOCKUTC called with an (!I)arg1(!i) of -1 inquires the kernel's notion of
+the hardware system clock. If the command returns a zero, the hardware clock
+is considered to tick in UTC; if it returns a positive non-zero value, it is
+considered to tick in local time. Any other positive value of (!I)arg1(!i)
+sets the current clock mode. On a 0 it is reset to UTC, or to local time
+otherwise.
 
 Although this call will never really change the setting of the hardware
 clock, due to the changed interpretation the clock seems to warp; don't play
@@ -1180,9 +1300,9 @@ ordinary distribution kernel.
 
 Root privileges are needed to change the debug level.
 
-!label S_DEBUGDEV
-!item [S_DEBUGDEV(0x03e9)]
-S_DEBUGDEV called with an (!I)arg1(!i) of -1 inquires the current
+!label S_DEBUGDEVICE
+!item [S_DEBUGDEVICE(0x03e9)]
+S_DEBUGDEVICE called with an (!I)arg1(!i) of -1 inquires the current
 (!nolink [BIOS]) device to output the debug information to. The order of
 defined (!nolink [BIOS]) devices is as follows:
 
@@ -1202,6 +1322,16 @@ much sense and may produce undesired results. The system does not restrict
 this in any way though, just assuming that you know what you're doing.
 
 Root privileges are needed to change the debug device.
+
+!label S_DEBUGKMTRACE
+!item [S_DEBUGKMTRACE(0x044c)]
+Dump out kmalloc'ed blocks with size and caller (debug kernel). (!I)arg1(!i)
+specify the address of the kmalloc'ed block to check and (!I)arg2(!i) specify
+the memory buffer where the dump will be written. Returns ENOENT if it fails.
+On success this call returns 0.
+
+S_DEBUGKMTRACE requires root euid, EPERM is returned otherwise and no action is
+performed.
 
 !label S_TIOCMGET
 !item [S_TIOCMGET(0x54f8)]
