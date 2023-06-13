@@ -1,0 +1,319 @@
+!iflang [english]
+
+
+!begin_node Psysctl
+(!begin_liste) [Availability]
+!item [Name:]
+(!rdouble)Psysctl(!ldouble) - Get or set system information.
+
+!item [Opcode:]
+350 (0x015e)
+
+!item [Syntax:]
+int32_t Psysctl ( int32_t *name, uint32_t namelen, void *old,
+						uint32_t *oldlenp, void *new, uint32_t newlen );
+
+!item [Description:]
+The function Psysctl retrieves system information and allows processes
+with appropriate privileges to set system information. The system
+information may be an integer, a string or a structure.
+
+(!I)name(!i) and (!I)namelen(!i) specify the system information to
+retrieve. (!I)name(!i) is an array of longwords which defines a path to
+the actual value. The first longword holds the top level name, the second
+longword is the second level name... (!I)namelen(!i) is the size of this
+array.
+
+The information is copied into the buffer specified by (!I)old(!i) and
+(!I)oldlenp(!i).
+
+Before the call, (!I)oldlenp(!i) points to a long specifiying the
+size of the buffer. After the call, this long word is set to the
+amount of copied data.
+
+If both (!I)old(!i) and (!I)oldlenp(!i) are set to NULL, the old value
+is not returned.
+
+If only (!I)old(!i) is set to NULL, (!I)oldlenp(!i) will be set to the
+amount of available data.
+
+To set a new value, (!I)new(!i) is set to a pointer to a buffer of
+lenght (!I)newlen(!i). Otherwise, (!I)new(!i) should be set to NULL
+and (!I)newlen(!i) set to 0.
+
+The top level names are defined with the following CTL_ prefix.
+
+!label %ctl_1
+(!B)CTL_KERN (1): Kernel(!b)
+!begin_xlist !compressed [KERN_OSTYPE]
+!item [KERN_OSTYPE]=1 (string) System version
+!item [KERN_OSRELEASE]=2 (string) System release
+!item [KERN_OSREV]=3 (integer) System revision
+!item [KERN_VERSION]=4 (string) Compile time information
+!item [KERN_HOSTNAME]=5 (string) Hostname
+!item [KERN_DOMAINNAME]=6 (string) (YP) Domainname
+!item [KERN_SECURELVL]=7 (integer) System security level
+!item [KERN_MAXPROC]=8 (integer) Max processes
+!item [KERN_MAXFILES]=9 (integer) Max open files
+!item [KERN_NGROUPS]=10 (integer) Number of supplemental group IDs
+!item [KERN_IOV_MAX]=11 (integer) Max iovec's for readv(2) etc.
+!item [KERN_LOGIN_NAME_MAX]=12 (integer) Max length login name + NUL
+!item [KERN_BOOTTIME]=13 (struct timeval) Time kernel was booted
+!item [KERN_INITIALTPA]=14 (integer) Max TPA size of a process
+!item [KERN_SYSDIR]=15 (string) The system directory
+!end_xlist
+
+!label %ctl_2
+(!B)CTL_HW (2): Generic CPU/IO(!b)
+!begin_xlist !compressed [HW_MACHINE]
+!item [HW_MACHINE]=1 (string) Machine class
+!item [HW_MACHINE_ARCH]=2 (string) Machine architecture
+!item [HW_MODEL]=3 (string) Specific machine model
+!item [HW_NCPU]=4 (integer) Number of CPUs
+!item [HW_BYTEORDER]=5 (integer) Machine byte order
+!item [HW_PAGESIZE]=6 (integer) Software page size
+!item [HW_FREEPHYSMEM]=7 (integer) Free physical memory
+!end_xlist
+
+!label %ctl_3
+(!B)CTL_MACHDEP (3): Machine dependent (not yet implemented)(!b)
+
+!label %ctl_4
+(!B)CTL_DEBUG (4): Debugging parameters (not yet implemented)(!b)
+
+!label %ctl_5
+(!B)CTL_PROC (5): Per-proc attributes(!b) (!nl)
+The second level name specifies the process ID (PROC_CURPROC or any PID),
+the third level name specifies the system information (PROC_PID_DEBUG).
+!begin_xlist !compressed [PROC_CURPROC]
+!item [PROC_CURPROC]=0x7fffffff (2^31-1) (integer) Select the current process
+!item [Other value] (integer) ID of specified process
+!begin_xlist !compressed
+!item [PROC_PID_DEBUG]=1 (integer) Process debug level
+!end_xlist
+!end_xlist
+
+!label %ctl_6
+(!B)CTL_KBD (6): Keyboard configuration(!b)
+!begin_xlist !compressed [KBD_PC_STYLE_CAPS]
+!item [KBD_PC_STYLE_CAPS]=1 (integer) CAPS key operate in PC style mode
+!item [KBD_MOUSE_PIXELS]=2 (integer) Keyboard mouse movement pixels
+!item [KBD_PIXELS_FINE]=3 (integer) Keyboard mouse movement pixels 'fine'
+!end_xlist
+
+!item [(!nolink [Return]) value:]
+The function can return the following results:
+
+!begin_xlist !compressed [ERANGE:]
+!item [E_OK~ :]
+No error has arisen
+!item [ENOMEM :]
+The amount of data available is greater than the size of the buffer supplied
+!item [EACCDN:]
+An attempt was made to change a read-only value or was made by a process
+with insufficient privilege
+!item [ERANGE:]
+The (!I)name(!i) array was less than two or greater than CTL_MAXNAME
+!item [ENOTDIR:]
+(!I)name(!i) specifies an intermediate rather than terminal name
+!item [EOPNOTSUPP:]
+(!I)name(!i) not found
+!item [ESRCH]
+Process not found
+!end_xlist
+
+!item [Availability:]
+This function is available as of FreeMiNT 1.15.12.
+
+!item [Group:]
+Process functions
+
+!item [See also:]
+(!link [Binding][Bindings for Psysctl]) ~ Sysconf
+(!ende_liste)
+
+
+!begin_node Bindings for Psysctl
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t Psysctl ( int32_t *name, uint32_t namelen, void *old,
+						uint32_t *oldlenp, void *new, uint32_t newlen );
+
+!item [Assembler:]
+!begin_verbatim
+move.l    newlen,-(sp)   ; Offset 22
+pea       new,-(sp)      ; Offset 18
+pea       oldlenp,-(sp)  ; Offset 14
+pea       old,-(sp)      ; Offset 10
+move.l    namelen,-(sp)  ; Offset 6
+pea       name,-(sp)     ; Offset 2
+move.w    #350,-(sp)     ; Offset 0
+trap      #1             ; GEMDOS
+lea       $1A(sp),sp     ; Correct stack
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node Psysctl
+(!begin_liste) [Beschreibung]
+!item [Name:]
+(!rdouble)Psysctl(!ldouble) - Get or set system information.
+
+!item [Gemdosnummer:]
+350 (0x015e)
+
+!item [Deklaration:]
+int32_t Psysctl ( int32_t *name, uint32_t namelen, void *old,
+						uint32_t *oldlenp, void *new, uint32_t newlen );
+
+!item [Beschreibung:]
+The function Psysctl retrieves system information and allows processes
+with appropriate privileges to set system information. The system
+information may be an integer, a string or a structure.
+
+(!I)name(!i) and (!I)namelen(!i) specify the system information to
+retrieve. (!I)name(!i) is an array of longwords which defines a path to
+the actual value. The first longword holds the top level name, the second
+longword is the second level name... (!I)namelen(!i) is the size of this
+array.
+
+The information is copied into the buffer specified by (!I)old(!i) and
+(!I)oldlenp(!i).
+
+Before the call, (!I)oldlenp(!i) points to a long specifiying the
+size of the buffer. After the call, this long word is set to the
+amount of copied data.
+
+If both (!I)old(!i) and (!I)oldlenp(!i) are set to NULL, the old value
+is not returned.
+
+If only (!I)old(!i) is set to NULL, (!I)oldlenp(!i) will be set to the
+amount of available data.
+
+To set a new value, (!I)new(!i) is set to a pointer to a buffer of
+lenght (!I)newlen(!i). Otherwise, (!I)new(!i) should be set to NULL
+and (!I)newlen(!i) set to 0.
+
+The top level names are defined with the following CTL_ prefix.
+
+!label %ctl_1
+(!B)CTL_KERN (1): Kernel(!b)
+!begin_xlist !compressed [KERN_OSTYPE]
+!item [KERN_OSTYPE]=1 (string) System version
+!item [KERN_OSRELEASE]=2 (string) System release
+!item [KERN_OSREV]=3 (integer) System revision
+!item [KERN_VERSION]=4 (string) Compile time information
+!item [KERN_HOSTNAME]=5 (string) Hostname
+!item [KERN_DOMAINNAME]=6 (string) (YP) Domainname
+!item [KERN_SECURELVL]=7 (integer) System security level
+!item [KERN_MAXPROC]=8 (integer) Max processes
+!item [KERN_MAXFILES]=9 (integer) Max open files
+!item [KERN_NGROUPS]=10 (integer) Number of supplemental group IDs
+!item [KERN_IOV_MAX]=11 (integer) Max iovec's for readv(2) etc.
+!item [KERN_LOGIN_NAME_MAX]=12 (integer) Max length login name + NUL
+!item [KERN_BOOTTIME]=13 (struct timeval) Time kernel was booted
+!item [KERN_INITIALTPA]=14 (integer) Max TPA size of a process
+!item [KERN_SYSDIR]=15 (string) The system directory
+!end_xlist
+
+!label %ctl_2
+(!B)CTL_HW (2): Generic CPU/IO(!b)
+!begin_xlist !compressed [HW_MACHINE]
+!item [HW_MACHINE]=1 (string) Machine class
+!item [HW_MACHINE_ARCH]=2 (string) Machine architecture
+!item [HW_MODEL]=3 (string) Specific machine model
+!item [HW_NCPU]=4 (integer) Number of CPUs
+!item [HW_BYTEORDER]=5 (integer) Machine byte order
+!item [HW_PAGESIZE]=6 (integer) Software page size
+!item [HW_FREEPHYSMEM]=7 (integer) Free physical memory
+!end_xlist
+
+!label %ctl_3
+(!B)CTL_MACHDEP (3): Machine dependent (not yet implemented)(!b)
+
+!label %ctl_4
+(!B)CTL_DEBUG (4): Debugging parameters (not yet implemented)(!b)
+
+!label %ctl_5
+(!B)CTL_PROC (5): Per-proc attributes(!b) (!nl)
+The second level name specifies the process ID (PROC_CURPROC or any PID),
+the third level name specifies the system information (PROC_PID_DEBUG).
+!begin_xlist !compressed [PROC_CURPROC]
+!item [PROC_CURPROC]=0x7fffffff (2^31-1) (integer) Select the current process
+!item [Other value] (integer) ID of specified process
+!begin_xlist !compressed
+!item [PROC_PID_DEBUG]=1 (integer) Process debug level
+!end_xlist
+!end_xlist
+
+!label %ctl_6
+(!B)CTL_KBD (6): Keyboard configuration(!b)
+!begin_xlist !compressed [KBD_PC_STYLE_CAPS]
+!item [KBD_PC_STYLE_CAPS]=1 (integer) CAPS key operate in PC style mode
+!item [KBD_MOUSE_PIXELS]=2 (integer) Keyboard mouse movement pixels
+!item [KBD_PIXELS_FINE]=3 (integer) Keyboard mouse movement pixels 'fine'
+!end_xlist
+
+!item [Ergebnis:]
+Die Funktion kann folgende R(!uumlaut)ckgabewerte liefern:
+
+!begin_xlist !compressed [ERANGE:]
+!item [E_OK~ :]
+No error has arisen
+!item [ENOMEM :]
+The amount of data available is greater than the size of the buffer supplied
+!item [EACCDN:]
+An attempt was made to change a read-only value or was made by a process
+with insufficient privilege
+!item [ERANGE:]
+The (!I)name(!i) array was less than two or greater than CTL_MAXNAME
+!item [ENOTDIR:]
+(!I)name(!i) specifies an intermediate rather than terminal name
+!item [EOPNOTSUPP:]
+(!I)name(!i) not found
+!item [ESRCH]
+Process not found
+!end_xlist
+
+!item [Verf(!uumlaut)gbar:]
+Siesteht ab FreeMiNT 1.15.12 zur Verf(!uumlaut)gung.
+
+!item [Gruppe:]
+Prozessfunktionen
+
+!item [Querverweis:]
+(!link [Binding][Bindings f(!uumlaut)r Psysctl]) ~ Sysconf
+(!ende_liste)
+
+
+!begin_node Bindings f(!uumlaut)r Psysctl
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t Psysctl ( int32_t *name, uint32_t namelen, void *old,
+						uint32_ *oldlenp, void *new, uint32_t newlen );
+
+!item [Assembler:]
+!begin_verbatim
+move.l    newlen,-(sp)   ; Offset 22
+pea       new,-(sp)      ; Offset 18
+pea       oldlenp,-(sp)  ; Offset 14
+pea       old,-(sp)      ; Offset 10
+move.l    namelen,-(sp)  ; Offset 6
+pea       name,-(sp)     ; Offset 2
+move.w    #350,-(sp)     ; Offset 0
+trap      #1             ; GEMDOS aufrufen
+lea       $1A(sp),sp     ; Stack korrigieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif
