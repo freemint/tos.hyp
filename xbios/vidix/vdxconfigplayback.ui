@@ -1,0 +1,255 @@
+!iflang [english]
+
+
+!begin_node vdxConfigPlayback
+(!begin_liste) [Availability]
+
+!item [Name:]
+(!rdouble)vdxConfigPlayback(!ldouble) - Prepare BES (BackEnd Scaler).
+
+!item [Opcode:]
+406 (0x0196)
+
+!item [Syntax:]
+int32_t vdxConfigPlayback ( vidix_playback_t *info ) ;
+
+!item [Description:]
+Driver should prepare BES on this call. 
+
+APP pass to driver the following (!I)info(!i):
+!begin_xlist !compressed [vidix_playback_t.blend_factor]
+!item [Field]
+Meaning
+!item [vidix_playback_t.fourcc]
+Contains fourcc of movie.
+!item [vidix_playback_t.capability]
+Currently contains a copy of vidix_capability_t.flags.
+!item [vidix_playback_t.blend_factor]
+Currently unused.
+!item [vidix_playback_t.src]
+x,y,w,h fields contain original movie size (in pixels) x and y often are nulls.
+!item [vidix_playback_t.src.pitch]
+y, u, v fields contain source pitches for each Y,U,V plane in bytes (For packed
+fourcc only Y value is used). They are hints for driver to use same destinition
+pitches as in source memory (to speed up memcpy process). Note: when source
+pitches are unknown or variable these field will be filled into 0.
+!item [vidix_playback_t.dest]
+x,y,w,h fields contains destination rectangle on the screen in pixels.
+!item [vidix_playback_t.num_frames]
+Maximal # of frames which can be used by APP. (Currently 10).
+!end_xlist
+
+Driver should fill following fields:
+!begin_xlist !compressed []
+!item [Field]
+Meaning
+!item [vidix_playback_t.num_frames]
+Real # of frames which will be used by driver. (Should be less or equal to app's num_frames).
+!item [vidix_playback_t.dest.pitch]
+y, u, v fields should contain alignment for each Y,U,V plane in bytes. (For
+packed fourcc only Y value is used).
+!item [vidix_playback_t.frame_size]
+Driver should tell to app which size of source frame (src.w and src.h) should
+use APP (according to pitches and offsets).
+!item [vidix_playback_t.offsets]
+Offsets from begin of BES memory for each frame.
+!item [vidix_playback_t.offset]
+y, u, v fields should contain offset for each Y,U,V plane within frame. (For
+packed fourcc only Y value is used).
+!item [vidix_playback_t.dga_addr]
+Address of BES memory.
+!end_xlist
+
+Also see this picture:
+!begin_verbatim
+    VIDEO MEMORY layout:
+     +-----------  It's begin of video memory     End of video memory--------------+
+     |                                                                             |
+     v                                                                             v
+     [      RGB memory                         |         YUV memory    |  UNDEF    ]
+                                               ^
+                                               |
+                                               +---- begin of BES memory         
+    BES MEMORY layout:
+     +-------- begin of BES memory
+     |
+     v
+     [ | |                      |       |       |
+       ^ ^                      ^       ^       ^
+       | |                      |       |       + BEGIN of second frame
+       | |                      |       + BEGIN of V plane
+       | |                      + BEGIN of U plane
+       | +------- BEGIN of Y plane
+       |
+       +--------- BEGIN of first frame
+!end_verbatim
+
+This means that in general case: (!nl)
+offset of frame != offset of BES (!nl)
+offset of Y plane != offset of first frame
+
+But often: (!nolink [vidix_playback_t]).offsets[0] = (!nolink [vidix_playback_t]).offset.y = 0;
+
+Formula: (For Y plane) copy source to:
+    (!nolink [vidix_playback_t]).dga_addr + (!nolink [vidix_playback_t]).offsets[i] + (!nolink [vidix_playback_t]).offset.y
+
+!item [(!nolink [Return]) value:]
+Driver should return 0.
+
+!item [Availability:]
+CT60/CTPCI hardware acceleration board and FireBee.
+
+!item [Group:]
+(!link [VIDIX XBIOS extension][VIDIX XBIOS extension])
+
+!item [See also:]
+(!link [Binding] [Bindings for vdxConfigPlayback]) ~ vdxPlaybackCopyFrame ~
+vdxPlaybackFrameSelect ~ vdxQueryDMAStatus ~ vdxQueryFourcc
+
+(!ende_liste)
+
+!begin_node Bindings for vdxConfigPlayback
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t vdxConfigPlayback ( vidix_playback_t *info );
+!item [Assembler:]
+!begin_verbatim
+pea       info         ; Offset 2
+move.w    #406,-(sp)   ; Offset 0
+trap      #14          ; Call XBIOS
+addq.l    #6,sp        ; Correct stack
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!else
+
+
+!begin_node vdxConfigPlayback
+(!begin_liste) [Beschreibung]
+
+!item [Name:]
+(!rdouble)vdxConfigPlayback(!ldouble) - Prepare BES (BackEnd Scaler).
+
+!item [Xbiosnummer:]
+406 (0x0196)
+
+!item [Deklaration:]
+int32_t vdxConfigPlayback ( vidix_playback_t *info );
+
+!item [Beschreibung:]
+Driver should prepare BES on this call. 
+
+APP pass to driver the following (!I)info(!i):
+!begin_xlist !compressed [vidix_playback_t.blend_factor]
+!item [Field]
+Meaning
+!item [vidix_playback_t.fourcc]
+Contains fourcc of movie.
+!item [vidix_playback_t.capability]
+Currently contains a copy of vidix_capability_t.flags.
+!item [vidix_playback_t.blend_factor]
+Currently unused.
+!item [vidix_playback_t.src]
+x,y,w,h fields contain original movie size (in pixels) x and y often are nulls.
+!item [vidix_playback_t.src.pitch]
+y, u, v fields contain source pitches for each Y,U,V plane in bytes (For packed
+fourcc only Y value is used). They are hints for driver to use same destinition
+pitches as in source memory (to speed up memcpy process). Note: when source
+pitches are unknown or variable these field will be filled into 0.
+!item [vidix_playback_t.dest]
+x,y,w,h fields contains destination rectangle on the screen in pixels.
+!item [vidix_playback_t.num_frames]
+Maximal # of frames which can be used by APP. (Currently 10).
+!end_xlist
+
+Driver should fill following fields:
+!begin_xlist !compressed []
+!item [Field]
+Meaning
+!item [vidix_playback_t.num_frames]
+Real # of frames which will be used by driver. (Should be less or equal to app's num_frames).
+!item [vidix_playback_t.dest.pitch]
+y, u, v fields should contain alignment for each Y,U,V plane in bytes. (For
+packed fourcc only Y value is used).
+!item [vidix_playback_t.frame_size]
+Driver should tell to app which size of source frame (src.w and src.h) should
+use APP (according to pitches and offsets).
+!item [vidix_playback_t.offsets]
+Offsets from begin of BES memory for each frame.
+!item [vidix_playback_t.offset]
+y, u, v fields should contain offset for each Y,U,V plane within frame. (For
+packed fourcc only Y value is used).
+!item [vidix_playback_t.dga_addr]
+Address of BES memory.
+!end_xlist
+
+Also see this picture:
+!begin_verbatim
+    VIDEO MEMORY layout:
+     +-----------  It's begin of video memory     End of video memory--------------+
+     |                                                                             |
+     v                                                                             v
+     [      RGB memory                         |         YUV memory    |  UNDEF    ]
+                                               ^
+                                               |
+                                               +---- begin of BES memory         
+    BES MEMORY layout:
+     +-------- begin of BES memory
+     |
+     v
+     [ | |                      |       |       |
+       ^ ^                      ^       ^       ^
+       | |                      |       |       + BEGIN of second frame
+       | |                      |       + BEGIN of V plane
+       | |                      + BEGIN of U plane
+       | +------- BEGIN of Y plane
+       |
+       +--------- BEGIN of first frame
+!end_verbatim
+
+This means that in general case: (!nl)
+offset of frame != offset of BES (!nl)
+offset of Y plane != offset of first frame
+
+But often: (!nolink [vidix_playback_t]).offsets[0] = (!nolink [vidix_playback_t]).offset.y = 0;
+
+Formula: (For Y plane) copy source to:
+    (!nolink [vidix_playback_t]).dga_addr + (!nolink [vidix_playback_t]).offsets[i] + (!nolink [vidix_playback_t]).offset.y
+
+!item [Ergebnis:]
+Driver should return 0.
+
+!item [Verf(!uumlaut)gbar:]
+CT60/CTPCI hardware acceleration board and FireBee.
+
+!item [Gruppe:]
+(!link [VIDIX-XBIOS-Erweiterung][VIDIX-XBIOS-Erweiterung])
+
+!item [Querverweis:]
+(!link [Binding] [Bindings f(!uumlaut)r vdxConfigPlayback]) ~ vdxPlaybackCopyFrame ~
+vdxPlaybackFrameSelect ~ vdxQueryDMAStatus ~ vdxQueryFourcc
+
+(!ende_liste)
+
+!begin_node Bindings f(!uumlaut)r vdxConfigPlayback
+!ignore_index
+(!begin_liste) [Assembler:]
+!item [C:]
+int32_t vdxConfigPlayback ( vidix_playback_t *info );
+!item [Assembler:]
+!begin_verbatim
+pea       info         ; Offset 2
+move.w    #406,-(sp)   ; Offset 0
+trap      #14          ; XBIOS aufrufen
+addq.l    #6,sp        ; Stack korrigieren
+!end_verbatim
+(!ende_liste)
+!end_node
+!end_node
+
+
+!endif
