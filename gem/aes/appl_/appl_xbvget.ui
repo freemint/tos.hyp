@@ -1,21 +1,21 @@
 !iflang [english]
 
-!begin_node appl_xbvset
+!begin_node appl_xbvget
 (!begin_liste) [Availability]
 !item [Name:]
-(!rdouble)Extended application bit-vector set(!ldouble) - Set the available logical drives for
+(!rdouble)Extended application bit-vector get(!ldouble) - Get the available logical drives for
 the file-selector.
 
 !item [Opcode:]
 18
 !item [Syntax:]
-int16_t appl_xbvset ( uint32_t bvdisk, uint32_t bvhard );
+int16_t appl_xbvget ( uint32_t *bvdisk, uint32_t *bvhard );
 
 !item [Description:]
-The call appl_xbvset informs (!nolink [GEM]) about the logical drives that are
+The call appl_xbvget gets (!nolink [GEM]) the list of logical drives that are
 present; it's needed, amongst others, for the file-selector, and this extended
 version allows drives beyond P:. The following apply:
-!begin_ilist !compressed [Parameter]
+!begin_xlist !compressed [Parameter]
 !item [Parameter]
 Meaning
 !item [~]
@@ -24,10 +24,10 @@ Meaning
 Bit-vector of floppy drives present (bit 31 = Drive A: etc).
 !item [bvhard]
 Bit-vector of hard drives present (bit 31 = Drive A: etc).
-!end_ilist
+!end_xlist
 
 !item [(!nolink [Return]) value:]
-Return value of the function is unknown at present.
+The return value is always 1.
 
 !item [Availability:]
 (!nolink [GEM])/4, (!nolink [GEM])/5 and FreeGEM.
@@ -39,25 +39,28 @@ the "abilities" bitmap.
 Application library
 
 !item [See also:]
-(!link [Binding] [Bindings for appl_xbvset]) ~ appl_bvset ~ appl_xbvget
+(!link [Binding] [Bindings for appl_xbvget]) ~ appl_bvset ~ appl_xbvset
 (!ende_liste)
 
 
 
-!begin_node Bindings for appl_xbvset
+!begin_node Bindings for appl_xbvget
 !ignore_index
 (!begin_liste) [GEM-Arrays]
 !item [C:]
-int16_t appl_xbvset ( uint32_t bvdisk, uint32_t bvhard );
+int16_t appl_xbvget ( uint32_t *bvdisk, uint32_t *bvhard );
 !item [Binding:]
 !begin_verbatim
-int16_t appl_xbvset (uint32_t bvdisk, uint32_t bvhard)
+int16_t appl_xbvget (uint32_t *bvdisk, uint32_t *bvhard)
 {
-   int_in[0]  = 1;
-   addr_in[0] = bvdisk;
-   addr_in[1] = bvhard;
+   int_in[0]  = 0;
+   
+   crys_if(18);
 
-   return ( crys_if(18) );  
+   *bvdisk = int_out[1..2];
+   *bvhard = int_out[3..4];
+
+   return ( int_out[0] );
 }
 !end_verbatim
 !item [GEM-Arrays:]
@@ -66,13 +69,13 @@ Address !! Element !! (!nolink [Contents])
 !hline
 control !! control[0] !! 18    # Function opcode
 control+2 !! control[1] !! 1     # Entry in int_in
-control+4 !! control[2] !! 1     # Entry in int_out
-control+6 !! control[3] !! 2     # Entry in addr_in
+control+4 !! control[2] !! 5     # Entry in int_out
+control+6 !! control[3] !! 0     # Entry in addr_in
 control+8 !! control[4] !! 0     # Entry in addr_out
-int_in !! int_in[0] !! 1
-addr_in !! addr_in[0] !! bvdisk
-addr_in+4 !! addr_in[1] !! bvhard
-int_out !! int_out[0] !! Return value
+int_in !! int_in[0] !! 0
+int_out   !! int_out[0] !! Return value
+int_out+2 !! int_out[1..2] !! bvdisk
+int_out+6 !! int_out[3..4] !! bvhard
 !end_table
 (!ende_liste)
 !end_node
@@ -80,20 +83,21 @@ int_out !! int_out[0] !! Return value
 
 !else
 
-!begin_node appl_xbvset
+!begin_node appl_xbvget
 (!begin_liste) [Beschreibung]
 !item [Name:]
-(!rdouble)Extended application bit-vector set(!ldouble)
+(!rdouble)Extended application bit-vector get(!ldouble) - ermittelt die
+angeschlossenen logischen Laufwerke f(!uumlaut)r die Dateiauswahlbox
 
 !item [AES-Nummer:]
 18
 !item [Deklaration:]
-int16_t appl_xbvset ( uint32_t bvdisk, uint32_t bvhard );
+int16_t appl_xbvget ( uint32_t *bvdisk, uint32_t *bvhard );
 
 !item [Beschreibung:]
-Die Funktion informiert das GEM (!uumlaut)ber die vorhandenen logischen Laufwerke,
-die u.a. f(!uumlaut)r die Dateiauswahl-box (Fileselector) ben(!oumlaut)tigt werden. Es gilt:
-!begin_ilist !compressed [Parameter]
+Die Funktion ermittelt die Liste der vorhandenen logischen Laufwerke,
+die u.a. f(!uumlaut)r die Dateiauswahl-box (Fileselector) verwendet werden. Es gilt:
+!begin_xlist !compressed [Parameter]
 !item [Parameter]
 Bedeutung
 !item [~]
@@ -102,10 +106,10 @@ Bedeutung
 Bitvektor der vorhandenen Diskettenlaufwerke (Bit-31 = Laufwerk-A etc).
 !item [bvhard]
 Bitvektor der vorhandenen Festplattenlaufwerke (Bit-31 = Laufwerk-A etc).
-!end_ilist
+!end_xlist
 
 !item [Ergebnis:]
-Der R(!uumlaut)ckgabewert der Funktion ist z.Zt. nicht bekannt.
+Als Ergebnis wird immer eine 1 zur(!uumlaut)ckgegeben.
 
 !item [Verf(!uumlaut)gbar:]
 (!nolink [GEM])/4, (!nolink [GEM])/5 und FreeGEM.
@@ -119,27 +123,29 @@ set in the "abilities" bitmap.
 (!link [Applikationen][Applikationsfunktionen])
 
 !item [Querverweis:]
-(!link [Binding] [Bindings f(!uumlaut)r appl_xbvset]) ~ appl_bvset ~
-appl_xbvget
+(!link [Binding] [Bindings f(!uumlaut)r appl_xbvget]) ~ appl_bvset ~ appl_xbvset
 
 (!ende_liste)
 
 
 
-!begin_node Bindings f(!uumlaut)r appl_xbvset
+!begin_node Bindings f(!uumlaut)r appl_xbvget
 !ignore_index
 (!begin_liste) [GEM-Arrays]
 !item [C:]
-int16_t appl_xbvset ( uint32_t bvdisk, uint32_t bvhard );
+int16_t appl_xbvget ( uint32_t *bvdisk, uint32_t *bvhard );
 !item [Umsetzung:]
 !begin_verbatim
-int16_t appl_xbvset (uint32_t bvdisk, uint32_t bvhard)
+int16_t appl_xbvget (uint32_t *bvdisk, uint32_t *bvhard)
 {
-   int_in[0]  = 1;
-   addr_in[0] = bvdisk;
-   addr_in[1] = bvhard;
+   int_in[0]  = 0;
 
-   return ( crys_if(18) );  
+   crys_if(18);
+
+   *bvdisk = int_out[1..2];
+   *bvhard = int_out[3..4];
+
+   return ( int_out[0] );
 }
 !end_verbatim
 !item [GEM-Arrays:]
@@ -148,12 +154,12 @@ Adresse !! Feldelement !! Belegung
 !hline
 control !! control[0] !! 18    # Opcode der Funktion
 control+2 !! control[1] !! 1     # Eintr(!aumlaut)ge in int_in
-control+4 !! control[2] !! 1     # Eintr(!aumlaut)ge in int_out
-control+6 !! control[3] !! 2     # Eintr(!aumlaut)ge in addr_in
+control+4 !! control[2] !! 5     # Eintr(!aumlaut)ge in int_out
+control+6 !! control[3] !! 0     # Eintr(!aumlaut)ge in addr_in
 control+8 !! control[4] !! 0     # Eintr(!aumlaut)ge in addr_out
-addr_in !! addr_in[0] !! bvdisk
-addr_in+4 !! addr_in[1] !! bvhard
-int_out !! int_out[0] !! Return-Wert
+int_out   !! int_out[0] !! (!nolink [Return])-Wert
+int_out+2 !! int_out[1..2] !! bvdisk
+int_out+6 !! int_out[3..4] !! bvhard
 !end_table
 (!ende_liste)
 !end_node
