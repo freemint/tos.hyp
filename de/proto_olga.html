@@ -1,0 +1,2127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: OLGA-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_ltl.html"><img src="udo_lf.gif" alt="LTL-Protokoll" title="LTL-Protokoll" border="0" width="24" height="24">LTL-Protokoll</a>
+<a name="UDO_nav_rg_HEAD" href="proto_seproto.html"><img src="udo_rg.gif" alt="SE-Protokoll" title="SE-Protokoll" border="0" width="24" height="24">SE-Protokoll</a>
+
+<hr>
+
+<h1><a name="OLGA-Protokoll">15.8 OLGA-Protokoll</a></h1>
+<a name="Object-Linking"></a>
+<a name="Linking_2C_20Object-"></a>
+<p>Das OLGA-Protokoll (Object Linking for GEM-Applications)
+wurde von <i>Thomas Much</i> entwickelt, und ermöglicht Object
+Linking auch unter <a href="gem_about.html">GEM</a>.
+</p>
+<p><b>Da dieses Konzept vielleicht nicht allen Lesern bekannt ist,
+zunächst ein mögliches Anwendungsbeispiel:</b> Stellen Sie sich vor,
+Sie benutzen Ihre Textverarbeitung und möchten ein Dokument durch
+eine Grafik etwas auflockern. Nachdem Sie die Grafik im Text plaziert
+haben, entscheiden Sie sich, diese noch geringfügig zu verändern.
+Normalerweise wechseln Sie dazu in das Grafikprogramm, nehmen dort die
+nötigen Änderungen vor, wechseln zurück in die Textverarbeitung,
+verwerfen die alte Grafik, importieren und plazieren die neue. Würden
+beide Applikationen (d.h. Grafikprogramm und Textverarbeitung) das
+OLGA-Protokoll unterstützen, könnte die Lösung dieser Aufgabe
+jedoch wie folgt aussehen: Sie wechseln in das Grafikprogramm,
+modifizieren dort die Grafik und nach dem Abspeichern sind Sie fertig!
+Die Textverarbeitung erkennt <i>automatisch</i>, daß die Grafik
+verändert wurde, und liest diese lebstständig ein!
+</p>
+<p>Das obige Beispiel setzt dabei ein Multitasking-Betriebssystem
+wie <a href="magic.html">MagiC</a> oder MultiTOS voraus. Und in der Tat: Single-TOS-Systeme
+werden von OLGA nicht (mehr) unterstützt. Wer sich näher mit dem
+OLGA-Protokoll beschäftigen möchte, sollte die folgenden Punkte
+beachten:
+</p>
+<ul>
+<li> <a href="#OLGA-Initialisierung">Initialisierung und Terminierung</a>
+</li>
+<li> <a href="#OLGA-Server">Funktionen eines Servers</a>
+</li>
+<li> <a href="#OLGA-Client">Funktionen eines Clients</a>
+</li>
+<li> <a href="#OLGA-Info-Dateiformat">Das Info-Datei-Format</a>
+</li>
+</ul>
+
+<p>OLGA arbeitet <i>dokumentenzentriert</i>, d.h. das Protokoll
+ist darauf vorbereitet, daß eine Applikation mehrere Dokumente (evtl.
+sogar mit komplett verschiedenen Datentypen) verwalten kann. Zur Steuerung
+des Object-Linkings wird ein sogenannter <b>OLGA-Manager</b> (kurz:
+Manager) eingesetzt. Die Kommunikation zwischen den Applikationen wird
+komplett über diesen Manager abgewickelt, vom dem es übrigens immer
+nur <i>einen</i> im System geben kann.
+</p>
+<p>Das Bild zeigt eine einfach OLGA-Verbindung
+</p>
+<p><img src="bilder/gif/olga_1.gif" alt="" title="" border="0" width="278" height="142"></p>
+<p>Das eigentliche Object-Linking wird bei OLGA durch sogenannte
+<b>Links</b> realisiert: dies sind Referenzen des Clients auf
+Datenobjekte, oder genauer: Dateinamen mit <i>absolutem</i> Pfad.
+Wird nun vom Server ein Objekt geändert, auf das ein Link besteht, so
+wird der Client (vom Manager) davon unterrichtet, und kann das
+geänderte Objekt neu darstellen.
+</p>
+<p>From Rev 1.2 (1996-11-20) onwards, extra functions were added
+and the OLGA architecture model now looks like this:
+</p>
+<p><img src="bilder/gif/olga_4.gif" alt="" title="" border="0" width="342" height="169"></p>
+<p>The above illustration shows the distribution of services
+between the OLGA-Manager and the applications using it (i.e. <a href="#OLGA-Client">Client</a> or
+<a href="#OLGA-Server">Server</a>). During linking, InplaceDrawing and Notification, the correct
+balance of communication between Manager and application for the
+embedding is the sole responsibility of the Client application.
+</p>
+<p>Finally, the Info files are co-ordinated by the Manager but then
+operate directly between Server and Client applications. Schematically
+communications are handled something like this:
+</p>
+<p><img src="bilder/gif/olga_3.gif" alt="" title="" border="0" width="515" height="255"></p>
+<p>Querverweis: <a href="proto_av.html">AV-Protokoll</a> &nbsp; <a href="proto_dd.html">Drag&amp;Drop-Protokoll</a>
+</p>
+<h3><a name="OLGA-Initialisierung">15.8.1 OLGA-Initialisierung</a></h3>
+<p><u>Initialisierung und Terminierung bei OLGA</u>
+</p>
+<p>Das <a href="#OLGA-Protokoll">OLGA-Protokoll</a> entspricht dem OLE-Protokoll, welches Object
+Embedding mit OEP (Object Exchange Protocol) und Objekt Linking mit
+OLGA ermöglicht. Da es sehr sinnvoll sein kann, beide Varianten in
+einer Applikation zu unterstützen, werde <i>beide</i> Protokolle (d.h.
+OLGA und OEP) mit denselben Nachrichten evtl. <i>gleichzeitig</i> (!)
+initialisiert. Die notwendigen Routinen um sich an- bzw. abzumelden
+lauten:
+</p>
+<ul>
+<li> <a href="#OLE_EXIT">OLE_EXIT</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Aus dem Protokoll ausklinken.
+</li>
+<li> <a href="#OLE_INIT">OLE_INIT</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Applikation beim Manager anmelden.
+</li>
+<li> <a href="#OLE_NEW">OLE_NEW</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Manager wurde nachgestartet.
+</li>
+<li> <a href="#OLGA_INIT">OLGA_INIT</a>&nbsp;&nbsp;&nbsp;&nbsp;Bestätigung für Anmeldung per OLE_INIT.
+</li>
+</ul>
+
+<p>Wie bereits erwähnt erfolgt die Kommunikation zwischen den
+OLGA-Applikationen über einen Manager, dessen <a href="aes_main.html">AES</a>-ID für den
+Nachrichtenaustausch ermittelt werden muss. Das Kochrezept hierzu
+lautet:
+</p>
+<p>&#x2022; <b>Fall 1: Die Applikation benötigt OLE (d.h. OEP und
+OLGA)</b>
+</p>
+<table class="UDO_env_xlist">
+<a name="OLEMANGR"></a>
+<tr><td nowrap="nowrap" valign="top">(a)</td>
+<td valign="top"> Den Manager per appl_find (&quot;OLEMANGR&quot;) suchen. War die
+Suche erfolgreich, so ist man bereits fertig.
+<br>&nbsp;
+<a name="Environmentvariable_20OLEMANAGER"></a>
+<a name="OLEMANAGER_2C_20Environmentvariable"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(b)</td>
+<td valign="top"> Ansonsten sollte man die Environmentvariable OLEMANAGER
+inspizieren, die einen kompletten Zugriffspfad auf den Manager
+enthalten kann. Aus diesem Pfad extrahiert man dann zunächst den
+eigentlichen Programmnamen für <a href="appl.html#appl_find">appl_find</a>, und geht dann wie unter (a)
+beschrieben vor. Wenn auch dies nicht zum Erfolg führt, sollte man
+das durch OLEMANAGER spezifizierte Programm per <a href="shel.html#shel_write">shel_write</a>
+nachstarten.
+<br>&nbsp;
+<a name="OEP_SERV"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(c)</td>
+<td valign="top"> Wenn alle bisherigen Anstrengungen nicht zum gewünschten
+Ergebnis geführt haben, gibt es offenbar <i>keinen</i> OLE-Manager,
+und man muss sich evtl. mit dem reinen OLGA-Protokoll begnügen. In diesem
+Fall führt man analog zu (a) ein appl_find (&quot;OLGA &quot;)
+<i>und</i> ein appl_- find (&quot;OEP_SERV&quot;) aus; evtl. müssen
+nämlich nun <i>zwei</i> Manager unterstützt werden!
+<br>&nbsp;
+<a name="Environmentvariable_20OLGAMANAGER"></a>
+<a name="OLGAMANAGER_2C_20Environmentvariable"></a>
+<a name="Environmentvariable_20OEPMANAGER"></a>
+<a name="OEPMANAGER_2C_20Environmentvariable"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(d)</td>
+<td valign="top"> Sollte auch die letzte Aktion keinen Erfolg gebracht haben, so
+sollten noch die Environmentvariablen OLGAMANAGER und OEPMANAGER (wie
+unter (b)) ausgewertet werden.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>&#x2022; <b>Fall 2: Die Applikation benötigt nur OLGA</b>
+</p>
+<blockquote>
+<p>In diesem Fall geht man wie unter dem ersten Punkt beschrieben
+vor, allerdings ändert sich die Reihenfolge der Aktionen zu
+(c),(d),(a) und (b). Natürlich brauchen OEP_SERV und OEPMANAGER in
+diesem Fall <i>nicht</i> abgefragt zu werden, da es unwahrscheinlich
+ist, dass ein OEP-Server das OLGA-Protokoll versteht.
+</p>
+</blockquote>
+<p>Querverweis: <a href="#OLGA-Protokoll">OLGA-Protokoll</a> &nbsp; <a href="proto_av.html">AV-Protokoll</a> &nbsp;
+<a href="proto_dd.html">Drag&amp;Drop-Protokoll</a>
+</p>
+<h3><a name="OLGA-Client">15.8.2 OLGA-Client</a></h3>
+<p>Die folgenden <a href="evnt.html#Nachrichten">Nachrichten</a> können von einem OLGA-Client
+verschickt bzw. empfangen werden:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a></td>
+<td valign="top"> Schließen eines Dokumentes anzeigen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_GETINFO">OLGA_GETINFO</a></td>
+<td valign="top"> Indexnummer für eine Info-Datei ermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_LINK">OLGA_LINK</a></td>
+<td valign="top"> Einbindung einer Datei in ein Dokument anzeigen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a></td>
+<td valign="top"> Referenz auf ein Objekt steht nicht mehr zur Verfügung.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a></td>
+<td valign="top"> Referenz auf ein Objekt wurde aktualisiert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a></td>
+<td valign="top"> Dokument beim Manager anmelden.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a></td>
+<td valign="top"> Referenz auf ein Objekt aktualisieren.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_START">OLGA_START</a></td>
+<td valign="top"> Server für einen Client nachstarten.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_UPDATED">OLGA_UPDATED</a></td>
+<td valign="top"> Server hat eine Datei verändert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_UNLINK">OLGA_UNLINK</a></td>
+<td valign="top"> Überwachung einer Datei beenden.
+
+</td></tr>
+</table>
+
+<p><b>Achtung:</b> An dieser Stelle sei darauf hingewiesen, daß
+im Hinblick auf zukünftige Betriebssystem-Versionen zur Kommunikation
+zwischen verschiedenen Programmen benutzte oder über Zeiger
+zugewiesene Speicherbereiche global sein müssen (<a href="gemdos_memory.html#Mxalloc">Mxalloc</a>-Funktion mit
+Global-Flag). Andernfalls wird es beim Einsatz auf Rechnern mit PMMU
+(z.B. Atari-TT oder Falcon) zu Speicherschutzverletzungen kommen.
+</p>
+<p>Querverweis: <a href="#Client_20minimal">minimale Anforderungen</a> &nbsp; <a href="#OLGA-Protokoll">OLGA-Protokoll</a> &nbsp; <a href="#OLGA-Server">OLGA-Server</a>
+</p>
+<h3><a name="OLGA-Server">15.8.3 OLGA-Server</a></h3>
+<p>Die folgenden <a href="evnt.html#Nachrichten">Nachrichten</a> können von einem OLGA-Server
+verschickt bzw. empfangen werden:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a></td>
+<td valign="top"> Link auf ein Objekt aufheben.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_INFO">OLGA_INFO</a></td>
+<td valign="top"> Antwort auf eine <a href="#OLGA_GETINFO">OLGA_GETINFO</a>-Nachricht.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_RENAME">OLGA_RENAME</a></td>
+<td valign="top"> Namensänderung eines Objektes mitteilen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#OLGA_UPDATE">OLGA_UPDATE</a></td>
+<td valign="top"> Änderung an einem Objekt mitteilen.
+
+</td></tr>
+</table>
+
+<p><b>Achtung:</b> An dieser Stelle sei darauf hingewiesen, daß
+im Hinblick auf zukünftige Betriebssystem-Versionen zur Kommunikation
+zwischen verschiedenen Programmen benutzte oder über Zeiger
+zugewiesene Speicherbereiche global sein müssen (<a href="gemdos_memory.html#Mxalloc">Mxalloc</a>-Funktion mit
+Global-Flag). Andernfalls wird es beim Einsatz auf Rechnern mit PMMU
+(z.B. Atari-TT oder Falcon) zu Speicherschutzverletzungen kommen.
+</p>
+<p>Querverweis: <a href="#Server_20minimal">minimale Anforderungen</a> &nbsp; <a href="#OLGA-Protokoll">OLGA-Protokoll</a> &nbsp; <a href="#OLGA-Client">OLGA-Client</a>
+</p>
+<h3><a name="OLGA_BREAKLINK">15.8.4 OLGA_BREAKLINK</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_BREAKLINK« - Link auf ein Objekt aufheben.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1244
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom Server an den Manager geschickt wenn
+er eine Datei löscht, oder anderweitig für den Client unbrauchbar
+macht.
+<br>&nbsp;
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1244)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Der Manager informiert anschließend alle
+Clients, die einen Link auf diese Datei gesetzt hatten.
+<br>&nbsp;
+<br>Der Server erhält anschließend eine <a href="#OLGA_BREAKLINK_2C_20Antwort_20auf">Antwort</a> vom Manager, damit
+er sicher sein kann, das seine Absicht verstanden worden ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Server">OLGA-Server</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_INFO">OLGA_INFO</a> &nbsp; <a href="#OLGA_RENAME">OLGA_RENAME</a> &nbsp; <a href="#OLGA_UPDATE">OLGA_UPDATE</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_BREAKLINK_2C_20Antwort_20auf">15.8.4.1 OLGA_BREAKLINK, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält der Server als Antwort auf eine
+verschickte <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3+4 = exakt dieselben Werte von <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a>
+Word 5   = 0
+Word 6   = 0
+Word 7   = <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a>
+</pre>
+<h3><a name="OLGA_INFO">15.8.5 OLGA_INFO</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_INFO« - Antwort auf eine OLGA_GETINFO-<a href="proto_ssp.html#Message">Message</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1248
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht ist als Antwort auf <a href="#OLGA_GETINFO">OLGA_GETINFO</a> zu verstehen,
+und wird vom Server <i>direkt</i> an den Client geschickt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1248)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf absoluten Info-Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top"><a href="indexudo.html">Index</a>-Nummer der Info-Datei</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Vor dem Verschicken der Nachricht muss der
+Server evtl. die zugehörige <a href="#OLGA-Info-Dateiformat">Info-Datei</a> aufbauen, sofern diese nicht
+bereits vorhanden ist. Ein Client darf sich jedoch <i>nicht</i> auf
+das Eintreffen dieser Antwort verlassen, denn der Server könnte ja
+inzwischen terminiert sein; außerdem darf er nur <i>lesend</i> auf
+die Datei zugreifen.
+<br>&nbsp;
+<br>Sobald der Client die Info-Datei wieder geschlossen hat, schickt
+er eine <a href="#OLGA_INFO_2C_20Antwort_20auf">Antwort</a> an den Server, damit dieser die Datei evtl. wieder
+löschen kann.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Server">OLGA-Server</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a> &nbsp; <a href="#OLGA_RENAME">OLGA_RENAME</a> &nbsp; <a href="#OLGA_UPDATE">OLGA_UPDATE</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_INFO_2C_20Antwort_20auf">15.8.5.1 OLGA_INFO, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält der Server als Antwort auf eine
+verschickte <a href="#OLGA_INFO">OLGA_INFO</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3+4 = exakt dieselben Werte von <a href="#OLGA_INFO">OLGA_INFO</a>
+Word 5   = <a href="indexudo.html">Index</a>-Nummer der Info-Datei
+Word 6   = 0
+Word 7   = <a href="#OLGA_INFO">OLGA_INFO</a>
+</pre>
+<h3><a name="OLGA_RENAME">15.8.6 OLGA_RENAME</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_RENAME« - Namensänderung eines Objektes mitteilen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123a
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom Server an den Manager geschickt, falls
+der Benutzer eine Datei im Server umbenannt oder verschoben hat. Es
+gilt
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123a)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf alten absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf neuen absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Es liegt im Ermessen des Servers, ob er nach
+dem Befehl 'Speichern als...' diese Nachricht verschickt. Sinnvoll
+wäre dies auf jedenfall, wenn der Server die neue Pfadangabe bzw. den
+neuen Dateinamen für das Dokument übernimmt. Nach Möglichkeit
+sollten Links zwar immer nur für Dateien auf <i>nicht</i>
+wechselbaren Medien bestehen, in der Praxis dürfte dies aber wohl
+kaum durchzuhalten sein. Falls der Inhalt der Datei verändert wurde,
+muss zusätzlich noch die Nachricht <a href="#OLGA_UPDATE">OLGA_UPDATE</a> verschickt werden.
+<br>&nbsp;
+<br>Der Server erhält anschließend eine <a href="#OLGA_RENAME_2C_20Antwort_20auf">Antwort</a>, auf die er z.B.
+mit der Freigabe des alten Speicherplatzes reagieren kann. Die
+Bestätigung bedeutet übrigens nur, daß der Manager das Umbenennen
+weitergemeldet hat; reagiert ein Client nicht darauf, so ist der
+entsprechende Link tot, d.h. er kann nicht weiter überwacht werden!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Server">OLGA-Server</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a> &nbsp; <a href="#OLGA_INFO">OLGA_INFO</a> &nbsp; <a href="#OLGA_UPDATE">OLGA_UPDATE</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_RENAME_2C_20Antwort_20auf">15.8.6.1 OLGA_RENAME, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält der Server als Antwort auf eine
+verschickte <a href="#OLGA_RENAME">OLGA_RENAME</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3+4 = exakt dieselben Werte von <a href="#OLGA_RENAME">OLGA_RENAME</a>
+Word 5+6 = exakt dieselben Werte von <a href="#OLGA_RENAME">OLGA_RENAME</a>
+Word 7   = <a href="#OLGA_RENAME">OLGA_RENAME</a>
+</pre>
+<h3><a name="OLGA_UPDATE">15.8.7 OLGA_UPDATE</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_UPDATE« - Änderung an einem Objekt mitteilen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1238
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht muss vom Server an den Manager geschickt
+werden, wenn er eine Datei abgespeichert hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1238)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf Dateinamen incl. absolutem</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Pfad</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">0, oder eine Server-Interne (eindeutige)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top"><a href="indexudo.html">Index</a>-Nummer, falls eine <a href="#OLGA-Info-Dateiformat">Info-Datei</a> zur</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Verfügung steht bzw. erzeugt werden  kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Die Bearbeitung erfolgt z.Zt. <i>nicht</i>
+Case-Sensitiv, d.h. die Groß- bzw. Kleinschreibung des Dateinamens
+wird ignoriert, damit das Linking nicht an unterschiedlichen
+Benutzereingaben scheitert. Dies wird in späteren Versionen
+(Stichwort: <a href="gemdos_filesys.html">alternative Dateisysteme</a>) allerdings nicht mehr der Fall sein.
+<br>&nbsp;
+<br>Der Server erhält anschließend eine <a href="#OLGA_UPDATE_2C_20Antwort_20auf">Antwort</a>, auf die er z.B.
+mit der Freigabe des für den Dateinamen reservierten Speichers
+reagieren kann.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Server">OLGA-Server</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_BREAKLINK">OLGA_BREAKLINK</a> &nbsp; <a href="#OLGA_INFO">OLGA_INFO</a> &nbsp; <a href="#OLGA_RENAME">OLGA_RENAME</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_UPDATE_2C_20Antwort_20auf">15.8.7.1 OLGA_UPDATE, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält der Server als Antwort auf eine
+verschickte <a href="#OLGA_UPDATE">OLGA_UPDATE</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3+4 = exakt dieselben Werte von <a href="#OLGA_UPDATE">OLGA_UPDATE</a>
+Word 5   = 0
+Word 6   = 0
+Word 7   = <a href="#OLGA_UPDATE">OLGA_UPDATE</a>
+</pre>
+<h3><a name="OLGA_CLOSEDOC">15.8.8 OLGA_CLOSEDOC</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_CLOSEDOC« - Schließen eines Dokumentes anzeigen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123c
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht sollte vom Client an den OLGA-Manager geschickt
+werden, wenn ein Dokument geschlossen wird.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123c)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Der Manager kann dann alle Links mit der
+entsprechenden Gruppennummer löschen. Dies könnte zwar auch mit
+einzelnen <a href="#OLGA_UNLINK">OLGA_UNLINK</a>-Aufrufen realisiert werden, jedoch können so
+die Manager-Internen-Strukturen einfacher freigegeben werden.
+<br>&nbsp;
+<br>Die Nachricht darf beim Programmende <i>nicht</i> verwendet
+werden, da durch OLE_EXIT bereits alle nötigen Aktionen vorgenommen
+werden. Als <a href="#OLGA_CLOSEDOC_2C_20Antwort_20auf">Antwort</a> erhält der Client eine einfache Bestätigung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp; <a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_CLOSEDOC_2C_20Antwort_20auf">15.8.8.1 OLGA_CLOSEDOC, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält ein Client als Antwort auf eine
+verschickte <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3   = 0
+Word 4   = 0
+Word 5   = Gruppenkennung des Dokumentes
+Word 6   = 0
+Word 7   = <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a>
+</pre>
+<h3><a name="OLGA_GETINFO">15.8.9 OLGA_GETINFO</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_GETINFO« - Indexnummer für eine Info-Datei ermitteln.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1247
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht kann ein Client direkt beim Server eine
+<a href="indexudo.html">Index</a>-Nummer für eine Info-Datei erfragen, wenn dieser eine solche
+bei <a href="#OLGA_UPDATE">OLGA_UPDATE</a> bekanntgegeben hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1247)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top"><a href="indexudo.html">Index</a>-Nummer der <a href="#OLGA-Info-Dateiformat">Info-Datei</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Nach dem Empfang dieser Nachricht kann der
+Server die entsprechende Datei aufbauen, sofern sie noch nicht
+vorhanden ist. Zu beachten ist außerdem, daß die übergebene
+<a href="indexudo.html">Index</a>-Nummer <i>ungültig</i> sein kann, und dann vom Server
+ignoriert werden muss.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_LINK">15.8.10 OLGA_LINK</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_LINK« - Einbindung einer Datei in ein Dokument
+anzeigen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123d
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht muss vom Client an den Manager geschickt
+werden, wenn er eine Datei in eines seiner Dokumente eingebunden hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123d)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf einen absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">der überwacht werden soll.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wenn die angegebene Datei von einem OLGA-Server
+verändert wird (oder eine <a href="proto_av.html#AV_PATH_UPDATE">AV_PATH_UPDATE</a>-<a href="proto_ssp.html#Message">Message</a> von einem Programm
+empfangen wird, welches kein Server ist), erhält der Client eine
+entsprechende <a href="#OLGA_UPDATED">OLGA_UPDATED</a>-Nachricht.
+<br>&nbsp;
+<br>Als Bestätigung erhalt der Client vom Manager eine
+entsprechende <a href="#OLGA_LINK_2C_20Antwort_20auf">Antwort</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp;
+<a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp; <a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_LINK_2C_20Antwort_20auf">15.8.10.1 OLGA_LINK, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält ein Client als Antwort auf eine
+verschickte <a href="#OLGA_LINK">OLGA_LINK</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0    = OLGA_ACK (0x1239)
+Word 1    = apID
+Word 2    = 0
+Word 3+4  = exakt dieselben Werte von <a href="#OLGA_LINK">OLGA_LINK</a>
+Word 5    = Gruppenkennung des Dokumentes
+Word 6    = Fehler bei Wert 0, sonst Ok
+Word 7    = <a href="#OLGA_LINK">OLGA_LINK</a>
+</pre>
+<h3><a name="OLGA_LINKBROKEN">15.8.11 OLGA_LINKBROKEN</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_LINKBROKEN« - Referenz auf ein Objekt steht nicht mehr
+zur Verfügung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1245
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht erhält der Client vom Manager, wenn ihm eine
+Datei nicht mehr zur Verfügung steht (z.B. weil sie gelöscht wurde).
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1245)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf alten absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Der Client könnte daraufhin den Benutzer
+informieren, oder auch per Dateiauswahl eine andere Datei auswählen lassen.
+Außerdem sollte er den jetzt ungültigen Link mit einer
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>-Nachricht auflösen lassen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp;
+<a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_LINKRENAMED">15.8.12 OLGA_LINKRENAMED</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_LINKRENAMED« - Referenz auf ein Objekt wurde
+aktualisiert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1241
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht muss vom Client als Antwort auf eine
+<a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a>-<a href="proto_ssp.html#Message">Message</a> an den Manager geschickt werden.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1241)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf alten absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf neuen absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Unterbleibt diese Antwort, so ist der
+entsprechende Link tot, d.h. er kann <i>nicht</i> mehr überwacht
+werden, da im Manager ja noch der alte Name gespeichert ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_OPENDOC">15.8.13 OLGA_OPENDOC</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_OPENDOC« - Dokument beim Manager anmelden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123b
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht kann vom Client an den Manager geschickt
+werden, wenn ein Dokument geöffnet worden ist.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123b)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Gruppenkennung des Clients</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Diese Nachricht dient z.Zt. nur zu
+Informationszwecken; die benötigten internen Strukturen werden vom
+Manager ansonsten beim Empfang der ersten <a href="#OLGA_LINK">OLGA_LINK</a> <a href="proto_ssp.html#Message">Message</a> angelegt.
+Die Gruppenkennung ist eine innerhalb des Clients eindeutige, und von
+diesem frei wählbare Zahl, mit der die Links innerhalb des Clients
+den Dokumenten zugeordnet werden können; sie sollte nach Möglichkeit
+stets angegeben werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_RENAMELINK">15.8.14 OLGA_RENAMELINK</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_RENAMELINK« - Referenz auf ein Objekt aktualisieren.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1240
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht erhält der Client vom Manager, wenn der Server
+eine Datei (auf die ein Link gesetzt ist) umbenannt oder verschoben
+hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1240)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf alten absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf neuen absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Diese Nachricht soll den Client nur anweisen,
+seine interne Referenz zu aktualisieren; das Dokument muss
+<i>nicht</i> neu gezeichnet werden. Der Zeiger auf den neuen Namen
+ist übrigens solange gültig, wie der Link besteht.
+<br>&nbsp;
+<br>Als Antwort auf diese Nachricht muss der Client eine
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a>-<a href="proto_ssp.html#Message">Message</a> an den Manager schicken, damit dieser seine
+Referenz aktualisieren, und unnötigen Speicherplatz freigeben kann.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_START">15.8.15 OLGA_START</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_START« - Server für einen Client nachstarten.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1246
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht kann ein Client einen für sich passenden
+Server nachstarten lassen.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1246)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Konstanten</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0001 = <a href="#OLS_TYPE">OLS_TYPE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0002 = <a href="#OLS_EXTENSION">OLS_EXTENSION</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0003 = <a href="#OLS_NAME">OLS_NAME</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4+5</td>
+  <td align="left" valign="top">Angaben über zu startendes Programm</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">bzw. Programmtyp (von Word[3] abhängig)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6+7</td>
+  <td align="left" valign="top">Zeiger auf die Kommandozeile, oder NULL</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Um das Programm zu starten wird (bei OLS_TYPE und
+OLS_EXTENSION) die Konfigurations-Datei 'olga.inf' ausgewertet. Zunächst
+wird der darin gefundene Server im Speicher gesucht, und bei Erfolg
+mit <a href="proto_av.html#VA_START">VA_START</a> aufgerufen. Anderenfalls wird das Programm in einer
+Multitaskingumgebung wie MagiC oder MultiTOS per <a href="shel.html#shel_write">shel_write</a>
+nachgestartet.
+<br>&nbsp;
+<br>Als Bestätigung erhält man eine einfache <a href="#OLGA_START_2C_20Antwort_20auf">Antwort</a>, sowie eine
+weitere <a href="#OLGA_START_2C_20Antwort2_20auf">Nachricht</a>, um die Kommandozeile leichter freigeben zu können
+(falls diese nicht NULL war).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_UPDATED">OLGA_UPDATED</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_START_2C_20Antwort_20auf">15.8.15.1 OLGA_START, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält der Client als Antwort auf eine
+verschickte <a href="#OLGA_START">OLGA_START</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3   = OLS-Konstante von <a href="#OLGA_START">OLGA_START</a>
+Word 4+5 = exakt dieselben Werte von <a href="#OLGA_START">OLGA_START</a>
+Word 6   = Fehler (bei Wert 0), sonst ok
+Word 7   = <a href="#OLGA_START">OLGA_START</a>
+</pre>
+<h4><a name="OLGA_START_2C_20Antwort2_20auf">15.8.15.2 OLGA_START, Antwort2 auf</a></h4>
+<p><b>Diese Nachricht erhält der Client als Antwort auf eine
+verschickte <a href="#OLGA_START">OLGA_START</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0   = OLGA_ACK (0x1239)
+Word 1   = apID
+Word 2   = 0
+Word 3   = 0 (!)
+Word 4+5 = exakt dieselben Werte von <a href="#OLGA_START">OLGA_START</a> [6]+[7]
+Word 6   = Fehler (bei Wert 0), sonst ok
+Word 7   = <a href="#OLGA_START">OLGA_START</a>
+</pre>
+<h4><a name="OLS_TYPE">15.8.15.3 OLS_TYPE</a></h4>
+<p><b>OLS_TYPE (0x0001):</b> Word[4] = 0. In Word[5] steht ein
+<a href="proto_xacc.html">XAcc</a>-Programmtyp.
+</p>
+<h4><a name="OLS_EXTENSION">15.8.15.4 OLS_EXTENSION</a></h4>
+<p><b>OLS_EXTENSION (0x0002):</b> In Word[4,5] steht eine
+Extension (z.B. &quot;.<a href="gem_about.html">GEM</a>&quot;).
+</p>
+<h4><a name="OLS_NAME">15.8.15.5 OLS_NAME</a></h4>
+<p><b>OLS_NAME (0x0003):</b> In Word[4,5] steht ein Zeiger auf den
+<i>absoluten</i> Dateinamen der zu startenden Applikation.
+</p>
+<h3><a name="OLGA_UPDATED">15.8.16 OLGA_UPDATED</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_UPDATED« - Server hat eine Datei verändert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123f
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht erhält der Client vom Manager, wenn der Server
+eine Datei, auf die ein Link gesetzt ist, verän- dert hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123f)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf absoluten Dateinamen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">0 oder eine <a href="indexudo.html">Index</a>-Nummer, falls eine</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top"><a href="#OLGA-Info-Dateiformat">Info-Datei</a> angefordert werden kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">AES-Kennung des Servers</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wenn der Client diese Nachricht empfängt,
+sollte er also das zugehörige Dokument neu anzeigen. Der Zeiger ist
+übrigens solange gültig, wie der Link besteht.
+<br>&nbsp;
+<br>Die Kennung des Servers (Word 6) ist garantiert gesetzt, falls
+Word 5 einen Wert ungleich 0 besitzt. An diese ID (d.h. <i>direkt</i>
+an den Server) kann dann eine <a href="#OLGA_GETINFO">OLGA_GETINFO</a> Nachricht geschickt werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp;
+<a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_UNLINK">15.8.17 OLGA_UNLINK</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_UNLINK« - Überwachung einer Datei beenden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x123e
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht muss vom Client an den Manager geschickt
+werden, wenn die Überwachung einer bestimmten Datei ein- gestellt
+werden soll.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x123e)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf einen absoluten Dateinamen,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">der nicht mehr überwacht</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">werden soll.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Gruppenkennung des Dokumentes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Falls das Dokument geschlossen wird, sollte
+stattdessen <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> verwendet werden. Wenn der Client
+terminiert, werden per OLE_EXIT alle entsprechenden Links automatisch
+gelöscht.
+<br>&nbsp;
+<br>Der angegebene Dateiname muss <i>exakt</i> mit der bei
+<a href="#OLGA_LINK">OLGA_LINK</a> übergebenen Zeichenkette übereinstimmen. Als Bestätigung
+erhält der Client eine passende <a href="#OLGA_UNLINK_2C_20Antwort_20auf">Antwort</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Client">OLGA-Client</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLGA_CLOSEDOC">OLGA_CLOSEDOC</a> &nbsp; <a href="#OLGA_GETINFO">OLGA_GETINFO</a> &nbsp; <a href="#OLGA_LINK">OLGA_LINK</a> &nbsp; <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> &nbsp;
+<a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> &nbsp; <a href="#OLGA_OPENDOC">OLGA_OPENDOC</a> &nbsp; <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> &nbsp; <a href="#OLGA_START">OLGA_START</a> &nbsp;
+<a href="#OLGA_UPDATED">OLGA_UPDATED</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="OLGA_UNLINK_2C_20Antwort_20auf">15.8.17.1 OLGA_UNLINK, Antwort auf</a></h4>
+<p><b>Diese Nachricht erhält ein Client als Antwort auf eine
+verschickte <a href="#OLGA_UNLINK">OLGA_UNLINK</a>-<a href="proto_ssp.html#Message">Message</a>:</b>
+</p>
+<pre>Word 0    = OLGA_ACK (0x1239)
+Word 1    = apID
+Word 2    = 0
+Word 3+4  = exakt dieselben Werte von <a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+Word 5    = Gruppenkennung des Dokumentes
+Word 6    = Fehler bei Wert 0, sonst Ok
+Word 7    = <a href="#OLGA_UNLINK">OLGA_UNLINK</a>
+</pre>
+<h3><a name="Server_20minimal">15.8.18 Server minimal</a></h3>
+<p><b>Ein <a href="#OLGA-Server">OLGA-Server</a> muss wenigstens folgendes tun:</b>
+</p>
+<ul>
+<li> <a href="#OLE_INIT">OLE_INIT</a> verschicken.
+</li>
+<li> <a href="#OLE_NEW">OLE_NEW</a> auswerten.
+</li>
+<li> <a href="#OLGA_INIT">OLGA_INIT</a> empfangen.
+</li>
+<li> <a href="#OLE_EXIT">OLE_EXIT</a> verschicken.
+</li>
+<li> <a href="proto_av.html#VA_START">VA_START</a> unterstützen.
+</li>
+</ul>
+
+<h3><a name="Client_20minimal">15.8.19 Client minimal</a></h3>
+<p><b>Ein <a href="#OLGA-Client">OLGA-Client</a> muss wenigstens folgendes tun:</b>
+</p>
+<ul>
+<li> <a href="#OLE_INIT">OLE_INIT</a> verschicken.
+</li>
+<li> <a href="#OLE_NEW">OLE_NEW</a> auswerten.
+</li>
+<li> <a href="#OLGA_INIT">OLGA_INIT</a> empfangen.
+</li>
+<li> <a href="#OLE_EXIT">OLE_EXIT</a> verschicken.
+</li>
+<li> auf <a href="#OLGA_RENAMELINK">OLGA_RENAMELINK</a> mit <a href="#OLGA_LINKRENAMED">OLGA_LINKRENAMED</a> antworten.
+</li>
+<li> auf <a href="#OLGA_LINKBROKEN">OLGA_LINKBROKEN</a> mit <a href="#OLGA_UNLINK">OLGA_UNLINK</a> antworten.
+</li>
+</ul>
+
+<h3><a name="OLE_EXIT">15.8.20 OLE_EXIT</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLE_EXIT« - Aus dem Protokoll ausklinken.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4951
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht sollte bei Programmende an den Manager
+geschickt werden.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x4951)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2-7</td>
+  <td align="left" valign="top">0</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Die Nachricht wird außerdem vom Manager an die
+Applikationen geschickt, wenn dieser terminiert. Wenn sich ein <a href="#OLGA-Client">OLGA-Client</a>
+beim Manager abmeldet, werden automatisch alle zugehörigen Links und
+Documents gelöscht.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Initialisierung">OLGA-Initialisierung</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLE_INIT">OLE_INIT</a> &nbsp; <a href="#OLE_NEW">OLE_NEW</a> &nbsp; <a href="#OLGA_INIT">OLGA_INIT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLE_INIT">15.8.21 OLE_INIT</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLE_INIT« - Applikation beim Manager anmelden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4950
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht muss an den OLGA-Manager geschickt werden, und
+sorgt dafür, daß die betreffende Applikation dem Manager bekannt
+wird.
+<br>&nbsp;
+<a name="XAcc-Programmtypen"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x4950)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Bitmap für OLGA</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0001 = <a href="#OL_SERVER">OL_SERVER</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0002 = <a href="#OL_CLIENT">OL_CLIENT</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x1000 = <a href="#OL_PIPES">OL_PIPES</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">maximale von der Applikation verstan-</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">dene Stufe des Protokolls (z.Zt. 0)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">nur für OEP: Bitmap, <a href="#OL_OEP">OL_OEP</a> gesetzt</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">nur für OEP: reserviert</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top"><a href="proto_xacc.html">XAcc</a>-Programmtyp (oder 0) mit fol-</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">gender Bedeutung:</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;WP&quot; = Textverarbeitung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;DP&quot; = Desktop Publishing</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;ED&quot; = Text-Editor</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;DB&quot; = Datenbank</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;SS&quot; = Tabellenkalkulation</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;RG&quot; = Rastergrafikprogramm</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;VG&quot; = Vektorgrafikprogramm</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;GG&quot; = allgemeines Grafikprogramm</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;MU&quot; = Musikanwendung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;CD&quot; = Computer Aided Design</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;DC&quot; = Datenkommunikation</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;DT&quot; = Desktop</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&quot;PE&quot; = Programmierumgebung</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wenn ein Protokoll von der Applikation nicht
+unterstützt wird, sind die Wörter 3 und 4 bzw. 5 und 6 auszunullen.
+Je nach Protokollauswahl erhält man dann vom Manager eine <a href="evnt.html#OEP_CONFIG">OEP_CONFIG</a>
+und/oder eine <a href="#OLGA_INIT">OLGA_INIT</a>-<a href="proto_ssp.html#Message">Message</a>; es ist dann nach den Beschreibungen
+des jeweiligen Protokolls fortzufahren.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Initialisierung">OLGA-Initialisierung</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLE_EXIT">OLE_EXIT</a> &nbsp; <a href="#OLE_NEW">OLE_NEW</a> &nbsp; <a href="#OLGA_INIT">OLGA_INIT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLE_NEW">15.8.22 OLE_NEW</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLE_NEW« - Manager wurde nachgestartet.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4952
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom Manager an alle erreichbaren Applikationen
+verschickt, wenn er nachgestartet worden ist.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x4952)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Bitmap</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x1000 = <a href="#OL_PIPES">OL_PIPES</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x2000 = <a href="#OL_START">OL_START</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x4000 = <a href="#OL_MANAGER">OL_MANAGER</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">max. Stufe des OLGA-Protokolls</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">nur für OEP: <a href="#OL_OEP">OL_OEP</a> (0x001) gesetzt,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">falls der Manager OEP beherrscht</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">nur für OEP: reserviert (0)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Versionsnummer des Managers (BCD)</td>
+</tr>
+</table>
+</div>
+
+<br>Nach Empfang und Auswertung dieser <a href="proto_ssp.html#Message">Message</a> sollte eine
+Applikation die Nachricht <a href="#OLE_INIT">OLE_INIT</a> verschicken, um sich beim Manager
+anzumelden. Achtung: Die Werte in dieser Nachricht ersetzen
+<i>nicht</i> die Rückgabe von <a href="evnt.html#OEP_CONFIG">OEP_CONFIG</a> bzw. von OLGA_INIT, sie dienen
+nur zu Informationszwecken.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Initialisierung">OLGA-Initialisierung</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLE_EXIT">OLE_EXIT</a> &nbsp; <a href="#OLE_INIT">OLE_INIT</a> &nbsp; <a href="#OLGA_INIT">OLGA_INIT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA_INIT">15.8.23 OLGA_INIT</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »OLGA_INIT« - Bestätigung für Anmeldung per OLE_INIT.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x1236
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird als Antwort auf eine <a href="#OLE_INIT">OLE_INIT</a>-<a href="proto_ssp.html#Message">Message</a>
+verschickt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 0</td>
+  <td align="left" valign="top">Nachrichtennummer (0x1236)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 1</td>
+  <td align="left" valign="top">AES-Kennung des eigenen Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 2</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Bitmap (OL_MANAGER gesetzt)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x1000 = <a href="#OL_PIPES">OL_PIPES</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x2000 = <a href="#OL_START">OL_START</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x4000 = <a href="#OL_MANAGER">OL_MANAGER</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Stufe des verwendeten Protokolls</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">0 = Fehler, sonst: alles ok</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Applikationen sollten den OLGA-Mechanismus erst
+verwenden, nachdem sie diese Nachricht erhalten haben, und diese
+keinen Fehler signalisiert hat.
+<br>&nbsp;
+<br><b>Ausnahme:</b> Bei Programmen, die bereits während der
+Startphase Dokumente öffnen, kann es sinnvoll sein, auch <i>ohne</i>
+Empfang dieser Nachricht das Protokoll zu benutzen; allerdings sollten
+bei der Applikation dann keine Fehler auftreten, falls sich der
+Manager doch nicht meldet.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#OLGA-Initialisierung">OLGA-Initialisierung</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#OLE_EXIT">OLE_EXIT</a> &nbsp; <a href="#OLE_INIT">OLE_INIT</a> &nbsp; <a href="#OLE_NEW">OLE_NEW</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="OLGA-Info-Dateiformat">15.8.24 OLGA-Info-Dateiformat</a></h3>
+<p>Das <a href="#OLGA-Protokoll">OLGA-Protokoll</a> ermöglicht den Austausch von speziellen
+Informationen zwischen Client und Server durch sogenannte
+<i>Info-Dateien</i>. Diese Dateien beinhalten zwei Arten von
+Datenstrukturen:
+</p>
+<ul>
+<li> <a href="#OLGAInfHeader">OLGAInfHeader</a>
+</li>
+<li> <a href="#OLGABlockHeader">OLGABlockHeader</a>
+</li>
+</ul>
+
+<p>Die Info-Dateien selbst sind dabei folgendermaßen aufgebaut:
+</p>
+<pre>InfHeader
+BlockHeader 1
+Daten 1
+BlockHeader 2
+Daten 2
+...
+...
+BlockHeader n-1
+Daten n-1
+BlockHeader n (id=0)
+</pre>
+<p>Das Dateiende (bzw. Block n) wird durch eine ID mit dem Wert 0
+gekennzeichnet. <b>Einige Block-ID's sind bereits fest definiert. Im
+einzelnen:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">ID</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">'AUTH'</td>
+  <td align="left" valign="top">Autor: Die Codierung entspricht dabei 'REM'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">(s.u.). Allerdings sollte man sich auf eine</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">einzige Zeile beschränken.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">'DATE'</td>
+  <td align="left" valign="top">Datum der letzten Änderung als <a href="gemdos_structures.html#DOSTIME">DOSTIME</a>-Struktur.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">'KEYW'</td>
+  <td align="left" valign="top">Stichworte: Die Codierung entspricht dabei 'REM'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">(s.u.). Innerhalb der Zeilen liegen die Stich-</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">worte durch <i>Kommata</i> getrennt vor.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">'REM '</td>
+  <td align="left" valign="top">Kommentar: Einzelne Zeilen sind null-terminiert,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">das Ende wird über die Länge erkannt. Somit kön-</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">nen auch Leerzeilen verschickt werden.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x00000000</td>
+  <td align="left" valign="top">Dateiende: Die Komponente <i>length</i> der <a href="#OLGABlockHeader">OLGABlockHeader</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Struktur sollte also den Wert 0 besitzen.</td>
+</tr>
+</table>
+</div>
+
+<p><b>Achtung:</b> Damit ist natürlich noch überhaupt
+<i>nicht</i> festgelegt, welche Blöcke (und in welcher Reihenfolge)
+<i>tatsächlich</i> gespeichert werden. Unbekannte Blöcke müssen
+daher ignoriert (d.h. überlesen) werden. Neue Block-ID's können frei
+definiert werden; damit es aber nicht zu Kollisionen mit bereits
+bestehenden ID's kommt, sollten Programmierer besser vorher mit dem
+<a href="#Much_2C_20Thomas">OLGA-Entwickler</a> <a href="contact.html">Kontakt</a> aufnehmen.
+</p>
+<p>Querverweis: <a href="#OLGA-Protokoll">OLGA-Protokoll</a> &nbsp; <a href="#OLGA-Client">OLGA-Client</a> &nbsp; <a href="#OLGA-Server">OLGA-Server</a>
+</p>
+<h3><a name="OLGAInfHeader">15.8.25 OLGAInfHeader</a></h3>
+<pre>typedef struct
+{
+    LONG magic;    /* Kennung: 'OLGA'                   */
+    WORD version;  /* Versionsnummer (z.Zt. 0x0100)     */
+    WORD skip;     /* Anzahl der folgenden Headerbytes, */
+                   /* die überlesen werden müssen.      */
+} OLGAInfHeader;
+</pre>
+<h3><a name="OLGABlockHeader">15.8.26 OLGABlockHeader</a></h3>
+<pre>typedef struct
+{
+    LONG id;       /* Block-ID */
+    LONG length;   /* Anzahl der folgenden Datenbytes */
+} OLGABlockHeader;
+</pre>
+<h3><a name="Much_2C_20Thomas">15.8.27 Much, Thomas</a></h3>
+<p>Thomas Much
+<br>Gerwigstraße 46
+<br>D-76131 Karlsruhe Fax: (0721) 622821
+<br><b>E-Mail:</b> Thomas.Much@stud.uni-karlsruhe.de (Internet)
+<br>http://www.uni-karlsruhe.de/&nbsp;Thomas.Much (WorldWideWeb)
+</p>
+<h3><a name="OL_SERVER">15.8.28 OL_SERVER</a></h3>
+<p><b>OL_SERVER (0x0001):</b>
+<br>Die Applikation ist ein <a href="#OLGA-Server">OLGA-Server</a>.
+</p>
+<h3><a name="OL_CLIENT">15.8.29 OL_CLIENT</a></h3>
+<p><b>OL_CLIENT (0x0002):</b>
+<br>Die Applikation ist ein <a href="#OLGA-Client">OLGA-Client</a>.
+</p>
+<h3><a name="OL_PEER">15.8.30 OL_PEER</a></h3>
+<p><b>OL_PEER (0x0003):</b>
+<br>Die Applikation ist ein Client und Server.
+</p>
+<h3><a name="OL_PIPES">15.8.31 OL_PIPES</a></h3>
+<p><b>OL_PIPES (0x1000):</b>
+<br>Die Applikation möchte <i>nicht</i> über Zeiger, sondern über
+MultiTOS-kompatible Drag&amp;Drop- <a href="magic_driveu.html#Pipes">Pipes</a> kommunizieren.
+</p>
+<p>Der Manager informiert dann, ob er diese Art der Kommunikation
+versteht bzw. ob sie auf dem aktuellen System möglich ist. <b>Z.Zt.
+wird diese Form jedoch noch nicht unterstützt.</b>
+</p>
+<h3><a name="OL_START">15.8.32 OL_START</a></h3>
+<p><b>OL_START (0x2000):</b>
+<br>Der Manager kann <a href="#OLGA_START">OLGA_START</a> ausführen.
+</p>
+<h3><a name="OL_MANAGER">15.8.33 OL_MANAGER</a></h3>
+<p><b>OL_MANAGER (0x4000):</b>
+<br>Die Applikation ist ein OLGA-Manager.
+</p>
+<h3><a name="OL_OEP">15.8.34 OL_OEP</a></h3>
+<p><b>OL_OEP (0x0001):</b>
+<br>Die Applikation versteht OEP.
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_ltl.html"><img src="udo_lf.gif" alt="LTL-Protokoll" title="LTL-Protokoll" border="0" width="24" height="24">LTL-Protokoll</a>
+<a name="UDO_nav_rg_FOOT" href="proto_seproto.html"><img src="udo_rg.gif" alt="SE-Protokoll" title="SE-Protokoll" border="0" width="24" height="24">SE-Protokoll</a>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: The background-DMA of MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_errors.html"><img src="udo_lf.gif" alt="Special error-messages in MagiC" title="Special error-messages in MagiC" border="0" width="24" height="24">Special error-messages in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_iconify.html"><img src="udo_rg.gif" alt="Iconification in MagiC" title="Iconification in MagiC" border="0" width="24" height="24">Iconification in MagiC</a>
+
+<hr>
+
+<h1><a name="The_20background-DMA_20of_20MagiC">11.9 The background-DMA of MagiC</a></h1>
+<a name="Background-DMA_20in_20MagiC"></a>
+<p>As of <a href="magic.html">MagiC</a> 3, the whole of the DOS, inclusive of access to DOS
+file systems, is reentrant and runs in the background. Thus it is
+possible to edit files on Drive A: without perceptibly slowing down
+the computer at floppy disk accesses. A prerequisite for this,
+however, are floppy and hard drive routines that work in the
+background.
+</p>
+<p>So that the hard disk driver does not need to make these
+functions available, the BIOS of MagiC contains all the required
+functions. Via the <a href="bios_cookiejar.html#Cookie_2C_20MagX">MagX cookie</a> (component <i>hddrv_functions</i>) one
+obtains access to the following structure, which contains pointers to
+the important routines of the background-DMA:
+</p>
+<pre>typedef struct
+{
+    LONG dma_begin ( VOID);
+    LONG dma_end   ( VOID );
+    LONG dma_wait  ( d0 = LONG ticks_200hz );
+    LONG ncr_begin ( VOID );
+    LONG ncr_end   ( VOID );
+    LONG ncr_wait  ( d0 = LONG ticks_200hz );
+} <a href="HDFUNCS.html">HDFUNCS</a>;
+</pre>
+<p><b>Note:</b> Directly before the structure (2 bytes before)
+lies a WORD that gives the length of the table in LONGs (in this case
+6). All of the 6 pointers lie in the system variables region and may
+be changed in case of need. The internal functions for the floppy
+drive also jump via the 6 pointers. <b>Important:</b> The
+<i>hddrv_functions</i> pointer in <a href="bios_cookiejar.html#Cookie_2C_20MagX">MagX cookie</a> may not be altered!
+</p>
+<p>At boot-time the preemptive multitasking is switched off
+(actually the multitasking itself is switched off) but the routines
+also work before installation of the AES, whereby the wait routines
+then do a 'busy waiting' (as they do when switching off the preemptive
+multitasking), and the semaphore routines simply do nothing (apart
+from setting and clearing <a href="bios_sysvars.html#flock">flock</a>).
+</p>
+<p>This hypertext contains <a href="magic_bios.html">extracts from MagiC's BIOS</a> that should demonstrate how the
+whole thing works. A few words about this:
+</p>
+<ul>
+<li><p> The routines acsi_xxx are both for ACSI and FDC, i.e. dma_begin
+sets flock, dma_end clears it again
+<br>&nbsp;
+</p></li>
+<li><p> The routines ncr_xxx are for TT-SCSI
+<br>&nbsp;
+</p></li>
+<li><p> The functions xxx_begin reserve the relevant semaphores. The
+following applies for the return values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-1</td>
+  <td align="left" valign="top"><a href="powerdos.html#Semaphore">Semaphore</a> is already in possession</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;0</td>
+  <td align="left" valign="top">Ok</td>
+</tr>
+</table>
+</div>
+
+<br>Apart from d0, the routines do not alter any registers
+<br>&nbsp;
+</p></li>
+<li><p> The functions xxx_end release the semaphores again; here too no
+registers are altered
+<br>&nbsp;
+</p></li>
+<li><p> dma_wait waits for an interrupt of the ACSI-DMA (or FDC)
+controller; ncr_wait is for the SCSI bus of the Atari-TT. The
+following applies for the return values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-2</td>
+  <td align="left" valign="top">Bus error (interrupt of TT-SCSI)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-1</td>
+  <td align="left" valign="top">Timeout</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;0</td>
+  <td align="left" valign="top">Ok</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+</ul>
+
+<p>See also: <a href="About_the_BIOS.html">About the BIOS</a> &nbsp; <a href="gemdos_about.html">About the GEMDOS</a> &nbsp; <a href="magic.html">MagiC</a>'s
+XFS-concept
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_errors.html"><img src="udo_lf.gif" alt="Special error-messages in MagiC" title="Special error-messages in MagiC" border="0" width="24" height="24">Special error-messages in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_iconify.html"><img src="udo_rg.gif" alt="Iconification in MagiC" title="Iconification in MagiC" border="0" width="24" height="24">Iconification in MagiC</a>
+</body>
+</html>

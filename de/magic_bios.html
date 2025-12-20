@@ -1,0 +1,369 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Auszug aus dem BIOS von MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_cookie.html"><img src="udo_lf.gif" alt="MAGX_COOKIE, status_bits" title="MAGX_COOKIE, status_bits" border="0" width="24" height="24">MAGX_COOKIE, status_bits</a>
+<a name="UDO_nav_rg_HEAD" href="magic_autoexec.html"><img src="udo_rg.gif" alt="Die AUTOEXEC.BAT-Datei in MagiC" title="Die AUTOEXEC.BAT-Datei in MagiC" border="0" width="24" height="24">Die AUTOEXEC.BAT-Datei in MagiC</a>
+
+<hr>
+
+<h1><a name="Auszug_20aus_20dem_20BIOS_20von_20MagiC">11.3 Auszug aus dem BIOS von MagiC</a></h1>
+<pre>*******************************
+******* ACSI ******************
+*******************************
+
+
+* Interruptsteuerung:
+*
+* Alles geht über den Eingang I5 des ST-MFP, hat den Interrupt #7
+* (aktiviert mit Bit 7 von ierb)
+* Polling über Bit 5 von gpip
+* 1. aer für Bit 5 muß 0 sein, d.h. Interrupt wird ausgelöst beim
+*    Übergang von 1 auf 0
+* 2. Interrupt _mfpint (7) aktivieren und Vektor setzen (Adr. $11c)
+*
+
+**********************************************************************
+*
+* Sperre den FDC/ACSI-DMA
+* und gib ihn wieder frei.
+* Kein Register (außer d0 bei dma_end) wird verändert
+*
+* Für die Zeit, in der <a href="aes_main.html">AES</a> noch nicht initialisiert ist, kann evnt_sem
+* nicht sperren, weil act_appl immer NULL ist.
+*
+
+dma_begin:
+ movem.l  d1-d2/a0-a2,-(sp)
+ lea      dma_sem,a0
+ moveq    #0,d1               ; kein Timeout
+ moveq    #<a href="magic_xfs.html#SEM_SET">SEM_SET</a>,d0
+ jsr      evnt_sem
+ st       <a href="bios_sysvars.html#flock">flock</a>
+ movem.l  (sp)+,d1-d2/a0-a2
+ rts
+
+dma_end:
+ movem.l  d0-d2/a0-a2,-(sp)
+ lea      dma_sem,a0
+ moveq    #<a href="magic_xfs.html#SEM_FREE">SEM_FREE</a>,d0
+ jsr      evnt_sem
+ clr.w    <a href="bios_sysvars.html#flock">flock</a>
+ movem.l  (sp)+,d0-d2/a0-a2
+ rts
+
+
+**********************************************************************
+*
+* long wait_ACSI( d0 = long ticks_200hz )
+*
+* RÜckgabe:    0    OK
+*             -1    TimeOut
+*             -2    Busfehler
+*
+
+wait_ACSI:
+ movem.l  d1-d2/a0-a2,-(sp)
+ tst.w    pe_slice            ; präemptiv ?
+ bmi.b    wdma_no_yield       ; nein, busy waiting
+ move.l   act_appl,d2
+ ble.b    wdma_no_yield       ; aktuelle Applikation ungültig
+
+* neue Routine über evnt_IO und MFP- Interrupt
+
+ lsr.l    #2,d0               ; <a href="aes_main.html">AES</a>: 50Hz statt 200Hz
+wdma_neu:
+ move     sr,d1
+ ori      #$700,sr
+ btst     #5,gpip             ; schon fertig ?
+ beq.b    wdma_ok2            ; ja, enable interrupt
+; Interrupt aufsetzen
+ pea      int_mfp7_unsel(pc)
+ move.l   d2,imfp7_appl       ; act_appl
+ move.l   sp,imfp7_unsel
+; Interrupt freigeben
+ move.w   d1,sr
+; Auf Interrupt warten
+ move.l   sp,a0
+;move.w   d0,d0               ; TimeOut in 50Hz- Ticks
+ jsr      evnt_IO
+ addq.l   #4,sp
+wdma_ende:
+ movem.l  (sp)+,d1-d2/a0-a2
+ rts
+
+* alte Routine mit busy waiting über <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>
+
+wdma_no_yield:
+ add.l    <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>,d0
+wdma_loop:
+ btst     #5,gpip
+ beq.b    wdma_ok
+ cmp.l    <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>,d0
+ bcc.b    wdma_loop
+wdma_timeout:
+ moveq    #-1,d0              ; Timeout
+ bra.b    wdma_ende
+wdma_ok2:
+ move.w   d1,sr
+wdma_ok:
+ moveq    #0,d0               ; OK
+ bra.b    wdma_ende
+
+
+**********************************************************************
+*
+* Interruptroutine für MFP, Interruptkanal #7 = I/O-Port 5
+* (DMA/FDC busy)
+*
+* Rückgabewert 0 (OK)
+*
+
+int_mfp7:
+ tst.l    imfp7_unsel                   ; Interrupt aktiviert ?
+ beq.b    imfp7_ende                    ; nein, weiter
+ movem.l  d0-d2/a0-a2,-(sp)
+
+ move.l   imfp7_unsel,a0
+ clr.l    imfp7_unsel                   ; Interrupt deaktivieren
+ clr.l    (a0)                          ; als eingetroffen markieren
+
+ move.l   imfp7_appl,a0
+ jsr      appl_IOcomplete               ; wartende APP aufwecken
+ movem.l  (sp)+,d0-d2/a0-a2
+imfp7_ende:
+ move.b   #$7f,isrb                     ; service- Bit löschen
+ rte
+
+
+**********************************************************************
+*
+* void int_mfp7_unsel( a0 = long *unselect, a1 = APPL *ap );
+*
+* Deaktiviert den Interrupt wieder, wenn er nicht eingetroffen ist
+* Rückgabewert -1 (Timeout)
+*
+
+int_mfp7_unsel:
+ clr.l    imfp7_unsel                   ; Interrupt deaktivieren
+ moveq    #-1,d0
+ move.l   d0,(a0)                       ; nicht eingetroffen
+ rts
+
+
+
+*******************************
+******* SCSI ******************
+*******************************
+
+
+* Interruptsteuerung:
+*
+* SCSI-DMA-Busfehler: Eingang I5 des TT-MFP
+* 1. aer für Bit 5 muß 0 sein, d.h. Interrupt wird ausgelöst beim
+*    Übergang von 1 auf 0
+* Polling über Bit 5 von gpip
+* Interrupt #7 des TT-MFP (Adresse $15c)
+
+* SCSI: Eingang I7 des TT-MFP
+* 1. aer für Bit 7 muß 1 sein, d.h. Interrupt wird ausgelöst beim
+*    Übergang von 0 auf 1
+* Polling über Bit 7 von gpip
+* Interrupt #15 des TT-MFP (Adresse $17c)
+
+* Während der Übertragung muß offenbar im Betriebsartenregister
+* $fff785 des ncr 5380 das Bit 3 (enable process interrupt)
+* gesetzt sein.
+
+**********************************************************************
+*
+* Interruptroutine für TT-MFP, Interruptkanal #7 = I/O-Port 5
+* (SCSI-DMA Busfehler)
+*
+* Rückgabewert -2
+*
+
+int_scsidma:
+ tst.l    ncrdma_unsel                  ; Interrupt aktiviert ?
+ beq.b    incrdma_ende                  ; nein, weiter
+ movem.l  d0-d2/a0-a2,-(sp)
+
+ moveq    #-2,d0                        ; eingetroffen (Fehler)
+ move.l   ncrdma_unsel,a0
+ clr.l    ncrdma_unsel                  ; Interrupt deaktivieren
+ move.l   d0,(a0)                       ; als eingetroffen markieren
+
+ move.l   ncrdma_appl,a0
+ jsr      appl_IOcomplete               ; wartende APP aufwecken
+ movem.l  (sp)+,d0-d2/a0-a2
+incrdma_ende:
+ move.b   #$7f,isrb+$80                 ; service- Bit löschen (TT-MFP)
+ rte
+
+
+**********************************************************************
+*
+* Interruptroutine für TT-MFP, Interruptkanal #15 = I/O-Port 7
+* (SCSI)
+*
+* Rückgabewert 0
+*
+
+int_ncr:
+ tst.l    ncrdma_unsel                  ; Interrupt aktiviert ?
+ beq.b    incr_ende                     ; nein, weiter
+ movem.l  d0-d2/a0-a2,-(sp)
+
+ move.l   ncrdma_unsel,a0
+ clr.l    ncrdma_unsel                  ; Interrupt deaktivieren
+ clr.l    (a0)                          ; als eingetroffen markieren
+
+ move.l   ncrdma_appl,a0
+ jsr      appl_IOcomplete               ; wartende APP aufwecken
+ movem.l  (sp)+,d0-d2/a0-a2
+incr_ende:
+ move.b   #$7f,isra+$80                 ; service- Bit löschen (TT-MFP)
+ rte
+
+
+**********************************************************************
+*
+* void incrdma_unsel( a0 = long *unselect, a1 = APPL *ap );
+*
+* Deaktiviert den Interrupt wieder, wenn er nicht eingetroffen ist.
+* (Rückgabewert -1)
+*
+
+incrdma_unsel:
+ clr.l    ncrdma_unsel                  ; Interrupt deaktivieren
+ moveq    #-1,d0                        ; Timeout
+ move.l   d0,(a0)                       ; nicht eingetroffen
+ rts
+
+
+**********************************************************************
+*
+* long wait_NCR( d0 = long ticks_200hz )
+*
+* RÜckgabe:    0    OK
+*             -2    Busfehler
+*             -1    TimeOut
+*
+* kein Register außer d0 wird verändert
+*
+
+wait_NCR:
+ movem.l  d1-d2/a0-a2,-(sp)
+ tst.w    pe_slice            ; präemptiv ?
+ bmi.b    wncr_no_yield       ; nein, busy waiting
+ move.l   act_appl,d2
+ ble.b    wncr_no_yield       ; aktuelle Applikation ungültig
+
+* neue Routine über evnt_IO und MFP- Interrupt
+
+ lsr.l    #2,d0               ; <a href="aes_main.html">AES</a>: 50Hz statt 200Hz
+wncr_neu:
+ move     sr,d1
+ ori      #$700,sr
+ btst     #5,gpip+$80         ; DMA- Busfehler ?
+ beq.b    wncr_err2           ; ja, return(-2)
+ btst     #7,gpip+$80         ; schon fertig ?
+ bne.b    wncr_ok2            ; ja, enable interrupt, return(0)
+; Interrupt aufsetzen
+ pea      incrdma_unsel(pc)
+ move.l   d2,ncrdma_appl      ; act_appl
+ move.l   sp,ncrdma_unsel
+; Interrupt freigeben
+ move.w   d1,sr
+; Auf Interrupt warten
+ move.l   sp,a0
+;move.w   d0,d0               ; TimeOut in 50Hz- Ticks
+ jsr      evnt_IO
+ addq.l   #4,sp
+wncr_ende:
+ movem.l  (sp)+,d1-d2/a0-a2
+ rts
+
+* alte Routine mit busy waiting über <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>
+
+wncr_no_yield:
+ add.l    <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>,d0
+wncr_loop:
+ btst     #5,gpip+$80
+ beq.b    wncr_err
+ btst     #7,gpip+$80
+ bne.b    wncr_ok
+ cmp.l    <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a>,d0
+ bcc.b    wncr_loop
+ moveq    #-1,d0                   ; Timeout
+ bra.b    wncr_ende
+wncr_ok2:
+ move.w   d1,sr
+wncr_ok:
+ moveq    #0,d0
+ bra.b    wncr_ende
+wncr_err2:
+ move.w   d1,sr
+wncr_err:
+ moveq    #-2,d0
+ bra.b    wncr_ende
+
+
+**********************************************************************
+*
+* Sperre den NCR-SCSI
+*
+* kein Register außer d0 wird verändert
+*
+* und gib ihn wieder frei.
+*
+* Kein Register wird verändert
+*
+* Für die Zeit, in der <a href="aes_main.html">AES</a> noch nicht initialisiert ist, kann evnt_sem
+* nicht sperren, weil act_appl immer NULL ist.
+*
+
+ncr_begin:
+ movem.l  d1-d2/a0-a2,-(sp)
+ lea      ncr_sem,a0
+ moveq    #0,d1               ; kein Timeout
+ moveq    #<a href="magic_xfs.html#SEM_SET">SEM_SET</a>,d0
+ jsr      evnt_sem
+ movem.l  (sp)+,d1-d2/a0-a2
+ rts
+
+ncr_end:
+ movem.l  d0-d2/a0-a2,-(sp)
+ lea      ncr_sem,a0
+ moveq    #<a href="magic_xfs.html#SEM_FREE">SEM_FREE</a>,d0
+ jsr      evnt_sem
+ movem.l  (sp)+,d0-d2/a0-a2
+ rts
+</pre>
+<p><b>Achtung:</b> Die hier angegebenen Routinen, können sich
+natürlich jederzeit wieder ändern!
+</p>
+<p>Querverweis: <a href="magic.html">MagiC</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="bios_main.html">BIOS</a> &nbsp; <a href="magic_xfs.html">XFS-Konzept in MagiC</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_cookie.html"><img src="udo_lf.gif" alt="MAGX_COOKIE, status_bits" title="MAGX_COOKIE, status_bits" border="0" width="24" height="24">MAGX_COOKIE, status_bits</a>
+<a name="UDO_nav_rg_FOOT" href="magic_autoexec.html"><img src="udo_rg.gif" alt="Die AUTOEXEC.BAT-Datei in MagiC" title="Die AUTOEXEC.BAT-Datei in MagiC" border="0" width="24" height="24">Die AUTOEXEC.BAT-Datei in MagiC</a>
+</body>
+</html>

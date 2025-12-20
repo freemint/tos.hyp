@@ -1,0 +1,347 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: The drive U: in MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_iconify.html"><img src="udo_lf.gif" alt="Iconification in MagiC" title="Iconification in MagiC" border="0" width="24" height="24">Iconification in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_magxinf.html"><img src="udo_rg.gif" alt="Make-up of the MAGX.INF file" title="Make-up of the MAGX.INF file" border="0" width="24" height="24">Make-up of the MAGX.INF file</a>
+
+<hr>
+
+<h1><a name="The_20drive_20U:_20in_20MagiC">11.11 The drive U: in MagiC</a></h1>
+<p>Under <a href="magic.html">MagiC</a>, a drive U: is created during the DOS initializtion.
+So that its existence is recognized by current programs, the relevant
+bit in <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> is set; however, no corresponding BIOS drive exists.
+</p>
+<p><img src="bilder/gif/drv_u.gif" alt="" title="" border="0" width="235" height="262"></p>
+<p>Within the pseudo-drive, there are some special directories,
+namely:
+</p>
+<ul>
+<li> <a href="#The_20directory_20U:_5CDEV">U:\DEV</a> &nbsp;(Devices)
+</li>
+<li> <a href="#The_20directory_20U:_5CPIPE">U:\PIPE</a> &nbsp;(Pipes)
+</li>
+<li> <a href="#The_20directory_20U:_5CPROC">U:\PROC</a> (Processes)
+</li>
+<li> <a href="#The_20directory_20U:_5CSHM">U:\SHM</a> &nbsp;(Shared memory)
+</li>
+</ul>
+
+<p>In contrast to MiNT, however, these are not special filesystems,
+but just subdirectories of the DFS for Drive U:. Depending on the
+particular subdirectory, the U-DFS creates various file-types and
+-drivers. As the directory control is encumbent on the DOS_XFS, write
+accesses to a workstation, for instance, are logged in the directory
+by the file date-stamp. This even goes so far that a write access to
+the root of drive A: alters the file date-stamp of U:\A automatically.
+</p>
+<p>All directories are restricted to a maxium of 32 entries at
+present, and <a href="gemdos_directory.html#Dfree">Dfree</a> calls only return the value NULL. In the root
+directory one can create, besides existing files, only symbolic links
+(via <a href="gemdos_file.html#Fsymlink">Fsymlink</a>).
+</p>
+<p>Before every access to drive U:, newly added drives will be
+added via symbolic links, or no longer existing ones removed; this is
+recognized via <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a>. A symbolic link for drive X: is registered as
+standard under the name U:\X, and points to the directory X:\.
+Symbolic links can be renamed or deleted (even a renamed link will be
+deleted if the relevant bit in the system variables <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> is
+cleared).
+</p>
+<p><b>Warning:</b> MiNT does not incorporate the drives as
+symbolic links, so one can set down the following command order:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Dsetdrv</td>
+<td valign="top"> U:
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> ..
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\
+
+</td></tr>
+</table>
+
+<p>With a symbolic link, on the other hand, one really changes the
+path, i.e. in the third line A:\ appears as the current path. To
+overcome this problem, there is special treatment in the kernel which
+enable the above control order in MagiC as well. However there is a
+problem with this: The symbolic link may not be renamed, as otherwise
+the following happens:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Frename</td>
+<td valign="top"> U:\A U:\FLOPPY
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetdrv</td>
+<td valign="top"> U:
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> U:\FLOPPY
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> ..
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\
+
+</td></tr>
+</table>
+
+<p>Because all file functions on U: work in exactly the same way as
+on a floppy disk, it is possible to rename directories such as U:\DEV.
+<b>Warning:</b> This should be avoided if at all possible, since
+otherwise user programs will not be able to find their device drivers.
+</p>
+<p>See also: <a href="About_the_BIOS.html">About the BIOS</a> &nbsp; <a href="gemdos_about.html">About the GEMDOS</a> &nbsp; <a href="magic.html">MagiC</a>'s
+XFS-concept &nbsp; <a href="gemdos_pipes.html">Test for pipes</a>
+</p>
+<h3><a name="The_20directory_20U:_5CDEV">11.11.1 The directory U:\DEV</a></h3>
+<p>In this directory the device drivers are entered. We are dealing
+here with pseudo-files, which are only known to DOS but not the
+BIOS.
+</p>
+<p><img src="bilder/gif/drv_udev.gif" alt="" title="" border="0" width="233" height="220"></p>
+<p>The well-known device names too are found in this directory, as
+the following apply:
+</p>
+<ul>
+<li> CON: (Handle -1) ==&gt; U:\DEV\CON
+</li>
+<li> AUX: (Handle -2) ==&gt; U:\DEV\AUX
+</li>
+<li> PRN: (Handle -3) ==&gt; U:\DEV\PRN
+</li>
+<li> NUL: (Handle -4) ==&gt; U:\DEV\NULL
+</li>
+</ul>
+
+<p>Because the devices <a href="xbios_sound.html#installed">installed</a> here can be accessed with the
+normal GEMDOS file functions, it is possile to output a text document
+to a printer simply by saving with <a href="gemdos_file.html#Fwrite">Fwrite</a>, for instance. Filenames
+such as CON: are converted automatically by the kernel into the
+correct form (in this case: U:\DEV\CON).
+</p>
+<p>Depending on the computer model, the following devices are
+available by default:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Device</td>
+<td valign="top"> Description
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">AUX</td>
+<td valign="top"> BIOS device 2
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CON</td>
+<td valign="top"> Console
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">LAN</td>
+<td valign="top"> BIOS device 7, generally SCC, channel A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MIDI</td>
+<td valign="top"> BIOS device 3; with output status on the other hand the
+device with the index 4
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MODEM1</td>
+<td valign="top"> BIOS device 6, generally the serial port realised with the
+ST-MFP, on the Falcon030 the SCC with channel B
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MODEM2</td>
+<td valign="top"> BIOS device 7, generally SCC, channel B
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">NULL</td>
+<td valign="top"> Empty pseudo-file, always returns during writing the status OK
+and during reading the value EOF (no character available)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">PRN</td>
+<td valign="top"> BIOS device 0, during output it will abort at a timeout
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SERIAL1</td>
+<td valign="top"> BIOS device 8, generally the TT-MFP
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SERIAL2</td>
+<td valign="top"> BIOS device 9, generally SCC, channel A
+
+</td></tr>
+</table>
+
+<p>Apart from CON:, all devices operate in 'raw-mode', which means
+that control sequences such as [Control]-[C] are ignored.
+</p>
+<p>Further devices can be created and entered at any time with
+<a href="gemdos_directory.html#Dcntl">Dcntl</a>; due to the incompatible driver format, however, one must use
+the opcode <a href="gemdos_directory.html#DEV_M_INSTALL">DEV_M_INSTALL</a> and not the otherwise usual <a href="gemdos_directory.html#DEV_INSTALL">DEV_INSTALL</a>. The
+devices present can be renamed and deleted with the usual methods; in
+contrast to MiNT, the deletion of a device is performed via the device
+driver itself, which withdraws from the relevant system vectors and
+releases the occupied memory or can terminate itself. A further
+difference to MiNT is that MagiC makes the full functionality of the
+DOS filesystem available, i.e.:
+</p>
+<ul>
+<li> No more than one device with the same name may exist
+</li>
+<li> Write accesses are monitored by changes of the file date-stamp
+</li>
+<li> Write-protected devices may not be written to, deleted or
+renamed
+</li>
+</ul>
+
+<p><b>Note:</b> With Fcreate one can not create files here; however
+it is possible to create symbolic links with <a href="gemdos_file.html#Fsymlink">Fsymlink</a>.
+</p>
+<p>See also: <a href="About_the_BIOS.html">About the BIOS</a> &nbsp; <a href="gemdos_about.html">About the GEMDOS</a> &nbsp; <a href="magic.html">MagiC</a>'s
+XFS-concept
+</p>
+<h3><a name="The_20directory_20U:_5CPIPE">11.11.2 The directory U:\PIPE</a></h3>
+<a name="Pipes"></a>
+<p>In this directory pipes are stored; these are temporary files
+that are used particularly for data exchange between processes.
+</p>
+<p>One differentiates between <i>unidirectional</i> and
+<i>bidirectional</i> pipes: the former allow data to flow only in one
+direction, the latter can transmit in both directions, though not
+simultaneously. Bidirectional pipes are used in the Drag&amp;Drop
+protocol, for instance. Pipes return when reading via Fread basically
+EOF (<b>E</b>nd <b>O</b>f <b>F</b>ile) if they are empty or if no
+write process is present. Similarly, during writing with <a href="gemdos_file.html#Fwrite">Fwrite</a> the
+value EOF is returned if no read process is present.
+</p>
+<p>The access for this is purely asynchronous, i.e. aplications
+wait for the read or write, and awake another application again if
+necessary. Pipes are deleted automatically when the last program using
+them has closed the file that represents them.
+</p>
+<p><b>Note:</b> MagiC supports a maximum of 32 pipes
+simultaneously. An <a href="gemdos_file.html#Fseek">Fseek</a> on pipes leads basically to the return value
+of 0L, i.e. the file pointer cannot be influenced. In directories,
+pipes appear with a length of 2 or 4k and the date of their creation.
+If an ID &gt; 31 is returned on opening of a pipe, the system function
+<a href="gemdos_file.html#Fselect">Fselect</a> cannot be used.
+</p>
+<p><b>In addition, as of MagiC 3 the following is to be
+heeded:</b>
+</p>
+<ul>
+<li><p> Pipes with mode 4 (pseudo-TTYs) are not supported. MagiC knows
+only uni- and bidirectional pipes and for mode 4 creates a
+bidirectional pipe. The main reason for pipes at present is the
+Drag&amp;Drop protocol.
+<br>&nbsp;
+</p></li>
+<li><p> Pipes return for <a href="gemdos_file.html#Finstat">Finstat</a>/<a href="gemdos_file.html#Foutstat">Foutstat</a> the number of bytes present
+or still free in the block
+<br>&nbsp;
+</p></li>
+<li><p> If a pipe is closed, then all waiting programs are awakened, to
+prevent any possible <i>deadlocks</i>
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>See also:
+<br><a href="gemdos_file.html#Fcreate">Fcreate</a> &nbsp; <a href="gemdos_file.html#Fread">Fread</a> &nbsp; <a href="gemdos_file.html#Fwrite">Fwrite</a> &nbsp; <a href="gemdos_file.html#Fclose">Fclose</a> &nbsp; <a href="gemdos_file.html#Fpipe">Fpipe</a> &nbsp; <a href="gemdos_pipes.html">Test for pipes</a>
+</p>
+<h3><a name="The_20directory_20U:_5CPROC">11.11.3 The directory U:\PROC</a></h3>
+<a name="Name_20of_20a_20process"></a>
+<a name="Process_2C_20Name_20of_20a"></a>
+<a name="UDO__PNAM"></a>
+<p>This directory gives an oveview of the processes currently
+active in the system. Each entry consists of the following components:
+</p>
+<ul>
+<li> The process name
+</li>
+<li> The process ID (PID)
+</li>
+<li> The current memory usage
+</li>
+<li> Date and time of creation of the process
+</li>
+</ul>
+
+<p><img src="bilder/gif/drvuproc.gif" alt="" title="" border="0" width="231" height="226"></p>
+<p>In the above illustration, for instance, the process
+<i><a href="xcontrol_main.html">XCONTROL</a></i> has the PID 4 and occupies 93460 bytes of memory at
+present.
+</p>
+<p>Process IDs are allocated at program launch and released again
+on termination. The deletion of a file in this directory results in
+the corresponding process being destroyed (via the AES program
+manager).
+</p>
+<p><b>Note:</b> The MiNT-conform process attributes (special file
+attributes) are not supported by MagiC at present. The name of a
+process can be obtained also via the environmental variable
+<i>_PNAM</i>; the process ID is found also in the basepage.
+</p>
+<p>See also: <a href="gem_about.html">GEM</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a> &nbsp; <a href="magic_taskmanager.html">Task-manager</a>
+</p>
+<h3><a name="The_20directory_20U:_5CSHM">11.11.4 The directory U:\SHM</a></h3>
+<a name="Shared_20memory"></a>
+<p>This directory serves as 'storage' for shared memory; so here
+one can create files that represent blocks of memory which other
+processes may access.
+</p>
+<p>By using shared memory it is very ease to realise
+<i>inter-process communication</i> (IPC).
+</p>
+<p>See also: <a href="gemdos_file.html#Fcntl">Fcntl</a> &nbsp; <a href="gemdos_file.html#SHMGETBLK">SHMGETBLK</a> &nbsp; <a href="gemdos_file.html#SHMSETBLK">SHMSETBLK</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_iconify.html"><img src="udo_lf.gif" alt="Iconification in MagiC" title="Iconification in MagiC" border="0" width="24" height="24">Iconification in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_magxinf.html"><img src="udo_rg.gif" alt="Make-up of the MAGX.INF file" title="Make-up of the MAGX.INF file" border="0" width="24" height="24">Make-up of the MAGX.INF file</a>
+</body>
+</html>

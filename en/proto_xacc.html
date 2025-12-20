@@ -1,0 +1,1422 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: XAcc
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_HEAD" href="proto_vscreen.html"><img src="udo_lf.gif" alt="Virtual Screen protocol" title="Virtual Screen protocol" border="0" width="24" height="24">Virtual Screen protocol</a>
+<a name="UDO_nav_rg_HEAD" href="proto_xfsl.html"><img src="udo_rg.gif" alt="xFSL interface" title="xFSL interface" border="0" width="24" height="24">xFSL interface</a>
+
+<hr>
+
+<h1><a name="XAcc">15.13 XAcc</a></h1>
+<p>The XAcc protocol was originally designed for non-multitasking
+versions of GEM to allow data exchange between the main application
+and any number of accessories. Since the AES did not provide a
+function to find the application IDs (apIDs) of other applications
+without knowing their names, XAcc had to rely on the undocumented
+feature that the main application always has the apID 0. Therefore
+XAcc in its present <a class="UDO_footnote" title="refers to the XAcc definition before &quot;Classic XAcc&quot;">(1)</a> form does not work in a multitasking
+environment. However, AES 4.0 provides the new function
+<a href="appl.html#appl_search">appl_search</a>, which allows any application to find the apIDs of all
+other applications running concurrently. This makes it possible to
+design a modified XAcc that does not use any 'dirty tricks'. This
+document contains a proposal for such a modified XAcc; the changes
+with respect to the previous definition are small and modifying an
+existing XAcc-based application should be a matter of minutes. Since
+single-tasking TOS will still be with us for a while, applications
+are encouraged to implement both 'traditional' and 'modern' XAcc,
+depending on the version number of the AES.
+</p>
+<ul class="content">
+	<li>15.13.1 <a href="#Purpose_20of_20XAcc">Purpose of XAcc</a>
+	<li>15.13.2 <a href="#Classic_20XAcc">Classic XAcc</a>
+			<ul class="content">
+		<li>15.13.2.1 <a href="#XAcc_20message_20groups">XAcc message groups</a>
+		<li>15.13.2.2 <a href="#XAcc_20messages">XAcc messages</a>
+				<ul class="content">
+			<li>15.13.2.2.1 <a href="#Basic_20XAcc_20messages">Basic XAcc messages</a>
+					<ul class="content">
+				<li>15.13.2.2.1.1 <a href="#Single-tasking_20GEM_20versions">Single-tasking GEM versions</a>
+				<li>15.13.2.2.1.2 <a href="#Multitasking_20GEM_20versions">Multitasking GEM versions</a>
+						</li>
+					</ul>
+					</li>
+			<li>15.13.2.2.2 <a href="#Extended_20names">Extended names</a>
+			<li>15.13.2.2.3 <a href="#Message_20group_201">Message group 1</a>
+			<li>15.13.2.2.4 <a href="#Message_20group_202">Message group 2</a>
+					</li>
+				</ul>
+				</li>
+		<li>15.13.2.3 <a href="#Compatibility_20considerations">Compatibility considerations</a>
+				</li>
+			</ul>
+			</li>
+	<li>15.13.3 <a href="#Extended_20XAcc">Extended XAcc</a>
+			<ul class="content">
+		<li>15.13.3.1 <a href="#MailMerge_20protocol">MailMerge protocol</a>
+		<li>15.13.3.2 <a href="#Remote-Mailmerge_20protocol">Remote-Mailmerge protocol</a>
+		<li>15.13.3.3 <a href="#Inquiry_20protocol">Inquiry protocol</a>
+		<li>15.13.3.4 <a href="#Request_2FReply_20protocol">Request/Reply protocol</a>
+				</li>
+			</ul>
+			</li>
+	<li>15.13.4 <a href="#Example:_20no_7CLink_27s_20XAcc_20protocol">Example: no|Link's XAcc protocol</a>
+	<li>15.13.5 <a href="#XACC.H">XACC.H</a>
+	</li>
+</ul>
+<br>
+<h3><a name="Purpose_20of_20XAcc">15.13.1 Purpose of XAcc</a></h3>
+<p>The GEM AES functions <a href="appl.html#appl_write">appl_write</a> and <a href="appl.html#appl_read">appl_read</a> can be used
+to exchange data between GEM applications running concurrently. In
+practice however, some problems need to be solved to make good use of
+these two functions:
+</p>
+<ul>
+<li><p> There are no standard messages for exchanging data. Their
+definition is the main goal of <a href="#XAcc">XAcc</a>.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="appl.html#appl_write">appl_write</a> needs the receiver's application identifier (apID).
+The only way to get this (before AES 4.0) is to call <a href="appl.html#appl_find">appl_find</a>,
+which needs the receiver's name. Thus communication is only possible
+if the sender knows the receiver's name.
+<br>This problem is solved in AES 4.0 by the introduction of the
+function <a href="appl.html#appl_search">appl_search</a>.
+<br>&nbsp;
+</p></li>
+<li><p> The main application does not know when an accessory is
+activated or deactivated. This would often be useful, for example if
+the main application changes system variables that could affect the
+accessory's behaviour. If the main application were informed before
+the accessory gains control, it could reset those to their old values
+and change them back after the accessory is finished.
+<br>Another advantage would be that after an accessory has been
+called, the main application could check if something has been written
+to the clipboard or if other changes to the environment have been
+made.
+<br>&nbsp;
+<br>With multitasking GEM, the situation has changed in several
+important ways. The possibility of using several 'main' applications
+in parallel makes it even more undesirable to let them directly
+manipulate system variables and the like; nevertheless there will
+probably always remain some purposes that require such methods. On the
+other hand, at least for applications using windows (the preferred
+method to get the most out of a multitasking system) it is now
+possible to detect changes of the active application by interpreting
+the new AES messages <a href="evnt.html#WM_ONTOP">WM_ONTOP</a> and <a href="evnt.html#WM_UNTOPPED">WM_UNTOPPED</a>. Therefore it is not
+considered necessary for XAcc to provide additional means to achieve
+this.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>The communications protocol described in this document solves
+all these problems. It was designed for two distinct purposes:
+</p>
+<ul>
+<li><p> Exchanging data of standard types between programs that have no
+information about each other.
+<br>&nbsp;
+</p></li>
+<li><p> Exchanging data between specific applications known to each
+other. The standard protocol ensures that program combinations from
+different vendors do not interfere with each other.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>A potential problem caused by this protocol should be mentioned
+at this point: for single-tasking GEM versions, it relies on the
+currently undocumented fact that the main application's apID is always
+zero. Without this assumption there is no way to exchange data without
+using <a href="appl.html#appl_find">appl_find</a>. Although this fact is not documented, it holds for
+all single-tasking versions of GEM in existence until now, both for
+MS-DOS and the Atari ST (this information was confirmed by Digital
+Research Germany). Of course the main application's apID may be
+different in future versions, although there is no reason to change
+the current behaviour for single-tasking systems. For AES 4.0 (and
+later) the above assumption is not needed anyway, so no compatibility
+problems are to be expected in the future.
+</p>
+<p>A further requirement is that all programs not using this
+protocol must ignore its messages. This should not be a serious
+problem, as all GEM applications should ignore messages they do not
+understand. At the time of writing no programs are known to violate
+this rule.
+</p>
+<h3><a name="Classic_20XAcc">15.13.2 Classic XAcc</a></h3>
+<p>The 'classic' <a href="#XAcc">XAcc</a> protocoll was finally defined on November 28,
+1992. All known <a href="#XAcc">XAcc</a> applications implement the protocol this way.
+</p>
+<ul class="content">
+	<li>15.13.2.1 <a href="#XAcc_20message_20groups">XAcc message groups</a>
+	<li>15.13.2.2 <a href="#XAcc_20messages">XAcc messages</a>
+	<li>15.13.2.3 <a href="#Compatibility_20considerations">Compatibility considerations</a>
+		</li>
+</ul>
+<br>
+<h4><a name="XAcc_20message_20groups">15.13.2.1 XAcc message groups</a></h4>
+<p>[Note: The 'levels' used in previous XAcc versions have been
+replaced by this new concept. Compatibility issues are discussed in a
+special section at the end of this document.]
+</p>
+<p>Both main applications and accessories can have widely different
+needs for communication with other programs. Therefore <a href="#XAcc">XAcc</a> defines
+several groups of related messages that deal with a certain range of
+data types. The message groups always indicate the messages understood
+by a program, not the messages it might send to other ones. If a
+program supports a certain message group, it must correctly respond to
+all corresponding messages, whether it can actually use the supplied
+data or not.
+</p>
+<p>In addition to XAcc message groups, there are the so-called
+'basic messages' which must be supported by any XAcc-aware program,
+and program-specific so-called 'special messages'.
+</p>
+<p>The basic messages deal solely with identification, but no real
+data exchange. They are already sufficient for programs that either do
+not exchange data with others at all or use only special messages to
+communicate with a number of other specific programs.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="#Message_20group_201">Message group 1</a></td>
+<td valign="top"> specifies the exchange of ASCII-format character data.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#Message_20group_202">Message group 2</a></td>
+<td valign="top"> deals with the exchange of drawings and pictures using the
+GEM metafile format and the GEM bit-image file format.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>Future extensions might include sound or spreadsheet data. In
+addition, a message group could be defined to handle command
+interchange between applications, e.g. for a 'Drag&amp;Drop' protocol.
+</p>
+<h4><a name="XAcc_20messages">15.13.2.2 XAcc messages</a></h4>
+<p>There are two kinds of XAcc messages: standard messages, which
+must be understood by every participating program, and special
+messages intended for communications between specific program
+combinations. The standard messages have numbers ranging from 0x400 to
+0x7ff, special messages start from 0x800. The latter ones may only be
+sent after the receiver has been identified and is known to understand
+them. The following description is only concerned with standard
+messages. In addition to <a href="#XAcc">XAcc</a> standard messages, the AES messages
+normally sent by the <a href="aes_fundamentals.html#The_20screen-manager">screen manager</a> may be used. The most useful ones are
+<a href="evnt.html#AC_OPEN">AC_OPEN</a> and <a href="evnt.html#MN_SELECTED">MN_SELECTED</a>; the latter one requires a knowledge of the
+receiver and therefore belongs to the special messages.
+</p>
+<ul class="content">
+	<li>15.13.2.2.1 <a href="#Basic_20XAcc_20messages">Basic XAcc messages</a>
+	<li>15.13.2.2.2 <a href="#Extended_20names">Extended names</a>
+	<li>15.13.2.2.3 <a href="#Message_20group_201">Message group 1</a>
+	<li>15.13.2.2.4 <a href="#Message_20group_202">Message group 2</a>
+			</li>
+</ul>
+<br>
+<h5><a name="Basic_20XAcc_20messages">15.13.2.2.1 Basic XAcc messages</a></h5>
+<a name="ACC_ID"></a>
+<a name="ACC_OPEN"></a>
+<a name="ACC_CLOSE"></a>
+<a name="ACC_ACC"></a>
+<a name="ACC_EXIT"></a>
+<pre>ACC_ID    = 0x400
+ACC_OPEN  = 0x401
+ACC_CLOSE = 0x402
+ACC_ACC   = 0x403
+ACC_EXIT  = 0x404
+</pre>
+<p>These messages provide <a href="#XAcc">XAcc</a> initialization and organization.
+This is the only part of XAcc which has to be implemented in a
+different way for single- and multi-tasking GEM versions. Note that
+the procedure described for 'multitasking' actually only depends on
+the existence of <a href="appl.html#appl_search">appl_search</a> and hence on an AES version number
+&gt;= 4.0. If some future single-tasking AES supports <a href="appl.html#appl_search">appl_search</a>,
+the 'multitasking' initialization should be used. Multitasking AES
+versions with a version number &lt; 4.0 should never exist; to be on
+the safe side, applications should not attempt to use XAcc if such a
+situation is detected.
+</p>
+<ul class="content">
+	<li>15.13.2.2.1.1 <a href="#Single-tasking_20GEM_20versions">Single-tasking GEM versions</a>
+	<li>15.13.2.2.1.2 <a href="#Multitasking_20GEM_20versions">Multitasking GEM versions</a>
+				</li>
+</ul>
+<br>
+<h6><a name="Single-tasking_20GEM_20versions">15.13.2.2.1.1 Single-tasking GEM versions</a></h6>
+<p>The communication between the main application and the
+accessories is initiated in the following way:
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> When a main application is started (or terminated), all desk
+accessories receive an <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> message from the AES <a href="aes_fundamentals.html#The_20screen-manager">screen manager</a>. In
+response they must send an identification to the main application
+according to the following format:
+<br>&nbsp;
+<pre>     msg[0]:  <a href="proto_xacc.html#ACC_ID">ACC_ID</a> (0x400)
+     msg[1]:  Sender's apID
+     msg[2]:  Length of the message - 16, giving 0
+     msg[3]:  Program version number and message groups
+     msg[4]  and
+     msg[5]:  Pointer to sender's name
+     msg[6]:  Menu number (menu_id) as returned by <a href="menu.html#menu_register">menu_register</a>
+     msg[7]:  Reserved (see <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a>)
+</pre>
+<br>The low byte of msg[3] contains a bitmap indicating which
+message groups are understood by the sender. Bit zero is set for
+message group 1, bit one for message group 2, and so on. This is
+independent of the message types which the sender might itself send to
+others. The sender of a message must ensure that it is understood by
+the receiver. The high byte is used to indicate a program version
+number using an arbitrary encoding scheme.
+<br>&nbsp;
+<br>The pointer to the sender's name is stored in a
+machine-dependent format. The name itself is a character string
+following C conventions, i.e. a string of characters terminated by a
+zero byte. To avoid name conflicts, long names are preferred to short
+abbreviations. The name must be available at the given address at any
+time, it may not be removed after initialization. As the version
+number is stored in msg[3], it should not occur again in the name.
+(Note: See the section '<a href="#Extended_20names">Extended names</a>' for more details on names.)
+<br>&nbsp;
+<br><a href="aes_fundamentals.html#Accessories">Accessories</a> using more than one menu entry must issue one <a href="proto_xacc.html#ACC_ID">ACC_ID</a>
+message for each entry used. <a href="aes_fundamentals.html#Accessories">Accessories</a> without a menu entry must use
+a number of -1.
+<br>&nbsp;
+<br>Since msg[1] and msg[2] have the same meaning for all message
+types, they are no longer mentioned from now on.
+<br>&nbsp;
+</p></li>
+<li><p> In response to an <a href="proto_xacc.html#ACC_ID">ACC_ID</a> message the main application sends an
+identification back to the accessory. The format is identical, except
+that there is no menu number and thus msg[6] can be used for any other
+purpose if neccessary. The same applies to msg[7].
+<br>&nbsp;
+</p></li>
+<li><p> In addition to the <a href="proto_xacc.html#ACC_ID">ACC_ID</a> message, the main application informs
+all previously registered accessories about the new one by sending
+them the message
+<br>&nbsp;
+<pre>     msg[0]:  <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> (0x403)
+     msg[3]:  Program version number and message groups
+     msg[4]  and
+     msg[5]:  Pointer to accessory's name
+     msg[6]:  Accessory's menu number (menu_id)
+     msg[7]:  Accessory's apID
+</pre>
+</p></li>
+<li><p> A desk accessory receiving the <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> message from the main
+application sends an <a href="proto_xacc.html#ACC_ID">ACC_ID</a> message to the thereby registered
+accessory, identical to the one previously sent to the main
+application.
+<br>&nbsp;
+</p></li>
+<li><p> When an accessory is activated by receiving an <a href="evnt.html#AC_OPEN">AC_OPEN</a> message,
+it sends the following message to the main application:
+<br>msg[0]: <a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a>
+<br>Just before the accessory returns control to another program, it
+sends the message
+<br>msg[0]: <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a>
+<br>When receiving <a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a>, the main application restores all system
+variables it has changed to their original values (if possible and
+neccessary). After receiving <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a>, it may set them again to any
+desired value.
+<br>&nbsp;
+<br><a href="aes_fundamentals.html#Accessories">Accessories</a> should change system variables only after sending
+ACC_OPEN and restore them before ACC_CLOSE.
+<br>&nbsp;
+<br>There have been some problems with the implementation of
+<a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a> and <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a> that should be mentioned. The system was
+designed with windowless accessories in mind, i.e. accessories that
+only display a dialog box. For these accessories, the above procedure
+is well-defined. <a href="aes_fundamentals.html#Accessories">Accessories</a> that use windows however have no way to
+find out if they have been activated or deactivated, because they do
+not receive a message to indicate this (starting from AES 4.0, this
+problem is solved). Therefore such accessories must be careful with
+<a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a> and <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a>. The most important thing is to guarantee that
+ACC_OPEN and ACC_CLOSE always occur in pairs, and that in between no other
+program gains control. How exactly this is implemented depends on the
+specific application. Sometimes the best implementation is not to use
+ACC_OPEN and ACC_CLOSE at all.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<p>After initialization is completed, all participating programs
+know the identity of all other ones, either by receiving an <a href="proto_xacc.html#ACC_ID">ACC_ID</a>
+message or by receiving an <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> message. The main application is
+always informed about accessory activities. If in addition it proves
+neccessary to inform one accessory about the activation of another
+one, this can be accomplished by sending special messages (starting
+from 0x800).
+</p>
+<h6><a name="Multitasking_20GEM_20versions">15.13.2.2.1.2 Multitasking GEM versions</a></h6>
+<p>The initialization procedure is much simpler in this case. Any
+application, i.e. both 'standard' applications and accessories, uses
+<a href="appl.html#appl_search">appl_search</a> to detect all currently running AES processes when it
+is started. To each application or accessory (i.e. everything but
+system processes) it sends an <a href="proto_xacc.html#ACC_ID">ACC_ID</a> message:
+</p>
+<pre>  msg[0]:  <a href="proto_xacc.html#ACC_ID">ACC_ID</a> (0x400)
+  msg[1]:  Sender's apID
+  msg[2]:  Length of the message - 16, giving 0
+  msg[3]:  Program version number and message groups
+  msg[4]  and
+  msg[5]:  Pointer to sender's name
+  msg[6]:  Menu number (menu_id) as returned by <a href="menu.html#menu_register">menu_register</a>
+  msg[7]:  Reserved
+</pre>
+<p>The low byte of msg[3] contains a bitmap indicating which
+message groups are understood by the sender. Bit zero is set for
+message group 1, bit one for message group 2, and so on. This is
+independent of the message types which the sender might itself send to
+others. The sender of a message must ensure that it is understood by
+the receiver. The high byte is used to indicate a program version
+number using an arbitrary encoding scheme.
+</p>
+<p>The pointer to the sender's name is stored in a
+processor-dependent format. The name itself is a string of characters
+terminated by two zero bytes. To avoid name conflicts, long names are
+preferred to short abbreviations. The name must be available at the
+given address at any time, it may not be removed after initialization.
+It must also reside in globally accessible memory. As the version
+number is stored in msg[3], it should not occur again in the name.
+(Note: see the section '<a href="#Extended_20names">Extended names</a>' for more details on names.)
+</p>
+<p>Applications using more than one menu entry must issue one
+<a href="proto_xacc.html#ACC_ID">ACC_ID</a> message for each entry used. <a href="aes_fundamentals.html#Accessories">Accessories</a> without a menu entry
+must use a number of -1.
+</p>
+<p>When receiving an <a href="proto_xacc.html#ACC_ID">ACC_ID</a> message, an application replies by
+sending a message of the same format to the original sender, the only
+difference being that <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> is used instead of <a href="proto_xacc.html#ACC_ID">ACC_ID</a>. Applications
+with several menu entries must again send one message for each entry.
+</p>
+<p>The messages <a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a> and <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a> are not used in multitasking
+systems.
+</p>
+<p><b>Note:</b> The only difference between <a href="proto_xacc.html#ACC_ID">ACC_ID</a> and <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> for
+multitasking systems is that an application receiving ACC_ID sends
+ACC_ACC as a reply, whereas no reply is sent on receiving ACC_ACC. This
+prevents applications from sending <a href="proto_xacc.html#ACC_ID">ACC_ID</a> to each other indefinitely.
+Obviously the name <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a> has lost its original meaning and probably
+should be changed. But since the symbolic names do not influence the
+actual behaviour of any program, this is not really important at all.
+</p>
+<p>Since in a multitasking environment every participating
+application can terminate, some means must be provided to tell other
+applications about this. Therefore the message <a href="proto_xacc.html#ACC_EXIT">ACC_EXIT</a> has been added
+to the list of level 0 messages. Before terminating, any application
+sends
+</p>
+<pre>  msg[0]:  <a href="proto_xacc.html#ACC_EXIT">ACC_EXIT</a> (0x404)
+  msg[1]:  Sender's apID
+  msg[2]:  Length of the message - 16, giving 0
+</pre>
+<p>to all applications that have ever registered themselves by
+sending <a href="proto_xacc.html#ACC_ID">ACC_ID</a> or <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a>.
+</p>
+<h5><a name="Extended_20names">15.13.2.2.2 Extended names</a></h5>
+<p>Experience with <a href="#XAcc">XAcc</a> has shown that it would often be useful to
+have more information about an application than specified with <a href="proto_xacc.html#ACC_ID">ACC_ID</a>
+messages. For example it is sometimes useful to check for a special
+feature that is not unique to a single program, but to several similar
+ones. This was the motivation for the introduction of &quot;Extended
+Names&quot;.
+</p>
+<p>An &quot;extended name&quot; is a character string of the
+format:
+</p>
+<p>'name'\0XDSC\0'string'\0'string'\0...'string'\0\0
+</p>
+<p>i.e. a &quot;standard&quot; name followed by the string
+&quot;XDSC&quot; (for &quot;e<b>X</b>tended
+<b>D</b>e<b>SC</b>ription&quot;), followed by a list of strings
+containing additional information. The end of the list is marked by an
+additional zero byte.
+</p>
+<p>Each information string indicates by its first byte what kind of
+information it contains. Currently the following types are defined:
+</p>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>'1'</b></td>
+<td valign="top"> - application type (human-readable)
+<br>&nbsp;
+<br>The text following this byte (an ASCII-1, 0x31) should roughly
+specify the type of application, e.g. &quot;word processor&quot; or
+&quot;spreadsheet&quot;. The purpose is for applications to present
+this information to the user to let him/her decide where data should
+go. This is not the place for advertising hype; a word processor
+should call itself &quot;word processor&quot; and not &quot;document
+editing and design system&quot;.
+<br>&nbsp;
+<br>It should be clear that the text should be understandable for
+end users, especially it should be in the language used for the user
+interface.
+<br>&nbsp;
+<a name="CD"></a>
+<a name="DB"></a>
+<a name="DC"></a>
+<a name="DP"></a>
+<a name="DT"></a>
+<a name="ED"></a>
+<a name="GG"></a>
+<a name="MU"></a>
+<a name="MV"></a>
+<a name="PE"></a>
+<a name="RG"></a>
+<a name="SS"></a>
+<a name="VG"></a>
+<a name="WP"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>'2'</b></td>
+<td valign="top"> - application type (machine-readable)
+<br>&nbsp;
+<br>Currently defined are:
+<br>&quot;WP&quot; - Word processor
+<br>&quot;DP&quot; - DTP
+<br>&quot;ED&quot; - Text editor
+<br>&quot;DB&quot; - Database
+<br>&quot;SS&quot; - Spreadsheet
+<br>&quot;RG&quot; - Raster graphics application
+<br>&quot;VG&quot; - Vector graphics application
+<br>&quot;GG&quot; - General graphics application
+<br>&quot;MU&quot; - Music application
+<br>&quot;CD&quot; - CAD
+<br>&quot;DC&quot; - Data communication
+<br>&quot;DT&quot; - Desktop
+<br>&quot;PE&quot; - Programming environment
+<br>&nbsp;
+<a name="Extended_20feature"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>'X'</b></td>
+<td valign="top"> - extended features This string is used to indicate special
+communication capabilities of an application. It can be used to give
+more specific information than just the message groups understood.
+Since this information is meant to be used by other applications
+rather than end users, short abbreviations are sufficient.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>'N'</b></td>
+<td valign="top"> - generic name Often several related, but not completely
+identical, applications have different names. Marketing requirements
+may even dictate changes of the &quot;official&quot; brand names,
+making them unsuitable for a &quot;technical&quot; identification. In
+such cases a &quot;generic&quot; name for all these programs can be
+specified, which is mainly used by other programs wishing to use
+special messages.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>The &quot;normal&quot; name should be the &quot;official&quot;
+name of the program, just as it is used on the package, in the manual,
+and in similar places. It should be presentable to the user to let
+him/her decide where to send data.
+</p>
+<p><b>Example:</b> The address database &quot;That's Address&quot;
+identifies itself with the extended name (in C syntax)
+</p>
+<p>&quot;That's Address\0XDSC\01database\02DB\0XMM\0XSU\0&quot;,
+</p>
+<p>indicating that it is a database with features &quot;MM&quot;
+and &quot;SU&quot;. The first one indicates a special mail merge mode,
+the second one the possibility of retrieving data by sending the key
+via <a href="proto_xacc.html#ACC_TEXT">ACC_TEXT</a>. (Further information on this program can be obtained
+from its manual.)
+</p>
+<h5><a name="Message_20group_201">15.13.2.2.3 Message group 1</a></h5>
+<a name="ACC_ACK"></a>
+<a name="ACC_TEXT"></a>
+<a name="ACC_KEY"></a>
+<pre>ACC_ACK  = 0x500
+ACC_TEXT = 0x501
+ACC_KEY  = 0x502
+</pre>
+
+<ol class="UDO_env_enumerate">
+<li><p> Transmitting text data:
+<br>&nbsp;
+<pre>     msg[0]:  ACC_TEXT (0x501)
+     msg[4]  and
+     msg[5]:  Pointer to text
+</pre>
+<br>The text may contain all printable ASCII characters (code &gt;=
+32) and the following control codes:
+<br>&nbsp;
+<br>0x09 TAB (may be interpreted as a space by the receiver)
+<br>0x0A LF (usually ignored by receiver)
+<br>0x0D CR (used to mark an end-of-line (or end-of paragraph)
+<br>&nbsp;
+<br>Other control codes may only be used if the receiver is known to
+understand them. The text is terminated by a zero byte. After the text
+has been interpreted completely, the receiver acknowledges by sending
+<br>&nbsp;
+<pre>     msg[0]:  ACC_ACK (0x500)
+     msg[3]:  0 if the text was simply ignored
+              1 if it was used in some sensible way
+</pre>
+<br>The sender of a text message may not change the text nor send
+any other text messages to the same receiver until is has received the
+acknowledgement.
+<br>&nbsp;
+<br>The sender must make sure that the memory used to store the text
+is globally accessible.
+<br>&nbsp;
+<br>The receiver should normally interpret the text as if it were
+typed from the keyboard. A word processor would for example insert it
+into the currently edited document (this implies using CR as an
+end-of-paragraph mark), a command line interpreter would interpret the
+text as a command (which implies using CR as an end-of-line mark).
+<br>&nbsp;
+</p></li>
+<li><p> Simulation of a key press:
+<br>&nbsp;
+<pre>     msg[0]:  ACC_KEY (0x502)
+     msg[3]:  Scancode of the simulated key and corresponding
+              ASCII-code (as returned by <a href="evnt.html#evnt_keybd">evnt_keybd</a>)
+     msg[4]:  State of the SHIFT keys (as returned by <a href="About_the_BIOS.html#Kbshift">Kbshift</a>)
+</pre>
+<br>This message should be regarded identical to a keyboard event.
+It can be used to send control commands to a receiver which might have
+been issued from the keyboard. Of course this requires a knowledge of
+the receiver, as no standard keyboard command sets exist. It should be
+noted that the receiver is free to use only the ASCII-code or only the
+scancode, or both of them.
+<br>&nbsp;
+<br>This message is acknowledged after its interpretation with:
+<br>&nbsp;
+<pre>     msg[0]:  ACC_ACK (0x500)
+     msg[3]:  0 if ACC_KEY was ignored or a given command was not
+              understood, 1 if some action was taken.
+</pre>
+</p></li>
+</ol>
+
+<p>To prevent a deadlock if a program does not properly acknowledge
+a message, the sender should have some way to recover. An accessory
+could for example stop waiting for an acknowledgement after the next
+<a href="evnt.html#AC_OPEN">AC_OPEN</a>, a main application might time out after a sufficiently long
+period.
+</p>
+<h5><a name="Message_20group_202">15.13.2.2.4 Message group 2</a></h5>
+<a name="ACC_META"></a>
+<a name="ACC_IMG"></a>
+<pre>ACC_META = 0x503
+ACC_IMG  = 0x504
+</pre>
+<p>These message are used to exchange drawings and pictures. Only
+the file formats defined in the GEM documentation are used; they
+are sufficient to meet most requirements, and any GEM application
+should be able to handle them anyway.
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> Sending a metafile:
+<br>&nbsp;
+<pre>     msg[0]:  ACC_META (0x503)
+     msg[3]:  1 for the final part, 0 otherwise
+     msg[4]  and
+     msg[5]:  Pointer to data
+     msg[6]  and
+     msg[7]:  Length of data (32 bit longword)
+</pre>
+<br>The metafile data is sent in the same format as it would be
+stored on disk. As metafiles can become quite large, and often
+accessories in particular do not have sufficient memory free to store
+them, a file can be sent in several pieces. The receiver has to take
+care of assembling all parts to restore the original data, if
+neccessary by writing the parts to a file. The last part of a file is
+marked by msg[3]=1. The sender may send no other data between the
+parts of a file. msg[6] and msg[7] contain the length of the part
+being sent, not the total length.
+<br>&nbsp;
+<br>The receiver acknowledges each part as described for <a href="#Message_20group_201">group 1</a>. As
+for text messages, the sender must make sure that the data to be
+transferred is stored in globally accessible memory.
+<br>&nbsp;
+</p></li>
+<li><p> Sending a bit image file:
+<br>&nbsp;
+<br>msg[0]: ACC_IMG (0x504)
+<br>&nbsp;
+<br>otherwise identical to 1.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<h4><a name="Compatibility_20considerations">15.13.2.3 Compatibility considerations</a></h4>
+<p>There are two major changes with respect to the original <a href="#XAcc">XAcc</a>
+definition:
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> &quot;Levels&quot; have been replaced by &quot;message
+groups&quot;
+<br>&nbsp;
+<br>The motivation for this change was that the classification
+according to exchangeable data types was not really a hierarchical
+one; there is no reason why a programm accepting graphics should also
+be able to understand text. The new scheme makes no such arbitrary
+assumptions.
+<br>&nbsp;
+<br>There is only one situation in which a possible incompatibility
+could occur: an application following the &quot;old&quot; convention
+encounters a &quot;new&quot; application and one of them indicates 2
+in the level/message group byte. This would be interprets as
+&quot;graphics only&quot; by one and as &quot;graphics and text&quot;
+by the other. Since the number of level-2 applications was always
+extremely small (in fact, the author knows only of a single one), this
+should be no problem in practice.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#Extended_20names">Extended names</a> have been introduced
+<br>&nbsp;
+<br>This could lead to a problem in the extremely unlikely case of
+an &quot;old&quot; application using a name string which is
+accidentally followed by &quot;XDSC&quot;.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<p>In any case it is expected that most applications will be
+converted to the new rules soon, if only to support MultiTOS.
+</p>
+<h3><a name="Extended_20XAcc">15.13.3 Extended XAcc</a></h3>
+<p>This chapter describes developments of the XAcc protocol after
+&quot;<a href="#Classic_20XAcc">Classic XAcc</a>&quot; (11/28/92). Last changes have been made on
+June 15, 1995.
+</p>
+<p>Since the last official documentation for the XAcc protocol,
+some extensions have appeared, which are now summarized here. Some of
+these extensions have arisen from the special forms of data
+interchange between the text processor <i>That's Write</i> and the
+address manager <i>That's Address</i> or its successor
+<i>no|Address.</i> However, these extensions are also accessible for
+any other applications, and the use of these application names in the
+following documentation is only for purposes of serving as examples
+(<i>That's Address</i> = TA and <i>That's Write</i>= TW). The
+extensions comprise:
+</p>
+<ul>
+<li><p> <a href="#MailMerge_20protocol">MailMerge protocol</a>
+<br>&nbsp;
+<br>The actual mail merge output of TW is serviced via this
+protocol.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#Remote-Mailmerge_20protocol">Remote-Mailmerge protocol</a>
+<br>&nbsp;
+<br>Permits an application itself to initiate a mail merge output in
+TW.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#Inquiry_20protocol">Inquiry protocol</a>
+<br>&nbsp;
+<br>Serves for obtaining information about the makeup of a database.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#Request_2FReply_20protocol">Request/Reply protocol</a>
+<br>&nbsp;
+<br>Serves for general data interchange between applications.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<ul class="content">
+	<li>15.13.3.1 <a href="#MailMerge_20protocol">MailMerge protocol</a>
+	<li>15.13.3.2 <a href="#Remote-Mailmerge_20protocol">Remote-Mailmerge protocol</a>
+	<li>15.13.3.3 <a href="#Inquiry_20protocol">Inquiry protocol</a>
+	<li>15.13.3.4 <a href="#Request_2FReply_20protocol">Request/Reply protocol</a>
+		</li>
+</ul>
+<br>
+<h4><a name="MailMerge_20protocol">15.13.3.1 MailMerge protocol</a></h4>
+<p>This protocol works with <a href="proto_xacc.html#ACC_TEXT">ACC_TEXT</a> messages for historical
+reasons. The TW sends to TA first an ACC_TEXT message with a string that
+starts with '#I' and contains after the 'I' the SDF format string
+which tells the TA which parts of an address data-set are to be
+transferred.
+</p>
+<p><b>Example:</b> '#IA1,A2,A3,A4,T1' (the first 4 address fields
+and the first lelephone number).
+</p>
+<p>After successful receipt of this message, an ACC_TEXT message with
+the string '0' is returned to TW, else an empty string ''.
+</p>
+<p>Now TW can start to request individual address data with the
+ACC_TEXT message '#N'. at the receipt of such a message, TA sends for
+each address field of an address an <a href="proto_xacc.html#ACC_TEXT">ACC_TEXT</a> message and at the end of
+the data set an empty string ''.
+</p>
+<h4><a name="Remote-Mailmerge_20protocol">15.13.3.2 Remote-Mailmerge protocol</a></h4>
+<p>For this protocol there are two new XAcc message types,
+namely:
+</p>
+<a name="ACC_FORCESDF"></a>
+<a name="ACC_GETSDF"></a>
+<pre>#define ACC_FORCESDF        0x520
+#define ACC_GETSDF          0x521
+</pre>
+<p>TA sends to TW an ACC_FORCESDF when an address or an
+address-list is to be sent to TW. If it is dealing only with an
+address, msg[4]+[5] contains a pointer to the keyword of the address;
+for an address-list msg[4]+[5] contains a pointer to '#L'. The
+ACC_FORCESDF message must be conirmed with an <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> (msg[3]==1 -&gt;
+OK and msg[3]==0 -&gt; <a href="bios_errors.html#ERROR">ERROR</a>).
+</p>
+<p>When TW receves a '#L', then TW runs a normal MailMerge
+protocol. If TW receives a keyword (max. 20 characters long), then TW
+requests this address from TA with ACC_GETSDF. The ACC_GETSDF message
+must have a pointer in msg[4]+[5] to a buffer that first contains the
+keyword with a terminating '\0' followed by the XDF format string
+(e.g.: 'JÖRG\0A1,A2,A3\0').
+</p>
+<p>If TA can understand the ACC_GETSDF message, then it sends an
+<a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> with msg[3]==1, else an <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> with msg[3]==0. Subsequently
+TW will receive the data of this single address as with the normal
+<a href="#MailMerge_20protocol">MailMerge protocol</a>.
+</p>
+<p>TW must have in its XDSC string an 'XRM', so that TA itself will
+start a Remote-Mailmerge protocol.
+</p>
+<p>TA now has the following XDSC features (e.g. ACC):
+</p>
+<pre>const char ta2Ident[] = &quot;That's Address ACC\0XDSC\0&quot;
+                        &quot;1Adressverwaltung\0&quot;
+                        &quot;2DB\0&quot;
+                        &quot;XMM\0XSU\0XDI\0XRM\0NnoAddress ACC\0&quot;;
+</pre>
+<table class="UDO_env_ilist">
+<tr><td nowrap="nowrap" valign="top"><i>XMM</i></td>
+<td valign="top"> MailMerge
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>XSU</i></td>
+<td valign="top"> Keyword passing (optional with following '?')
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>XDI</i></td>
+<td valign="top"> <a href="#Inquiry_20protocol">Inquiry protocol</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>XRM</i></td>
+<td valign="top"> Remote-MailMerge
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Inquiry_20protocol">15.13.3.3 Inquiry protocol</a></h4>
+<a name="ACC_GETDSI"></a>
+<a name="ACC_DSINFO"></a>
+<a name="ACC_FILEINFO"></a>
+<p>In principle the whole Inquiry protocol proceeds in 2 steps.
+First the data of the available databases are obtained, and
+subsequently (completely independent of each other timewise) the
+individual fields of a selected database are inquired for.
+</p>
+<p>So part 1 (as example of TA and TW):
+</p>
+<pre>            TA                  |                   TW
+--------------------------------+------------------------------------
+                            ACC_GETDSI
+            &lt;----------------------------------------
+
+                            ACC_DSINFO
+            ----------------------------------------&gt;
+
+                            <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a>
+            &lt;----------------------------------------
+
+    {
+                            ACC_FILEINFO
+            ----------------------------------------&gt;
+
+                            <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a>
+            &lt;----------------------------------------
+
+    }   /* 'n' times, where n was passed at ACC_DSINFO */
+</pre>
+<p>Explanation of the individual protocol elements:
+</p>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>ACC_GETDSI</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>This initiates the Inquiry protocol. This message contains a
+pointer to a variable of the type <a href="proto_xacc.html#Xacc_Dsi_Request">Xacc_Dsi_Request</a>, containing coding
+of which fields of what type are desired.
+<br>&nbsp;
+<pre>        msg[0]            = ACC_GETDSI (0x510)
+        msg[1]            = Application ID
+        msg[4] and msg[5] = Pointer to the desired
+                            field types (see <a href="#XACC.H">XACC.H</a>)
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>ACC_DSINFO</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>The inquired application replies to an ACC_GETDSI with this
+message, in which a pointer is passed to the inquiring application to
+a variable of the type <a href="proto_xacc.html#Xacc_Dsinfo">Xacc_Dsinfo</a> if the inquiry could be answered,
+or a NULL-pointer if the inquiry could not be answered.
+<br>&nbsp;
+<pre>        msg[0]            = ACC_DSINFO (0x511)
+        msg[4] and msg[5] = Pointer to <a href="proto_xacc.html#Xacc_Dsinfo">Xacc_Dsinfo</a> structure
+                            (see <a href="#XACC.H">XACC.H</a>), or NULL
+</pre>
+<br>The inquired application in turn answers all its replies with an
+ACC_ACK message:
+<br>&nbsp;
+<pre>        msg[0]            = <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a>
+        msg[3]            = 1     If all is OK
+                          = 0     If an error has arisen (this terminates
+                                  the protocol)
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>ACC_FILEINFO</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>When the ACC_DSINFO message from the inquiring application has
+been confirmed, then for each available file an ACC_FILEINFO message
+with a pointer to a variable of the type <a href="proto_xacc.html#Xacc_File_Info">Xacc_File_Info</a>, or a NULL-
+pointer for an error, is sent to the inquiring application.
+<br>&nbsp;
+<br>As mentioned above, each of these messages must be confirmed
+with <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> from the inquiring application.
+<br>&nbsp;
+<pre>        msg[0]            = ACC_FILEINFO (0x512)
+        msg[4] and msg[5] = Pointer to <a href="proto_xacc.html#Xacc_File_Info">Xacc_File_Info</a> structure (see
+                            <a href="#XACC.H">XACC.H</a>), or NULL
+</pre>
+
+</td></tr>
+</table>
+
+<a name="ACC_GETFIELDS"></a>
+<a name="ACC_FIELDINFO"></a>
+<p>When the first part of the Inquiry protocol has been completed
+successfully, then the inquiring application can present the user with
+a list of the available databases and the information they contain,
+and let him make a selection.
+</p>
+<p>If the user does this, then the second part of the Inquiry
+protocol proceeds (again an example of TA and TW):
+</p>
+<pre>            TA                  |                   TW
+--------------------------------+------------------------------------
+                            ACC_GETFIELDS
+            &lt;----------------------------------------
+
+    {
+                            ACC_FIELDINFO
+            ----------------------------------------&gt;
+
+                            <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a>
+            &lt;----------------------------------------
+
+    }   /* 'n' times, wher n was passed at ACC_FILEINFO */
+</pre>
+<p>Explanation of the individual protocol elements:
+</p>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>ACC_GETFIELDS</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>With this the inquiring application selects a database (the
+relevant database ID was received in the ACC_FILEINFO message in the
+structure <a href="proto_xacc.html#Xacc_File_Info">Xacc_File_Info</a>)) and now tells the inquired application that
+it should now transmit the individual field information.
+<br>&nbsp;
+<pre>        msg[0]            = ACC_GETFIELDS (0x513)
+        msg[1]            = Application ID
+        msg[3]            = ID of the desired database
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>ACC_FIELDINFO</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>When the ACC_GETFIELDS message has been confirmed by the
+inquiring application, then for each field an ACC_FIELDINFO message
+with a pointer to a variable of the type <a href="proto_xacc.html#Xacc_Field_Info">Xacc_Field_Info</a>, or a NULL-
+pointer at an error, is sent to the inquiring application.
+<br>&nbsp;
+<br>As mentioned above, each of these messages must be confirmed
+with <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> from the inquiring application.
+<br>&nbsp;
+<pre>        msg[0]            = ACC_FIELDINFO (0x514)
+        msg[4] and msg[5] = Pointer to <a href="proto_xacc.html#Xacc_Field_Info">Xacc_Field_Info</a> structure (see
+                            <a href="#XACC.H">XACC.H</a>), or NULL
+</pre>
+
+</td></tr>
+</table>
+
+<p>In <i>That's</i>/<i>no|Address</i> at present the field types
+FT_CHAR, FT_DATE and FT_TIME are implemented.
+</p>
+<h4><a name="Request_2FReply_20protocol">15.13.3.4 Request/Reply protocol</a></h4>
+<p>Two further messages were introduced to enable a general data
+exchange:
+</p>
+<a name="ACC_REQUEST"></a>
+<a name="ACC_REPLY"></a>
+<pre>#define ACC_REQUEST     0x480
+#define ACC_REPLY       0x481
+</pre>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>ACC_REQUEST</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>With this message one requests a service from another
+application. The makeup of this message is as follows:
+<br>&nbsp;
+<pre>      msg[0]:     ACC_REQUEST (0x480)
+      msg[1]:     Application ID of the sender
+      msg[2]:     0
+      msg[3]:     The high-byte is free for application-specific
+                  information, and in the low-byte the type of the
+                  data is coded that are sent with this message:
+                  0x01  String, i.e. msg[4]+msg[5] is a
+                        pointer to the string
+                  0x02  EEnv-string, i.e. msg[4]+msg[5] is
+                        a pointer to the Env-string (multiple
+                        strings separated by '\0', with a
+                        terminating double '\0'-bytes)
+                  0x03  Binary data, i.e. msg[4]+msg[5] is
+                        a pointer to the binary data. In this
+                        case the receiver naturally has to be
+                        aware of the data structure! (Local
+                        type differentiation is possible by means
+                        of the high-byte, for instance)
+                  0x04  Code, i.e. msg[4] to msg[7] directly
+                        contain the data (useful for transmission
+                        of data amounts up to 8 bytes)
+      msg[4,5]:   Pointer to the data (except type 0x04)
+      msg[6,7]:   Length of data area, incl. possible '\0'-bytes
+                  (except type 0x04)
+</pre>
+<br>There are two different options for replying to this message:
+<br>&nbsp;
+<ul>
+<li><p> <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> with msg[3]=0, if the receiving application cannot
+process this message
+<br>&nbsp;
+</p></li>
+<li><p> ACC_REPLY, if the message could be processed and a reply has
+been sent back
+<br>&nbsp;
+</p></li>
+</ul>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>ACC_REPLY</b></td>
+<td valign="top">
+<br>&nbsp;
+<br>A successful ACC_REQUEST request is answered with this message.
+The makeup of this message is as follows:
+<br>&nbsp;
+<pre>            msg[0]:     ACC_REPLY (0x481)
+            msg[1]:
+                .
+                .       see ACC_REQUEST!
+                .
+            msg[7]:
+</pre>
+
+</td></tr>
+</table>
+
+<p>Applications that support the protocol elements described above
+have to contain the <a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'RQ' in their XDSC description.
+</p>
+<h3><a name="Example:_20no_7CLink_27s_20XAcc_20protocol">15.13.4 Example: no|Link's XAcc protocol</a></h3>
+<p>The <i>no|Link</i> accessory was conceived for the control of
+infra-red devices and contains an XAcc communication layer for the
+control by special applications. At present the <i>Media-Link</i>
+interface of Catch Computer is supported. A further adaptation for the
+<i>no|Remote</i> interface of no|Software is in preparation (at the
+time this was written).
+</p>
+<p>The <i>no|Link</i> accessory administers all information
+required for the control of the infra-red or other hardware. Each
+hardware-dependent code (e.g. an infra-red signal) is assigned a
+command, and for each device (e.g. a video recorder) there exists a
+list of such commands.
+</p>
+<p>For example, if an application for the remote control of a video
+recorder wants to send an infra-red signal for the 'Play' key, then it
+sends <i>no|Link</i> an XAcc message, in which the command 'send',
+the device &lt;VIDEORECORDER&gt; and the command &lt;PLAY&gt; are
+coded.
+</p>
+<p>So that an application can communicate completely with
+<i>no|Link</i>, it must support the <a href="#Request_2FReply_20protocol">Request/Reply protocol</a>, which is
+made known by an <a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'RQ' in the XDSC description. Only
+in this way is it possible to maintain the list of the <i>no|Link</i>
+registered devices.
+</p>
+<p>If the application also wants to receive codes from the
+accessory (only possible with suitable hardware), then the XDSC
+description must contain additionally an <a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'RR' (Remote
+Receive). All applications that want to work with <i>no|Link</i> have
+to support the XAcc Level/<a href="#Message_20group_201">Message group 1</a>.
+</p>
+<p>As application type the <i>no|Link</i> accessory receives in
+XDSC '\2RC' (Remote Control).
+</p>
+<p>The complete XAcc identification of <i>no|Link</i> at present
+is as follows (in C-syntax, using the original German):
+</p>
+<pre>    char xaccNoLinkIdent[] =    &quot;Infrarot Manager\0&quot;
+                                &quot;XDSC\0&quot;
+                                &quot;1Fernsteuerschnittstelle\0&quot;
+                                &quot;2RC\0&quot;
+                                &quot;XRQ\0&quot;
+                                &quot;NnoRci\0&quot;;
+</pre>
+<p>A possible XAcc identification for a <i>no|Link</i>
+application could look like this:
+</p>
+<pre>    char xaccIdentstring[] =    &quot;VideoControl\0&quot;
+                                &quot;XDSC\0&quot;
+                                &quot;1Video Fernbedienung\0&quot;
+                                &quot;XRQ\0&quot;
+                                &quot;Nno|Video ACC\0&quot;;
+</pre>
+<p>The communication between the application and the
+<i>no|Link</i> accessory is mainly via ACC_TEXT messages.
+</p>
+<p>The accessory at present understands the following commands,
+which have to be sent as a string by means of an <a href="proto_xacc.html#ACC_TEXT">ACC_TEXT</a> message
+(where &lt;X&gt; := &lt;device&gt;:&lt;command&gt;):
+</p>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>&quot;S &lt;X&gt;&quot;</b></td>
+<td valign="top"> Sending of a command, e.g: 'S VIDEO:PLAY'.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>&quot;P &lt;X&gt;&quot;</b></td>
+<td valign="top"> Preparation of a command, e.g: 'P VIDEO:PLAY'. With this the
+infra red hardware is informed of the code for this command, but it is
+not yet sent
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>&quot;S&quot;</b></td>
+<td valign="top"> Sending of the last prepared command
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>&quot;T &lt;X&gt;&quot;</b></td>
+<td valign="top"> Test of the existence of a command
+<br>&nbsp;
+<br>Particularly at a new installation of a remote control
+application, all devices and commands that this application uses
+should be communicated to the accessory!
+<br>&nbsp;
+<br>If <i>no|Link</i> does not know the supplied command, the user
+is invited to activate the required 'learning procedure', or to assign
+the new command to one already present.
+<br>&nbsp;
+<br>Each remote control application should contain a function that
+allows the user to 'test' all supported commands - preferably via an
+'<a href="c_task_royal.html#Install">Install</a>' button.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>The test function is the only one that may lead to interaction
+with the user in some circumstances. All others issue no output.
+</p>
+<p>As reply the application receives an <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> message, in which
+the success or otherwise of handling the command is noted in msg[3]:
+</p>
+<table class="UDO_env_blist">
+<tr><td nowrap="nowrap" valign="top"><b>1</b></td>
+<td valign="top"> Operation was successful
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>0</b></td>
+<td valign="top"> Device/command is not present, or error in the handling
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>Device and command names may be up to 32 characters long and may
+<i>not</i> contain a ':'. No regard is paid to case, i.e. capitals
+and lower case characters are not differentiated.
+</p>
+<p>An application can request a list of registered devices from the
+accessory. For this the application has to understand the new <a href="#XAcc">XAcc</a>
+<a href="#Request_2FReply_20protocol">Request/Reply protocol</a> (see above, or <a href="#XACC.H">XACC.H</a>).
+</p>
+<p>To request the list, the application sends a ACC_REQUEST to the
+accessory, where the message must be constructed as follows:
+</p>
+<pre>    msg[0] = <a href="proto_xacc.html#ACC_REQUEST">ACC_REQUEST</a> (0x480)
+    msg[1] = apid
+    msg[2] = 0
+    msg[3] = 0x04       /* Data-type: Code */
+    msg[4] = 'D'        /* 'D' represents 'devices' */
+    msg[5] = 0
+    msg[6] = 0
+    msg[7] = 0
+</pre>
+<p>As reply the application receives an <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> message with msg[3]
+== 0 if an error has occured, or on success an ACC_REPLY message:
+</p>
+<pre>    msg[0] = <a href="proto_xacc.html#ACC_REPLY">ACC_REPLY</a> (0x481)
+    msg[1] = apID of no|Link
+    msg[2] = 0
+    msg[3] = 0x02       /* Data-type: Environment string */
+    msg[4]+msg[5] = Pointer to globally accessible memory containing the
+                    list of the devices in the following format:
+                           &quot;DEVICEINFOS:\0device1\0device2\0&quot;
+    msg[6]+msg[7] = LONG value, specifying the size of the buffer
+                    (inclusive of the terminating two NULL-bytes)
+
+</pre>
+<p>The receipt of an <a href="proto_xacc.html#ACC_REPLY">ACC_REPLY</a> message must be confirmed
+subsequently with an <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> message, so that the <i>no|Link</i>
+accessory can release its resources again!
+</p>
+<h3><a name="XACC.H">15.13.5 XACC.H</a></h3>
+<a name="Xacc_Dsi_Request"></a>
+<a name="Xacc_Dsinfo"></a>
+<a name="Xacc_File_Info"></a>
+<a name="Xacc_Field_Info"></a>
+<pre>/*==================================================================*/
+/*                                                                  */
+/*                <a href="#XAcc">XAcc</a> definitions (Pure-C syntax)                  */
+/*                                                                  */
+/*==================================================================*/
+
+#ifndef __XACC__
+# define __XACC__
+
+/*--------------------------------------------------------------------
+    <a href="#XAcc">XAcc</a> message types
+--------------------------------------------------------------------*/
+/* Level 0 */
+# define <a href="proto_xacc.html#ACC_ID">ACC_ID</a>             0x400
+# define <a href="proto_xacc.html#ACC_OPEN">ACC_OPEN</a>           0x401
+# define <a href="proto_xacc.html#ACC_CLOSE">ACC_CLOSE</a>          0x402
+# define <a href="proto_xacc.html#ACC_ACC">ACC_ACC</a>            0x403
+# define <a href="proto_xacc.html#ACC_EXIT">ACC_EXIT</a>           0x404
+
+/* Level/<a href="#Message_20group_201">Message group 1</a> */
+##6# '<a href="proto_ssp.html#Message">Message</a> group' eingefuegt
+# define <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a>            0x500
+# define <a href="proto_xacc.html#ACC_TEXT">ACC_TEXT</a>           0x501
+# define <a href="proto_xacc.html#ACC_KEY">ACC_KEY</a>            0x502
+
+/* Level/<a href="#Message_20group_202">Message group 2</a> */
+# define <a href="proto_xacc.html#ACC_META">ACC_META</a>           0x503
+# define <a href="proto_xacc.html#ACC_IMG">ACC_IMG</a>            0x504
+
+/*
+ * Extended XACC message types:
+ * These messages are relatively 'independent' of the XACC-level
+ * of the applications, i.e. they should be used only if the
+ * communication partner in its XDSC description signals that it
+ * participates in the relevant <a href="proto_xacc.html#Extended_20feature">Extended feature</a>!
+ */
+
+/* Reuest/Reply protocol: (<a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'RQ')      */
+/*        <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> messages are a part of the protocol  */
+/*        and therefore must be understood!            */
+# define <a href="proto_xacc.html#ACC_REQUEST">ACC_REQUEST</a>        0x480
+# define <a href="proto_xacc.html#ACC_REPLY">ACC_REPLY</a>          0x481
+
+/* <a href="#Inquiry_20protocol">Inquiry protocol</a>: (<a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'DI')           */
+/*        <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> messages are a part of the protocol  */
+/*        and therefore must be understood!            */
+#define <a href="proto_xacc.html#ACC_GETDSI">ACC_GETDSI</a>          0x510
+#define <a href="proto_xacc.html#ACC_DSINFO">ACC_DSINFO</a>          0x511
+#define <a href="proto_xacc.html#ACC_FILEINFO">ACC_FILEINFO</a>        0x512
+#define <a href="proto_xacc.html#ACC_GETFIELDS">ACC_GETFIELDS</a>       0x513
+#define <a href="proto_xacc.html#ACC_FIELDINFO">ACC_FIELDINFO</a>       0x514
+
+/* Remote <a href="#MailMerge_20protocol">MailMerge protocol</a>: (<a href="proto_xacc.html#Extended_20feature">Extended feature</a> 'RM')  */
+/*        <a href="proto_xacc.html#ACC_ACK">ACC_ACK</a> messages are a part of the protocol  */
+/*        and therefore must be understood!            */
+#define <a href="proto_xacc.html#ACC_FORCESDF">ACC_FORCESDF</a>        0x520
+#define <a href="proto_xacc.html#ACC_GETSDF">ACC_GETSDF</a>          0x521
+
+
+/*----------------------------------------------------------------------
+    Definitions for the <a href="#Request_2FReply_20protocol">Request/Reply protocol</a>
+----------------------------------------------------------------------*/
+/* <a href="proto_xfsl.html#Data-types">Data-types</a> of the Request/Reply: */
+#define RQREP_TYPE_STRING   1
+#define RQREP_TYPE_ENVSTR   2
+#define RQREP_TYPE_BIN      3
+#define RQREP_TYPE_CODE     4
+
+
+/*----------------------------------------------------------------------
+    Definitions for the <a href="#Inquiry_20protocol">Inquiry protocol</a>
+----------------------------------------------------------------------*/
+#define DSI_VERSION         0x0100
+
+
+/* Field data-types:
+ *    Values lower than 128 are 'human-readable types' and
+ *    values greater/equal 128 are 'machine-readable types'
+ */
+#define FT_CHAR        0x00  /* String                                */
+#define FT_DATE        0x02  /* String in _IDT format                 */
+                             /* Deflt: DD.MM.YY if no _IDT available; */
+                             /* for more about _IDT see MINT          */
+#define FT_TIME        0x03  /* String: HH:MM:SS                      */
+
+#define FT_BYTE        0x80  /* 2-byte HEX-string                     */
+#define FT_UBYTE       0x81  /* 2-byte HEX-string, unsigned           */
+#define FT_SHORT       0x82  /* 4-byte HEX-string                     */
+#define FT_USHORT      0x83  /* 4-byte HEX-string, unsigned           */
+#define FT_LONG        0x84  /* 8-byte HEX-string                     */
+#define FT_ULONG       0x85  /* 8-byte HEX-string, unsigned           */
+#define FT_FLOAT       0x86  /* 8-byte HEX-string                     */
+#define FT_DOUBLE      0x87  /* 20-byte HEX-string                    */
+#define FT_ENUM        0x88  /* 4-byte HEX-string                     */
+#define FT_BOOL        0x89  /* String: 'T' or 'F'                    */
+#define FT_BITFLD      0x8A  /* An 8-bit aligned HEX-string           */
+#define FT_TIME_T      0x90  /* 8-byte HEX-string (time_t, see UNIX)  */
+
+
+typedef struct {
+    int     version;
+    char    field_types[32]; /* Max. count of 256 field-types are     */
+                             /* available (see definements above);    */
+                             /* each bit in this field represents a   */
+                             /* valid field-type, where type 0 is     */
+                             /* the lowest bit of the first character */
+                             /* and type 255 the highest bit of the   */
+                             /* last character */
+} Xacc_Dsi_Request;
+
+typedef struct {
+    int     db_anz;          /* Count of available databases          */
+##6# Hier und spaeter 'data base' -&gt; 'database'
+
+} Xacc_Dsinfo;
+
+typedef struct {
+    long    db_id;           /* ID of the database                    */
+    char    fname[32];       /* Filename of the database; if you      */
+                             /* are using a <a href="gemdos_main.html">GEMDOS</a> or DOS filesystem  */
+                             /* it must have a &lt;8.3&gt; format.          */
+    char    title[32];       /* A max. 32 byte long description of    */
+                             /* the database                          */
+    time_t  crea_time;       /* The creation date/time of the         */
+                             /* database file                         */
+    time_t  mod_time;        /* The last modification date/time of    */
+                             /* the database structure                */
+    int     n_fields;        /* The number of fields that are         */
+                             /* available corresponding to the        */
+                             /* requested field types given by the    */
+                             /* <a href="proto_xacc.html#ACC_GETDSI">ACC_GETDSI</a> message                    */
+} Xacc_File_Info;
+
+typedef struct {
+    int     fld_size;        /* The count of bits in the field        */
+    int     n_fields;        /* The count of field elements           */
+    int     elem_size;       /* The length of one field element       */
+    char    field_buff[0];   /* From here the list of the n_fields    */
+                             /* elements follows in this format:      */
+                             /* 2 byte bitno and elem_size byte-      */
+                             /* description, e.g. (elem_size=10):     */
+                             /*    &quot;\0\1private\0\0\0&quot;                */
+                             /*    &quot;\0\2sex\0\0\0\0\0\0\0&quot;            */
+                             /*    &quot;\0\4dealer\0\0\0\0&quot;               */
+                             /* The value '06' identifies the 2nd     */
+                             /* and the 3rd element;                  */
+                             /* NOTE that you can't use sizeof        */
+                             /* because of this declaration           */
+} Bitfld_Info;
+
+typedef struct {
+    int     n_enums;         /* The count of enum-elements            */
+    int     elem_size;       /* The length of one enum element        */
+    char    enum_buff[0];    /* From here the list of the n_enums     */
+                             /* elements follows in this format:      */
+                             /* 2 byte id and elem_size byte-         */
+                             /* description, e.g. (elem_size=10):     */
+                             /*    &quot;\0Aprivate\0\0\0&quot;                 */
+                             /*    &quot;\0Bsex\0\0\0\0\0\0\0&quot;             */
+                             /*    &quot;\0Edealer\0\0\0\0&quot;                */
+                             /* The value '0042' identifies the 2nd   */
+                             /* element;                              */
+                             /* NOTE that you can't use sizeof        */
+                             /* because of this declaration           */
+} Enum_Info;
+
+typedef <a href="proto_xfsl.html#union">union</a> {
+    ulong        n_elems;      /* For types like char, uchar this is  */
+                               /* the length of the field             */
+    Enum_Info    *enum_info;   /* enum is a special type, which needs */
+                               /* more description than the length!   */
+    Bitfld_Info  *bitfld_info; /* A bitfield like used in TA2 for the */
+                               /* info-flags                          */
+} Type_Desc;
+
+typedef struct {
+    char         id[8];      /* The export-identifier of the corres-  */
+                             /* ponding field, i.e. 'A1' for the      */
+                             /* first address field of Clever or TA2  */
+    char         name[16];   /* A short description                   */
+    char         desc[32];   /* A long description                    */
+    int          type;       /* The data-type; must be one of the     */
+                             /* constants defined at the top of this  */
+                             /* file                                  */
+    Type_Desc    t_desc;     /* This <a href="proto_xfsl.html#union">union</a> contains either the length */
+                             /* of the field or a pointer to an info- */
+                             /* struct if the type is a special one   */
+                             /* like enum or other user-defined types */
+} Xacc_Field_Info;
+
+
+#endif    /* #ifndef __XACC__ */
+</pre>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_FOOT" href="proto_vscreen.html"><img src="udo_lf.gif" alt="Virtual Screen protocol" title="Virtual Screen protocol" border="0" width="24" height="24">Virtual Screen protocol</a>
+<a name="UDO_nav_rg_FOOT" href="proto_xfsl.html"><img src="udo_rg.gif" alt="xFSL interface" title="xFSL interface" border="0" width="24" height="24">xFSL interface</a>
+</body>
+</html>

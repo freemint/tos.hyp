@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: NAP BioNet100
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="c_task_royal.html"><img src="udo_lf.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+<a name="UDO_nav_rg_HEAD" href="powerdos.html"><img src="udo_rg.gif" alt="PowerDOS" title="PowerDOS" border="0" width="24" height="24">PowerDOS</a>
+
+<hr>
+
+<h1><a name="NAP_20BioNet100">5.20 NAP BioNet100</a></h1>
+<a name="nap_io"></a>
+<a name="nap_in_s"></a>
+<a name="nap_out_s"></a>
+<p>BioNet was a <a href="gemdos_main.html">GEMDOS</a> network extension from BIODATA GmbH.
+</p>
+<p>Three functions are added to the <a href="gemdos_main.html">GEMDOS</a>, which allow the BioNet
+Client to communicate with a 'Nap' hosted by the Nap Server. A server
+can run multiple Nap, each of them is identified by a
+<i>nap_handle</i> associated to a internal NAP_COM structure.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Number</td>
+<td valign="top"> Meaning
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">91</td>
+<td valign="top"> <b>nap_io()</b> Nap input/output
+<br>This function is the legacy function for bidirectional
+communication with the server. <i>nap_io</i> is divided into the
+<i>nap_in_s</i> and <i>nap_out_s</i> functions, which are executed
+one after the other.
+<br>The return value is the number of returned bytes.
+<br>&nbsp;
+<br>Syntax:
+<br>int32_t <a href="gemdos_trap.html#gemdos">gemdos</a>( 91, int16_t nap_handle, int8_t *buf_out, int32_t
+len_out, int8_t *buf_in, int32_t len_in);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">130</td>
+<td valign="top"> <b>nap_in_s()</b> Nap input
+<br>This function writes data to the server.
+<br>Returns the number of transferred bytes.
+<br>&nbsp;
+<br>Syntax:
+<br>int32_t <a href="gemdos_trap.html#gemdos">gemdos</a>( 130, int16_t nap_handle, int32_t mode, int32_t
+count, int8_t *buffer);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">131</td>
+<td valign="top"> <b>nap_out_s()</b> Nap output
+<br>This function reads data from the server.
+<br>Returns the number of transferred bytes.
+<br>&nbsp;
+<br>Syntax:
+<br>int32_t <a href="gemdos_trap.html#gemdos">gemdos</a>( 131, int16_t nap_handle, int32_t mode, int32_t
+count, int8_t *buffer);
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>The <i>mode</i> parameter is stored into the field
+<i>nap_wert</i> by the server. Values from 0 to -9L are reserved by
+BioNet100. The client can set <i>mode</i> to a value less than -9L to
+acquire a lock, or to 0L to release the lock. If no transfer is
+required, <i>count</i> should be set to 0.
+</p>
+<p>The NAP_COM structure is defined as follows:
+</p>
+<pre>typedef struct
+{
+  int16_t    nap_handle;   /* Nap handle that identifies a program   */
+  int32_t    nummer;       /* BioNet client number                   */
+  int16_t    status;       /* Status of the client                   */
+                           /*   Bit 0: nap_in_s is active            */
+                           /*   Bit 1: nap_out_s is active           */
+                           /*   Bit 2: first data burst              */
+                           /*   Bit 3: last data burst               */
+                           /*   Bit 4: fatal error                   */
+  int32_t    ret_wert;     /* If bit 4 of status is set, specifies   */
+                           /* the message sent to the client:        */
+                           /*   0 = 'Cant repair protocoll-error...' */
+                           /*   1 = 'Repairing protocoll-error...'   */
+  int32_t    nap_wert;     /* If nonzero, prevents other client to   */
+                           /* communicate with this Nap. By default, */
+                           /* set to nummer. This value is returned  */
+                           /* as error-code to other client          */
+  int8_t    *in_buffer;    /* Pointer to the data buffer that holds  */
+                           /* either the data to read from nap_in_s, */
+                           /* or command data for nap_out_s          */
+  int8_t    *out_buffer;   /* Pointer to the data buffer that holds  */
+                           /* the data to send to the client through */
+                           /* nap_out_s.                             */
+  int32_t    ges_count;    /* Total number of data to send/receive   */
+  int32_t    akt_count;    /* Current number of data to send/receive */
+}
+</pre>
+<p><b>Note:</b> The BioNet server complies to the XBRA protocol
+with ID 'BioS'.
+</p>
+<p>See also: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="bios_functions.html">BIOS function list</a> &nbsp; <a href="xbios_functions.html">XBIOS function list</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="c_task_royal.html"><img src="udo_lf.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+<a name="UDO_nav_rg_FOOT" href="powerdos.html"><img src="udo_rg.gif" alt="PowerDOS" title="PowerDOS" border="0" width="24" height="24">PowerDOS</a>
+</body>
+</html>

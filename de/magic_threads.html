@@ -1,0 +1,323 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Threads in MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_test.html"><img src="udo_lf.gif" alt="Test auf MagiC" title="Test auf MagiC" border="0" width="24" height="24">Test auf MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_programs.html"><img src="udo_rg.gif" alt="Die Zusatzprogramme für MagiC" title="Die Zusatzprogramme für MagiC" border="0" width="24" height="24">Die Zusatzprogramme für MagiC</a>
+
+<hr>
+
+<h1><a name="Threads_20in_20MagiC">11.18 Threads in MagiC</a></h1>
+<p>Das Konzept der Threads ermöglicht Quasi-Parallelität
+<i>innerhalb</i> einer Anwendung, und ist unter Betriebssystemen wie
+OS/2, MacOS oder UNIX schon länger bekannt. Im Gegensatz zum normalen
+Multitasking können dabei <i>mehrere</i> Threads zu einem Programm
+(bzw. Prozess) gehören. In <a href="magic.html">MagiC</a> werden Threads ab der Version 4.50
+(01.04.96) unterstützt, und sind als Applikation implementiert, d.h.
+ein Thread besitzt unter MagiC eine eigene Applikations-ID. Das
+Konzept lehnt sich dabei an das von Sun Solaris 2.x an.
+</p>
+<p>Dieser Abschnitt beschreibt die folgenden Punkte:
+</p>
+<ul>
+<li> <a href="shel.html#Threads_2C_20Erzeugen_20von">Erstellen eines Threads</a>
+</li>
+<li> <a href="shel.html#Threads_2C_20Beenden_20von">Beenden eines Threads</a>
+</li>
+<li> <a href="#Threads_20und_20Signale">Signale und Threads</a>
+</li>
+<li> <a href="#Threads_20und_20AES-Aufrufe">Threads und AES-Aufrufe</a>
+</li>
+<li> <a href="#Threads_20und_20VDI-Aufrufe">Threads und VDI-Aufrufe</a>
+</li>
+<li> <a href="#Verteilung_20der_20Resourcen_20bei_20Threads">Verteilung der Resourcen</a>
+</li>
+</ul>
+
+<p>Querverweis: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="gemdos_process.html">Prozessfunktionen</a> &nbsp; <a href="#Threads_2C_20Beispiel-Code_20zu">Beispiel-Code</a>
+</p>
+<h3><a name="Threads_20und_20Signale">11.18.1 Threads und Signale</a></h3>
+<p>Beim Zusammenspiel von Threads und Signalen ist folgendes zu
+beachten: wird ein Prozess (z.B. per SIGSTOP) angehalten, so werden
+auch alle zugehörigen Threads angehalten; durch das SIGCONT-Signal
+können alle Threads wieder aufgeweckt werden. Falls ein Prozess per
+<a href="gemdos_signals.html#SIGTERM">SIGTERM</a> oder <a href="gemdos_signals.html#SIGKILL">SIGKILL</a> beendet wird, werden auch alle betroffenen
+Threads automatisch terminiert.
+</p>
+<p>Die Signalbehandlung wird immer nur vom Haupt-Thread
+übernommen; dies ist derjenige, der mit <a href="gemdos_process.html#Pexec">Pexec</a> gestartet worden ist.
+Während der Abarbeitung eines Signalhandlers wird deshalb auch nur
+der Haupt-Thread angehalten, und bei einem Aufruf von <a href="gemdos_process.html#Psigreturn">Psigreturn</a> in
+diesen zurückgesprungen.
+</p>
+<p><b>Achtung:</b> Falls mehr als ein Thread die Signalmaske
+manipuliert, kann es zu Unstimmigkeiten kommen, falls die Maske nicht
+in der richtigen Reihenfolge wieder zurückgesetzt wird. Beispiel:
+</p>
+<pre>Thread-A rettet alte Maske
+Thread-A ändert Maske
+Thread-B rettet alte Maske
+Thread-A restauriert alte Maske
+Thread-B restauriert alte Maske
+</pre>
+<p>In diesem Fall wird die Signalmaske ungewollt verändert. Eine
+Lösung dieses Problems besteht darin, jedem Thread eine
+<i>eigene</i> Signalmaske zuzuteilen, und als <i>effektive</i>
+Signalmaske die Masken aller Threads durch eine Oder-Verknüpfung zu
+verbinden. Möglicherweise wird das in einer späteren Version von
+<a href="magic.html">MagiC</a> tatsächlich der Fall sein.
+</p>
+<p>Querverweis: <a href="#Threads_20in_20MagiC">Threads in MagiC</a> &nbsp; <a href="gemdos_signals.html">Signale</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp;
+<a href="gemdos_process.html">Prozessfunktionen</a>
+</p>
+<h3><a name="Threads_20und_20AES-Aufrufe">11.18.2 Threads und AES-Aufrufe</a></h3>
+<p>Bei der Entwicklung von eigenen Programmen muss unbedingt darauf
+geachtet werden, daß eine Multithread-sichere Bibliothek verwendet
+wird. Die Standardbibliotheken von <i>Pure-C</i> etwa sind in weiten
+Teilen diesbezüglich unbrauchbar. Es muss inbesondere darauf geachtet
+werden, daß jeder Thread sein eigenes global-Feld erhält. Betroffen
+sind daher die folgenden Funktionen:
+</p>
+<ul>
+<li> <a href="appl.html#appl_init">appl_init</a>
+</li>
+<li> <a href="rsrc.html#rsrc_free">rsrc_free</a>
+</li>
+<li> <a href="rsrc.html#rsrc_gaddr">rsrc_gaddr</a>
+</li>
+<li> <a href="rsrc.html#rsrc_load">rsrc_load</a>
+</li>
+<li> <a href="rsrc.html#rsrc_rcfix">rsrc_rcfix</a>
+</li>
+<li> <a href="rsrc.html#rsrc_saddr">rsrc_saddr</a>
+</li>
+</ul>
+
+<p><b>Hinweis:</b> Die original <a href="magic.html">MagiC</a> Dokumentation enthält
+Beispiele für Multithread fähige <a href="aes_main.html">AES</a>-Funktionen, an deren Aufbau man
+sich orientieren kann. Beachtet werden sollte noch, daß der Name
+eines Threads auf AES-Ebene <i>ungültig</i> ist, d.h. er kann
+<i>nicht</i> per <a href="appl.html#appl_find">appl_find</a> oder <a href="appl.html#appl_search">appl_search</a> gefunden werden.
+</p>
+<p>Querverweis:
+<br><a href="#Threads_20und_20VDI-Aufrufe">Threads und VDI-Aufrufe</a> &nbsp; <a href="gemdos_process.html">Prozessfunktionen</a> &nbsp; <a href="aes_fundamentals.html#AES-Bindings">AES-Bindings</a> &nbsp;
+<a href="gemdos_signals.html">Signale</a>
+</p>
+<h3><a name="Threads_20und_20VDI-Aufrufe">11.18.3 Threads und VDI-Aufrufe</a></h3>
+<p><a href="vdi_main.html">VDI</a>-Aufrufe sind in den meisten Fällen nicht so kritisch wie
+<a href="aes_main.html">AES</a>-Aufrufe, da hier seltener ein Reentranz-Problem auftritt. Der
+Grund ist darin zu sehen, daß es bei Aufruf von VDI-Funktionen
+nicht so häufig zu Taskwechseln kommt, wie dies z.B. beim AES der
+Fall ist.
+</p>
+<p>Problematisch sind VDI-Aufrufe jedoch immer dann, wenn auf
+Vektorfonts zugegriffen wird, da in diesen Fällen i.d.R.
+Plattenzugriffe notwendig sind, die in <a href="magic.html">MagiC</a> bekanntlich unterbrechbar
+sind. In einer solchen Situation kann es also zu einem Task-Switching
+kommen. Welche VDI-Befehle im einzelnen unterbrechbar sind kann an
+dieser Stelle <i>nicht</i> beantwortet werden; bei Bedarf ist dies
+mit den <a href="VDI_fundamentals.html#NVDI">NVDI</a>-Entwicklern abzuklären, so daß dann nur für diese
+Funktionen reentrante Bibliotheksfunktionen erforderlich wären.
+</p>
+<p>Querverweis:
+<br><a href="#Threads_20und_20AES-Aufrufe">Threads und AES-Aufrufe</a> &nbsp; <a href="gemdos_process.html">Prozessfunktionen</a> &nbsp; <a href="vdi_bindings.html">VDI-Bindings</a> &nbsp;
+<a href="gemdos_signals.html">Signale</a>
+</p>
+<h3><a name="Verteilung_20der_20Resourcen_20bei_20Threads">11.18.4 Verteilung der Resourcen bei Threads</a></h3>
+<p>In <a href="magic.html">MagiC</a> laufen Threads auf demselben Prozess, besitzen jedoch
+eine eigene Applikations-ID, und sind somit eine selbstständige Task.
+Die folgende Tabelle gibt eine Übersicht über die Resourcen, die ein
+Thread selbst besitzt, bzw. vom Hauptprogramm benutzt.
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Threads besitzen</td>
+  <td align="left" valign="top">vom Hauptprogramm wird benutzt</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Userstack</td>
+  <td align="left" valign="top">&#x2022; Dateihandles</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Supervisor-Stack</td>
+  <td align="left" valign="top">&#x2022; Basepage</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Applikations-ID</td>
+  <td align="left" valign="top">&#x2022; Speicherblöcke</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Resource-Dateien</td>
+  <td align="left" valign="top">&#x2022; aktuelles Laufwerk/Verzeichnisse</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Menüzeile</td>
+  <td align="left" valign="top">&#x2022; Prozess-ID (PID)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Desktop-Hintergrund</td>
+  <td align="left" valign="top">&#x2022; Domain (MiNT bzw. <a href="tos_main.html">TOS</a>)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Fenster</td>
+  <td align="left" valign="top">&#x2022; umask</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; <a href="proto_ssp.html#Message">Message</a> Queue</td>
+  <td align="left" valign="top">&#x2022; aktuelle DTA</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Mauszeiger</td>
+  <td align="left" valign="top">&#x2022; <a href="gemdos_memory.html#Malloc">Malloc</a>-Flags</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; VT52-Fenster (optional)</td>
+  <td align="left" valign="top">&#x2022; Kommandozeile und Environment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; <a href="bios_sysvars.html#etv_term">etv_term</a>-Vektor</td>
+  <td align="left" valign="top">&#x2022; Signal-Handler und -maske</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&#x2022; Semaphoren</td>
+  <td align="left" valign="top">&#x2022; VT52-Fenster (optional)</td>
+</tr>
+</table>
+</div>
+
+<p><b>Hinweis:</b> Wie man sieht erhält ein Thread damit z.B.
+eine <i>eigene</i> <a href="evnt.html#AP_TERM">AP_TERM</a> Nachricht. Bei der Verwendung von
+Resource-Dateien ist darauf zu achten, daß ggfs. ein eigenes
+global-Feld benutzt wird.
+</p>
+<p>Zu beachten ist ferner, daß Speicher, den der Thread alloziert,
+dem Prozess gehört, und bei Beendigung des Threads <i>nicht</i>
+automatisch freigegeben wird; gleiches gilt für geöffnete Dateien,
+die erst bei der Programmbeendigung geschlossen werden. Dies muss
+deshalb ggfs. vom Thread übernommen werden.
+</p>
+<p><b>Achtung:</b> Es ist unbedingt zu beachten, daß
+</p>
+<ul>
+<li><p> keine <a href="gemdos_structures.html#DTA">DTA</a> verwendet wird, da die Funktionen <a href="gemdos_file.html#Fsfirst">Fsfirst</a>, <a href="gemdos_file.html#Fsnext">Fsnext</a>,
+<a href="gemdos_file.html#Fsetdta">Fsetdta</a> und <a href="gemdos_file.html#Fgetdta">Fgetdta</a> <i>nicht</i> Multithread-sicher sind.
+<br>&nbsp;
+</p></li>
+<li><p> Zugriffe auf Dateihandles mit geeigneten Methoden
+synchronisiert werden. Es dürfen nicht zwei Threads gleichzeitig auf
+dieselbe Datei zugreifen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Die Funktion <a href="gemdos_process.html#Psemaphore">Psemaphore</a> ist bereits für Threads ausgelegt, und
+kann sowohl zur Synchronisation zwischen Prozessen als auch zwischen
+mehreren Threads eines Prozesses verwendet werden. Beim Beenden eines
+Threads werden alle von diesem blockierten Semaphoren automatisch
+freigegeben.
+</p>
+<p>Nach Möglichkeit sollte z.Zt. nur der Haupt-Thread ein <a href="gemdos_process.html#Pexec">Pexec</a>
+ausführen, nicht jedoch nebenläufige Threads. Theoretisch ist dies
+jedoch erlaubt, und zwar dann, wenn kein anderer Thread oder der
+Haupt-Thread Pexec aufgerufen hat, und der Haupt-Thread sich nicht
+beendet.
+</p>
+<p>Das Problem liegt ganz einfach darin, daß z.Zt.
+Rücksprungadressen bei Pexec nicht im laufenden Prozess sondern im
+Parent abgelegt werden, und der Parent des vom Thread gestarteten
+Prozesses ungültig wird.
+</p>
+<p>Falls ein Thread die Funktion <a href="gemdos_process.html#Pterm">Pterm</a> ausführt, so wird z.Zt. nur
+dieser Thread beendet. Angemerkt werden soll auch noch, daß ein
+Thread andere Programme per <a href="shel.html#shel_write">shel_write</a> (parallel) starten, und auf
+deren Beendigung warten kann.
+</p>
+<p>Querverweis: <a href="#Threads_20und_20AES-Aufrufe">Threads und AES-Aufrufe</a> &nbsp; <a href="#Threads_20und_20VDI-Aufrufe">Threads und VDI-Aufrufe</a> &nbsp;
+<a href="gemdos_process.html">Prozessfunktionen</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a>
+</p>
+<h3><a name="Threads_2C_20Beispiel-Code_20zu">11.18.5 Threads, Beispiel-Code zu</a></h3>
+<pre>#include &lt;tos.h&gt;
+#include &lt;mt_<a href="aes_fundamentals.html#aes">aes</a>.h&gt;
+
+WORD global[15];
+WORD ap_id;
+WORD fmt_id;
+
+LONG <a href="proto_xfsl.html#cdecl">cdecl</a> format_thread( struct fmt_parameter *par )
+{
+   WORD myglobal[15];
+   WORD ap_id;
+
+   /* wir braten das global-Feld der Haupt-APPL nicht über */
+
+   ap_id = MT_<a href="appl.html#appl_init">appl_init</a>(myglobal);
+   (...)
+}
+
+
+/*********************************************************************
+*
+* Startet den Formatier-Thread.
+*
+*********************************************************************/
+
+WORD start_format( VOID *param )
+{
+   <a href="THREADINFO.html">THREADINFO</a> thi;
+
+   if   (fmt_id &lt; 0)   /* Thread noch nicht aktiv */
+   {
+      thi.proc = (VOID *) format_thread;
+      thi.user_stack = NULL;
+      thi.stacksize = 4096L;
+      thi.mode = 0;
+      thi.res1 = 0L;
+      fmt_id = <a href="shel.html#shel_write">shel_write</a>(SHW_THR_CREATE, 1, 0,
+                          (BYTE *) &amp;thi, param);
+      return(fmt_id);
+   }
+   else
+      return(-1);    /* Thread läuft noch */
+}
+
+WORD main( VOID )
+{
+   if ((ap_id = MT_<a href="appl.html#appl_init">appl_init</a>(global)) &lt; 0)
+      <a href="gemdos_process.html#Pterm">Pterm</a>(-1);
+   else
+   {
+      (...)
+      start_format( .... );
+
+      while(...)
+         (...);
+
+      <a href="appl.html#appl_exit">appl_exit</a>();
+      return(0);
+   }
+}
+</pre>
+<p>Querverweis: <a href="#Threads_20in_20MagiC">Threads</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="gemdos_process.html">Prozessfunktionen</a> &nbsp; <a href="gemdos_signals.html">Signale</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_test.html"><img src="udo_lf.gif" alt="Test auf MagiC" title="Test auf MagiC" border="0" width="24" height="24">Test auf MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_programs.html"><img src="udo_rg.gif" alt="Die Zusatzprogramme für MagiC" title="Die Zusatzprogramme für MagiC" border="0" width="24" height="24">Die Zusatzprogramme für MagiC</a>
+</body>
+</html>

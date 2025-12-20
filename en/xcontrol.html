@@ -1,0 +1,2398 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: About XCONTROL
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="xcontrol_main.html"><img src="udo_up.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_lf_HEAD" href="xcontrol_main.html"><img src="udo_lf.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_rg_HEAD" href="guidelines.html"><img src="udo_rg.gif" alt="Programming guidelines" title="Programming guidelines" border="0" width="24" height="24">Programming guidelines</a>
+
+<hr>
+
+<h1><a name="About_20XCONTROL">9.1 About XCONTROL</a></h1>
+<p>XControl is a modular (extendable) control field desk accessory
+that was first shipped by Atari with the TT030 and Mega-STE series of
+computers.
+</p>
+<p><img src="bilder/gif/xcontrol.gif" alt="" title="" border="0" width="258" height="196"></p>
+<p>The individual modules are files with the extension '.CPX'
+(<b>C</b>ontrol <b>P</b>anel e<b>X</b>tension), and XControl itself
+can be taken as the control program for these modules.
+</p>
+<p><b>Important:</b> XControl should be used only as a tool for
+configuration dialogs, and <i>not</i> misused for other purposes.
+</p>
+<p>The communication between XControl and its modules takes place
+via two structures that are denoted <a href="XCPB.html">XCPB</a> and <a href="CPXINFO.html">CPXINFO</a>. The former makes
+some flags as well as a whole string of help functions available.
+</p>
+<a name="XControl_2C_20Start_20of"></a>
+<p>At system start-up XControl loads all available CPX headers,
+using up to 512 bytes of system memory per header; provided the
+corresponding flag is set in the header, each of the CPX files is
+called once for initialization. One can specify for each individual
+module whether it is to be loaded as resident or not (this can be
+changed also with the bundled configuration CPX). In addition it is
+possible to write CPX modules that set only certain values; these
+so-called 'set only' modules are called only during booting or renewed
+loading of the CPX modules with XControl, and simply return a
+NULL-pointer during the initialization.
+</p>
+<a name="CPX_20module_2C_20Activation_20of_20a"></a>
+<p>As soon as a user selects a CPX module, XControl loads it into
+memory and calls the function <a href="#cpx_init">cpx_init</a>. Subsequently <a href="#cpx_call">cpx_call</a> is
+called, for which essentially the module itself now takes control.
+</p>
+<a name="CPX_2C_20Form"></a>
+<a name="CPX_2C_20Event"></a>
+<a name="Form_20CPX"></a>
+<a name="Event_20CPX"></a>
+<p><b>One can differentiate between a Form CPX and an Event
+CPX</b>. The former are relatively simple to program, but offer only
+limited flexibility. The latter are more flexible, since they evaluate
+the AES events directly. All the CPX modules supplied with XControl
+1.0 are Form CPX files, from which one can deduce that Form CPXs
+suffice in most cases.
+</p>
+<a name="CPX_2C_20Suffix_20of_20a"></a>
+<p>The following terminology applies for the filenames of CPX
+modules:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Suffix</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CP</td>
+  <td align="left" valign="top">Standard CPX without header</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CPX</td>
+  <td align="left" valign="top">Standard CPX, ready for use</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CPZ</td>
+  <td align="left" valign="top">Inactive CPX (deactivated by XControl)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.HDR</td>
+  <td align="left" valign="top">Header for the CPX file</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*_R.CPX</td>
+  <td align="left" valign="top">Resident CPX file</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*_S.CPX</td>
+  <td align="left" valign="top">Set-only CPX file</td>
+</tr>
+</table>
+</div>
+
+<a name="CPX_20file_2C_20Format_20of_20a"></a>
+<a name="CPX_20file_2C_20Header_20of_20a"></a>
+<p>The format of a CPX file is very similar to that of a normal
+program. It consists of a 512-byte header and the remaining file
+content that is almost a normal GEMDOS program file, including a
+standard 28-byte GEMDOS header.
+</p>
+<a name="CPXHEAD"></a>
+<pre>typedef struct
+{
+    uint16_t magic;                 /* Magic constant = 100   */
+
+    struct
+    {
+        unsigned reserved : 13;  /* Reserved                */
+        unsigned resident :  1;  /* RAM-resident if set     */
+        unsigned bootinit :  1;  /* Boot initialize if set  */
+        unsigned setonly  :  1;  /* Set-only CPX if set     */
+
+    } flags;
+
+    int32_t  cpx_id;                /* Unique CPX ID                   */
+    uint16_t cpx_version;           /* CPX version number              */
+    int8_t   i_text[14];            /* Icon text                       */
+    uint16_t sm_icon[48];           /* Icon bitmap (32*24 pixel)       */
+    uint16_t i_color;               /* Icon colour                     */
+    int8_t   title_text[18];        /* Name of the CPX (16 chars. max) */
+    uint16_t t_color;               /* Text colour                     */
+    int8_t   buffer[64];            /* Non-volatile buffer             */
+    int8_t   reserved[306];         /* Reserved                        */
+
+} CPXHEAD;
+</pre>
+<p><b>Some notes about the header:</b>
+</p>
+<ul>
+<li> The first function in the TEXT segment has to be the
+initialization routine for the CPX
+</li>
+<li> There are everal toolkits for the construction of a CPX header
+</li>
+<li> Header and linked program file can be joined in most UNIX-like
+shells (e.g. Mupfel from Gemini) with the command 'cat'
+</li>
+<li> During CPX development it is very practical that XControl can
+be launched also as a program (alter the suffix!); this allows working
+without permanent rebooting of the computer
+</li>
+<li> CPX ID and version number ensure that each CPX appears only
+once (and also only the latest version)
+</li>
+</ul>
+
+<p>While programming a CPX module one should note some subtleties:
+As such a module has no non-volatile memory available (apart from 64
+bytes), nothing is permitted that reserves fixed memory in any way. In
+particular, all variable contents are lost when leaving the CPX as a
+rule!
+</p>
+<p><b>Hence one should</b>:
+</p>
+<ul>
+<li> Incorporate resources statically
+</li>
+<li> Only permit short-term memory allocation
+</li>
+<li> Not create permanent virtual VDI workstations
+</li>
+</ul>
+
+<p>For the programming of a CPX module one can fall back on the
+functions from the following categories:
+</p>
+<ul>
+<li><p> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</p></li>
+</ul>
+
+<a name="COPS"></a>
+<p><b>Note:</b> There are several alternatives to XCONTROL, which is
+not being developed by Atari any more. One that is particularly
+recommended is COPS (<b>CO</b>ntrol <b>P</b>anel <b>S</b>erver,
+which not only permits simultaneous opening of any mumber of CPX
+modules, but also allows control fields with a larger working area than
+XCONTROL.
+</p>
+<p>Other alternatives are ZCONTROL and a supplementary function of
+the Freedom2 file-selector.
+</p>
+<h3><a name="CPX_20programming_20guidelines">9.1.1 CPX programming guidelines</a></h3>
+<a name="Guidelines_20for_20CPX_20modules"></a>
+<p>When programming a CPX module one should keep to the following
+rules if possible:
+</p>
+<ul>
+<li> Release reserved memory as soon as possible
+</li>
+<li> XControl functions should always be used if this is possible
+</li>
+<li> The user interface should be as simple as possible and
+fashioned in a similar way to other CPX modules
+</li>
+<li> Graphical elements are to be preferred to menu commands
+</li>
+<li> 'OK' and 'Cancel' should always be implemented (if possible)
+</li>
+<li> <a href="#Popup">Popup</a> menus should be depicted as text with a shadowed rectanle
+</li>
+<li> <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> (quitting of the main program) is evaluated as
+'Cancel'
+</li>
+<li> WM_CLOSE (closing of the XControl window) is evaluated as 'OK'
+</li>
+<li> 'Save' is evaluated as 'OK' without quitting the dialog
+</li>
+<li> The root object of the CPX always has a size of 256*176 pixels
+<b>Exception:</b> Under <a href="xcontrol.html#COPS">COPS</a> the object tree may have a size of up to
+512*384 pixels
+</li>
+<li> Interrupt vectors may not be altered
+</li>
+<li> <a href="#Xform_do">Xform_do</a> may not be mixed with functions for <a href="xcontrol.html#Event_20CPX">Event CPXs</a>
+</li>
+<li> One must not forget about reserved memory when quitting the
+CPX, as this would lead to fragmentation of the memory otherwise
+</li>
+<li> One must not use IDs already being used by other CPXs
+</li>
+<li> Opened files must be closed again
+</li>
+<li> Opened VDI workstations must be closed again in every case
+(at the latest at the receipt of a AC_CLOSE or WM_CLOSE message), if
+they are no longer needed
+</li>
+</ul>
+
+<h3><a name="CPX_20functions">9.1.2 CPX functions</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_button">cpx_button</a></td>
+<td valign="top"> Mouse button event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_call">cpx_call</a> </td>
+<td valign="top"> Activation routine
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_close">cpx_close</a> </td>
+<td valign="top"> Close event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_draw">cpx_draw</a> </td>
+<td valign="top"> Redraw event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_hook">cpx_hook</a> </td>
+<td valign="top"> Preemption hook
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_init">cpx_init</a> </td>
+<td valign="top"> Initialization
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_m1">cpx_m1</a> </td>
+<td valign="top"> Mouse rectangle event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_m2">cpx_m2</a> </td>
+<td valign="top"> Mouse rectangle event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_key">cpx_key</a> </td>
+<td valign="top"> Keyboard event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_timer">cpx_timer</a> </td>
+<td valign="top"> Timer event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_wmove">cpx_wmove</a> </td>
+<td valign="top"> Window movement
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_button">9.1.2.1 cpx_button</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_button« - Mouse button event.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_button) (<a href="MRETS.html">MRETS</a> *mrets, int16_t nclicks,
+int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_button is made when a mouse button event occurs.
+The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Mouse parameter for event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">nclicks</td>
+<td valign="top"> Number of mouse clicks
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Is to be set to the value 1 if the CPX is to be quit
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#cpx_timer">cpx_timer</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_call">9.1.2.2 cpx_call</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_call« - Calling of the CPX module.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*cpx_call) ( <a href="GRECT.html">GRECT</a> *work );
+<br>&nbsp;
+<br>int16_t cdecl (*cpx_call) ( <a href="GRECT.html">GRECT</a> *work, <a href="aes_structures.html#DIALOG">DIALOG</a> *dialog );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_call is made when the user has selected the
+corresponding module. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">work</td>
+<td valign="top"> Rectangle with the coordinates of the XControl window
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">dialog</td>
+<td valign="top"> Pointer to a window dialog
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The second calling procedure is only available
+under <a href="xcontrol.html#COPS">COPS</a>. The parameter <i>dialog</i> in this case contains a
+pointer to the window dialog structure. The dialog is opened by <a href="xcontrol.html#COPS">COPS</a>
+after the <a href="#cpx_init">cpx_init</a> with the aid of <a href="wdlg.html#wdlg_create">wdlg_create</a> and <a href="wdlg.html#wdlg_open">wdlg_open</a>. The
+parameter <i>work</i> and the object tree lie outside the visible
+screen area up to the first call of <a href="#Xform_do">Xform_do</a> or up to the return from
+the cpx_call function.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">End of processing</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">CPX should continue to be processed</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xcontrol_main.html">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_close">9.1.2.3 cpx_close</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_close« - Event for closing the CPX window.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_close) (int16_t flag);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_close serves for closing the CPX module. The
+following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">flag</td>
+<td valign="top"> Reason for closing:
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="evnt.html#AC_CLOSE">AC_CLOSE</a> message</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">WM_CLOSE message</td>
+</tr>
+</table>
+</div>
+
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The function is called for every AC_CLOSE or WM_CLOSE
+message. The CPX should then immediately release all memory reserved
+for it. The function must be implemented for every <a href="xcontrol.html#Event_20CPX">Event CPX</a>. AC_CLOSE
+is to be evaluated as 'Cancel', WM_CLOSE as 'OK'.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_init">cpx_init</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_draw">9.1.2.4 cpx_draw</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_draw« - Event for redrawing the CPX window.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_draw) (<a href="GRECT.html">GRECT</a> *clip);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_draw serves for redrawing parts of the CPX window.
+The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">clip</td>
+<td valign="top"> Region to be redrawn, which is also needed as a passing
+parameter for <a href="#GetFirstRect">GetFirstRect</a>
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The required rectangle list must be obtained with
+<a href="#GetFirstRect">GetFirstRect</a> and <a href="#GetNextRect">GetNextRect</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_wmove">cpx_wmove</a> &nbsp; <a href="#GetFirstRect">GetFirstRect</a> &nbsp; <a href="#GetNextRect">GetNextRect</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_hook">9.1.2.5 cpx_hook</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_hook« - Preemption hook.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Definiton</td>
+<td valign="top"> int16_t cdecl (*cpx_hook) (int16_t event, int16_t *msg, <a href="MRETS.html">MRETS</a>
+*mrets, int16_t *key, int16_t *nclicks);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_hook is made immediately after <a href="evnt.html#evnt_multi">evnt_multi</a>, so
+before XControl processes the event. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Occurring events
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg</td>
+<td valign="top"> Event buffer
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Mouse parameters
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> Keypress
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">nclicks</td>
+<td valign="top"> Number of mouse clicks
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Continue processing events</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Break off processing events</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_draw">cpx_draw</a> &nbsp; <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#cpx_m1">cpx_m1</a> &nbsp; <a href="#cpx_m2">cpx_m2</a> &nbsp; <a href="#cpx_timer">cpx_timer</a> &nbsp;
+<a href="#cpx_wmove">cpx_wmove</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_init">9.1.2.6 cpx_init</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_init« - Initialization of the CPX.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> <a href="CPXINFO.html">CPXINFO</a> * cdecl cpx_init (<a href="XCPB.html">XCPB</a> *xcpb);
+<br>&nbsp;
+<br>CPXINFO * cdecl cpx_init (XCPB *xcpb, int32_t magic, int32_t
+version );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_init serves for initializing the CPX. The
+following applies:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>xcpb</i></td>
+  <td align="left" valign="top">Pointer to the <a href="XCPB.html">XCPB</a> structure of XControl</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> The function must be placed at the start of the
+TEXT segment of the CPX file, and is called during XControl
+initialization as well as on activating the CPX.
+<br>&nbsp;
+<br>With the aid of the second calling procedure one can ascertain
+from the parameters <i>magic</i> and <i>version</i> whether the CPX
+is running under XCONTROL or <a href="xcontrol.html#COPS">COPS</a>. The following routine may be used:
+<br>&nbsp;
+<a name="COPS_2C_20Test_20for"></a>
+<pre>int16_t is_<a href="xcontrol.html#COPS">COPS</a> ( int32_t magic, int32_t version )
+{
+   if ((magic == '<a href="xcontrol.html#COPS">COPS</a>') &amp;&amp; (version &gt;= 0x10000L))
+      return (TRUE);      /* <a href="xcontrol.html#COPS">COPS</a> */
+   else return (FALSE);   /* <a href="xcontrol_main.html">XCONTROL</a> */
+}
+</pre>
+<br>If <a href="xcontrol.html#COPS">COPS</a> is recognized, the CPX can draw an object tree with a
+size up to 512*384 pixels and pass it to the function <a href="#Xform_do">Xform_do</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">'Set-only' CPX</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Else</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Pointer to the CPXINFO structure of the CPX</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_close">cpx_close</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_m1">9.1.2.7 cpx_m1</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_m1« - Event 1 for a mouse rectangle.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_m1) (<a href="MRETS.html">MRETS</a> *mrets, int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_m1 is made when the mouse pointer enters or leaves
+a certain area. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Mouse parameters
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Set to the value 1 when the CPX is to be exited
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_m2">cpx_m2</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_m2">9.1.2.8 cpx_m2</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_m2« - Event 2 for a mouse rectangle.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_m2) (<a href="MRETS.html">MRETS</a> *mrets, int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_m2 is made when the mouse pointer enters or leaves
+a certain area. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Mouse parameters
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Set to the value 1 when the CPX is to be exited
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_m1">cpx_m1</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_key">9.1.2.9 cpx_key</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_key« - Event for a key-press.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_key) (int16_t kstate, int16_t key, int16_t
+*event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_key is made when a keyboard vvent has occurred.
+The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">kstate</td>
+<td valign="top"> Status of the 'special' keys ([Alternate], [Control], [Shift],
+etc.)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> <b>Triggering key:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">High byte :</td>
+  <td align="left" valign="top">Scancode of the key</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Low byte  :</td>
+  <td align="left" valign="top">ASCII-code of the key</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Set to the value 1 when the CPX is to be exited
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_timer">cpx_timer</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_timer">9.1.2.10 cpx_timer</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_timer« - Timer event.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_timer) (int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_timer is made when a timer event has occurred. The
+following applies:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> Set to the value 1 when the CPX is to be exited
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> Timer events are <i>not</i> supported by <a href="xcontrol.html#Form_20CPX">Form CPXs</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_wmove">9.1.2.11 cpx_wmove</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_wmove« - Movement of the XControl window.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*cpx_wmove) (<a href="GRECT.html">GRECT</a> *work);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call cpx_wmove is made when the user moves the XControl
+window. The following applies:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>work</i></td>
+  <td align="left" valign="top">New coordinates of the XControl window</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#CPX_20functions">CPX functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#cpx_draw">cpx_draw</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XCONTROL_20functions">9.1.3 XCONTROL functions</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#CPX_Save">CPX_Save</a> </td>
+<td valign="top"> Saves defaults
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Get_Buffer">Get_Buffer</a> </td>
+<td valign="top"> Gets buffer
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#getcookie">getcookie</a> </td>
+<td valign="top"> Gets cookie variables
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#GetFirstRect">GetFirstRect</a> </td>
+<td valign="top"> Gets first rectangle from list
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#GetNextRect">GetNextRect</a> </td>
+<td valign="top"> Gets next rectangle from list
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#MFsave">MFsave</a> </td>
+<td valign="top"> Saves/restores mouse form
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Popup">Popup</a> </td>
+<td valign="top"> <a href="#Popup">Popup</a> menu management
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#rsh_fix">rsh_fix</a> </td>
+<td valign="top"> Converts object tree
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#rsh_obfix">rsh_obfix</a> </td>
+<td valign="top"> Converts object from character to pixel display
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Set_Evnt_Mask">Set_Evnt_Mask</a></td>
+<td valign="top"> Sets event mask
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_arrow">Sl_arrow</a> </td>
+<td valign="top"> Slider arrow handling
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_dragx">Sl_dragx</a> </td>
+<td valign="top"> Slider drag movement (horizontal)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_dragy">Sl_dragy</a> </td>
+<td valign="top"> Slider drag nmovement (vertical)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_size">Sl_size</a> </td>
+<td valign="top"> Sets slider size
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_x">Sl_x</a> </td>
+<td valign="top"> Positions a slider (horizontal)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_y">Sl_y</a> </td>
+<td valign="top"> Positions a slider (vertical)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Xform_do">Xform_do</a> </td>
+<td valign="top"> Form management
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#XGen_Alert">XGen_Alert</a> </td>
+<td valign="top"> Displays an alert box.
+
+</td></tr>
+</table>
+
+<h4><a name="CPX_Save">9.1.3.1 CPX_Save</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »CPX_Save« - Save defaults.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*CPX_Save) (VOID *ptr, int32_t num);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call CPX_Save permits saving the default settings of a CPX.
+The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>ptr</i></td>
+  <td align="left" valign="top">Address of the data to be saved</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num</i></td>
+  <td align="left" valign="top">Number of bytes to be saved</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> XControl saves the settings in the DATA segment of
+the CPX. Thus developers must themselves ensure that there is
+sufficient free space in the DATA segment. This is done with the data
+field 'SAVE_VARS' in CPXSTART.S.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">An error has arisen</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">No eror has arisen</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Get_Buffer">9.1.3.2 Get_Buffer</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Get_Buffer« - Get buffer.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Get_Buffer) (VOID);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Get_Buffer obtains the address of a 64-byte sized
+resident memory block.
+<br>&nbsp;
+<br><b>Note:</b> In this memory the CPX can save the contents of
+write-only registers if TOS offers no functions for interrogation
+(example: window colours). One has to emphasise again that any other
+memory allocated to a CPX is volatile!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns a pointer to the memory block address.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="getcookie">9.1.3.3 getcookie</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »getcookie« - Get cookie variables.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*getcookie) (int32_t cookie, int32_t *p_value);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call getcookie searches for a cookie, and obtains its
+value. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">cookie</td>
+<td valign="top"> Cookie variable
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">p_value</td>
+<td valign="top"> Address of a variable that is to receive the value, or NULL if
+the value is of no interest
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Cookie not found</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt;0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Cookie found</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="bios_cookiejar.html">Cookie jar</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="GetFirstRect">9.1.3.4 GetFirstRect</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »GetFirstRect« - Get first rectangle from list.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> <a href="GRECT.html">GRECT</a> * cdecl (*GetFirstRect) (<a href="GRECT.html">GRECT</a> *prect);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call GetFirstRect obtains the first rectangle from the
+rectangle list. The following applies:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>prect</i></td>
+  <td align="left" valign="top">Area to be updated</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> The function is required for the redrawing of
+window portions after a <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> message; however, the object tree is
+managed by XControl itself.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">No further window portions present</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Else</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Window portion to be restored</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#GetNextRect">GetNextRect</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="GetNextRect">9.1.3.5 GetNextRect</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »GetNextRect« - Get next rectangle from list.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> <a href="GRECT.html">GRECT</a> * cdecl (*GetNextRect) (VOID);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call GetNextRect obtains the next rectangle from the
+rectangle list.
+<br>&nbsp;
+<br><b>Note:</b> The function is required for the redrawing of
+window portions after a <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> message; however, the object tree is
+managed by XControl itself.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">No further window portions present</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Else</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Window portion to be restored</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#GetFirstRect">GetFirstRect</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="MFsave">9.1.3.6 MFsave</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »MFsave« - Save/restore mouse form.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*MFsave) (int16_t saveit, <a href="aes_structures.html#MFORM">MFORM</a> *mf);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call MFsave saves or restores the shape of the mouse
+pointer. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">savit</td>
+<td valign="top">
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Restore mouse-shape</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Save mouse-shape</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mf</td>
+<td valign="top"> Memory block for saving the mouse-shape
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="graf.html#graf_mouse">graf_mouse</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Popup">9.1.3.7 Popup</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Popup« - Management of a popup menu.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*Popup) (int8_t *items[], int16_t num_items,
+int16_t default_item, int16_t font_size, <a href="GRECT.html">GRECT</a> *button, <a href="GRECT.html">GRECT</a> *world);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Popup takers on the complete management of a popup
+menu. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">items</td>
+<td valign="top"> Array with character strings for the individual entries; each
+entry must have the same length, as well as at least two spaces at the
+start and at least one space at the end
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">num_items</td>
+<td valign="top"> Number of entries
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">default_item</td>
+<td valign="top"> Default entry (count starts at 0), or the value -1
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">font_size</td>
+<td valign="top"> <b>Font size:</b> 8*16 or 8*8 font; for the parameters one
+should use the same values as in the <a href="aes_structures.html#TEDINFO">TEDINFO</a> structure (according to
+Atari, only the large system font is used at present)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">button</td>
+<td valign="top"> Rectangle of the button to which the popup belongs
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">world</td>
+<td valign="top"> Rectangle of the background object tree (as a rule the object
+tree of the CPX)
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> With too many entries (five onwards) the popup is
+scrolled automatically; the processing blocks all other actions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the selected entry of the popup, or the
+value -1 if no element of the popup had been selected.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Xform_do">Xform_do</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="rsh_fix">9.1.3.8 rsh_fix</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »rsh_fix« - Object tree conversion.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*rsh_fix) (int16_t num_objs, int16_t num_frstr,
+int16_t num_frimg, int16_t num_tree, <a href="aes_structures.html#OBJECT">OBJECT</a> *rs_object, <a href="aes_structures.html#TEDINFO">TEDINFO</a>
+*rs_tedinfo, int8_t *rs_string[], <a href="aes_structures.html#ICONBLK">ICONBLK</a> *rs_iconblk, <a href="aes_structures.html#BITBLK">BITBLK</a>
+*rs_bitblk, int32_t *rs_frstr, int32_t *rs_frimg, int32_t *rs_trindex,
+struct foobar *rs_imdope);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call rsh_fix converts an object tree on the basis of 8*16
+pixel-sized characters. The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_objs</i></td>
+  <td align="left" valign="top">Total number of objects</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_frstr</i></td>
+  <td align="left" valign="top">Total number of strings</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_frimg</i></td>
+  <td align="left" valign="top">Total number of images</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_tree</i></td>
+  <td align="left" valign="top">Total number of object trees</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_object</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_tedinfo</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_string</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_iconblk</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_bitblk</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_frstr</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_frimg</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tr_trindex</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_imdope</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> With this the CPX has the same pixel size in all
+resolutions. When working with a RCS one should therefore also choose
+a graphics mode with 8*16 pixel-sized characters.
+<br>&nbsp;
+<br>The coordinate conversion may only take place once, of course -
+hence XControl makes the flag 'SkipRshFix' available in the <a href="XCPB.html">XCPB</a>
+structure.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#rsh_obfix">rsh_obfix</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="rsh_obfix">9.1.3.9 rsh_obfix</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »rsh_obfix« - Object conversion: Character to pixel display.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*rsh_obfix) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t curob);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call rsh_obfix converts the size and position of a
+specified object from a character-based display to a pixel-based
+display. The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Address of the object tree</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>curob</i></td>
+  <td align="left" valign="top">Object to be converted</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#rsh_fix">rsh_fix</a> &nbsp; <a href="rsrc.html#rsrc_obfix">rsrc_obfix</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Set_Evnt_Mask">9.1.3.10 Set_Evnt_Mask</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Set_Evnt_Mask« - Set an event mask.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Set_Evnt_Mask) (int16_t mask, MOBLK *m1, MOBLK
+*m2, int32_t time);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Set_Evnt_Mask determines which events the CPX should
+react to. The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>mask</i></td>
+  <td align="left" valign="top">Permitted events (as for <a href="evnt.html#evnt_multi">evnt_multi</a>)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>m1</i></td>
+  <td align="left" valign="top">Mouse rectangle and -direction</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>m2</i></td>
+  <td align="left" valign="top">Mouse rectangle and -direction</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>time</i></td>
+  <td align="left" valign="top">Time in milliseconds for timer event</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_arrow">9.1.3.11 Sl_arrow</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_arrow« - Slider arrow handling.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_arrow) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t obj, int16_t inc, int16_t min, int16_t max, int16_t
+*value, int16_t direction, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_arrow is to be made as soon as an arrow of a slider
+has been clicked on. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Address of the object tree
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Base object (index of slider 'track')
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (child of base object)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">obj</td>
+<td valign="top"> Arrow that was clicked on
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">inc</td>
+<td valign="top"> Number of units that are to be added or subtracted
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimum <i>value</i> that can be accepted
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximum <i>value</i> that can be accepted
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> Address for current value
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">direction</td>
+<td valign="top"> <b>Direction:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Vertical</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Horizontal</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Address of a function (as for <a href="#Sl_x">Sl_x</a>/<a href="#Sl_y">Sl_y</a>)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_dragx">9.1.3.12 Sl_dragx</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_dragx« - Slider drag movement (horizontal).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_dragx) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t min, int16_t max, int16_t *value, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_dragx manages the movement of the horizontal
+slider. The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Address of the object tree</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>base</i></td>
+  <td align="left" valign="top">Base object (index of slider 'track')</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>slider</i></td>
+  <td align="left" valign="top">Slider (child of the base object)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>min</i></td>
+  <td align="left" valign="top">Minimum <i>value</i> that can be accepted</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max</i></td>
+  <td align="left" valign="top">Maximum <i>value</i> that can be accepted</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>value</i></td>
+  <td align="left" valign="top">Address for current value</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>foo</i></td>
+  <td align="left" valign="top">Address of a function, as for <a href="#Sl_x">Sl_x</a></td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_dragy">9.1.3.13 Sl_dragy</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_dragy« - Slider drag movement (vertical).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_dragy) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t min, int16_t max, int16_t *value, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_dragy manages the movement of the vertical slider.
+The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Address of the object tree</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>base</i></td>
+  <td align="left" valign="top">Base object (index of slider 'track')</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>slider</i></td>
+  <td align="left" valign="top">Slider (child of the base object)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>min</i></td>
+  <td align="left" valign="top">Minimum <i>value</i> that can be accepted</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max</i></td>
+  <td align="left" valign="top">Maximum <i>value</i> that can be accepted</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>value</i></td>
+  <td align="left" valign="top">Address for current value</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>foo</i></td>
+  <td align="left" valign="top">Address of a function, as for <a href="#Sl_y">Sl_y</a></td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_size">9.1.3.14 Sl_size</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_size« - Sets slider size.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_size) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t num_items, int16_t visible, int16_t direction, int16_t
+min_size);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_size sets the size of the slider. The following
+apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Address of the object tree
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Base object (index of slider 'track')
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (child of the base object)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">num_items</td>
+<td valign="top"> Number of elements present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">visible</td>
+<td valign="top"> Number of elements visible
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">direction</td>
+<td valign="top"> <b>Direction:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Vertical</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Horizontal</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min_size</td>
+<td valign="top"> Minimum size of slider, in pixels
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The function is required to obtain the
+relationship of the amount of data displayed to the total that is
+present.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#Sl_x">Sl_x</a> &nbsp; <a href="#Sl_y">Sl_y</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_x">9.1.3.15 Sl_x</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_x« - Positions a slider (horizontal).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_x) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t slider,
+int16_t value, int16_t min, int16_t max, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_x positions the slider within a base object in the
+horizontal direction. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Address of the object tree
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Base object (index of slider 'track')
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (child of the base object)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> New value that the slider should represent
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimum that <i>value</i> may accept
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximum that <i>value</i> may accept
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Address of a function (or NULL), which is called simultaneously
+with slider repositioning; this permits slider movements to be used
+also to alter displayed values
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_y">Sl_y</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_y">9.1.3.16 Sl_y</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_y« - Positions a slider (vertical).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> VOID cdecl (*Sl_y) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t slider,
+int16_t value, int16_t min, int16_t max, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Sl_y positions the slider within a base object in the
+vertical direction. The following apply:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Address of the object tree
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Base object (index of slider 'track')
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (child of the base object)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> New value that the slider should represent
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimum that <i>value</i> may accept
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximum that <i>value</i> may accept
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Address of a function (or NULL), which is called simultaneously
+with slider repositioning; this permits slider movements to be used
+also to alter displayed values
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Sl_x">Sl_x</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Xform_do">9.1.3.17 Xform_do</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Xform_do« - Manage a form.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*Xform_do) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t startob,
+int16_t *puntmsg);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call Xform_do takes on the management of a form, as well as
+(to a limited extent) the handling of AES messages. The following
+apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Address of the object tree</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>startob</i></td>
+  <td align="left" valign="top">Start object</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>puntmsg</i></td>
+  <td align="left" valign="top"><a href="proto_ssp.html#Message">Message</a> buffer</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> Under <a href="xcontrol.html#COPS">COPS</a> the CPX can draw an object tree up to
+512*384 pixels in size and pass it to this function.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> <i>puntmsg</i> contains a message to be evaluated:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#WM_REDRAW">WM_REDRAW</a>:</td>
+<td valign="top"> The CPX must itself redraw objects that do not belong to the
+object tree. The rectangle list can be obtained with the functions
+<a href="#GetFirstRect">GetFirstRect</a> and <a href="#GetNextRect">GetNextRect</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#AC_CLOSE">AC_CLOSE</a>:</td>
+<td valign="top"> <u>and</u>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">WM_CLOSE:</td>
+<td valign="top"> The CPX was terminated; reserved memory is to be freed
+immediately. <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> is to be evaluated as 'Cancel', WM_CLOSE as
+'OK'.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#CT_KEY">CT_KEY</a>:</td>
+<td valign="top"> Special message that permits evaluation of key-presses,
+provided these can have no repercussions on EDIT fields.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top"><i>puntmsg</i>[3]</td>
+  <td align="left" valign="top">High byte</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Scancode of the pressed key</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>puntmsg</i>[3]</td>
+  <td align="left" valign="top">Low byte</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">ASCII-code of the pressed key</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Else:</td>
+<td valign="top"> <a href="indexudo.html">Index</a> of object clicked on (a double-click is flagged in the
+upper bit).
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="form.html#form_do">form_do</a> &nbsp; <a href="form.html#form_xdo">form_xdo</a> &nbsp; <a href="aes_fundamentals.html#The_20rectangle-list_20of_20a_20window">Rectangle-list of a window</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="XGen_Alert">9.1.3.18 XGen_Alert</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XGen_Alert« - Display an alert box.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Declaration</td>
+<td valign="top"> int16_t cdecl (*XGen_Alert) (int16_t id);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description</td>
+<td valign="top"> The call XGen_Alert enables the display of a simple alert box.
+The following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>id</i></td>
+  <td align="left" valign="top"><b>Type of message:</b></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;0 = 'Save default settings?'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;1 = 'Memory allocation error!'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;2 = 'File read/write error'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;3 = 'File not found'</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> Further alert boxes must be defined by the user.
+However, <a href="form.html#form_alert">form_alert</a> is <i>not</i> suitable for this, as it centres
+the alert box with reference to the full screen area and not with
+reference to the XControl window.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns one of the following values:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;0 :</td>
+<td valign="top"> 'Cancel' was clicked on
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;&gt; 0 :</td>
+<td valign="top"> 'OK' was clicked on (if the alert box has only one button, then
+it is the 'OK' button)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XCONTROL_20functions">XCONTROL functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="form.html#form_alert">form_alert</a> &nbsp; <a href="#About_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="xcontrol_main.html"><img src="udo_up.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_lf_FOOT" href="xcontrol_main.html"><img src="udo_lf.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_rg_FOOT" href="guidelines.html"><img src="udo_rg.gif" alt="Programming guidelines" title="Programming guidelines" border="0" width="24" height="24">Programming guidelines</a>
+</body>
+</html>

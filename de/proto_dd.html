@@ -1,0 +1,305 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Drag&amp;Drop-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_bubblegem.html"><img src="udo_lf.gif" alt="BubbleGEM" title="BubbleGEM" border="0" width="24" height="24">BubbleGEM</a>
+<a name="UDO_nav_rg_HEAD" href="proto_dhst.html"><img src="udo_rg.gif" alt="Document-History-Protokoll" title="Document-History-Protokoll" border="0" width="24" height="24">Document-History-Protokoll</a>
+
+<hr>
+
+<h1><a name="Drag_26amp_3BDrop-Protokoll">15.3 Drag&amp;Drop-Protokoll</a></h1>
+<a name="Protokoll_2C_20Drag_26amp_3BDrop-"></a>
+<p>Das Drag&amp;Drop-Protokoll wurde von Atari für das Multi-<a href="tos_main.html">TOS</a>
+entwickelt. Es handelt sich dabei um ein sehr flexibles Protokoll,
+welches nicht selbst Bestandteil des Betriebssystems ist, und daher
+auch unter anderen Betriebssystemvarianten eingesetzt werden könnte,
+wenn diese Multitasking und <a href="magic_driveu.html#Pipes">Pipes</a> unterstützen.
+</p>
+<p>AES-Nachrichten werden in diesem Protokoll nur dazu benutzt, um die
+Kommunikationspartner zusammenzubringen; die gesamte restliche
+Datenübertragung erfolgt über eine <i>Pipe</i>, auf die man mit den
+gewohnten Dateifunktionen des GEMDOS zugreifen kann.
+</p>
+<p><b>Um eine Drag&amp;Drop-Kommunikation zu beginnen</b>, legt
+man in dem Verzeichnis U:\PIPE eine Datei mit dem Namen 'DRAGDROP.xx'
+an, wobei ein x jeweils für die Buchstaben A bis Z stehen kann.
+Dadurch könnten theoretisch bis zu 676 gleichzeitige
+Drag&amp;Drop-Vorgänge stattfinden, was sicherlich ausreichen sollte.
+Zum Anlegen der Pipe sollte man die Funktion <a href="gemdos_file.html#Fcreate">Fcreate</a> verwenden, da
+diese eine ordentliche Fehlermeldung zurückliefert wenn eine
+gleichnamige Pipe bereits existieren sollte. Darüberhinaus sollte
+beim Anlegen der Pipe das <i>Hidden-Bit</i> (Bit-1) gesetzt werden:
+dadurch enthält die lesende Seite ein End-of-File (EOF), wenn die
+andere Seite der Pipe geschlossen wird.
+</p>
+<p>Anschließend wird die Nachricht <a href="evnt.html#AP_DRAGDROP">AP_DRAGDROP</a> an den Empfänger
+geschickt. Da keine Rückmeldung auf diese Mitteilung vorgesehen ist,
+muß sich der Sender der Funktion Fselect bedienen, um festzustellen,
+ob jemand auf der Gegenseite die Pipe zum Lesen geöffent hat und
+empfangsbereit ist. Atari empfiehlt in diesem Zusammenhang ein
+Time-Out von drei bis vier Sekunden.
+</p>
+<p><b>Achtung:</b> Der Sender ist leider <i>nicht</i> in der Lage
+im voraus festzustellen, ob die Ziel-Applikation das
+Drag&amp;Drop-Protokoll überhaupt unterstützt. Daher ist es
+möglich, daß der Anwender erst nach Ablauf der Time-Out-Zeit eine
+entsprechende Mitteilung erhält. Aus diesem Grund sollten alle
+Applikationen, die das Protokoll <i>nicht</i> unterstützen, eine
+<a href="#ddlisting">negative Bestätigung</a> zurückschicken, damit die lästige Wartezeit entfällt. Falls
+der Empfänger hingegen zur Aufnahme der Daten bereit ist, sollte er
+die Kennung <a href="proto_dd.html#DD_OK">DD_OK</a> (mit dem Wert 0) zurückschicken.
+</p>
+<p>Als nächstes müssen sich beide Parteien über die Art der zu
+verschickenden Daten einigen; Kernpunkt des Drag&amp;Drop-Protokolls
+sind nämlich unterschiedliche <a href="#Drag_26amp_3BDrop_20Datentypen">Arten von Datentypen</a>, die als vier Zeichen lange
+Buchstabenfolgen dargestellt werden. Dazu schickt der Empfänger eine
+<i>nach Präferenz sortierte</i> Liste von acht für ihn brauchbaren
+Datentypen an den Sender. Eine Textverarbeitung könnte auf diese Art z.B.
+mitteilen, daß sie Dateien im Rich-Text-Format (RTF) und ASCII-Format
+unterstützt, und dabei ersteren den Vorzug gibt. <b>Wichtig:</b>
+Wenn weniger als acht Datentypen verstanden werden, muss der Rest der
+Liste mit Null-Bytes aufgefüllt werden, so daß immer genau 32 Bytes
+übermittelt werden.
+</p>
+<p>Der Sender kann dann anhand der vom Empfänger übermittelten
+Liste entscheiden, welches Datenformat verwendet werden soll. Dabei
+dient die übermittelte Liste jedoch nur als Richtlinie; der Sender
+kann also durchaus eine andere Reihenfolge benutzen oder auch noch
+andere Formate anbieten.
+</p>
+<p><b>Die Übermittlung der eigentlichen Daten erfolgt dann in den
+folgenden Schritten:</b>
+</p>
+<a name="Drag_26amp_3BDrop_2C_20Header_20bei"></a>
+<ul>
+<li><p> Zuerst wird ein Header übermittelt, der alle Informationen
+über die Daten - ihr Format und ihre Länge - enthält. Der
+Empfänger kann darauf dann entsprechend reagieren. Der Header ist wie
+folgt aufgebaut:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Position</td>
+  <td align="left" valign="top">Länge</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">2 Bytes</td>
+  <td align="left" valign="top">Länge des Headers</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">4 Bytes</td>
+  <td align="left" valign="top">Datentyp (z.B. ARGS)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">4 Bytes</td>
+  <td align="left" valign="top">Länge der zu übertragenden Daten</td>
+</tr>
+<tr>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">variabel(n)</td>
+  <td align="left" valign="top">Name der Daten (null-terminiert)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">10+n</td>
+  <td align="left" valign="top">variabel</td>
+  <td align="left" valign="top">Dateiname (null-terminiert)</td>
+</tr>
+</table>
+</div>
+
+<br>Da die Länge des Headers mit angegeben werden muss, ist dieser
+für zukünftige Zwecke leicht erweiterbar.
+<br>&nbsp;
+</p></li>
+<li><p> Nachdem er den Header eingelesen hat, kann der Empfänger auf
+diesen reagieren. So kann er beispielsweise dem Sender mitteilen, daß
+er mit dem vorgeschlagenen Datenformat einverstanden ist, oder nicht.
+Dies geschieht durch Senden von verschiedenen <a href="#Drag_26amp_3BDrop_20Status_20Bytes">Status-Bytes</a>.
+<br>&nbsp;
+</p></li>
+<li><p> Sobald der Empfänger mit <a href="proto_dd.html#DD_OK">DD_OK</a> geantwortet hat, wird mit der
+Übertragung der Daten begonnen; dabei werden genau so viele Bytes
+geschrieben, wie im Header angegeben wurden, und anschließend die
+Pipe geschlossen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Wichtiger Hinweis:</b> Normalerweise wird ein Prozess vom
+Kernel terminiert, wenn er in eine Pipe schreibt, die von niemandem
+zum Lesen geöffnet ist. Dies läßt sich verhindern, indem man das
+Signal <a href="gemdos_signals.html#SIGPIPE">SIGPIPE</a> ignoriert. Ferner sollte keiner der beiden Partner ein
+<a href="wind.html#wind_update">wind_update</a> benutzen, da es sonst u.U. zu einem <b>Deadlock</b>
+kommen könnte, wenn eine der beiden Seiten versucht eine
+Bildschirmausgabe (z.B. eine Alertbox) zu machen.
+</p>
+<a name="Drag_26amp_3BDrop_2C_20Quelltext_20f_C3_BCr"></a>
+<p><b>Tip:</b> Ein Beispiel-Quelltext zum Drag&amp;Drop-Protokoll
+befindet sich z.B. in der Zeitschrift <i>ST-Computer</i> (Ausgabe
+12/1993).
+</p>
+<p>Querverweis:
+<br><a href="proto_av.html">AV-Protokoll</a> <a href="gem_about.html">GEM</a> <a href="guidelines_styles.html">Style-Guidelines</a> <a href="gemdos_pipes.html">Test auf Pipes</a> <a href="proto_olga.html">OLGA-Protokoll</a>
+</p>
+<a name="ddlisting"></a>
+<h3><a name="D_26amp_3BD-Listing_1">15.3.1 D&amp;D-Listing_1</a></h3>
+<pre>/* Das folgende Programmfragment signalisiert dem Sender
+   des Drag&amp;Drop-Protokolls, daß das eigene Programm
+   dieses Protokoll nicht versteht. */
+
+#define <a href="evnt.html#AP_DRAGDROP">AP_DRAGDROP</a>   63
+#define <a href="proto_dd.html#DD_NAK">DD_NAK</a>         1
+
+/* wir befinden uns nun in der Event-Schleife;
+   msg ist der <a href="proto_ssp.html#Message">Message</a>-Puffer. */
+
+case <a href="evnt.html#AP_DRAGDROP">AP_DRAGDROP</a>:
+{
+    static BYTE pipename[] = &quot;U:\\PIPE\\DRAGDROP.AA&quot;;
+    LONG fd;
+
+    pipename[18] = msg[7] &amp; 0x00ff;
+    pipename[17] = (msg[7] &amp; 0xff00) &gt;&gt; 8;
+
+    fd = <a href="gemdos_file.html#Fopen">Fopen</a> (pipename, 2);
+    if (fd &gt;= 0)
+    {
+        BYTE c = <a href="proto_dd.html#DD_NAK">DD_NAK</a>;
+
+        <a href="gemdos_file.html#Fwrite">Fwrite</a> ((WORD) fd, 1, &amp;c);
+        <a href="gemdos_file.html#Fclose">Fclose</a> ((WORD) fd);
+    }
+}
+break;
+</pre>
+<a name="Drag_26amp_3BDrop_20Datentypen"></a>
+<h3><a name="Drag_26amp_3BDrop_2C_20Datentypen_20f_C3_BCr">15.3.2 Drag&amp;Drop, Datentypen für</a></h3>
+<p><a href="proto_xfsl.html#Datentypen">Datentypen</a> werden innerhalb des Drag&amp;Drop-Protokolls durch
+eine vier Zeichen lange Buchstabenfolge repräsentiert. Die folgende
+Liste enthält die zur Zeit definierten <a href="proto_xfsl.html#Datentypen">Datentypen</a>:
+</p>
+<dl class="UDO_env_description">
+<dt><b>ARGS</b></dt>
+<dd>
+<p> steht für eine <i>Kommandozeile</i>, also i.a. einen oder
+mehrere Datei- oder Verzeichnisnamen, die voneinander durch
+Leerzeichen getrennt sind. Für Dateinamen die selbst Leerzeichen
+enthalten, ist eine Sonderbehandlung notwendig. Dazu wird der
+Dateiname in <i>einfache</i> Anführungsstriche eingeschlossen, und
+jeder Anführungsstrich, der im Namen auftritt, durch einen doppelten
+ersetzt.
+<br>&nbsp;
+<br><b>Beispiel:</b>
+<br>Aus <i>Eric's file</i> würde <i>'Eric''s file'</i>.
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>PATH</b></dt>
+<dd>
+<p> ist reserviert, um Informationen über das vom Benutzer
+gewählte Zielobjekt zu erfragen. Die Übertragung läuft in diesem
+Fall in die <i>umgekehrte</i> Richtung; d.h. der Sender liest genau
+so viele Bytes wie angegeben. Hierzu muß der Empfänger nach dem
+Senden von <a href="proto_dd.html#DD_OK">DD_OK</a> direkt die Daten übermitteln. Diese sollten den
+vollständigen Pfadnamen bzw. Dateinamen des Zielfensters (mit '\'
+terminiert) enthalten.
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>.XXX</b></dt>
+<dd>
+<p> steht für eine Extension (eines Dateinamens).
+<b>Beispiele:</b>
+<br>&nbsp;
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">.IMG</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Grafikdaten im <a href="VDI_fundamentals.html#XIMG-Format">XIMG-Format</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">.<a href="gem_about.html">GEM</a></td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Grafikdaten im <a href="VDI_fundamentals.html#Metafile-Format">Metafile-Format</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">.TXT</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Texte im <a href="ascii.html">ASCII-Format</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">.RTF</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Texte im Rich-Text-Format</td>
+</tr>
+</table>
+</div>
+
+</p>
+
+</dd>
+</dl>
+<p>Querverweis: <a href="#Drag_26amp_3BDrop-Protokoll">Drag&amp;Drop-Protokoll</a>
+</p>
+<a name="Drag_26amp_3BDrop_20Status_20Bytes"></a>
+<h3><a name="Drag_26amp_3BDrop_2C_20Status_20Bytes_20f_C3_BCr">15.3.3 Drag&amp;Drop, Status Bytes für</a></h3>
+<a name="DD_OK"></a>
+<a name="DD_NAK"></a>
+<a name="DD_EXT"></a>
+<a name="DD_LEN"></a>
+<a name="DD_TRASH"></a>
+<a name="DD_PRINTER"></a>
+<a name="DD_CLIPBOARD"></a>
+<p>Die folgende Liste enthält alle Status-Bytes, die innerhalb
+einer Drag&amp;Drop-Kommunikation anfallen können:
+</p>
+<pre>#define DD_OK         0    /* Ok, - weitermachen                */
+#define DD_NAK        1    /* Drag&amp;Drop abbrechen               */
+#define DD_EXT        2    /* Datenformat wird nicht akzeptiert */
+#define DD_LEN        3    /* Wunsch nach weniger Daten         */
+#define DD_TRASH      4    /* Ziel ist ein Papierkorb-Icon      */
+#define DD_PRINTER    5    /* Ziel ist ein Drucker-Icon         */
+#define DD_CLIPBOARD  6    /* Ziel ist ein Klemmbrett-Icon      */
+</pre>
+<p>Alle anderen Werte sind für zukünftige Erweiterungen
+reserviert.
+</p>
+<p><b>Hinweis:</b> Das Status-Byte DD_EXT wird verschickt, wenn
+der Empfänger das angebotene Datenformat nicht mag. Der Sender wird
+daraufhin einen neuen Header mit einem anderen Datenformat schicken,
+oder seinerseits die Übertragung abbrechen. Dies kann sich solange
+wiederholen, bis sich Sender und Empfänger auf ein Format geeinigt
+haben, oder bis feststeht, daß es keine Möglichkeit der
+Verständigung gibt.
+</p>
+<p>Querverweis: <a href="#Drag_26amp_3BDrop-Protokoll">Drag&amp;Drop-Protokoll</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_bubblegem.html"><img src="udo_lf.gif" alt="BubbleGEM" title="BubbleGEM" border="0" width="24" height="24">BubbleGEM</a>
+<a name="UDO_nav_rg_FOOT" href="proto_dhst.html"><img src="udo_rg.gif" alt="Document-History-Protokoll" title="Document-History-Protokoll" border="0" width="24" height="24">Document-History-Protokoll</a>
+</body>
+</html>

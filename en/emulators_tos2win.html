@@ -1,0 +1,187 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: TOS2WIN
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="emulators.html"><img src="udo_up.gif" alt="Emulators" title="Emulators" border="0" width="24" height="24">Emulators</a>
+<a name="UDO_nav_lf_HEAD" href="emulators_stem.html"><img src="udo_lf.gif" alt="STEmulator" title="STEmulator" border="0" width="24" height="24">STEmulator</a>
+<a name="UDO_nav_rg_HEAD" href="emulators_others.html"><img src="udo_rg.gif" alt="Detecting the presence of TosBox, Steem and PaCifiST" title="Detecting the presence of TosBox, Steem and PaCifiST" border="0" width="24" height="24">Detecting the presence of TosBox, Steem and PaCifiST</a>
+
+<hr>
+
+<h1><a name="TOS2WIN">14.4 TOS2WIN</a></h1>
+<p><b>Tos2Win Cookie</b>
+</p>
+<p>To ascertain which Tos2Win version and which features are
+present, as of Version 1.19 a cookie '_T2W' exists with a pointer to
+the following data structure:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">1 x Word</td>
+<td valign="top"> Length of the structure
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1 x Word</td>
+<td valign="top"> Version in BCD i.e. $0119 = Version 1.19
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1 x Long</td>
+<td valign="top"> Offset of the Atari memory in PC memory for recalculation of
+pointers
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">4 x Long</td>
+<td valign="top"> Bit-fields for individual T2W features
+
+</td></tr>
+</table>
+
+<p>
+<br><b>Call PC-DLLs as of Version 1.19J</b>
+</p>
+<p>In TOS2WIN all PC calls are introduced with the sequence $4858,
+which is followed by the group code (e.g. $5043) for the DLL
+functions, and is terminated with the function number (e.g. $0000).
+</p>
+<p>So a call of a DLL function would look as follows:
+</p>
+<pre>Function start
+                    .
+                    .
+                    .
+                  $4858
+                  $5043
+                  $0000
+                    .
+                    .
+                    .
+Function end       RTS
+</pre>
+<p>The parameters for the function lie from a7 + 4 onwards. This
+means placing all required parameters on the stack (always only
+LONGwords) and then a bsr to function start.
+</p>
+<p>All pointers passed to the PC function to values in Atari memory
+have to be corrected with an offset. Atari address + offset = PC
+address. One can get the offset either via the Tos2Win cookie or via
+the DLL function $0000. The offset does not alter during the runtime
+of the program.
+</p>
+<p>DLL function
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">$0000</td>
+<td valign="top"> LONG HoleOffset()
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> Returns in d0 the offset for recalculation
+
+</td></tr>
+</table>
+
+<br>This function can also be used to ascertain whether the
+following functions are present. Just load register d0 with zero and
+call the function. If there is still zero in d0, then the functions
+are not implemented.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0001</td>
+<td valign="top"> LONG OpenLibrary(Name)
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name :</td>
+<td valign="top"> Pointer to a NULL-terminated string that contains the name of
+the desired DLL, e.g. 'GDI32.DLL' (the pointer must be corrected with
+the offset)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> Returns in d0 a handle to the DLL
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0002</td>
+<td valign="top"> VOID CloseLibrary(Handle)
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Handle :</td>
+<td valign="top"> Handle to the DLL to be closed; when the internal Windows
+counter has reached zero, the DLL is removed from memory
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0003</td>
+<td valign="top"> LONG GetFunctionAdress(Handle,Name)
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Handle :</td>
+<td valign="top"> Handle for the DLL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Name :</td>
+<td valign="top"> Pointer to a NULL-terminated string that contains the name of
+the function (pointer has to be corrected)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> Address of the function in PC memory
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0004</td>
+<td valign="top"> LONG CallLibraryFunction(Adr,Number,.....)
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Adr :</td>
+<td valign="top"> Address of the desired function
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Number :</td>
+<td valign="top"> Number of parameters passed to the PC function
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">.... :</td>
+<td valign="top"> The corresponding parameters (pointers have to be corrected)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> Possible return value of the PC function
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="emulators.html"><img src="udo_up.gif" alt="Emulators" title="Emulators" border="0" width="24" height="24">Emulators</a>
+<a name="UDO_nav_lf_FOOT" href="emulators_stem.html"><img src="udo_lf.gif" alt="STEmulator" title="STEmulator" border="0" width="24" height="24">STEmulator</a>
+<a name="UDO_nav_rg_FOOT" href="emulators_others.html"><img src="udo_rg.gif" alt="Detecting the presence of TosBox, Steem and PaCifiST" title="Detecting the presence of TosBox, Steem and PaCifiST" border="0" width="24" height="24">Detecting the presence of TosBox, Steem and PaCifiST</a>
+</body>
+</html>

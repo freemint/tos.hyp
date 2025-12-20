@@ -1,0 +1,1739 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: AES fundamentals
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="aes_main.html"><img src="udo_up.gif" alt="AES" title="AES" border="0" width="24" height="24">AES</a>
+<a name="UDO_nav_lf_HEAD" href="aes_about.html"><img src="udo_lf.gif" alt="About the AES" title="About the AES" border="0" width="24" height="24">About the AES</a>
+<a name="UDO_nav_rg_HEAD" href="appl.html"><img src="udo_rg.gif" alt="Application library" title="Application library" border="0" width="24" height="24">Application library</a>
+
+<hr>
+
+<h1><a name="AES_20fundamentals">8.2 AES fundamentals</a></h1>
+<p>The AES (Application Environment Services forms the highest level
+of <a href="gem_about.html">GEM</a>. It deals with all those parts of GEM that go above
+elementary graphic output and input functions. As the AES works
+exclusively with VDI and GEMDOS calls, it is completely independent of the
+graphic hardware, of input devices as well as of file-systems.
+</p>
+<p>The AES manages two types of user programs: Normal GEM
+applications with file extensions '.PRG', '.APP' or '.GTP', and desk
+accessories with file extensions '.ACC'.
+</p>
+<p>Unless you are using a multitasking operating system such as
+<a href="magic.html">MagiC</a>, MiNT or MultiTOS, the AES can only run one application and
+six desk accessories at a time. Desk accessories (with an '.ACC'
+extension) allow quasi-multitasking even with plain <a href="tos_main.html">TOS</a>: They are
+usually special <a href="gem_about.html">GEM</a> programs loaded (wholly or partially) at boot-up
+from the root directory of the boot drive (normally C:\), which remain
+in memory and can be called <i>at any time</i> from GEM (and some
+TOS) programs by clicking on their entry in the first drop/pulldown
+menu. In other words, desk accessories can be called and used while
+another application is running and has its window(s) open, even with a
+single-tasking operating system such as TOS. Note that this is not
+real multi-tasking, as the main application is suspended while the
+accessory is executing and only resumes when the accessory is exited.
+</p>
+<p>Unlike applications, desk accessories don't interact with the
+user immediately; most just initialize themselves and enter a message
+loop awaiting an <a href="evnt.html#AC_OPEN">AC_OPEN</a> message. Some wait for timer events or
+special messages from other applications. Once triggered, they usually
+open a window where a user may interact with them. Under TOS,
+accessories should not use a menu bar and should never exit after a
+<a href="menu.html#menu_register">menu_register</a> call. Loading of any resources should happen before the
+accessory calls <a href="menu.html#menu_register">menu_register</a>, and these resources should be embedded
+in the desk accessory rather than being post-loaded, as on TOS
+versions earlier than 2.06 memory allocated to a desk accessory is not
+freed at a resolution change; thus memory allocated with <a href="rsrc.html#rsrc_load">rsrc_load</a> is
+lost to the system after a change of resolution with the early
+TOS's.
+</p>
+<p>When a desk accessory is closed under TOS, it is sent an
+<a href="evnt.html#AC_CLOSE">AC_CLOSE</a> message by the system. Following this it should perform any
+required cleanups to release sytem resources and close files opened at
+<a href="evnt.html#AC_OPEN">AC_OPEN</a> (the AES closes the accessory's windows automatically).
+Following this it should reenter the event loop and wait for a later
+<a href="evnt.html#AC_OPEN">AC_OPEN</a> message.
+</p>
+<p>The following points are covered in this section:
+</p>
+<ul>
+<li> <a href="#Accessories">Accessories</a>
+</li>
+<li> <a href="#AES_20bindings">Bindings of the AES</a>
+</li>
+<li> <a href="#The_20desktop_20window">The desktop window</a>
+</li>
+<li> <a href="#Data_20exchange_20via_20the_20GEM_20clipboard">Data exchange via the GEM clipboard</a>
+</li>
+<li> <a href="evnt.html#Messages">Messages</a>
+</li>
+<li> <a href="#The_20object_20structure">AES object structure</a>
+</li>
+<li> <a href="#The_20quarter-screen_20buffer">Quarter-screen buffer</a>
+</li>
+<li> <a href="#The_20rectangle-list_20of_20a_20window">Rectangle-list of a window</a>
+</li>
+<li> <a href="#The_20screen-manager">Screen-manager</a>
+</li>
+<li> <a href="#Toolbar_20support">Toolbar support</a>
+</li>
+</ul>
+
+<a name="AES_20clones"></a>
+<a name="Clones_2C_20AES"></a>
+<a name="MinA"></a>
+<a name="AES_20in_20source_20text_3F"></a>
+<a name="Source_20text_2C_20AES_20in"></a>
+<p>For the AES too there have been some interesting
+developments, as various programmers have meanwhile announced their
+own <b>AES clones</b>; at present one can mention projects such as
+<i>N.AES</i> and <i>XaAES.</i> Besides constant evolution one
+may hope also for source texts of these GEM components.
+</p>
+<p>See also: <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="Accessories">8.2.1 Accessories</a></h3>
+<ul>
+<li> <a href="#Startup-code_20for_20accessories">Startup-code for accessories</a>
+</li>
+<li> <a href="#Accessories_20in_20MagiC">Accessories in MagiC</a>
+</li>
+</ul>
+
+<h4><a name="Startup-code_20for_20accessories">8.2.1.1 Startup-code for accessories</a></h4>
+<a name="Accessories_2C_20Startup-code_20for"></a>
+<p>To test whether an application was launched as a program or as a
+desk accessory, one can proceed as follows:
+</p>
+<ul>
+<li><p> If the register a0 has the value zero at program startup, then
+we are dealing with a normal program launch.
+<br>&nbsp;
+</p></li>
+<li><p> Otherwise we are dealing with a desk accessory, and register a0
+contains a pointer to the (incompletely) filled <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a>. The TPA has
+already been shrunk appropriately (to the sum of basepage size and the
+length of the three program segments), but a stack still has to be
+created.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Note:</b> With this information there is no problem in
+creating the start- up code for a program in such a way that it
+recognizes automatically how the application was launched, and to
+continue the initialization appropriately. With most C compilers the
+external variable <i>_app</i> in the startup code is initialized
+automatically, which has the value 0 when the application was launched
+as a desk accessory. This makes it possible to develop applications so
+that they may be launched either as desk accessories or as normal
+programs.
+</p>
+<p>See also:
+<br><a href="aes_about.html">About the AES</a> &nbsp; <a href="#Accessories_20in_20MagiC">Accessories in MagiC</a> &nbsp; <a href="gemdos_tpa.html">Program launch and TPA</a>
+</p>
+<h4><a name="Accessories_20in_20MagiC">8.2.1.2 Accessories in MagiC</a></h4>
+<a name="MagiC_2C_20Accessories_20in"></a>
+<p>Under <a href="magic.html">MagiC</a>, desk accessories are almost equal to programs.
+Their windows are maintained at program changes. They may have menus
+and desktop backgrounds, post-load programs, allocate memory,
+open/close/ delete/copy files etc.
+</p>
+<p>As there is no longer any reason to close windows at program
+changes, there is no <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> message any more. The system does not
+distinguish desk accessories from programs, apart from the fact that
+they may not terminate themselves. As under GEM/2, accessories can
+also deregister themselves in the menu, using the AES call
+<a href="menu.html#menu_unregister">menu_unregister</a>.
+</p>
+<p>In place of accessories, under MagiC it is more sensible to use
+applications that simply register one menu bar with one menu, and lie
+in the APP autostart folder. These applications can be loaded when
+required, and also removed again afterwards.
+</p>
+<p><b>Note:</b> As of MagiC 4, desk accessories can be loaded
+also while the system is running (not just at boot-up). Furthermore
+accessories can be unloaded by clicking on the corresponding accessory
+entry in the first menu while the [Control] key is held down. One
+disadvantage is that at present accessories may not perform <a href="gemdos_process.html#Pexec">Pexec</a> with
+mode 104.
+</p>
+<p>See also:
+<br><a href="aes_about.html">About the AES</a> &nbsp; <a href="gem_about.html">GEM</a> &nbsp; <a href="#Startup-code_20for_20accessories">Startup-code for accessories</a> &nbsp; <a href="shel.html#shel_write">shel_write</a>
+</p>
+<h3><a name="The_20desktop_20window">8.2.2 The desktop window</a></h3>
+<a name="Window_2C_20Desktop"></a>
+<p>Of the available windows, the desktop or background window plays
+a special role. It has the ID 0, occupies the whole screen area, is
+always open and also cannot be closed. The <i>working area</i> is the
+area below the menu bar. Only in this working area can other programs
+output to the screen or open their own windows.
+</p>
+<p>Normally the working area of the desktop appears as a solid
+green area (in colour resolutions) or as a grey raster pattern (in
+monochrome operation). The <a href="#The_20screen-manager">screen-manager</a> attends to the screen redraws all on
+its own; with a call of <i><a href="wind.html#wind_set">wind_set</a></i>, other application programs
+can anchor any other object tree as a background. In that case too the
+screen-manager looks after any required redraws of sections of the
+image. Although this possibility is very alluring, there are several
+reasons that point <i>against</i> the use of the desktop window; the
+most important:
+</p>
+<ul>
+<li><p> Even under a multitasking-capable <a href="gem_about.html">GEM</a> (<a href="magic.html">MagiC</a> or MultiTOS),
+there can be <i>only one</i> screen background. This should be
+reserved for the program that can make the most use of it - as a rule
+this is the desktop or a desktop replacement such as the Gemini shell,
+Thing or Jinnee for instance.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>To sum up: If possible, the desktop background should
+<i>not</i> be used in your own programs.
+</p>
+<p>See also: <a href="aes_about.html">About the AES</a> &nbsp; <a href="wind.html#wind_set">wind_set</a> &nbsp; <a href="wind.html#WF_NEWDESK">WF_NEWDESK</a>
+</p>
+<h3><a name="Data_20exchange_20via_20the_20GEM_20clipboard">8.2.3 Data exchange via the GEM clipboard</a></h3>
+<a name="Data_20exchange_20via_20clipboard"></a>
+<a name="Clipboard_2C_20Data_20exchange_20via"></a>
+<p>To store files in the clipboard, one should proceed as follows:
+</p>
+<ul>
+<li> Delete all clipboard files that match the mask 'scrap.*' and
+'SCRAP.*'. <i>Note:</i> The mask 'SCRAP.*' must be allowed for
+because old programs knew nothing of alternative and case-sensitive
+file-systems.
+</li>
+<li> Save the data to be stored in one or several formats.
+</li>
+<li> <a href="powerdos.html#Send">Send</a> the message <a href="evnt.html#SC_CHANGED">SC_CHANGED</a> to <i>all</i> applications in the
+system and <a href="evnt.html#SH_WDRAW">SH_WDRAW</a> to the system shell.
+</li>
+</ul>
+
+<p>The filename is <i>always</i> 'scrap.', the extension (suffix)
+depends on the selected format here; if possible one should
+<i>always</i> support one of the following standard formats:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Suffix</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">gem</td>
+  <td align="left" valign="top">Vector graphics in metafile format</td>
+</tr>
+<tr>
+  <td align="left" valign="top">img</td>
+  <td align="left" valign="top">Pixel images in XIMG format</td>
+</tr>
+<tr>
+  <td align="left" valign="top">txt</td>
+  <td align="left" valign="top">ASCII text file, each line terminated with CR/LF</td>
+</tr>
+</table>
+</div>
+
+<p>In addition one can support one or more of the following formats
+(the receiver then has the option of using the option with the
+greatest amount of information):
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Suffix</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">asc</td>
+  <td align="left" valign="top">ASCII text file, each paragraph terminated with CR/LF</td>
+</tr>
+<tr>
+  <td align="left" valign="top">csv</td>
+  <td align="left" valign="top">ASCII file with comma-separated numbers</td>
+</tr>
+<tr>
+  <td align="left" valign="top">cvg</td>
+  <td align="left" valign="top">Calamus vector graphic format</td>
+</tr>
+<tr>
+  <td align="left" valign="top">dif</td>
+  <td align="left" valign="top">Export file of spreadsheets</td>
+</tr>
+<tr>
+  <td align="left" valign="top">eps</td>
+  <td align="left" valign="top">Encapsulated PostScript</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1wp</td>
+  <td align="left" valign="top">Wordplus format</td>
+</tr>
+<tr>
+  <td align="left" valign="top">rtf</td>
+  <td align="left" valign="top">Microsoft Rich Text Format</td>
+</tr>
+<tr>
+  <td align="left" valign="top">tex</td>
+  <td align="left" valign="top">TeX</td>
+</tr>
+</table>
+</div>
+
+<p>The receiving program should first check which of the available
+files contains the most information, and then use this file.
+</p>
+<p><b>Important:</b> Each of the files in the clipboard contains
+the same information on principle, just in different formats. The text
+processor <i>Papyrus</i>, for instance, imports 'scrap.rtf' only if
+its own format 'scrap.pap' could not be found.
+</p>
+<p>It should be clear from the above explanation that only
+<i>one</i> data object (though in different formats) can be present
+in the clipboard at any time.
+</p>
+<p><i>Note:</i> A few old programs, such as First Word and First
+Word Plus, are promiscuous and the clipoards they create automatically
+are scattered all over the place - usually the directory they are
+launched from. Some other applications may then use this clipboard
+rather than the 'official' one on the boot drive!
+</p>
+<p>See also: <a href="scrp.html">Clipboard functions</a> &nbsp; <a href="scrp.html#scrp_clear">scrp_clear</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="The_20object_20structure">8.2.4 The object structure</a></h3>
+<p>Although the data structure of the object tree is not a tree in
+the sense of a binary tree, it nevertheless possesses within a pointer
+the logical chaining of a tree, with predecessors and successors
+(generally called 'parents' and 'children' respectively). The speci
+fication of parents and children is made via indices to an array.
+</p>
+<p>The tree structure of the individual objects can be illustrated
+best with a simple example: A menu is composed at first of the menu
+bar. This in turn contains several title texts. The title texts
+therefore are contained directly in the menu bar, and are both
+children of the object 'menu bar', so they move on the same
+hierarchical level. The object menu bar refers with <i>ob_head</i> to
+the first menu title and with <i>ob_tail</i> to the last menu title.
+In the first menu title the pointer <i>ob_next</i> serves for
+addressing the next menu title. Thus the chaining shows the following
+structure:
+</p>
+<pre>      Menu bar:
+   +---------+---------+--------+
+   | ob_head | ob_tail | ...    |
+   |    o    |    o    |        |
+   +----|----+----|----+--------+
+        |         +-------------------------+
+        V                                   V
+   +---------+---------+--------+       +---------+---------+--------+
+   | ...     | ob_next | ...    |  ...  | ...     | ...     | ...    |
+   |         |    o    |        |       |         |         |        |
+   +---------+----|----+--------+       +---------+---------+--------+
+   1st menu title |                          n-th menu title
+                  +-----&gt; 2nd menu title
+</pre>
+<p>The actions that may be performed with a given object is
+specified in <i>ob_flags.</i> The state of an object is held in the
+entry <i>ob_state.</i> The entry <i>ob_type</i> determines the
+object type.
+</p>
+<p>For an exact definition some objects need an additional data
+structure such as <a href="aes_structures.html#TEDINFO">TEDINFO</a> or <a href="aes_structures.html#BITBLK">BITBLK</a>. In that case a pointer to this
+additional structure will be stored in <i>ob_spec.</i>
+</p>
+<p>Summarising again the total setup of the data structure for
+objects <a href="aes_structures.html#OBJECT">OBJECT</a>:
+</p>
+<pre>         +-------------+
+         |  ob_next    |   <a href="indexudo.html">Index</a> for the next object
+         +-------------+
+         |  ob_head    |   <a href="indexudo.html">Index</a> of the first child
+         +-------------+
+         |  ob_tail    |   <a href="indexudo.html">Index</a> of the last child
+         +-------------+
+         |  ob_type    |   Object type
+         +-------------+
+         |  ob_flags   |   Manipulation flags
+         +-------------+
+         |  ob_state   |   Object status
+         +-------------+
+         |  ob_spec    |   See under object type
+         +-------------+
+         |  ob_x       |   Relative X-coordiante to parent object
+         +-------------+
+         |  ob_y       |   Relative Y-coordinate to parent object
+         +-------------+
+         |  ob_width   |   Width of the object
+         +-------------+
+         |  ob_height  |   Height of the object
+         +-------------+
+</pre>
+<p>See also:
+<br><a href="#AES_20object_20colours">AES object colours</a> &nbsp; <a href="#AES_20object_20types">Object types</a> &nbsp; <a href="#AES_20object_20flags">Manipulation flags</a> &nbsp; <a href="#AES_20object_20stati">Object status</a>
+</p>
+<h4><a name="AES_20object_20types">8.2.4.1 AES object types</a></h4>
+<a name="Object_20types_20of_20the_20AES"></a>
+<p>The following types of object are available for selection:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Type</td>
+<td valign="top"> Meaning
+<br>&nbsp;
+<a name="G_BOX"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_BOX (20)</td>
+<td valign="top"> Rectangular box with optional border; <i>ob_spec</i> contains
+sundry information about border width, colour and similar matters
+<br>&nbsp;
+<a name="G_TEXT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_TEXT (21)</td>
+<td valign="top"> Formatted graphic text; <i>ob_spec</i> points to a <a href="aes_structures.html#TEDINFO">TEDINFO</a>
+structure
+<br>&nbsp;
+<a name="G_BOXTEXT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_BOXTEXT (22)</td>
+<td valign="top"> Rectangular box with formatted graphic text; <i>ob_spec</i>
+points to a TEDINFO structure
+<br>&nbsp;
+<a name="G_IMAGE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_IMAGE (23)</td>
+<td valign="top"> Monochrome image; <i>ob_spec</i> points to <a href="aes_structures.html#BITBLK">BITBLK</a> structure
+<br>&nbsp;
+<a name="USERDEF"></a>
+<a name="G_USERDEF"></a>
+<a name="G_PROGDEF"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_USERDEF (24)</td>
+<td valign="top"> User-defined function for drawing a customized object;
+<i>ob_spec</i> points to a <a href="aes_structures.html#USERBLK">USERBLK</a> structure. (<i>Note:</i> In some
+libraries this is called G_PROGDEF for a programmer-defined function)
+<br>&nbsp;
+<a name="G_IBOX"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_IBOX (25)</td>
+<td valign="top"> Transparent rectangle that can only be seen if the optional
+border does not have zero width; <i>ob_spec</i> contains futher
+information about the appearance
+<br>&nbsp;
+<a name="G_BUTTON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_BUTTON (26)</td>
+<td valign="top"> Push-button text with border for option selection;
+<i>ob_spec</i> points to a text string with the text that is to
+appear in the button
+<br>&nbsp;
+<br><b>New as of <a href="magic.html">MagiC</a> Version 3.0:</b>
+<br>If the object flag <a href="aes_fundamentals.html#WHITEBAK">WHITEBAK</a> is set, and bit 15 in object status =
+0, then the button will contain an underscored character; for this,
+(high byte &amp; 0xf) of <i>ob_state</i> gives the desired position
+of the underscore (with a suitable library one can make the
+underscored character when pressed together with the [Alternate] key
+select the button in the dialog of a running application)
+<br>&nbsp;
+<br>On the other hand if bit 15 = 1 then we are dealing with a
+special button (radio-button or checkbox)
+<br>&nbsp;
+<br>Further specialties: <a href="aes_fundamentals.html#WHITEBAK">WHITEBAK</a> = 1, bit 15 = 1 and in
+<i>ob_state</i>:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Highbyte = -2</td>
+<td valign="top"> Group frames
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Highbyte = -1</td>
+<td valign="top"> Special button, no underscore
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Highbyte != -1,-2</td>
+<td valign="top"> Special button, with underscore
+
+</td></tr>
+</table>
+
+<br>(Here again (high byte &amp; 0xf) of <i>ob_spec</i> is the
+underscore position). The presence of these features is best
+established via the function <a href="appl.html#UDO__25apgi_13">appl_getinfo</a> (opcode 13).
+<br>&nbsp;
+<a name="G_BOXCHAR"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_BOXCHAR (27)</td>
+<td valign="top"> Rectangle containing a character; in <i>ob_spec</i> both the
+appearance of the border and the character are defined
+<br>&nbsp;
+<a name="G_STRING"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_STRING (28)</td>
+<td valign="top"> Character string; <i>ob_spec</i> points to the string
+<br>&nbsp;
+<br><b>New as of <a href="magic.html">MagiC</a> Version 3.0:</b>
+<br>If the object flag <a href="aes_fundamentals.html#WHITEBAK">WHITEBAK</a> is set, and the high-byte of
+<i>ob_state</i> != -1, then a character of the string will be
+underscored; the underscore position is determined by (high byte &amp;
+0xf) of <i>ob_state</i>
+<br>&nbsp;
+<br>With WHITEBAK flag set and high byte of<i>ob_state</i>= -1 the
+complete string will be underscored. The presence of these features is
+best established via the function <a href="appl.html#UDO__25apgi_13">appl_getinfo</a> (opcode 13).
+<br>&nbsp;
+<a name="G_FTEXT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_FTEXT (29)</td>
+<td valign="top"> Editable formatted graphic text; <i>ob_spec</i> points to a
+<a href="aes_structures.html#TEDINFO">TEDINFO</a> structure
+<br>&nbsp;
+<a name="G_FBOXTEXT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_FBOXTEXT (30)</td>
+<td valign="top"> Rectangle with editable formatted graphic text; <i>ob_spec</i>
+points to a TEDINFO structure
+<br>&nbsp;
+<a name="G_ICON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_ICON (31)</td>
+<td valign="top"> Monochrome icon symbol with mask; <i>ob_spec</i> points to the
+<a href="aes_structures.html#ICONBLK">ICONBLK</a> structure
+<br>&nbsp;
+<a name="G_TITLE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_TITLE (32)</td>
+<td valign="top"> Title of a drop-down menu; <i>ob_spec</i> points to the
+string.
+<br>&nbsp;
+<br>As of <a href="magic.html">MagiC</a> 2 one can also underscore one of the characters.
+This is done as follows:
+<br>&nbsp;
+<br>Set <a href="aes_fundamentals.html#WHITEBAK">WHITEBAK</a> in <i>ob_state</i>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(ob_state &gt;&gt; 8) &amp; 0xf</td>
+<td valign="top"> Position of the underscore
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(ob_state &gt;&gt; 8) &amp; 0xf0</td>
+<td valign="top"> is 0
+
+</td></tr>
+</table>
+
+<a name="G_CICON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_CICON (33)</td>
+<td valign="top"> Colour icon (available as of AES V3.3); <i>ob_spec</i>
+points to the <a href="aes_structures.html#CICONBLK">CICONBLK</a> structure
+<br>&nbsp;
+<a name="G_CLRICN"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_CLRICN (33)</td>
+<td valign="top"> Colour icon; <i>ob_spec</i> is a pointer to an <a href="aes_structures.html#ICONBLK">ICONBLK</a>
+structure. Supported in the <a href="gem_about.html#ViewMAX">ViewMAX</a>/3 beta and in FreeGEM.
+<br>&nbsp;
+<a name="G_SWBUTTON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_SWBUTTON (34)</td>
+<td valign="top"> Cycle button (i.e. a button which alters its text cyclically
+when clicked on); <i>ob_spec</i> points to a <a href="aes_structures.html#SWINFO">SWINFO</a> structure. The
+presence of this object type should be inquired with <a href="appl.html#UDO__25apgi_13">appl_getinfo</a> (opcode
+13).
+<br>&nbsp;
+<a name="G_DTMFDB"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_DTMFDB (34)</td>
+<td valign="top"> For internal AES use only: desktop image. The
+<i>ob_spec</i> is a far pointer to a <a href="vdi_structures.html#MFDB">MFDB</a> structure. Supported in the
+<a href="gem_about.html#ViewMAX">ViewMAX</a>/3 beta and in FreeGEM.
+<br>&nbsp;
+<a name="G_POPUP"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_POPUP (35)</td>
+<td valign="top"> <a href="xcontrol.html#Popup">Popup</a> menu; <i>ob_spec</i> points to a <a href="aes_structures.html#POPINFO">POPINFO</a> structure. If
+the menu has more than 16 entries, then it can be scrolled. The
+presence of this object type should be inquired with <a href="appl.html#UDO__25apgi_13">appl_getinfo</a> (opcode
+13). <i>Note:</i> G_POPUP looks like G_BUTTON but the character
+string is not centred, so as to line up with the other character
+strings in the menu if possible.
+<br>&nbsp;
+<a name="G_WINTITLE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_WINTITLE (36)</td>
+<td valign="top"> This object number is used internally by <a href="magic.html">MagiC</a> to depict window
+titles. The construction of this object type may change at any time
+and is therefore not documented.
+<br>&nbsp;
+<a name="G_EDIT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_EDIT (37)</td>
+<td valign="top"> As of <a href="magic.html">MagiC</a> 5.20 an editable object implemented in a shared
+library is available; <i>ob_spec</i> points to the object.
+<b>Warning:</b> This type is <i>not yet</i> supported by the
+functions form_do, form_xdo, form_button, form_keybd, objc_edit, wdlg_evnt and wdlg_do
+at present, i.e. the corresponding events need to be passed on to the
+object (with <a href="edit.html#edit_evnt">edit_evnt</a>).
+<br>&nbsp;
+<a name="G_SHORTCUT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_SHORTCUT (38)</td>
+<td valign="top"> This type is treated in a similar way to G_STRING, but any
+keyboard shortcut present is split off and output ranged right. The
+presence of this object type should be inquired for with <a href="appl.html#UDO__25apgi_13">appl_getinfo</a>
+(opcode 13).
+<br>&nbsp;
+<br>The introduction of proportional AES fonts required new
+strategy for the alignment of menu entries. So as to align keyboard
+shortcuts ranged right, objects of the type G_STRING inside a menu are
+therefore split into commands and shortcuts. This strategy however
+fails for menus that are managed by the program itself, e.g. within a
+window or a popup menu. This new object type had to be introduced in
+order to achieve usable alignment in that case too.
+<br>&nbsp;
+<a name="G_SLIST"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">G_SLIST (39)</td>
+<td valign="top"> XaAES extended object - scrolling list.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>Note:</b> For G_BOX, G_IBOX and G_BOXCHAR, the component
+<i>ob_spec</i> of the <a href="aes_structures.html#OBJECT">OBJECT</a> structure does <i>not</i> point to
+another data structure, but contains further information for the
+appearance of the object. The following apply:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bits</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">24..31</td>
+<td valign="top"> Character to be depicted (only for G_BOXCHAR)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">16..23</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&nbsp;0</td>
+<td valign="top"> = Border width
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;1..128</td>
+<td valign="top"> = Border lies 1..128 pixels at the inside of the object
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-1..-127</td>
+<td valign="top"> = Border lies 1..127 pixel at the outside of the object
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">12..15</td>
+<td valign="top"> Border colour (0..15)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">08..11</td>
+<td valign="top"> Text colour (0..15)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">7</td>
+<td valign="top"> Text transparent (0) or opaque (1)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">04..06</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> = Hollow
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> = Increasing intensity
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">.</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">.</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">7</td>
+<td valign="top"> = Solid area
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">00..03</td>
+<td valign="top"> Inner colour (0..15)
+
+</td></tr>
+</table>
+
+<p>The high byte is used by the AES only for submenus. If the
+highest bit of <i>ob_type</i> is 0x8000 and the bit <a href="aes_fundamentals.html#SUBMENU">SUBMENU</a> in
+<i>ob_flags</i> is set, then the bits 8..14 specify which submenu is
+coupled with the menu entry. Hence each application can have a maximum
+of 128 submenus. <a href="magic.html">MagiC</a> only reads the low byte from <i>ob_type</i>,
+apart from the submenu handling. TOS reacts cleanly to unknown
+object types (such as the purely MagiC types G_SWBUTTON etc.), i.e.
+the objects are not drawn.
+</p>
+<p>See also: <a href="#The_20object_20structure">Object structure in AES</a> &nbsp; <a href="#AES_20object_20colours">AES object colours</a>
+</p>
+<h4><a name="AES_20object_20colours">8.2.4.2 AES object colours</a></h4>
+<a name="Object_20colours_20of_20the_20AES"></a>
+<p>The following table contains the predefined object colours. Of
+course particulars depend on the selected screen resolution, as well
+as any settings made by the user.
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Number</td>
+  <td align="left" valign="top">Colour</td>
+  <td align="right" valign="top">Standard RGB values</td>
+</tr>
+<tr>
+  <td align="left" valign="top">WHITE    (00)</td>
+  <td align="left" valign="top">White</td>
+  <td align="right" valign="top">1000, 1000, 1000</td>
+</tr>
+<tr>
+  <td align="left" valign="top">BLACK    (01)</td>
+  <td align="left" valign="top">Black</td>
+  <td align="right" valign="top">0,    0,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">RED      (02)</td>
+  <td align="left" valign="top">Red</td>
+  <td align="right" valign="top">1000,    0,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GREEN    (03)</td>
+  <td align="left" valign="top">Green</td>
+  <td align="right" valign="top">0, 1000,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">BLUE     (04)</td>
+  <td align="left" valign="top">Blue</td>
+  <td align="right" valign="top">0,    0, 1000</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CYAN     (05)</td>
+  <td align="left" valign="top">Cyan</td>
+  <td align="right" valign="top">0, 1000, 1000</td>
+</tr>
+<tr>
+  <td align="left" valign="top">YELLOW   (06)</td>
+  <td align="left" valign="top">Yellow</td>
+  <td align="right" valign="top">1000, 1000,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">MAGENTA  (07)</td>
+  <td align="left" valign="top">Magenta</td>
+  <td align="right" valign="top">1000,    0, 1000</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DWHITE   (08)</td>
+  <td align="left" valign="top">Light grey</td>
+  <td align="right" valign="top">752,  752,  752</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DBLACK   (09)</td>
+  <td align="left" valign="top">Dark grey</td>
+  <td align="right" valign="top">501,  501,  501</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DRED     (10)</td>
+  <td align="left" valign="top">Dark red</td>
+  <td align="right" valign="top">713,    0,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DGREEN   (11)</td>
+  <td align="left" valign="top">Dark green</td>
+  <td align="right" valign="top">0,  713,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DBLUE    (12)</td>
+  <td align="left" valign="top">Dark blue</td>
+  <td align="right" valign="top">0,    0,  713</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DCYAN    (13)</td>
+  <td align="left" valign="top">Dark cyan</td>
+  <td align="right" valign="top">0,  713,  713</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DYELLOW  (14)</td>
+  <td align="left" valign="top">Dark yellow</td>
+  <td align="right" valign="top">713,  713,    0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DMAGENTA (15)</td>
+  <td align="left" valign="top">Dark magenta</td>
+  <td align="right" valign="top">713,    0,  713</td>
+</tr>
+</table>
+</div>
+
+<p><b>Note:</b> These colours also correspond mostly to the icon
+colours used under Windows and OS/2. With a suitable CPX module one
+can set the correct RGB values for the frst 16 colours.
+</p>
+<p>See also: <a href="#The_20object_20structure">Object structure in AES</a> &nbsp; <a href="#AES_20object_20types">AES object types</a>
+</p>
+<h4><a name="AES_20object_20flags">8.2.4.3 AES object flags</a></h4>
+<a name="Object_20flags_20of_20the_20AES"></a>
+<p>The manipulation flags of an object determine its properties.
+The following options can be chosen:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Flag</td>
+<td valign="top"> Meaning
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">NONE (0x0000)</td>
+<td valign="top"> No properties.
+<br>&nbsp;
+<a name="SELECTABLE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SELECTABLE (0x0001)</td>
+<td valign="top"> The object is selectable by clicking on it with the mouse.
+<br>&nbsp;
+<a name="DEFAULT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DEFAULT (0x0002)</td>
+<td valign="top"> If the user presses the [Return] or [Enter] key, this object
+will be selected automatically and the dialog exited; the object will
+have a thicker outline. This flag is permitted only once in each tree.
+<br>&nbsp;
+<a name="EXIT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">EXIT (0x0004)</td>
+<td valign="top"> Clicking on such an object and releasing the mouse button while
+still over it will terminate the dialog (see also <a href="form.html#form_do">form_do</a>).
+<br>&nbsp;
+<a name="EDITABLE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">EDITABLE (0x0008)</td>
+<td valign="top"> This object may be edited by the user by means of the keyboard.
+<br>&nbsp;
+<a name="RBUTTON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">RBUTTON (0x0010)</td>
+<td valign="top"> If several objects in an object tree have the property RBUTTON
+(radio button, similar to those on a push-button radio), then only one
+of these objects can be in a selected state at a time. These objects
+should all be children of a parent object with the object type <a href="aes_fundamentals.html#G_IBOX">G_IBOX</a>.
+If another object of this group is selected, then the previously
+selected object will be deselected automatically.
+<br>&nbsp;
+<a name="LASTOB"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">LASTOB (0x0020)</td>
+<td valign="top"> This flag tells the AES that this is the last object within
+an object tree.
+<br>&nbsp;
+<a name="TOUCHEXIT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">TOUCHEXIT (0x0040)</td>
+<td valign="top"> The dialog (see also <a href="form.html#form_do">form_do</a>) will be exited as soon as the
+mouse pointer lies above this object and the left mouse button is
+pressed.
+<br>&nbsp;
+<a name="HIDETREE"></a>
+<a name="HIDDEN"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">HIDETREE (0x0080)</td>
+<td valign="top"> The object and its children will no longer be noticed by
+<a href="objc.html#objc_draw">objc_draw</a> and <a href="objc.html#objc_find">objc_find</a> as soon as this flag is set. Furthermore this
+flag is also evaluated as of <a href="magic.html">MagiC</a> 5.20 by <a href="form.html#form_keybd">form_keybd</a>, if objects for
+keyboard shortcuts are searched for. Input to hidden objects is still
+possible, however. To prevent this, the EDITABLE flag has to be
+cleared.
+<br>&nbsp;
+<a name="INDIRECT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">INDIRECT (0x0100)</td>
+<td valign="top"> <i>ob_spec</i> now points to a further pointer that in turn
+points to the actual value of <i>ob_spec</i> (see also <a href="aes_structures.html#OBJECT">OBJECT</a>). In
+this way the standard data structures such as <a href="aes_structures.html#TEDINFO">TEDINFO</a> etc. can be
+extended in a simple way.
+<br>&nbsp;
+<a name="FL3DIND"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">FL3DIND (0x0200)</td>
+<td valign="top"> Under MultiTOS this object creates a three-dimensional object
+(under <a href="magic.html">MagiC</a> as of Version 3.0 only from 16-colour resolutions onwards
+and when the 3D effect has not been switched off). In 3D operation
+this will be interpreted as an indicator. As a rule, such objects are
+buttons that display a status, e.g. radio-buttons.
+<br>&nbsp;
+<a name="ESCCANCEL"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ESCCANCEL (0x0200)</td>
+<td valign="top"> Pressing the [Esc] key corresponds to the selection of the
+object with this flag. Therefore there may be only one default object
+in a dialog. Only effective in <a href="gem_about.html#ViewMAX">ViewMAX</a>/2 and later.
+<br>&nbsp;
+<a name="FL3DBAK"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">FL3DBAK (0x0400)</td>
+<td valign="top"> In 3D operation this object will be treated as an AES
+background object, and drawn as such. It is recommended to allocate
+the ROOT object with this flag in dialogs with 3D buttons. The same
+applies for editable fields and text objects, as only in this way will
+a consistent background colour be maintained.
+<br>&nbsp;
+<br>See also (0x4000).
+<br>&nbsp;
+<a name="BITBUTTON"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">BITBUTTON (0x0400)</td>
+<td valign="top"> This flag was introduced with <a href="gem_about.html#ViewMAX">ViewMAX</a> beta, but not used there.
+Presumably a button with this flag contains a bitmap in place of a
+text. Only effective in <a href="gem_about.html#ViewMAX">ViewMAX</a>/2 and later.
+<br>&nbsp;
+<a name="FL3DACT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">FL3DACT (0x0600)</td>
+<td valign="top"> In 3D operation this object will be treated as an activator. As
+a rule such objects are buttons with which one can exit dialogs or
+trigger some action.
+<br>&nbsp;
+<a name="SUBMENU"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SUBMENU (0x0800)</td>
+<td valign="top"> This is used in MultiTOS and from <a href="magic.html">MagiC</a> 5.10 on to mark
+submenus. <a href="menu.html#menu_attach">menu_attach</a> sets this bit in a menu entry to signify that a
+submenu is attached to it. The high byte of <i>ob_type</i>then
+contains the submenu index (128..255) i.e. bit 15 of <i>ob_type</i>
+is always set simultabeously with SUBMENU.
+<br>&nbsp;
+<a name="SCROLLER"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SCROLLER (0x0800)</td>
+<td valign="top"> Pressing the [PAGEUP] key corresponds to the selection of the
+first object with this flag in the dialog; pressing the [PAGEDOWN] key
+corresponds to the selection of the last object with this flag. Only
+effective in <a href="gem_about.html#ViewMAX">ViewMAX</a>/2 and later.
+<br>&nbsp;
+<a name="FLAG3D"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">FLAG3D (0x1000)</td>
+<td valign="top"> An object with this flag will be drawn with a 3D border. From
+<a href="gem_about.html#ViewMAX">ViewMAX</a>/2 on every button will be drawn automatically with a 3D
+border. The colour category (see USECOLOURCAT) will be used for this.
+Only effective in <a href="gem_about.html#ViewMAX">ViewMAX</a>/2 and later.
+<br>&nbsp;
+<a name="USECOLOURCAT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">USECOLOURCAT (0x2000)</td>
+<td valign="top"> USECOLOURCAT (0x2000) The colour of the object is not a colour
+index of the VDI, but an entry in a table with colours for
+designated categories. This table has 16 entries. <a href="gem_about.html#ViewMAX">ViewMAX</a> uses the
+following categories:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">CC_<a href="wind.html#NAME">NAME</a> (8)</td>
+<td valign="top"> Inactive title-bar
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_SLIDER (8)</td>
+<td valign="top"> Scroll bar background
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_DESKTOP (10)</td>
+<td valign="top"> The desktop
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_BUTTON (11)</td>
+<td valign="top"> Buttons and other 3D widgets
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_<a href="wind.html#INFO">INFO</a> (12)</td>
+<td valign="top"> Window information-line
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_ALERT (13)</td>
+<td valign="top"> <a href="guidelines_styles.html#Alert_20boxes">Alert boxes</a> (not used in <a href="gem_about.html#ViewMAX">ViewMAX</a> or FreeGEM)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CC_SLCTDNAME (14)</td>
+<td valign="top"> Active title-bar
+
+</td></tr>
+</table>
+
+<br>Probably it is intended to let the categories 0 to 7 be defined
+by the application, while 8 to 15 are reserved for the system. The
+settings are stored in <a href="gem_about.html#ViewMAX">ViewMAX</a>.INI (GEM.CFG in FreeGEM) and consist
+of one foreground, one background, a fill-style and a fill index in
+each case. Only effective in <a href="gem_about.html#ViewMAX">ViewMAX</a>/2 and later.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">FL3DBAK (0x4000)</td>
+<td valign="top"> 3D background (sunken rather than raised). To check for this
+feature, use <a href="appl.html#appl_init">appl_init</a> and check that bit 3 of xbuf.abilities is set.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SUBMENU (0x8000)</td>
+<td valign="top"> Not implemented in any known PC AES.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>See also: <a href="#The_20object_20structure">Object structure in AES</a> &nbsp; <a href="#AES_20object_20types">AES object types</a>
+</p>
+<h4><a name="AES_20object_20stati">8.2.4.4 AES object stati</a></h4>
+<a name="Object_20stati_20of_20the_20AES"></a>
+<p>The object status determines how an object will be displayed
+later on the screen. An object status can be of the following type:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Status</td>
+<td valign="top"> Meaning
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">NORMAL (0x0000)</td>
+<td valign="top"> Normal representation.
+<br>&nbsp;
+<a name="SELECTED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SELECTED (0x0001)</td>
+<td valign="top"> Inverse representation, i.e. the object is selected (except for
+<a href="aes_fundamentals.html#G_CICON">G_CICON</a>, which will use its 'selected' image).
+<br>&nbsp;
+<a name="CROSSED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CROSSED (0x0002)</td>
+<td valign="top"> If the object type is BOX, the object will be drawn with a
+white diagonal cross over it (usually this state can be seen only over
+a selected or coloured object). <b>See also below.</b>
+<br>&nbsp;
+<a name="CHECKED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CHECKED (0x0004)</td>
+<td valign="top"> A checkmark tick will be displayed at the left edge of the
+object.
+<br>&nbsp;
+<a name="DISABLED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DISABLED (0x0008)</td>
+<td valign="top"> The object will be displayed greyed out and is no longer
+selectable.
+<br>&nbsp;
+<a name="OUTLINED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">OUTLINED (0x0010)</td>
+<td valign="top"> The object gets a border.
+<br>&nbsp;
+<a name="SHADOWED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SHADOWED (0x0020)</td>
+<td valign="top"> A shadow is drawn under the object.
+<br>&nbsp;
+<a name="WHITEBAK"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">WHITEBAK (0x0040)</td>
+<td valign="top"> With PC-GEM this causes the icon mask not to be drawn with
+the icon, which can speed up output is some circumstances.
+<br>As of <a href="magic.html">MagiC</a> 3 this controls the underscoring of character strings.
+This feature can be ascertained with <a href="appl.html#UDO__25apgi_13">appl_getinfo</a> (opcode 13).
+<br>&nbsp;
+<a name="DRAW3D"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DRAW3D (0x0080)</td>
+<td valign="top"> An object is to be drawn with a 3D effect. This flag is of
+interest only for PC-GEM, and will be ignored by the Atari AES
+(and also in MagiC).
+<br>&nbsp;
+<a name="HIGHLIGHTED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">HIGHLIGHTED (0x0100)</td>
+<td valign="top"> An object with this status will be surrounded by a dashed line
+that is drawn with <a href="bios_structures.html#MD">MD</a>_XOR. This status was introduced with <a href="gem_about.html#ViewMAX">ViewMAX</a>
+beta.
+<br>&nbsp;
+<a name="UNHIGHLIGHTED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">UNHIGHLIGHTED (0x0200)</td>
+<td valign="top"> An object with this status will be drawn with the surround
+explicitly set by the status HIGHLIGHTED removed. For this one has to
+proceed as follows: First the status HIGHLIGHTED must be cleared, then
+the status UNHIGHLIGHTED set and following this the object must be
+redrawn with the function <a href="objc.html#objc_draw">objc_draw</a>. A redraw of the object without
+the status UNHIGHLIGHTED would not remove the surround, as it lies
+outside the area that the object occupies. After the redraw the status
+UNHIGHLIGHTED should be cleared again. This status was introduced with
+<a href="gem_about.html#ViewMAX">ViewMAX</a> beta.
+<br>&nbsp;
+<a name="UNDERLINE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">UNDERLINE (0x0f00)</td>
+<td valign="top"> This opcode is available in <a href="magic.html">MagiC</a> from Version 2.0 onwards, and
+sets the position and size of the underscore for objects of the type
+<a href="aes_fundamentals.html#G_STRING">G_STRING</a>, <a href="aes_fundamentals.html#G_TITLE">G_TITLE</a> and <a href="aes_fundamentals.html#G_BUTTON">G_BUTTON</a>.
+<br>&nbsp;
+<a name="XSTATE"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">XSTATE (0xf000)</td>
+<td valign="top"> This opcode is available in <a href="magic.html">MagiC</a> from Version 2.0 onwards, and
+serves for switching for the various button types (G_STRING, G_TITLE and
+G_BUTTON).
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>In GEM/5, CROSSED makes the object draw in 3D:
+</p>
+<ul>
+<li> If an object is both CROSSED and <a href="aes_fundamentals.html#SELECTABLE">SELECTABLE</a>, then it is drawn
+as a checkbox.
+</li>
+<li> If it is CROSSED, <a href="aes_fundamentals.html#SELECTABLE">SELECTABLE</a> and an <a href="aes_fundamentals.html#RBUTTON">RBUTTON</a>, it is drawn as a
+radio button.
+</li>
+<li> If it is a button or a box and it is CROSSED, then it is drawn
+as a raised 3D shape, similar to Motif.
+</li>
+<li> If a button is CROSSED and <a href="aes_fundamentals.html#DEFAULT">DEFAULT</a>, a &quot;Return key&quot;
+symbol appears on it (rather like NEXTSTEP).
+</li>
+<li> Boxes and text fields that are CROSSED and CHECKED appear
+sunken.
+</li>
+</ul>
+
+<p>GEM/5 can be detected by calling <a href="vdi_inquire.html#vqt_name">vqt_name</a> for font 1. If
+nothing is returned, GEM/5 is running.
+</p>
+<p>Recent FreeGEM builds contain a system based on the GEM/5
+one, but extended and backwards-compatible. The DRAW3D state is used
+instead of CROSSED:
+</p>
+<ul>
+<li> If an object is both DRAW3D and <a href="aes_fundamentals.html#SELECTABLE">SELECTABLE</a>, then it is drawn as
+a checkbox.
+</li>
+<li> If it is DRAW3D, <a href="aes_fundamentals.html#SELECTABLE">SELECTABLE</a> and an <a href="aes_fundamentals.html#RBUTTON">RBUTTON</a>, it is drawn as a
+radio button.
+</li>
+<li> If a button is DRAW3D and <a href="aes_fundamentals.html#DEFAULT">DEFAULT</a>, a &quot;Return key&quot;
+symbol will be on it.
+</li>
+<li> If an object with a 3D border has the WHITEBAK state, then the
+3D border will not have a black edge.
+</li>
+<li> If a radio button or checkbox has the WHITEBAK state, then it
+will be drawn with a white background rather than in the colour used
+by 3D objects.
+</li>
+</ul>
+
+<p>To check for these abilities, use <a href="appl.html#appl_init">appl_init</a> and check that bit 3
+of xbuf.abilities is set.
+</p>
+<p>See also: <a href="#The_20object_20structure">Object structure in AES</a> &nbsp; <a href="#AES_20object_20types">AES object types</a>
+</p>
+<h3><a name="The_20quarter-screen_20buffer">8.2.5 The quarter-screen buffer</a></h3>
+<p>The quarter-screen buffer is required by the <a href="#The_20screen-manager">screen-manager</a> to save the
+contents of the menu background when drop-down menus drop down. The
+'QSB' (the usual abbreviation) is also used for the display of alert
+boxes. Normally its size should depend on the number of colour planes
+and the size of the system font, but <i>not</i> on the total size of
+the screen.
+</p>
+<p><b>A good formula would be:</b>
+<br>&nbsp;&nbsp;500(characters) * space of one character * colour planes
+</p>
+<p>In 'ST High' resolution this would give a value of exactly 8000
+(i.e. a quarter of the screen memory). Unfortunately in many cases the
+AES is not so clever. The following table contains a summary of the
+algorithm used by some GEM versions:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">GEM version</td>
+  <td align="left" valign="top">Method for setting the QSB</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1.0 and 1.2</td>
+  <td align="left" valign="top">Static, 8000 bytes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1.4</td>
+  <td align="left" valign="top">Dynamic, a quarter of the screen memory</td>
+</tr>
+<tr>
+  <td align="left" valign="top">3.0</td>
+  <td align="left" valign="top">Dynamic, half of the screen memory</td>
+</tr>
+</table>
+</div>
+
+<p><b>Note:</b> The GEM versions 1.0 and 1.2 (i.e. up to and
+including TOS Version 1.02) are <i>not</i> prepared by this for
+colour graphics cards - one of several reasons why even with the use
+of a special VDI driver under these GEM versions one can
+<i>not</i> make use of colour graphics cards.
+</p>
+<p>See also: <a href="gem_about.html">GEM</a>
+</p>
+<h3><a name="The_20rectangle-list_20of_20a_20window">8.2.6 The rectangle-list of a window</a></h3>
+<a name="Window_2C_20rectangle-list_20of_20a"></a>
+<p>To overcome the problem of windows that overlap each other, the
+AES holds for each window a so-called <i>rectangle-list</i>; when
+a window is partially obscured, <a href="gem_about.html">GEM</a> divides the visible portion of
+that window into the least possible number of non-overlapping
+rectangles, the details of which are then stored in the
+rectangle-list. Thus the elements of this list form a record of the
+currently completely visible working area of the corresponding window.
+</p>
+<p>To redraw a window (or its contents) one first inquires with the
+function <a href="wind.html#wind_get">wind_get</a>(<a href="wind.html#WF_FIRSTXYWH_2C_20wind_get">WF_FIRSTXYWH</a>) for the first rectangle of the above
+mentioned list. Then one checks whether this rectangle overlaps with
+the screen area to be redrawn; then and only then one can redraw this
+area with the use of <a href="vdi_control.html#vs_clip">vs_clip</a>.
+</p>
+<p>This method will be continued with all remaining elements of the
+rectangle-list, until the height <i>and</i> the width of a rectangle
+have the value zero.
+</p>
+<p>See also: <a href="VDI_fundamentals.html#Clipping">Clipping</a> &nbsp; <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> &nbsp; <a href="wind.html#wind_get">wind_get</a> &nbsp; <a href="wind.html#wind_update">wind_update</a>
+</p>
+<h3><a name="The_20screen-manager">8.2.7 The screen-manager</a></h3>
+<p>The screen-manager is always active and supervises the position
+of the mouse pointer when this leaves the working area of the window
+of other applications. The areas in question are the frames of the
+windows, the drop-down menus and the menu bar.
+</p>
+<p>When touching the menu area, the screen-manager automatically
+ensures that the section of the screen occupied by the menu is saved
+and later restored again (<a href="#The_20quarter-screen_20buffer">the quarter-screen buffer</a> is used for this).
+</p>
+<p>Manipulation of the window controllers also do not lead to
+permanent changes of the screen memory; the result of the interaction
+with the screen-manager are the so-called message events, which inform
+the relevant application about the user's actions.
+</p>
+<a name="Screen-manager_2C_20Name_20of_20the"></a>
+<a name="Screen-manager_2C_20ID_20of_20the"></a>
+<p><b>Note:</b> The ID of the screen-manager can, incidentally, be
+found easily by a call of <a href="appl.html#appl_find">appl_find</a>(&quot;SCRENMGR&quot;).
+</p>
+<p>See also: <a href="aes_about.html">About the AES</a> &nbsp; <a href="gem_about.html">GEM</a> &nbsp; <a href="evnt.html#Messages">Messages</a>
+</p>
+<h3><a name="Toolbar_20support">8.2.8 Toolbar support</a></h3>
+<a name="Toolbars_2C_20Redraw_20and_20update_20of"></a>
+<p>From AES version 4.1 onwards the operating system supports
+so-called toolbars. A toolbar is an <a href="aes_structures.html#OBJECT">OBJECT</a> tree that is positioned
+below the information-line of a window (and above the working area)
+which makes it possible to display buttons, icons etc. in a window.
+</p>
+<p>As already known from the window routines, the management of
+toolbars is shared betwen the AES and the application. <b>Here the
+AES is responsible for the following actions:</b>
+</p>
+<ul>
+<li> Adaptation of the X- and Y-coordinates of the toolbar when the
+window is moved or its size is changed.
+</li>
+<li> Ensuring that the window is configured to the size required by
+the window components and the toolbar.
+</li>
+<li> Adjustment of the toolbar's width to the width of the window.
+</li>
+<li> Redraw of the toolbar on receipt of a <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> message.
+</li>
+<li> Sending of AES messages when the user activates an object of
+the toolbar.
+</li>
+</ul>
+
+<p><b>The application, on the other hand, must look after the
+following:</b>
+</p>
+<ul>
+<li> Construction of an <a href="aes_structures.html#OBJECT">OBJECT</a> tree for the toolbar (in particulat
+one has to ensure that all selectable elements of the toolbox have the
+status <a href="aes_fundamentals.html#TOUCHEXIT">TOUCHEXIT</a>).
+</li>
+<li> Adjustment of the width of a toolbar object if this depends on
+the width of the window (may be required when changing the size of the
+window).
+</li>
+<li> Handling of <a href="aes_fundamentals.html#USERDEF">USERDEF</a> objects.
+</li>
+<li> Redrawing all objects whose appearance is to be changed. In
+this case it is imperative that the rectangle-list of the toolbar is
+inquired for and/or taken into account.
+</li>
+<li> Problems that arise in connection with the screen resolution
+have to be solved. Thus, for instance, the height of an icon in the ST
+Medium resolution can differ from the height of the icon in the TT030
+Medium resolution.
+</li>
+</ul>
+
+<p><b>For supporting toolbars in your own programs, you should
+respect the following points:</b>
+</p>
+<ul>
+<li> Communication with the AES window-manager
+</li>
+<li> <a href="aes_fundamentals.html#wind_calc_2C_20Problems_20with">Problems with wind_calc</a>
+</li>
+<li> <a href="#Redraw_20and_20updating_20of_20toolbars">Redraw and updating of toolbars</a>
+</li>
+<li> <a href="xaaes_toolbar.html">Toolbar support under XaAES</a>
+</li>
+</ul>
+
+<p>See also:
+<br><a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a> &nbsp; <a href="wind.html#WF_FTOOLBAR_2C_20wind_get">WF_FTOOLBAR</a> &nbsp; <a href="wind.html#WF_NTOOLBAR_2C_20wind_get">WF_NTOOLBAR</a> &nbsp; <a href="evnt.html#WM_TOOLBAR">WM_TOOLBAR</a> &nbsp; <a href="wind.html#wind_get">wind_get</a> &nbsp; <a href="wind.html#wind_set">wind_set</a>
+</p>
+<h4><a name="Redraw_20and_20updating_20of_20toolbars">8.2.8.1 Redraw and updating of toolbars</a></h4>
+<p>For redraws of (parts of) the toolbar, one has to pay respect to
+the rectangle-list as usual. As the previous <a href="wind.html#wind_get">wind_get</a> opcodes <a href="wind.html#WF_FIRSTXYWH_2C_20wind_get">WF_FIRSTXYWH</a>
+and <a href="wind.html#WF_NEXTXYWH_2C_20wind_get">WF_NEXTXYWH</a> <i>only respect the working area</i> of a window, however,
+two new parameters (<a href="wind.html#WF_FTOOLBAR_2C_20wind_get">WF_FTOOLBAR</a> and <a href="wind.html#WF_NTOOLBAR_2C_20wind_get">WF_NTOOLBAR</a>) were introduced, with whose
+help the rectangle-list of a toolbar can be interrogated.
+</p>
+<p><b>A redraw of (parts of) the toolbar may be necessary in the
+following situations:</b>
+</p>
+<ul>
+<li> The toolbar contains user-defined objects (<a href="aes_fundamentals.html#USERDEF">USERDEF</a>'s).
+</li>
+<li> The status of an object in the toolbar was altered. The area to
+be redrawn here consists of the size of the object plus the space
+required for special effects (3D, shadowing, outlining etc.).
+</li>
+</ul>
+
+<p><b>Redraw is not necessary in the following cases, for
+instance:</b>
+</p>
+<ul>
+<li> The relevant window is iconified. The application does not have
+to take on any management of the toolbar; this is only required at the
+restoration of the iconification, the so-called uniconify.
+</li>
+<li> The toolbar present in the window is to be replaced by another
+one. In this case a call of <a href="wind.html#wind_set">wind_set</a> with the opcode <a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a> and
+the address of the new <a href="aes_structures.html#OBJECT">OBJECT</a> tree will suffice.
+</li>
+<li> The toolbar present in the window is to be removed. In this
+case a call of <a href="wind.html#wind_set">wind_set</a> with the opcode <a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a> and NULL parameters
+will suffice.
+</li>
+</ul>
+
+<p>See also: <a href="#The_20rectangle-list_20of_20a_20window">Rectangle-list of a window</a> &nbsp; <a href="#Toolbar_20support">Toolbar support</a>
+</p>
+<h4><a name="Toolbars_20and_20the_20window-manager">8.2.8.2 Toolbars and the window-manager</a></h4>
+<p>For handling toolbars an application can have recourse to the
+window- manager of the AES. In detail:
+</p>
+<a name="Toolbar_2C_20Tacking_20on_20a"></a>
+<p><b>For tacking on a toolbar to a window</b>, it is sufficient
+to call <a href="wind.html#wind_set">wind_set</a>(handle, <a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a>, ...) with the address of the
+toolbar object tree. If this call is executed while the window is
+open, then it is itself responsible for the correct calculation of the
+height of the toolbar.
+</p>
+<a name="Toolbar_2C_20Exchange_20of_20a"></a>
+<p><b>To exchange a toolbar for another one</b>, one can have
+recourse to a call of <a href="wind.html#wind_set">wind_set</a>(handle, <a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a>, ...) with the
+address of the new toolbar. If this call is executed while the window
+is open, then it is itself responsible for the correct calculation of
+the height of the (new) toolbar.
+</p>
+<a name="Toolbar_2C_20Removal_20of_20a"></a>
+<p><b>To remove a toolbar from a window</b>, it is necessary to
+call <a href="wind.html#wind_set">wind_set</a>(handle, <a href="wind.html#WF_TOOLBAR">WF_TOOLBAR</a>, ...) with NULL parameters. If this
+call is executed while the window is open, then it is itself
+responsible for the correct calculation of the height of the toolbar.
+</p>
+<p><b>In addition the following points have to be taken into
+consideration:</b>
+</p>
+<ul>
+<li> If a window is closed with <a href="wind.html#wind_close">wind_close</a>, then any toolbar present
+will <i>not</i> be removed. At a later reopening the toolbar will be
+in place once more.
+</li>
+<li> If a window is removed with <a href="wind.html#wind_delete">wind_delete</a>, then its link to a
+toolbar will be dissolved.
+</li>
+<li> To be able to recognize mouse-clicks on toolbar objects, these
+have to possess the status <a href="aes_fundamentals.html#TOUCHEXIT">TOUCHEXIT</a>. When such an object is clicked
+on, the AES creates a <a href="evnt.html#WM_TOOLBAR">WM_TOOLBAR</a> message which is sent to the
+relevant application.
+</li>
+</ul>
+
+<p>See also: <a href="aes_main.html">AES</a> &nbsp; <a href="gem_about.html">GEM</a> &nbsp; <a href="#Toolbar_20support">Toolbar support</a>
+</p>
+<h4><a name="Problems_20with_20wind_calc_20in_20toolbar_20windows">8.2.8.3 Problems with wind_calc in toolbar windows</a></h4>
+<a name="wind_calc_2C_20Problems_20with"></a>
+<p>When applying the function <a href="wind.html#wind_calc">wind_calc</a> to windows that possess a
+toolbar there are several problems to be taken into account:
+</p>
+<p>As this function is <i>not</i> passed a window ID (window
+handle), the desired sizes cannot be calculated correctly when a
+toolbar is present in the window. The reason for this is that, quite
+simply, the AES in this case has <i>no information</i> about the
+toolbar, and specially about its size.
+</p>
+<p>Hence the values returned by <a href="wind.html#wind_calc">wind_calc</a> in such cases have to be
+further refined by the application. As the program can access the
+relevant <a href="aes_structures.html#OBJECT">OBJECT</a> tree (and with this also the height of the toolbar),
+this should present no problems. <b>In detail:</b>
+</p>
+<ul>
+<li> When ascertaining the <i>border areas</i> of the window, the
+height of the toolbar must be added to the height returned by the
+function.
+</li>
+<li> When ascertaining the <i>working area</i> of the window, the
+height of the toolbar must be added to the Y-value (<i>couty</i>)
+returned by the function.
+</li>
+</ul>
+
+<p><b>Note:</b> Besides the height of the actual object, the
+height of the toolbar should include also the space requirement for
+special effects (3D, shadowing, etc.).
+</p>
+<p>See also: <a href="wind.html#WF_FTOOLBAR_2C_20wind_get">WF_FTOOLBAR</a> &nbsp; <a href="wind.html#WF_NTOOLBAR_2C_20wind_get">WF_NTOOLBAR</a> &nbsp; <a href="evnt.html#WM_TOOLBAR">WM_TOOLBAR</a> &nbsp; <a href="objc.html#objc_sysvar">objc_sysvar</a>
+</p>
+<h3><a name="AES_20bindings">8.2.9 AES bindings</a></h3>
+<a name="Bindings_20of_20the_20AES"></a>
+<p>The AES is called via a single subprogram that is passed 6
+parameters; these are addresses of various arrays that are used for
+input/output communications. To call an AES function, the following
+parameter block must be populated with the addresses of the arrays
+described below:
+</p>
+<a name="AES_20parameter-block"></a>
+<a name="Parameter-block_20of_20the_20AES"></a>
+<pre>typedef struct
+{
+    int16_t *cb_pcontrol;  /* Pointer to control array */
+    int16_t *cb_pglobal;   /* Pointer to global array  */
+    int16_t *cb_pintin;    /* Pointer to int_in array  */
+    int16_t *cb_pintout;   /* Pointer to int_out array */
+    int16_t *cb_padrin;    /* Pointer to adr_in array  */
+    int16_t *cb_padrout;   /* Pointer to adr_out array */
+} <a href="aes_structures.html#AESPB">AESPB</a>;
+</pre>
+<p>The address of this parameter block (which lies on the stack)
+must be entered in register d1, and subsequently register d0.w must be
+filled with the magic value 0xc8 (200). With a TRAP #2 system call the
+AES can then be called directly. For the
+<b><i>Pure-Assembler</b></i> this could look like this, for
+instance:
+</p>
+<a name="aes"></a>
+<pre>                .EXPORT aes         ; Export function
+                .CODE               ; Start of the code-segment
+
+        aes:     MOVE.L 4(sp),d1    ; Address of the parameter blocks
+                 MOVE.W #200,d0     ; Opcode of the <a href="aes_main.html">AES</a>
+                 TRAP   #2          ; Call <a href="gem_about.html">GEM</a>
+                 RTS                ; And exit
+
+                .END                ; End of the module
+</pre>
+<p>There is no clear information available about which registers
+may be altered. In fact, however, the corresponding routines in ROM
+save <i>all</i> registers.
+</p>
+<p>Now to the individual arrays. With each field, designated input
+or output functions can be performed. The following apply:
+</p>
+<a name="control"></a>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><b>int16_t control[5]</b></td>
+<td valign="top"> With this field information about the called function and its
+parameters can be determined. The following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">control[0]</td>
+<td valign="top"> = Function number (opcode)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">control[1]</td>
+<td valign="top"> = Number of elements in int_in array the function is being sent
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">control[2]</td>
+<td valign="top"> = Number of elements in int_out array the function is being
+sent
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">control[3]</td>
+<td valign="top"> = Number of elements in addr_in array the function returns
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">control[4]</td>
+<td valign="top"> = Number of elements in addr_out array the function returns
+
+</td></tr>
+</table>
+
+<br>There is no clear information about which elements must be set
+before an AES call. It is required in each case for elements
+[0],[1] and [3]. It seems less sensible for the elements [2] and [4] -
+after all the AES functions know how many values they return in the
+output fields.
+<a name="Global_20field_20of_20the_20AES"></a>
+<a name="global"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t global[15]</b></td>
+<td valign="top"> This field contains global data for the application and is used
+partly by <a href="appl.html#appl_init">appl_init</a> and partly by other AES functions, and is
+filled automatically. The following apply:
+<table class="UDO_env_xlist">
+<a name="AES_20version_20number"></a>
+<a name="Version_20number_20of_20the_20AES"></a>
+<tr><td nowrap="nowrap" valign="top">global[0]</td>
+<td valign="top"> Version number of the AES
+<a name="Multitasking_20present_3F"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[1]</td>
+<td valign="top"> Number of applications that can run concurrently; with a value
+of -1 there is no limit
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[2]</td>
+<td valign="top"> Unique ID number of the application
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[3,4]</td>
+<td valign="top"> Miscellaneous information that only has meanning for the
+application, and can be set and read by it
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[5,6]</td>
+<td valign="top"> Pointer to a list of pointers to the object trees of the
+application (is set by <a href="rsrc.html#rsrc_load">rsrc_load</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[7,8]</td>
+<td valign="top"> Address of the memory reserved for the resource file. Only
+documented by Digital Research and <i>not</i> by Atari.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[9]</td>
+<td valign="top"> Length of the reserved memory. Only documented by Digital
+Research and <i>not</i> by Atari.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[10]</td>
+<td valign="top"> Number of colour planes. Only documented by Digital Research
+and <i>not</i> by Atari.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[11,12]</td>
+<td valign="top"> Reserved
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[13]</td>
+<td valign="top"> Maximum height of a character, which is used by the AES for
+the <a href="vdi_attribute.html#vst_height">vst_height</a> call. This entry is only available as of AES Version
+4.0, and also only documented by Atari.
+<br>As of PC-GEM Version 2.0 this value is interpreted as a
+bit-vector with the drives registered with the desktop (bit 15 = Drive
+A:).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">global[14]</td>
+<td valign="top"> Minimum height of a character, which is used by the AES for
+the <a href="vdi_attribute.html#vst_height">vst_height</a> call. This entry is only available as of AES Version
+4.0, and also only documented by Atari.
+<br>As of PC-GEM Version 2.0 this value is interpreted as a
+bit-vector that specifies which of the drives listed in global[13] can
+be regarded as hard drives.
+
+</td></tr>
+</table>
+
+<a name="int_in"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t int_in[16]</b></td>
+<td valign="top"> All 16-bit-sized input parameters are passed with this field.
+<a name="int_out"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t int_out[10]</b></td>
+<td valign="top"> All 16-bit-sized return values are supplied by the AES via
+this field.
+<a name="addr_in"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int32_t addr_in[8]</b></td>
+<td valign="top"> This field serves for the transmission of pointers (e.g.
+pointers to character strings) to the AES functions.
+<a name="addr_out"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int32_t addr_out[2]</b></td>
+<td valign="top"> All 32-bit-sized return values are supplied by the AES via
+this field.
+
+</td></tr>
+</table>
+
+<p><b>Warning:</b> If the operating system supports threads, then
+it is imperative that a multithread-safe library is used. In
+particular one must ensure that each thread receives <i>its own</i>
+global field (see above).
+</p>
+<p>See also: <a href="#Sample_20binding_20for_20AES_20functions">Sample binding</a> &nbsp; <a href="vdi_bindings.html">VDI bindings</a> &nbsp; <a href="tos_vers.html">TOS list</a>
+</p>
+<h4><a name="Sample_20binding_20for_20AES_20functions">8.2.9.1 Sample binding for AES functions</a></h4>
+<p>The function 'crys_if' (crystal interface) looks after the
+proper filling of the control arrays, and performs the actual AES
+call. It is passed one WORD parameter in d0 containing the funtion's
+opcode minus 10 multiplied by 4 (for faster table indexing); this
+gives an index into a table in which the values for control[1],
+control[2] and control[3] are entered for each individual AES
+function.
+</p>
+<a name="crys_if"></a>
+<pre><a href="aes_structures.html#AESPB">AESPB</a> c;
+
+int16_t crys_if (int16_t opcode)
+{
+        int16_t i, *paesb;
+
+        control[0] = opcode;
+        paespb = &amp;ctrl_cnts[ (opcode-10)*3 ];
+
+        for (i = 1; i &lt; 4; i++)
+                control[i] = *paespb++;
+
+        <a href="aes_fundamentals.html#aes">aes</a> (c);
+        return (int_out[0]);
+
+} /* crys_if */
+</pre>
+<p>The table used for this could be built up as follows, for
+instance:
+</p>
+<pre>.GLOBAL ctrl_cnts
+.DATA
+
+ctrl_cnts: .dc.b     0,  1,  0       ; <a href="appl.html#appl_init">appl_init</a>
+           .dc.b     2,  1,  1       ; <a href="appl.html#appl_read">appl_read</a>
+           .dc.b     2,  1,  1       ; <a href="appl.html#appl_write">appl_write</a>
+            ...
+            ...
+            ...
+
+.END
+</pre>
+<p>A fuller version is given in <i>The Atari Compendium</i> pp.
+6.39-41. Note that the <a href="rsrc.html#rsrc_gaddr">rsrc_gaddr</a> call must be special cased in a
+library if you want to use the crys_if binding to call the AES.
+</p>
+<p>See also: <a href="#AES_20bindings">AES bindings</a> &nbsp; <a href="gem_about.html">GEM</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="aes_main.html"><img src="udo_up.gif" alt="AES" title="AES" border="0" width="24" height="24">AES</a>
+<a name="UDO_nav_lf_FOOT" href="aes_about.html"><img src="udo_lf.gif" alt="About the AES" title="About the AES" border="0" width="24" height="24">About the AES</a>
+<a name="UDO_nav_rg_FOOT" href="appl.html"><img src="udo_rg.gif" alt="Application library" title="Application library" border="0" width="24" height="24">Application library</a>
+</body>
+</html>

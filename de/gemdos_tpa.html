@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Programmstart und TPA
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="gemdos_programs.html"><img src="udo_lf.gif" alt="Das Programmformat" title="Das Programmformat" border="0" width="24" height="24">Das Programmformat</a>
+<a name="UDO_nav_rg_HEAD" href="gemdos_signals.html"><img src="udo_rg.gif" alt="Signale" title="Signale" border="0" width="24" height="24">Signale</a>
+
+<hr>
+
+<h1><a name="Programmstart_20und_20TPA">5.6 Programmstart und TPA</a></h1>
+<a name="TPA_20und_20Programmstart"></a>
+<a name="Transient_20Program_20Area"></a>
+<p>Zu Beginn eines Programms ist es sehr wichtig überflüssigen
+Speicher per <a href="gemdos_memory.html#Mshrink">Mshrink</a> an das Betriebssystem zurückzugeben, da
+anderenfalls kein Speicherplatz mehr für andere Prozesse zur
+Verfügung steht.
+</p>
+<p>Ein Compiler übernimmt diese Aufgabe normalerweise automatisch;
+als Assembler-Programmierer muss man diese Prozedur jedoch selbst
+durchführen. Die entsprechende Routine könnte wie folgt aussehen:
+</p>
+<pre>            .text
+
+            move.l    4(sp),a0      ; Zeiger auf <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a>
+            lea       mystack,sp    ; Stack-Pointer setzen
+            move.l    #$100,d0      ; Länge der Basepage
+            add.l     $c(a0),d0     ; Länge des Text-Segments
+            add.l     $14(a0),d0    ; Länge des Data-Segments
+            add.l     $1c(a0),d0    ; Länge des BSS-Segments
+            move.l    d0,-(sp)      ; Ergebnis auf dem Stack
+            move.l    a0,-(sp)      ; Basepage-Adresse auf Stack
+            clr.w     -(sp)         ; Füllparameter
+            move.w    #$4a,-(sp)    ; <a href="gemdos_memory.html#Mshrink">Mshrink</a>
+            trap      #1            ; <a href="gemdos_main.html">GEMDOS</a> aufrufen
+            lea       $c(sp),sp     ; Stack korrigieren
+            jsr       main          ; Hauptprogramm aufrufen
+            move.w    d0,-(sp)      ; <a href="VT_52_terminal.html#Return">Return</a>-Wert des Programms
+            move.w    #$4c,-(sp)    ; <a href="gemdos_process.html#Pterm">Pterm</a>
+            trap      #1            ; <a href="gemdos_main.html">GEMDOS</a> aufrufen
+
+            .bss
+
+            .ds.l     2000          ; 8000 Bytes Stack
+mystack:    .ds.l     2
+</pre>
+<p><b>Im Klartext:</b> Der benötigte Speicherplatzbedarf wird
+errechnet, indem die Länge der Basepage, des Text-, Data- und
+BSS-Segments sowie ggfs. des Stacks aufaddiert werden. Alle
+notwendigen Angaben befinden sich in der Basepage, deren Adresse als
+Parameter auf dem Stack (4(sp)) mitgeteilt wird. Der errechnete Wert
+ist dann die Anzahl der Bytes, auf die die TPA (Transient Program
+Area, Speicherbereich eines Programms) geschrumpft werden kann.
+</p>
+<p><b>Nach Ausführung dieser Prozedur besitzt die TPA eines
+Programms dann die folgende Gestalt:</b>
+</p>
+<p><img src="bilder/gif/tpa.gif" alt="" title="" border="0" width="352" height="191"></p>
+<p>Der so freigegebene Speicherplatz kann nun vom <a href="gemdos_main.html">GEMDOS</a> für
+andere Zwecke genutzt werden: etwa zum Starten weiterer Programme,
+oder um Speicheranforderungen per <a href="gemdos_memory.html#Malloc">Malloc</a> bzw. <a href="gemdos_memory.html#Mxalloc">Mxalloc</a> zu befriedigen.
+</p>
+<a name="TSR-Programme"></a>
+<a name="Terminate_20and_20Stay_20Resident"></a>
+<p>Auch bei einem TSR-Programm (Terminate and Stay Resident) kann
+der benötigte Speicherplatz nach der oben angegebenen Methode
+berechnet werden; der einzige Unterschied ist, daß Programme dieser
+Art sich <i>nicht</i> per <a href="gemdos_process.html#Pterm">Pterm</a> sondern per <a href="gemdos_process.html#Ptermres">Ptermres</a> beenden, und
+sich dadurch resident im Speicher verankern.
+</p>
+<p>Querverweis: <a href="gemdos_structures.html#PD">BASEPAGE</a> &nbsp; <a href="gemdos_memory.html">Speicherverwaltung</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="gemdos_programs.html"><img src="udo_lf.gif" alt="Das Programmformat" title="Das Programmformat" border="0" width="24" height="24">Das Programmformat</a>
+<a name="UDO_nav_rg_FOOT" href="gemdos_signals.html"><img src="udo_rg.gif" alt="Signale" title="Signale" border="0" width="24" height="24">Signale</a>
+</body>
+</html>

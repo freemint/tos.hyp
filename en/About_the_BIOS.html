@@ -1,0 +1,1335 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: About the BIOS
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_HEAD" href="bios_main.html"><img src="udo_lf.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_rg_HEAD" href="bios_channels.html"><img src="udo_rg.gif" alt="The input/output channels of the BIOS" title="The input/output channels of the BIOS" border="0" width="24" height="24">The input/output channels of the BIOS</a>
+
+<hr>
+
+<h1><a name="About_20the_20BIOS">3.1 About the BIOS</a></h1>
+<a name="BIOS_2C_20The"></a>
+<p>The BIOS (<b>B</b>asic<b>I</b>nput/<b>O</b>utput
+<b>S</b>ystem) functions represent the lowest level interface between
+the Atari's operating system and hardware, and are called via the
+680X0 Trap #13. Preferably, these functions should not be used by
+application programs, as substantially more powerful functions on a
+higher level are available to provide better alternatives. Altogether
+the following functions are available:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Bconin">Bconin</a></td>
+<td valign="top"> Read a character from a device
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Bconout">Bconout</a></td>
+<td valign="top"> <a href="powerdos.html#Send">Send</a> a character to a peripheral unit
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Bconstat">Bconstat</a></td>
+<td valign="top"> Get input status of a peripheral unit
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Bcostat">Bcostat</a></td>
+<td valign="top"> Get status of a standard output device
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Drvmap">Drvmap</a></td>
+<td valign="top"> Get information about attached devices
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Getbpb">Getbpb</a></td>
+<td valign="top"> Get address to the <a href="About_the_BIOS.html#bios">bios</a> parameter block of a unit
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Getmpb">Getmpb</a></td>
+<td valign="top"> Speicherparameterblock ermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Kbshift">Kbshift</a></td>
+<td valign="top"> Fetch/set status of the shift keys
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Mediach">Mediach</a></td>
+<td valign="top"> Ask if the media has been changed
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Rwabs">Rwabs</a></td>
+<td valign="top"> Direct read/write operation on a unit
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Setexc">Setexc</a></td>
+<td valign="top"> Set an get interrupt vector
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Tickcal">Tickcal</a></td>
+<td valign="top"> Get time difference between two timer calls
+
+</td></tr>
+</table>
+
+<p>The BIOS is reentrant in <a href="magic.html">MagiC</a>. This means that these
+functions can be also called up repeatedly from interrupts (as long as
+the relevant supervisor stack does not overflow...).
+</p>
+<p><b>Note:</b>
+</p>
+<ul>
+<li><p> The &lt;saveptr_area&gt; of the BIOS is still present (for
+reasons of compatibility), but it is not used by the system.
+<br>&nbsp;
+</p></li>
+<li><p> The stack checks of Turbo C/Pure-C will fail for routines that
+are executed in supervisor-mode (under TOS this could happen until
+now only for <a href="aes_fundamentals.html#USERDEF">USERDEF</a> routines in the AES, that are also executed in
+supervisor-mode).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>If you hook your own routines into the BIOS, then make sure
+that you construct them to be fully reentrant. Make no assumptions
+about the contents of the &lt;saveptr_area&gt;!
+</p>
+<a name="BIOS_2C_20Parameter_20passing_20in"></a>
+<a name="Parameter_20passing_20in_20BIOS"></a>
+<p>The BIOS receives its parameters from the stack; for this the
+last argument from the parameter list is stored as the first on the
+stack. Function results are returned in the processor register d0.
+Only registers d3-d7 and a3-a7 are saved, all others may be altered by
+the call.
+</p>
+<p>See also: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="xbios_main.html">XBIOS</a> &nbsp; <a href="bios_resvector.html">Reset vector</a> &nbsp; <a href="VT_52_terminal.html">VT-52 terminal</a>
+</p>
+<h3><a name="bios-trap">3.1.1 bios-trap</a></h3>
+<a name="bios"></a>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Bios« - Execute bios-trap
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG bios ( VOID, ... );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The routine bios executes a TRAP #13 exception. The parameters
+passed depend on the particular BIOS function in each case.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns a value of the data type LONG.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="gemdos_trap.html#gemdos">gemdos</a> &nbsp; <a href="xbios_trap.html#xbios">xbios</a> &nbsp; <a href="bios_main.html">BIOS</a> &nbsp; <a href="the_system_vectors.html#BIOS_20Dispatcher">Dispatcher</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Bconin">3.1.2 Bconin</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Bios console input
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 2
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Bconin ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Bconin reads in a character from a
+peripheral device. The following devices can be specified for
+<i>dev</i>:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">prn: (Printer/Parallel port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">aux: (aux device, the RS-232 port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">con: (Console)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">MIDI port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">Keyboard port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">Screen</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">ST compatible RS232 port (Modem 1)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">SCC channel B (Modem 2)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">TTMFP serial port (Modem 3)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">SCC channel A (Modem 4)</td>
+</tr>
+</table>
+</div>
+
+<br>Note that the device numbers from 6 up are only available from
+the TOS030 of the Atari-TT. A wrong declaration for <i>dev</i> can
+lead to a system crash.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the read-in character as an ASCII value in
+the bits 0..7. When reading from the console, the bits 16 to 23
+contain the <a href="scancode.html">scan-code</a> of the relevant key. If, in addition, the
+corresponding bit of the system variable <a href="bios_sysvars.html#conterm">conterm</a> is set, then the bits
+24 to 31 contain the current value of <a href="#Kbshift">Kbshift</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Bconin">Binding</a> &nbsp; <a href="#Bconout">Bconout</a> &nbsp; <a href="xbios_keyboard.html#Keytbl">Keytbl</a> &nbsp; <a href="xbios_interface.html#Bconmap">Bconmap</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Bconin">3.1.2.1 Bindings for Bconin</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Bconin">Bconin</a> ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    dev,-(sp)    ; Offset 2
+move.w    #2,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Bconout">3.1.3 Bconout</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Bios console output
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 3
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> VOID Bconout ( int16_t dev, int16_t c );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Bconout writes the character <i>c</i> to
+the peripheral device dev. The following devices can be specified for
+<i>dev</i>:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">prn: (Printer/Parallel port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">aux: (Aux device, the RS-232 port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">con: (Console, <a href="VT_52_terminal.html">VT-52 terminal</a>)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">MIDI port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">Keyboard port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">Screen</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">ST compatible RS-232 port (Modem 1)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">SCC channel B (Modem 2)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">TTMFP serial port (Modem 3)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">SCC channel A (Modem 4)</td>
+</tr>
+</table>
+</div>
+
+<br>Note that the device numbers from 6 up are only available from
+the TOS030 of the Atari-TT.
+<br>&nbsp;
+<br><b>Note:</b> The function only returns when the character has
+actually been output by the relevant device. A wrong declaration for
+<i>dev</i> can lead to a system crash. All codes from 0x00 to 0xFF
+for the character <i>c</i> are interpreted as printable characters.
+Output via (5) is, incidentally, faster than via (2), as the VT-52
+sequences do not have to be evaluated.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Bconout">Binding</a> &nbsp; <a href="#Bconin">Bconin</a> &nbsp; <a href="#Bconstat">Bconstat</a> &nbsp; <a href="xbios_interface.html#Bconmap">Bconmap</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Bconout">3.1.3.1 Bindings for Bconout</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> VOID <a href="#Bconout">Bconout</a> ( int16_t dev, int16_t c );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    c,-(sp)      ; Offset 4
+move.w    dev,-(sp)    ; Offset 2
+move.w    #3,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Bconstat">3.1.4 Bconstat</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Bios console status
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 1
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int16_t Bconstat ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Bconstat establishes the input status of a
+standard peripheral device dev. The following devices can be specified
+for <i>dev</i>:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">prn: (Printer/Parallel port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">aux: (Aux device, the RS-232 port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">con: (Console)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">MIDI port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">Keyboard port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">Screen</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">ST compatible RS-232 port (Modem 1)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">SCC channel B (Modem 2)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">TTMFP serial port (Modem 3)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">SCC channel A (Modem 4)</td>
+</tr>
+</table>
+</div>
+
+<br>Note that the device numbers from 6 up are only available from
+the TOS030 of the Atari-TT. A wrong declaration for <i>dev</i> can
+lead to a system crash.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns -1 when there are characters waiting in
+the buffer, and 0 if this is not the case.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Bconstat">Binding</a> &nbsp; <a href="#Bconin">Bconin</a> &nbsp; <a href="#Bconout">Bconout</a> &nbsp; <a href="xbios_interface.html#Bconmap">Bconmap</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Bconstat">3.1.4.1 Bindings for Bconstat</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int16_t <a href="#Bconstat">Bconstat</a> ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    dev,-(sp)    ; Offset 2
+move.w    #1,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Bcostat">3.1.5 Bcostat</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Bios output status
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 8
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Bcostat ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Bcostat establishes the status of a standard
+output device dev. The following devices can be specified for
+<i>dev</i> on the Atari:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">prn: (Printer/Parallel port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">aux: (Aux device, the RS-232 port)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">con: (Console)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">Keyboard port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">MIDI port</td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">Screen</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">ST compatible RS-232 port (Modem 1)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">SCC channel B (Modem 2)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">TTMFP serial port (Modem 3)</td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">SCC channel A (Modem 4)</td>
+</tr>
+</table>
+</div>
+
+<br>Note that the device numbers from 6 up are only available from
+the TOS030 of the Atari-TT.
+<br>&nbsp;
+<br><b>Note: According to Atari, the swap between the MIDI port (4)
+and the intelligent keyboard (3) compared to other BIOS functions
+has been retained from a bug in TOS 1.0 for reasons of
+compatibility.</b>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the status of the output device, namely -1
+if characters could be written, and 0 if the buffer is full.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Bcostat">Binding</a> &nbsp; <a href="#Bconout">Bconout</a> &nbsp; <a href="xbios_interface.html#Bconmap">Bconmap</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Bcostat">3.1.5.1 Bindings for Bcostat</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Bcostat">Bcostat</a> ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    dev,-(sp)    ; Offset 2
+move.w    #8,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Drvmap">3.1.6 Drvmap</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> drive map
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 10
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Drvmap ( VOID );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Drvmap establishes the mounted drives. For
+each mounted drive one bit is set. Valid are:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bit 0:</td>
+<td valign="top"> Drive A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 1:</td>
+<td valign="top"> Drive B etc. (max 32 devices possible)
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The function returns the contents of the system
+variable <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a>. To determine which drives are recognized by <a href="gemdos_main.html">GEMDOS</a>,
+you have to use the function Dsetdrv.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns a bit-vector for the connected (mounted)
+drives.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Drvmap">Binding</a> &nbsp; <a href="gemdos_directory.html#Dsetdrv">Dsetdrv</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Drvmap">3.1.6.1 Bindings for Drvmap</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Drvmap">Drvmap</a> ( VOID );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    #$A,-(sp)     ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #2,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(10)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Getbpb">3.1.7 Getbpb</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Get Bios parameter block
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 7
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="bios_structures.html#BPB">BPB</a> *Getbpb ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Getbpb establishes the BIOS parameter
+block of the device <i>dev</i>, which is coded as follows:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">Drive A</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">Drive B</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">Drive C</td>
+</tr>
+</table>
+</div>
+
+<br>Any further drives follow in a similar way. By calling this
+function the media-change status in the BIOS is reset.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the address of the BIOS parameter block.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Getbpb">Binding</a> &nbsp; <a href="#Getmpb">Getmpb</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Getbpb">3.1.7.1 Bindings for Getbpb</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> <a href="bios_structures.html#BPB">BPB</a> *<a href="#Getbpb">Getbpb</a> ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    dev,-(sp)    ; Offset 2
+move.w    #7,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(7,W:dev%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Getmpb">3.1.8 Getmpb</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Get memory parameter block
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 0
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> VOID Getmpb ( <a href="bios_structures.html#MPB">MPB</a> *ptr );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Getmpb serves for initialising the memory
+management and is called at bootup by <a href="gemdos_main.html">GEMDOS</a> to create the original
+TPA. After this, Getmbp may <i>not</i> be used any more.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> This function does not return a result.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Getmpb">Binding</a> &nbsp; <a href="#Getbpb">Getbpb</a> &nbsp; <a href="gemdos_tpa.html">Program launch and TPA</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Getmpb">3.1.8.1 Bindings for Getmpb</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> VOID <a href="#Getmpb">Getmpb</a> ( <a href="bios_structures.html#MPB">MPB</a> *ptr );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>pea       ptr          ; Offset 2
+move.w    #0,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Kbshift">3.1.9 Kbshift</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Keyboard shift status of the 'special' keys.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 11
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Kbshift ( int16_t mode );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Kbshift establishes or alters the current
+state of the keyboard 'special' keys. If <i>mode</i> is negative,
+then only the state is established. If <i>mode</i> is 0 or greater
+than 0, then the corresponding status will be set.
+<br>The individual bits are defined as follows:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">Right shift key</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">Left shift key</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">Control key</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">ALT key</td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">Caps-lock</td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">Right mouse button</td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">Left mouse button</td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">Alt Gr since TOS 4.06 (Milan)</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> The function simply inquires an internal system
+variable of the BIOS, whose address can be calculated via <a href="bios_sysvars.html#UDO__sysbase">_sysbase</a>
+if required.
+<br>For TOS 1.0 this system variable is at address 0xE1B.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the set keyboard status.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Kbshift">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Bindings_20for_20Kbshift">3.1.10 Bindings for Kbshift</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Kbshift">Kbshift</a> ( int16_t mode );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    mode,-(sp)   ; Offset 2
+move.w    #$B,-(sp)    ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Mediach">3.1.11 Mediach</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Media change
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 9
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Mediach ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Mediach establishes whether the data-carrier
+'medium' on the device <i>dev</i> has been changed since the last
+disk operation of the particular drive. Valid are:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top"><i>dev</i></td>
+  <td align="left" valign="top">= 0</td>
+  <td align="left" valign="top">(Drive A)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">= 1</td>
+  <td align="left" valign="top">(Drive B)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">= 2</td>
+  <td align="left" valign="top">(Drive C, similarly for other drives)</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> One should never assume that a device's medium
+cannot be exchanged (removable disk catridge, CD-ROM, floppy drive,
+floptical ...). The recognition of a floppy disk change usually only
+works reliably if the floppy is not write-protected. In addition one
+should note that during formatting a floppy different serial numbers
+will be asssigned.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns an integer-value with the following
+meaning:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">Media definitely has not changed.</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">Media might have changed.</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">Media definitely has changed.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Mediach">Binding</a> &nbsp; <a href="xbios_drive.html#Flopfmt">Flopfmt</a> &nbsp; <a href="xbios_drive.html#Protobt">Protobt</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Mediach">3.1.11.1 Bindings for Mediach</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Mediach">Mediach</a> ( int16_t dev );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    dev,-(sp)    ; Offset 2
+move.w    #9,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp        ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(9,W:dev%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Rwabs">3.1.12 Rwabs</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Read/write absolute
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 4
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Rwabs ( int16_t rwflag, VOID *buff, int16_t cnt,
+int16_t recnr, int16_t dev, int32_t lrecno );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Rwabs reads or writes data directly resp.
+from or to the drive that was specified with <i>dev</i>. The
+parameter <i>rwflag</i> is a bit-vector that specifies the type of
+operation. Valid are:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><i>rwflag-bit</i></td>
+<td valign="top"> Meaning
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> 0 = Read
+<br>1 = Write
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> 0 = Pay regard to media change
+<br>1 = Do not read of affect media-change status
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> 0 = In case of error, start a retry
+<br>1 = Do not start a retry
+<br>For this, a hard disk driver that is compatible with AHDI 3.0 is
+required.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3</td>
+<td valign="top"> 0 = Normal mode
+<br>1 = Physical mode (1)
+<br>For this, a hard disk driver that is compatible with AHDI 3.0 is
+required.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br><i>cnt</i> sectors from buffer <i>buff</i> will be
+transferred. In <i>recnr</i> the starting sector on the drive will be
+specified. <i>lrecno</i> will be used only if <i>recnr</i> has the
+value -1, and an AHDI 3.0-compatible <a href="xhdi.html">hard disk driver</a> is available.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns 0 if the access was successful, otherwise
+a negative number.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Rwabs">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Rwabs">3.1.12.1 Bindings for Rwabs</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Rwabs">Rwabs</a> ( int16_t rwflag, VOID *buff, int16_t cnt,
+int16_t recnr, int16_t dev, int32_t lrecno );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.l    lrecno,-(sp)  ; Offset 14
+move.w    dev,-(sp)     ; Offset 12
+move.w    recnr,-(sp)   ; Offset 10
+move.w    cnt,-(sp)     ; Offset  8
+pea       buff          ; Offset  4
+move.w    rwflag,-(sp)  ; Offset  2
+move.w    #4,-(sp)      ; Offset  0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+lea       $12(sp),sp    ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top">
+Fehler%=Bios(4,W:rwflag%,L:buff%,W:cnt%,W:recnr%,W:dev%,L:lrecno%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Setexc">3.1.13 Setexc</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Set exception vector
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 5
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Setexc ( int16_t number, VOID (*vec)() );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Setexc sets or reads the contents of
+exception vectors. Valid are:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>number</i></td>
+  <td align="left" valign="top">Number of the vector</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>vec</i></td>
+  <td align="left" valign="top">New address (or -1)</td>
+</tr>
+</table>
+</div>
+
+<br><b>Note:</b> If<i>vec</i> is -1L, then the vector's previous
+value is returned.
+<br>&nbsp;
+<br>The number of the exception vector to be set is, by the way,
+identical to the address to be set divided by 4.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the previous (or current) value of the
+vector.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Setexc">Binding</a> &nbsp; <a href="the_system_vectors.html">System Vectors</a> &nbsp; <a href="bios_sysvars.html">System variables</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Setexc">3.1.13.1 Bindings for Setexc</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> int32_t <a href="#Setexc">Setexc</a> ( int16_t number, VOID (*vec)() );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>pea       exchdlr      ; Offset 4
+move.w    number,-(sp) ; Offset 2
+move.w    #5,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #8,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<h3><a name="Tickcal">3.1.14 Tickcal</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Tick calculation
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 6
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> int32_t Tickcal ( void );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine Tickcal returns the number of milliseconds
+that have elapsed between two calls of the system timer.
+<br>&nbsp;
+<br><b>Note:</b> For this the function accesses the <a href="bios_sysvars.html#UDO__timr_ms">_timr_ms</a> system
+variable.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> Number of corresonding milliseconds
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> All TOS versions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20Tickcal">Binding</a> &nbsp; <a href="bios_sysvars.html">System variables</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20Tickcal">3.1.14.1 Bindings for Tickcal</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">C:</td>
+<td valign="top"> LONG <a href="#Tickcal">Tickcal</a> ( VOID );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    #6,-(sp)     ; Offset 0
+trap      #13          ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #2,sp        ; Correct stack
+</pre>
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_FOOT" href="bios_main.html"><img src="udo_lf.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_rg_FOOT" href="bios_channels.html"><img src="udo_rg.gif" alt="The input/output channels of the BIOS" title="The input/output channels of the BIOS" border="0" width="24" height="24">The input/output channels of the BIOS</a>
+</body>
+</html>

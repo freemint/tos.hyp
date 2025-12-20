@@ -1,0 +1,170 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: ARGV-Verfahren
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="gemdos_mintnet.html"><img src="udo_lf.gif" alt="Netzwerk" title="Netzwerk" border="0" width="24" height="24">Netzwerk</a>
+<a name="UDO_nav_rg_HEAD" href="c_task_royal.html"><img src="udo_rg.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+
+<hr>
+
+<h1><a name="ARGV-Verfahren">5.18 ARGV-Verfahren</a></h1>
+<a name="Kommandozeilen_2C_20erweiterte"></a>
+<p>Das ARGV-Verfahren dient zur Übergabe erweiterter
+Kommandozeilen, und wurde im Herbst 1989 von <i>Ken Badertscher</i>
+(Atari-USA) offiziell spezifiziert. Das Verfahren arbeitet wie folgt:
+</p>
+<p>Die Environmentvariable ARGV zeigt an, daß dieses Verfahren
+angewendet wird; der Wert der Variablen spielt dabei <i>keine</i>
+Rolle, allein die Anwesenheit ist entscheidend. Die ARGV-Variable muss
+die letzte Environmentvariable sein, damit das aufgerufene Programm
+den &quot;vorderen&quot; Teil als sein normales Environment
+weiterbenutzen kann.
+</p>
+<p>Die erweiterte Kommandozeile wird nun einfach als Folge von
+Strings (Null-Terminiert !) hinter ARGV in das Environment
+geschrieben. Der erste String enthält dabei den Namen des gestarteten
+Programms, wie man ihn auch bei Pexec übergibt (und entspricht dem
+bislang nicht genutzten argv[0]). Die weiteren Strings enthalten die
+einzelnen Parameter, in denen auch Leerzeichen auftauchen dürfen; das
+Ende der Liste wird wie bei einem normalen Environment durch eine
+doppelte 0 gekennzeichnet.
+</p>
+<p>Darüber hinaus übergibt man bei Pexec als Längenbyte (erstes
+Byte in der Kommandozeile) den Wert 127, der wegen der existierenden
+Längenbeschränkung auf 125 Bytes bislang nicht angenommen werden
+konnte. Dies ermöglicht es dem aufgerufenen Programm,
+sicherzustellen, daß die im Environment übergebenen Werte
+tatsächlich gültig sind und nicht etwa von einem Programm, das den
+ARGV-Standard nicht kennt, übriggelassen wurden.
+</p>
+<p>Je nachdem, ob man per ARGV Parameter an andere Programme
+übergeben, oder diese selbst lesen möchte, behandelt man einen der
+folgenden zwei Punkte:
+</p>
+<p>&#x2022; ARGV beim gestarteten Programm
+</p>
+<a name="ARGV_20beim_20gestarteten_20Programm"></a>
+<p>Zunächst stellt man fest, ob die Variable ARGV im Environment
+vorhanden ist. Wenn dies der Fall ist, <i>und</i> das
+Kommandozeilen-Längenbyte den Wert 127 besitzt, dann findet man nach
+der ersten 0 nach ARGV (denn diese Variable könnte ja einen Wert
+haben), die einzelnen Kommandozeilenparameter. Zum Schluß sollte man
+den ersten Buchstaben von ARGV auf 0 den Wert 0 setzen, damit das
+Environment wieder die Standardform besitzt.
+</p>
+<p>&#x2022; ARGV beim Aufrufer
+</p>
+<a name="ARGV_20beim_20Aufrufer"></a>
+<p>Zunächst muß ein neues Environment für das aufzurufende
+Programm erzeugt werden. Dazu berechnet man z.B. die Länge des
+bereits vorhandenen Environments, addiert die Länge der Kommandozeile
+und alloziert entsprechend viele Bytes. Dann wird das bestehende
+Environment kopiert (und dabei eine evtl. bereits bestehende
+ARGV-Variable entfernt), die neue ARGV-Variable und die
+Kommandozeilenparameter nacheinander angehängt (jeweils
+null-terminiert). Eine letzte Null schließt das Environment dann
+endgültig ab. Zu guter letzt übergibt man im Längenbyte der
+Kommandozeile den magischen Wert 127.
+</p>
+<p>&#x2022; Erweiterung des ARGV-Verfahrens
+</p>
+<a name="ARGV-Verfahren_2C_20erweitertes"></a>
+<p>Ein Problem mit der ursprünglichen Definition des
+ARGV-Verfahrens besteht darin, <i>leere</i> Parameter übergeben zu
+können (zwei aufeinanderfolgende Nullen schließen ja das Environment
+ab !). Um diese dennoch übergeben zu können, wurde das Verfahren wie
+folgt erweitert:
+</p>
+<ul>
+<li><p> leere Parameter werden in der Kommandozeile in <i>einfache</i>
+Anführungsstriche gesetzt, und tauchen im Environment als
+<i>genau</i> ein Leerzeichen auf.
+<br>&nbsp;
+</p></li>
+<li><p> für die Variable ARGV wird ein Wert definiert: falls diese mit
+'NULL:' beginnt, enthält der Rest der Zeile (durch Kommata getrennt)
+die Positionen der leeren Parameter. <b>Beispiel:</b> ARGV=NULL:3,5,9
+bedeutet, daß argv[3], argv[5] und argv[9] leer sind. Der
+Startup-Code sollte sich dann darum kümmern, die entsprechenden
+Parameter zu löschen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Hinweis:</b> Um maximale Kompatibilität zu alten Programmen
+zu gewährleisten, sollte das erweiterte ARGV-Verfahren <i>nur
+dann</i> eingesetzt werden, wenn tatsächlich leere Parameter
+übergeben werden müssen. In allen anderen Fällen sollte man
+stattdessen auf die ursprüngliche Definiton zurückgreifen.
+</p>
+<p>&#x2022; ARGV-Verfahren ab <a href="magic.html">MagiC</a> 3.0
+</p>
+<a name="ARGV-Verfahren_20in_20MagiC"></a>
+<a name="MagiC_2C_20ARGV-Verfahren_20in"></a>
+<p>Ab MagiC-3 wird das ARGV-Verfahren bereits von <a href="gemdos_process.html#Pexec">Pexec</a> auf drei
+verschiedene Arten unterstützt:
+</p>
+<ul>
+<li><p> <b>Ist das Längenbyte der Kommandozeile 127</b>, geht Pexec
+davon aus, daß das aufrufende Programm ARGV unterstützt und das
+Environment bereits entsprechend manipuliert ist; das Environment wird
+daher nicht geändert.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Ist das Längenbyte 254</b>, erwartet MagiC direkt
+dahinter die Zeichenkette &quot;ARGV=&quot;, gefolgt von einem
+Nullbyte und von einer durch zwei Nullbytes abgeschlossenen Liste von
+Parametern. Durch Übergaben von &quot;ARGV=NULL...&quot; usw. kann
+man auch das erweiterte ARGV-Verfahren verwenden, das die Übergabe
+von leeren Parametern ermöglicht (s.o).
+<br>&nbsp;
+<br>Pexec löscht ein evntl. vorhandenes ARGV und trägt das neue
+ins Environment ein. Die Kommandozeile besteht nur aus dem Wert 127
+als Indikator, daß die Parameter im Environment liegen. Das Verfahren
+ist geeignet, wenn das aufgerufene Programm mit Sicherheit das
+ARGV-Verfahren beherrscht.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Ist das Längenbyte 255</b>, erwartet MagiC direkt
+dahinter eine durch Leerstellen getrennte und durch ein Nullbyte
+abgeschlossene Liste von Parametern (wie i.a. die Kommandozeile
+übergeben wird). Pexec löscht ein evntl. vorhandenes ARGV, erstellt
+aus der Kommandozeile eine Argumentliste und trägt diese als ARGV ins
+Environment ein. Als argv[0] wird der Programmdatei-Pfad genommen, der
+Pexec übergeben wurde. Ist dieser Pfad ungültig, gibt es Müll,
+deshalb sollte man auch bei Modus 5 von Pexec (Basepage erstellen)
+einen sinnvollen Programmnamen übergeben. Bei Modus 7 heißt argv[0]
+dann einfach &quot;NONAME&quot;, weil hier kein Name übergeben wird.
+<br>&nbsp;
+<br>Die Kommandozeile hat als Längenbyte 127 als Indikator für das
+Vorhandensein von ARGV. Ist die Länge der Kommandozeile &lt; 127,
+wird diese außerdem in die Basepage kopiert, ansonsten besteht die
+Kommandozeile nur aus dem Wert 127. Das Verfahren ist geeignet, wenn
+das aufrufende Programm nicht sicher ist, daß das aufgerufene
+Programm ARGV versteht.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="gemdos_mintnet.html"><img src="udo_lf.gif" alt="Netzwerk" title="Netzwerk" border="0" width="24" height="24">Netzwerk</a>
+<a name="UDO_nav_rg_FOOT" href="c_task_royal.html"><img src="udo_rg.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+</body>
+</html>

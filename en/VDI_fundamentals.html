@@ -1,0 +1,4363 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: VDI fundamentals
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_HEAD" href="About_the_VDI.html"><img src="udo_lf.gif" alt="About the VDI" title="About the VDI" border="0" width="24" height="24">About the VDI</a>
+<a name="UDO_nav_rg_HEAD" href="vdi_bindings.html"><img src="udo_rg.gif" alt="VDI bindings" title="VDI bindings" border="0" width="24" height="24">VDI bindings</a>
+
+<hr>
+
+<h1><a name="VDI_20fundamentals">7.2 VDI fundamentals</a></h1>
+<a name="VDI_2C_20Fundamentals_20of_20the"></a>
+<p>The VDI (<b>V</b>irtual <b>D</b>evice <b>I</b>nterface)
+forms the lower half of <a href="gem_about.html">GEM</a>; it is so to speak the basis of all AES
+functions.
+</p>
+<p>Even if one normally regards the VDI primarily as providing
+functions for graphics output, its tasks also extend to <i>inputs</i>
+(such as with the mouse or graphics tablet, for instance). Hence
+the VDI is an operating system layer for addressing (in the widest
+sense) graphics- oriented output <i>and</i> input devices. This
+section describes the items:
+</p>
+<ul>
+<li> <a href="vdi_bindings.html">VDI bindings</a>
+</li>
+<li> <a href="#Clipping">Clipping</a>
+</li>
+<li> <a href="#About_20the_20GDOS">GDOS</a>
+</li>
+<li> <a href="#GDOS_20drivers">GDOS drivers</a>
+</li>
+<li> <a href="#VDI_20coordinate_20systems">VDI coordinate systems</a>
+</li>
+<li> <a href="linea_about.html">Line-A routines</a>
+</li>
+<li> <a href="#Metafile_20format">Metafile format</a>
+</li>
+<li> <a href="#NVDI">NVDI</a>
+</li>
+<li> <a href="#Off-screen_20bitmaps">Off-screen bitmaps</a>
+</li>
+<li> <a href="#The_20OUT_20file_20format">OUT fileformat</a>
+</li>
+<li> <a href="#Raster_20formats">Raster formats</a>
+</li>
+<li> <a href="#SpeedoGDOS">SpeedoGDOS</a>
+</li>
+<li> <a href="#Details_20about_20vector_20fonts">Vector fonts</a>
+</li>
+<li> <a href="#VDI_20workstations">VDI workstations</a>
+</li>
+<li> <a href="#The_20XIMG_20format_20for_20pixel_20images">XIMG format</a>
+</li>
+</ul>
+
+<p>As the word 'virtual' already indicates, nearly all function
+calls can be applied to any available output device (screen, printer,
+plotter, slide maker, imagesetter etc.). So it makes no difference
+whether one wants to draw circles or output text: this can be realized
+with the same operating system functions in each case.
+</p>
+<a name="VDI_2C_20Origin_20of_20the"></a>
+<p>The roots of the VDI lie in the CP/M-GSX system, which arose
+at the start of the eighties from the requirement for a portable
+graphics interface for the then-dominant CP/M systems. Similarities in
+the functions and designations to the GKS (<b>G</b>raphical
+<b>K</b>ern <b>S</b>ystem) are hence by no means accidental but were
+fully intented by the <i>Digital Research</i> developers.
+</p>
+<p>The VDI complies with the ANSI standard X3H3.6CG-VDI.
+</p>
+<p>See also: <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="Clipping">7.2.1 Clipping</a></h3>
+<p>Clipping is a procedure that is really only made possible by the
+use of a windowed operating system. For this one uses a clipping
+rectangle which specifies to which part of the screen all graphic
+outputs of the relevant workstation are to be restricted; everything
+that protrudes outside the specified image section will be omitted in
+the screen output.
+</p>
+<p>A low efficency but easily programmed window output routine
+would simply set one clipping rectangle for each partial rectangle of
+the window and then repeat all screen outputs required for building up
+the window contents. If you take the trouble to first make plausibi-
+lity checks whether the object to be drawn is actually going to be
+<i>visible</i>, you can naturally save a considerable amount of time.
+</p>
+<p><b>Note:</b> Like so much else in life, clipping too is not
+available for free. If you want to achieve optimum speed for screen
+build-ups, you should switch off the clipping rectangle as often as
+possible.
+</p>
+<p>See also: <a href="#VDI_20fundamentals">VDI fundamentals</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a> &nbsp; <a href="vdi_control.html#vs_clip">vs_clip</a>
+</p>
+<h3><a name="About_20the_20GDOS">7.2.2 About the GDOS</a></h3>
+<a name="FontGDOS"></a>
+<a name="FSM-GDOS"></a>
+<a name="AMC-GDOS"></a>
+<a name="GDOS_2C_20Font-"></a>
+<a name="GDOS_2C_20FSM-"></a>
+<a name="GDOS_2C_20AMC-"></a>
+<p>Several functions of the VDI can only be used properly after
+the installation of a GDOS from the AUTO folder. Basically a GDOS
+(<b>G</b>raphics <b>D</b>evice <b>O</b>perating <b>S</b>ystem)
+allows the loading of various device drivers and fonts, and then to
+use them.
+</p>
+<p>The GDOS itself is completely independent of the device used.
+Only the post-loaded drivers that realize the VDI functions on the
+correspon- ding device are device-specific. With detailed knowledge of
+the driver format it is possible to use any - even exotic - output
+devices as a VDI output device.
+</p>
+<p>With resident GDOS the number of available VDI functions
+increases, while all other functions remain fully functional or
+contain extended output capabilities. However this is not the case the
+other way round, functions that require GDOS lead to a crash of the
+computer if GDOS is not resident.
+</p>
+<a name="GDOS_2C_20Family_20of"></a>
+<p><img src="bilder/gif/gdos_ahn.gif" alt="The family tree of the GDOS family" title="The family tree of the GDOS family" border="0" width="394" height="282"></p>
+<a name="vq_gdos"></a>
+<p><b>Therefore it is important to know in some cases whether a
+complete GDOS is <a href="xbios_sound.html#installed">installed</a> at all.</b> Atari has documented the
+following procedure for this purpose: The trap-dispatcher alters the
+input value -2 for register d0 only when a GDOS is <a href="xbios_sound.html#installed">installed</a>. Many
+compilers make the function <b>vq_gdos</b> available, which returns a
+value of 0 when <i>no</i> GDOS is <a href="xbios_sound.html#installed">installed</a>. This functions is based
+essentially on the following code:
+</p>
+<pre>vq_gdos:      move.w   #-2,d0
+              trap     #2
+              cmp.w    #-2,d0
+              sne      d0
+              ext.w    d0
+              rts
+</pre>
+<p><b>Important note:</b> vq_gdos only returns the information
+whether a GDOS is present, or not. <i>Nothing</i> is said about which
+GDOS is loaded or which capabilities the GDOS offers. So with the aid
+of this function it is <i>not</i> possible, for instance, to
+differentiate between AMC-GDOS and <a href="#SpeedoGDOS">SpeedoGDOS</a> or <a href="#NVDI">NVDI</a>.
+</p>
+<a name="ABC-GEM"></a>
+<p><b>Attention:</b> The <a href="gem_about.html">GEM</a> versions of the Dutch software house
+&quot;ABC&quot; (ABC-GEM 2.x) will crash at this call!
+</p>
+<a name="vq_vgdos"></a>
+<a name="UDO__vq_gdos"></a>
+<p>Alternatively there is also vq_vgdos (_vq_gdos):
+</p>
+<pre>vq_vgdos:     move.w   #-2,d0
+              trap     #2
+              rts
+</pre>
+<a name="GDOS_NONE"></a>
+<a name="GDOS_ATARI"></a>
+<a name="GDOS_AMC"></a>
+<a name="GDOS_AMCLIGHT"></a>
+<a name="GDOS_FNT"></a>
+<a name="GDOS_FSM"></a>
+<p>As return one receives:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">GDOS Type</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_NONE</td>
+  <td align="left" valign="top">-2</td>
+  <td align="left" valign="top">GDOS not installed.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-</td>
+  <td align="left" valign="top">Any other value.</td>
+  <td align="left" valign="top">GDOS 1.0  or 1.2</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_ATARI</td>
+  <td align="left" valign="top">0x0007E88A</td>
+  <td align="left" valign="top">GDOS 1.1 from Atari Corp.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_AMC</td>
+  <td align="left" valign="top">0x0007E864</td>
+  <td align="left" valign="top">AMC-GDOS from Arnd Beissner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_AMCLIGHT</td>
+  <td align="left" valign="top">0x0007E8BA</td>
+  <td align="left" valign="top">GEMINI-special GDOS from Arnd Beissner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-</td>
+  <td align="left" valign="top">0x3e5d0957</td>
+  <td align="left" valign="top">ttf-gdos from Trevor Blight</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_FNT</td>
+  <td align="left" valign="top">0x5F464E54 ('_FNT')</td>
+  <td align="left" valign="top">FONTGDOS</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GDOS_FSM</td>
+  <td align="left" valign="top">0x5F46534D ('_FSM')</td>
+  <td align="left" valign="top">FSMGDOS</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-</td>
+  <td align="left" valign="top">0x66564449 ('fVDI')</td>
+  <td align="left" valign="top">fVDI</td>
+</tr>
+</table>
+</div>
+
+<p>The current (and more efficient) versions of GDOS are SpeedoGDOS and
+NVDI (as of Version 3.0), that, amid other things, permit handling
+vector fonts in TrueType, Type-1 or Speedo format. NVDI is also
+available in a special <i>Macintosh version</i> (<a href="VDI_fundamentals.html#NVDIMac">NVDIMac</a>), and
+permits any program that can ouput via GDOS (in conjunction with <a href="magic.html">MagiC</a>
+Mac) to make its output on Apple printers and in a network as well.
+</p>
+<p>See also: <a href="#The_20make-up_20of_20the_20ASSIGN.SYS_20file">ASSIGN.SYS file</a> &nbsp; <a href="#VDI_20fundamentals">VDI fundamentals</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="The_20make-up_20of_20the_20ASSIGN.SYS_20file">7.2.3 The make-up of the ASSIGN.SYS file</a></h3>
+<p>The declaration of fonts and drivers in the ASSIGN.SYS file is
+made according to the following scheme:
+</p>
+<pre>&lt;Device number&gt; &lt;Option&gt; &lt;Name of the driver&gt; &lt;Comment&gt;
+</pre>
+<p><u>Example:</u>
+</p>
+<pre>; ASSIGN.SYS file
+path = C:\gemsys
+
+01p screen.sys    ; Screen driver (ROM)
+monaco10.fnt      ; Font (10 point)
+monaco12.fnt      ; Font (12 point)
+monaco18.fnt      ; Font (18 point)
+monaco24.fnt      ; Font (24 point)
+
+21r laserjet.sys  ; HP Laserjet   (resident)
+22r necp.sys      ; NEC Pinwriter (resident)
+
+31 meta.sys       ; <a href="#Metafile_20drivers">Metafile drivers</a>
+81 t_office.sys   ; Tele-Office
+</pre>
+<p>The variable <i>path</i> sets the directory in which drivers
+and fonts will be looked for by GDOS. Comments are always preceded by
+a semi- colon.
+</p>
+<p>Under <i>Option</i> one can add a flag for each driver that
+specifies some further particulars; the following apply:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Option</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">'p'</td>
+<td valign="top"> If <a href="#NVDI">NVDI</a> is active, then the matching <a href="#NVDI">NVDI</a> screen driver is
+loaded automatically; otherwise the driver of the Atari VDI that is
+present in ROM will be used
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">'r'</td>
+<td valign="top"> The driver will be loaded on booting the system, and remains
+permanently in memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">'r '</td>
+<td valign="top"> The specified <i>font</i> will be loaded on booting the
+system, and remains resident in memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">'s '</td>
+<td valign="top"> Incorporates the specified <i>font</i> as the system font.
+<br><b>Note:</b> In this way the real system fonts may be replaced;
+the new font must have the same size and number of characters as the
+old font.
+
+</td></tr>
+</table>
+
+<p><b>Warning:</b> If there is <i>no</i> letter after a device
+identifier, then the driver will be loaded on demand, and later
+removed from the system again. Only bitmap (pixel) fonts but
+<i>no</i> vector fonts can be declared in the ASSIGN.SYS file.
+</p>
+<a name="ASSIGN.SYS_20file_20as_20of_20GEM_2F3"></a>
+<p>Incidentally, as of PC-GEM/3 the file ASSIGN.SYS no longer
+exists. There the drivers of the devices as well as fonts that are to
+be <a href="xbios_sound.html#installed">installed</a> are simply copied to the folder \GEMAPPS\GEMSYS or to the
+folder \GEMAPPS\FONTS.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#VDI_20fundamentals">VDI fundamentals</a>
+</p>
+<h3><a name="GDOS_20drivers">7.2.4 GDOS drivers</a></h3>
+<a name="Drivers_2C_20GDOS"></a>
+<a name="Drivers_2C_20VDI"></a>
+<a name="VDI_20drivers"></a>
+<p>A GDOS driver is essentially a normal program file without a
+startup code, which contains a dispatcher for the incoming VDI
+calls as a first routine. All drivers must be declared in the
+ASSIGN.SYS file that is evaluated by GDOS at the start.
+</p>
+<p>The following list shows the most important drivers with their
+respective device numbers:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Screen driver</td>
+<td valign="top"> (01-10)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Plotter driver</td>
+<td valign="top"> (11-20)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Printer driver</td>
+<td valign="top"> (21-30)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Metafile driver</td>
+<td valign="top"> (31-40)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Camera driver</td>
+<td valign="top"> (41-50)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Tablet driver</td>
+<td valign="top"> (51-60)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Memory driver</td>
+<td valign="top"> (61-70)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Fax driver</td>
+<td valign="top"> (81-90)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit-Image driver</td>
+<td valign="top"> (91-100)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Multimedia driver</td>
+<td valign="top"> (101-110)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Sound driver</td>
+<td valign="top"> (111-120)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Load and draw Bit-Image driver</td>
+<td valign="top"> (121-130)
+
+</td></tr>
+</table>
+
+<p>For implementing the dispatcher one should respect the
+following:
+</p>
+<ul>
+<li> The address of the VDI parameter block is passed in register
+D1
+</li>
+<li> The function itself is terminated with an RTS statement
+</li>
+</ul>
+
+<p>A GDOS driver always operates in a raster-coordinate system; the
+conversion of values in the <a href="vdi_bindings.html#ptsin">ptsin</a> and <a href="vdi_bindings.html#ptsout">ptsout</a> fields is taken on by the
+GDOS. In addition one should bear in mind that not all functions reach
+the actual driver in exactly the same form as they were sent, since
+they are partially pre-processed by the GDOS.
+</p>
+<p>See also: <a href="#About_20the_20GDOS">GDOS</a> &nbsp; <a href="#VDI_20fundamentals">VDI fundamentals</a> &nbsp; <a href="vdi_bindings.html#Bindings_20of_20the_20VDI">Bindings of the VDI</a>
+</p>
+<h4><a name="Screen_20drivers">7.2.4.1 Screen drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Screen"></a>
+<a name="Drivers_2C_20Screen"></a>
+<p>The TOS screen driver can be replaced by a custom driver,
+which has to be post-loaded by the GDOS.
+</p>
+<p>Such drivers exist already for various graphics cards (e.g.
+<i><a href="#NVDI">NVDI</a>- ET4000</i> for graphics cards with the Tseng ET-4000 chip).
+</p>
+<p>When acquiring an alternative screen driver, one should ensure
+that the driver supports all relevant functions of the VDI, and
+also has no problems with GEM fonts.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#Minimum_20range_20of_20functions_20for_20screen_20drivers">Minimum range of functions</a>
+</p>
+<h4><a name="Minimum_20range_20of_20functions_20for_20screen_20drivers">7.2.4.2 Minimum range of functions for screen drivers</a></h4>
+<p>The following list describes the range of functions that a
+screen driver should offer as a minimum; this comes from a
+specification from the Atari <i>GEM Programmer's Guide.</i>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Opcode</td>
+  <td align="left" valign="top">Subcode</td>
+  <td align="left" valign="top">Function</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnwk">v_opnwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clswk">v_clswk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clrwk">v_clrwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_updwk">v_updwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_escape.html">Escape functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_chcells">vq_chcells</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_exit_cur">v_exit_cur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_enter_cur">v_enter_cur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curup">v_curup</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curdown">v_curdown</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curright">v_curright</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curleft">v_curleft</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curhome">v_curhome</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_eeos">v_eeos</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_eeol">v_eeol</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">11</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curaddress">v_curaddress</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">12</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_curtext">v_curtext</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">15</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_curaddress">vq_curaddress</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">18</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_dspcur">v_dspcur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">19</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_rmcur">v_rmcur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pline">v_pline</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pmarker">v_pmarker</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_gtext">v_gtext</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_fillarea">v_fillarea</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html">Output functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_bar">v_bar</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_arc">v_arc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pieslice">v_pieslice</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_circle">v_circle</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellipse">v_ellipse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellarc">v_ellarc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellpie">v_ellpie</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rbox">v_rbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rfbox">v_rfbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_justified">v_justified</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">12</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">14</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vs_color">vs_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">15</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_type">vsl_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">17</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_color">vsl_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">18</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_type">vsm_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">20</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_color">vsm_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">21</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_font">vst_font</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">22</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_color">vst_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">23</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_interior">vsf_interior</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">24</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_style">vsf_style</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">25</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_color">vsf_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">26</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_color">vq_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">28</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vrq_locator">vrq_locator</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">31</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vrq_string">vrq_string</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">32</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vswr_mode">vswr_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">33</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vsin_mode">vsin_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">35</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vql_attributes">vql_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">36</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqm_attributes">vqm_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">37</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqf_attributes">vqf_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">38</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_attributes">vqt_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">39</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">100</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnvwk">v_opnvwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">101</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clsvwk">v_clsvwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">102</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_extnd">vq_extnd</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">104</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">106</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_effects">vst_effects</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">107</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_point">vst_point</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">108</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">109</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_raster.html#vro_cpyfm">vro_cpyfm</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">110</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_raster.html#vr_trnfm">vr_trnfm</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">111</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vsc_form">vsc_form</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">112</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_udpat">vsf_udpat</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">113</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_udsty">vsl_udsty</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">114</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#vr_recfl">vr_recfl</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">115</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqin_mode">vqin_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">116</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_extent">vqt_extent</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">117</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_width">vqt_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">118</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vex_timv">vex_timv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">121</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_raster.html#vrt_cpyfm">vrt_cpyfm</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">122</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#v_show_c">v_show_c</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">123</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#v_hide_c">v_hide_c</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">124</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vq_mouse">vq_mouse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">125</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vex_butv">vex_butv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">126</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vex_motv">vex_motv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">127</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vex_curv">vex_curv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">128</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_input.html#vq_key_s">vq_key_s</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">129</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vs_clip">vs_clip</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">130</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_name">vqt_name</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">131</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a></td>
+</tr>
+</table>
+</div>
+
+<h4><a name="Bit-image_20drivers">7.2.4.3 Bit-image drivers</a></h4>
+<a name="GDOS_20Driver_2C_20Bit-Image"></a>
+<a name="Drivers_2C_20Bit-image"></a>
+<p>With the aid of a bit-image driver, all applications that can
+output via GDOS can print directly to a file.
+</p>
+<p>With <a href="#NVDI">NVDI</a> drivers, one can set the page format and the name of
+the bit-image file for <a href="vdi_control.html#v_opnwk">v_opnwk</a>. The filename can also be passed with
+the help of <a href="vdi_inquire.html#vq_extnd">vq_extnd</a>:
+</p>
+<pre><a href="vdi_bindings.html#contrl">contrl</a>[1]   = 4;
+<a href="vdi_bindings.html#ptsin">ptsin</a>[2]    = 1157;
+<a href="vdi_bindings.html#ptsin">ptsin</a>[3..4] = Pointer to the filename (BYTE *);
+<a href="vdi_bindings.html#ptsin">ptsin</a>[5..6] = Pointer to the error variable (int16_t *);
+<a href="vdi_bindings.html#ptsin">ptsin</a>[7]    = 0;
+</pre>
+<p><b>Note:</b> One can certainly argue about the sense or
+nonsense of this feature, since <a href="vdi_inquire.html#vq_extnd">vq_extnd</a> is actually a pure
+information function!
+</p>
+<p>See lso: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#The_20make-up_20of_20the_20ASSIGN.SYS_20file">ASSIGN.SYS file</a>
+</p>
+<h4><a name="Printer_20drivers">7.2.4.4 Printer drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Printer"></a>
+<a name="Drivers_2C_20Printer"></a>
+<p>The selection of printer drivers for GDOS is at present almost
+inexhaustible; the only bottleneck seems to be for some colour
+printers.
+</p>
+<p>When working with printer drivers one should note that not all
+drivers are completely identical functionally. So when using, say, a
+laser printer there are not only extra functions, but some of the
+existing ones may be partly extended as well.
+</p>
+<p>For <a href="#NVDI">NVDI</a> printer drivers one can set the page format and the
+GEMDOS output device for <a href="vdi_control.html#v_opnwk">v_opnwk</a>. For outputting (colour) images one
+should use the <a href="vdi_raster.html#vrt_cpyfm">vrt_cpyfm</a> or <a href="vdi_raster.html#vro_cpyfm">vro_cpyfm</a> functions. They can be addressed
+in NVDI for printer drivers (and IMG, etc.) exactly like the
+functions of the screen driver. The only difference is that rasters
+cannot be moved within a printer bitmap (source and destination <a href="vdi_structures.html#MFDB">MFDB</a>
+with fd_addr == 0L), as the printer bitmap generally consists of
+several slices that are handled sequentially. But this difference
+presents no restrictions, since copying within the device bitmap makes
+no sense for printer output!
+</p>
+<p>If necessary, the printer driver buffers the bitmap in the
+display list should insufficient memory be available; there is
+therefore no need to hold the bitmap in memory with <a href="vdi_control.html#v_updwk">v_updwk</a> until
+output.
+</p>
+<p>If the bitmap has to be scaled, the program should not itself
+enlarge the bitmap if possible, but leave this work to
+<a href="vdi_raster.html#vrt_cpyfm">vrt_cpyfm</a>/<a href="vdi_raster.html#vro_cpyfm">vro_cpyfm</a>. This improves the output quality, less data has
+to be buffered on the hard drive, and the printout is speeded up.
+Whether the driver is capable of scaling can be established with the
+<a href="vdi_inquire.html#vq_extnd">vq_extnd</a> call.
+</p>
+<p>When outputting colour images in 8-colour mode, rasters should
+be treated before dithering with a correction function. Recommended is
+a gamma correction with an exponent of 0.3 to 0.4, so that the image
+does not appear completely dull and oversaturated. In TrueColor mode
+the driver performs colour correction, black separation and other
+quality improvements itself - bitmaps here should be sent without
+previous correction and without rasterising to the driver.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#Bitmap_20format_20for_20printer_20drivers">Bitmap format for printer drivers</a> &nbsp;
+<a href="#Minimum_20range_20of_20functions_20for_20printer_20drivers">Minimum range of function</a>
+</p>
+<h4><a name="Minimum_20range_20of_20functions_20for_20printer_20drivers">7.2.4.5 Minimum range of functions for printer drivers</a></h4>
+<p>The following list describes the range of functions that a
+printer driver should offer as a minimum; this comes from a
+specification from the Atari <i>GEM Programmer's Guide.</i>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Opcode</td>
+  <td align="left" valign="top">Subcode</td>
+  <td align="left" valign="top">Function</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnwk">v_opnwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clswk">v_clswk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clrwk">v_clrwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_updwk">v_updwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_escape.html">Escape functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_chcells">vq_chcells</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">20</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_form_adv">v_form_adv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">21</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_output_window">v_output_window</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">22</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_clear_disp_list">v_clear_disp_list</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">23</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_bit_image">v_bit_image</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pline">v_pline</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pmarker">v_pmarker</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_gtext">v_gtext</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_fillarea">v_fillarea</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html">Output functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_bar">v_bar</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_arc">v_arc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pieslice">v_pieslice</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_circle">v_circle</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellipse">v_ellipse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellarc">v_ellarc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellpie">v_ellpie</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rbox">v_rbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rfbox">v_rfbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_justified">v_justified</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">12</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">15</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_type">vsl_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">17</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_color">vsl_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">18</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_type">vsm_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">20</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_color">vsm_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">21</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_font">vst_font</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">22</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_color">vst_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">23</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_interior">vsf_interior</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">24</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_style">vsf_style</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">25</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_color">vsf_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">26</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_color">vq_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">32</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vswr_mode">vswr_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">35</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vql_attributes">vql_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">36</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqm_attributes">vqm_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">37</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqf_attributes">vqf_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">38</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_attributes">vqt_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">39</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">102</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_extnd">vq_extnd</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">104</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">106</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_effects">vst_effects</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">107</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_point">vst_point</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">108</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">112</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_udpat">vsf_udpat</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">116</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_extent">vqt_extent</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">117</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_width">vqt_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">129</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vs_clip">vs_clip</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">130</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_name">vqt_name</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">131</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a></td>
+</tr>
+</table>
+</div>
+
+<h4><a name="Bitmap_20format_20for_20printer_20drivers">7.2.4.6 Bitmap format for printer drivers</a></h4>
+<a name="Printer_20drivers_2C_20Bitmap_20format"></a>
+<p>Just as for the screen, <a href="vdi_inquire.html#vq_scrninfo">vq_scrninfo</a> returns the format of the
+bitmap for printers as well. As a rule, there are only 3 different
+formats here:
+</p>
+<ul>
+<li> Monochrome bitmap, if the driver has 2 colours.
+</li>
+<li> Three sequential planes, if the driver has 8 colours.
+</li>
+<li> Packed pixels with 32 bits, if the driver runs in TrueColor
+mode.
+</li>
+</ul>
+
+<p>As formats (1) and (3) will be self-explanatory, we only need to
+deal with format (2) here: For 8 colours, a coloured bitmap consists
+of 3 complete planes lying sequentially in memory. So the
+device-specific raster format corrresponds to the standard format. The
+allocation of the VDI colour index to pixel values follows the
+standard arrangement that applies to all VDI drivers.
+</p>
+<p>See also: <a href="#Printer_20drivers">Printer drivers</a> &nbsp; <a href="#Raster_20formats">Raster formats</a> &nbsp; <a href="vdi_raster.html#vro_cpyfm">vro_cpyfm</a> &nbsp;
+<a href="vdi_raster.html#vrt_cpyfm">vrt_cpyfm</a>
+</p>
+<h4><a name="Fax_20drivers">7.2.4.7 Fax drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Fax"></a>
+<a name="Drivers_2C_20Fax"></a>
+<p>A fax driver is, in principle, nothing more than a simple
+printer driver. With the help of such a driver, all applications that
+output via GDOS can send faxes directly.
+</p>
+<p>For a fax driver one can specify neither a page format nor a
+GEMDOS device. One should also not attempt to alter the size of the
+bitmap.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#The_20make-up_20of_20the_20ASSIGN.SYS_20file">ASSIGN.SYS file</a>
+</p>
+<h4><a name="Tablet_20drivers">7.2.4.8 Tablet drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Tablet"></a>
+<a name="Drivers_2C_20Tablet"></a>
+<p>As no drivers for graphics tablets exist at present, it is not
+possible to give further information here.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#The_20make-up_20of_20the_20ASSIGN.SYS_20file">ASSIGN.SYS file</a>
+</p>
+<h4><a name="Camera_20drivers">7.2.4.9 Camera drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Camera"></a>
+<a name="Drivers_2C_20Camera"></a>
+<p>As no drivers for the <i>Polaroid palette</i> exist at present,
+it is not possible to give further information here.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#Minimum_20range_20of_20functions_20for_20camera_20drivers">Minimum range of functions</a>
+</p>
+<h4><a name="Minimum_20range_20of_20functions_20for_20camera_20drivers">7.2.4.10 Minimum range of functions for camera drivers</a></h4>
+<p>The following list describes the range of functions that a
+camera driver should offer as a minimum; this comes from a
+specification from <i>Digital Research</i> for PC-GEM 2.0:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Opcode</td>
+  <td align="left" valign="top">Subcode</td>
+  <td align="left" valign="top">Function</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnwk">v_opnwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clswk">v_clswk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clrwk">v_clrwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_updwk">v_updwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_escape.html">Escape functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_chcells">vq_chcells</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">23</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_bit_image">v_bit_image</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">91</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vsp_film">vsp_film</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">92</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vqp_filmname">vqp_filmname</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pline">v_pline</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html">Output functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_bar">v_bar</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_arc">v_arc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pieslice">v_pieslice</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_circle">v_circle</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellipse">v_ellipse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellarc">v_ellarc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellpie">v_ellpie</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rbox">v_rbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rfbox">v_rfbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_justified">v_justified</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">12</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">13</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_rotation">vst_rotation</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">14</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vs_color">vs_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">15</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_type">vsl_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">16</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_width">vsl_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">17</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_color">vsl_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">18</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_type">vsm_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">19</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_height">vsm_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">20</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_color">vsm_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">21</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_font">vst_font</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">22</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_color">vst_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">23</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_interior">vsf_interior</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">24</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_style">vsf_style</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">25</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_color">vsf_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">26</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_color">vq_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">32</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vswr_mode">vswr_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">35</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vql_attributes">vql_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">36</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqm_attributes">vqm_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">37</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqf_attributes">vqf_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">38</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_attributes">vqt_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">39</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">102</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_extnd">vq_extnd</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">104</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">106</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_effects">vst_effects</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">107</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_point">vst_point</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">108</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">112</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_udpat">vsf_udpat</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">113</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_udsty">vsl_udsty</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">116</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_extent">vqt_extent</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">117</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_width">vqt_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">119</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">120</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vst_unload_fonts">vst_unload_fonts</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">129</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vs_clip">vs_clip</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">130</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_name">vqt_name</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">131</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a></td>
+</tr>
+</table>
+</div>
+
+<h4><a name="Memory_20drivers">7.2.4.11 Memory drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Memory"></a>
+<a name="Drivers_2C_20Memory"></a>
+<p>A memory driver is, in principle, a screen driver for which the
+output does not end up in the screen memory, but in another part of
+the memory, and which can then be processed further there.
+</p>
+<p>The drivers available at present only support a monochrome
+bitmap, and have a logical resolution of 300dpi. Unfortunately the
+aspect ratio does not usually correspond to the current resolution of
+the screen, which has the result that circles, for instance, will be
+represented as ellipses.
+</p>
+<p>The resolution of the bitmap may be set with <a href="vdi_control.html#v_opnwk">v_opnwk</a>, by writing
+the value 1 in <a href="vdi_bindings.html#ptsin">ptsin</a>[0..1] for width-1 or height-1 as well as in
+<a href="vdi_bindings.html#contrl">contrl</a>[1]. After calling the function, the address of the bitmap is
+returned in contrl[0..1]. In addition it is also possible to set the
+bitmap size with <a href="vdi_inquire.html#vq_extnd">vq_extnd</a>. In that case it is also possible to pass a
+custom buffer; for this one sets contrl[3] to the value 3 and passes
+in <a href="vdi_bindings.html#intin">intin</a>[1..2] a pointer to the buffer.
+</p>
+<p>Due to greater flexibility, one should give preference to
+off-screen bitmaps over memory drivers.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#The_20make-up_20of_20the_20ASSIGN.SYS_20file">ASSIGN.SYS file</a>
+</p>
+<h4><a name="Metafile_20drivers">7.2.4.12 Metafile drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Metafile"></a>
+<a name="Drivers_2C_20Metafile"></a>
+<p>A metafile driver saves all calls directed to it in a GEM
+metafile which lies in the current directory of the application and
+has the name <i>GEMFILE.GEM</i> by default.
+</p>
+<p>If one wishes to alter the name, then directly after <a href="vdi_control.html#v_opnwk">v_opnwk</a>
+call the function <a href="vdi_escape.html#vm_filename">vm_filename</a>, which can be passed a complete filename
+with the desired path and name.
+</p>
+<p>So that other programs can depict a metafile sensibly, one
+should call the functions <a href="vdi_escape.html#v_meta_extents">v_meta_extents</a>, <a href="vdi_escape.html#vm_pagesize">vm_pagesize</a> and <a href="vdi_escape.html#vm_coords">vm_coords</a>.
+</p>
+<p>See also:
+<br><a href="vdi_escape.html#v_meta_extents">v_meta_extents</a> &nbsp; <a href="vdi_escape.html#vm_pagesize">vm_pagesize</a> &nbsp; <a href="vdi_escape.html#vm_coords">vm_coords</a> &nbsp; <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#Minimum_20range_20of_20functions_20for_20metafile_20drivers">Minimum range of functions</a>
+</p>
+<h4><a name="Minimum_20range_20of_20functions_20for_20metafile_20drivers">7.2.4.13 Minimum range of functions for metafile drivers</a></h4>
+<p>The following list describes the range of functions that a
+metafile driver should offer as a minimum; this comes from a
+specification from the Atari <i>GEM Programmer's Guide.</i>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Opcode</td>
+  <td align="left" valign="top">Subcode</td>
+  <td align="left" valign="top">Function</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnwk">v_opnwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clswk">v_clswk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clrwk">v_clrwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_updwk">v_updwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_escape.html">Escape functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_chcells">vq_chcells</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_exit_cur">v_exit_cur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_enter_cur">v_enter_cur</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">20</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_form_adv">v_form_adv</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">21</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_output_window">v_output_window</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">22</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_clear_disp_list">v_clear_disp_list</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">23</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_bit_image">v_bit_image</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">98</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_meta_extents">v_meta_extents</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">99</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#v_write_meta">v_write_meta</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">100</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vm_filename">vm_filename</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pline">v_pline</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pmarker">v_pmarker</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_gtext">v_gtext</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_fillarea">v_fillarea</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html">Output functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_bar">v_bar</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_arc">v_arc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pieslice">v_pieslice</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_circle">v_circle</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellipse">v_ellipse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellarc">v_ellarc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellpie">v_ellpie</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rbox">v_rbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rfbox">v_rfbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_justified">v_justified</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">12</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">13</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_rotation">vst_rotation</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">14</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vs_color">vs_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">15</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_type">vsl_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">16</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_width">vsl_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">17</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_color">vsl_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">18</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_type">vsm_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">19</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_height">vsm_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">20</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_color">vsm_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">21</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_font">vst_font</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">22</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_color">vst_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">23</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_interior">vsf_interior</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">24</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_style">vsf_style</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">25</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_color">vsf_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">26</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_color">vq_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">32</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vswr_mode">vswr_mode</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">35</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vql_attributes">vql_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">36</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqm_attributes">vqm_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">37</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqf_attributes">vqf_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">38</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_attributes">vqt_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">39</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">102</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_extnd">vq_extnd</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">103</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_contourfill">v_contourfill</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">104</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">106</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_effects">vst_effects</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">107</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_point">vst_point</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">108</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">112</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_udpat">vsf_udpat</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">113</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_udsty">vsl_udsty</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">114</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#vr_recfl">vr_recfl</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">117</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_width">vqt_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">129</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#vs_clip">vs_clip</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">131</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a></td>
+</tr>
+</table>
+</div>
+
+<h4><a name="Plotter_20drivers">7.2.4.14 Plotter drivers</a></h4>
+<a name="GDOS_20drivers_2C_20Plotter"></a>
+<a name="Drivers_2C_20Plotter"></a>
+<p>After a long drought, GDOS plotter drivers too have become
+available. So, for instance, the program <i>DATA</i> is supplied with
+an HPGL driver, and also the PD disk number 458 of the magazine
+<i>ST-Computer</i> you will find such a driver.
+</p>
+<p>More detailed information about plotter drivers is not available
+at present.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="#Minimum_20range_20of_20functions_20for_20plotter_20drivers">Minimum range of functions</a>
+</p>
+<h4><a name="Minimum_20range_20of_20functions_20for_20plotter_20drivers">7.2.4.15 Minimum range of functions for plotter drivers</a></h4>
+<p>The following list describes the range of functions that a
+plotter driver should offer as a minimum; this comes from a
+specification from the Atari <i>GEM Programmer's Guide.</i>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Opcode</td>
+  <td align="left" valign="top">Subcode</td>
+  <td align="left" valign="top">Function</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_opnwk">v_opnwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clswk">v_clswk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_clrwk">v_clrwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_control.html#v_updwk">v_updwk</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_escape.html">Escape functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_escape.html#vq_chcells">vq_chcells</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pline">v_pline</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pmarker">v_pmarker</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_gtext">v_gtext</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_fillarea">v_fillarea</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_output.html">Output functions</a>:</td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_bar">v_bar</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_arc">v_arc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_pieslice">v_pieslice</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_circle">v_circle</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellipse">v_ellipse</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellarc">v_ellarc</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_ellpie">v_ellpie</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rbox">v_rbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_rfbox">v_rfbox</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top"></td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top"><a href="vdi_output.html#v_justified">v_justified</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">12</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">15</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_type">vsl_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">17</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_color">vsl_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">18</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_type">vsm_type</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">20</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_color">vsm_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">21</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_font">vst_font</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">22</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_color">vst_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">23</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_interior">vsf_interior</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">24</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_style">vsf_style</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">25</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_color">vsf_color</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">35</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vql_attributes">vql_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">36</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqm_attributes">vqm_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">37</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqf_attributes">vqf_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">38</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_attributes">vqt_attributes</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">39</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">102</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vq_extnd">vq_extnd</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">104</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">107</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_point">vst_point</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">108</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">116</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_extent">vqt_extent</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">117</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_width">vqt_width</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">130</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_name">vqt_name</a></td>
+</tr>
+<tr>
+  <td align="center" valign="top">131</td>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top"><a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a></td>
+</tr>
+</table>
+</div>
+
+<h3><a name="VDI_20coordinate_20systems">7.2.5 VDI coordinate systems</a></h3>
+<p>The VDI distinguishes two different types of coordinate
+systems:
+</p>
+<ul>
+<a name="Raster_20coordinates"></a>
+<a name="Coordinates_2C_20RC"></a>
+<a name="RC_20coordinates"></a>
+<li><p> <b>Raster coordinates (RC):</b> When using this system one can
+use the exact coordinate system native to the output device. For a
+screen this corresponds to the available horizontal and vertical
+pixels. The point of origin lies in the <i>top</i> left corner.
+<br>The main advantage of raster coordinates is the absolutely exact
+positioning, which alone enables precise work with screen rasters
+(windows etc).
+<br>&nbsp;
+<a name="Normalized_20coordinates"></a>
+<a name="Coordinates_2C_20Normalized"></a>
+<a name="Coordinates_2C_20NDC"></a>
+<a name="NDC_20coordinates"></a>
+</p></li>
+<li><p> <b>Normalized coordinates (NDC):</b> This system always has a
+maximum resolution of 32768*32768 points. When a device driver is
+called the VDI will automatically recalculate to the device's
+physical coordinate system. The origin lies in the <i>bottom</i> left
+corner. For working with the NDC system a GDOS has to have been
+<a href="xbios_sound.html#installed">installed</a> - the screen driver in ROM can <i>not</i> handle NDC
+coordinates.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>The following illustration makes the difference between RC and
+NDC coordinates particularly clear:
+</p>
+<p><img src="bilder/gif/koords_en.gif" alt="" title="" border="0" width="560" height="343"></p>
+<p><b>Note:</b> In practice the NDC system is seldom used.
+Programs that have to offer exact dimensioning (desktop publishing,
+scientific graphics) must in any case use internally their own - finer
+- coordinate representation.
+</p>
+<p>The use of the NDC system would mean that the coordinates would
+have to be converted twice (once from the internal representation in
+NDC coordinates, then to raster coordinates), which would lead to
+superfluous speed losses and rounding errors.
+</p>
+<p>See also: <a href="#VDI_20fundamentals">VDI fundamentals</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="Metafile_20format">7.2.6 Metafile format</a></h3>
+<p>Metafiles are nothing more than saved VDI commands, which are
+used in object-oriented programs such as <i>GEMDRAW</i> or
+<i>Kandinsky.</i> The main purpose here is a standardized data
+exchange between different GEM applications. A metafile starts with
+a header that describes the charactersitics of the graphic contained
+in it, and is constructed as follows:
+</p>
+<a name="META_HEADER"></a>
+<pre>typedef struct
+{
+   int16_t id;           /* Always has the value 0xffff          */
+   int16_t headlen;      /* Length of the header                 */
+   int16_t version;      /* Version number                       */
+   int16_t transform;    /* NDC or RC coordinate system          */
+   int16_t extents[4];   /* Max. size of the graphic (optional)  */
+   int16_t pagesize[2];  /* Page size in 1/10 mm     (optional)  */
+   int16_t coords[4];    /* Coordinate system        (optional)  */
+   int16_t bit_image;    /* Bit-image present (1) or not (0)     */
+   int16_t reserved[9];  /* Reserved                             */
+} META_HEADER;
+</pre>
+<p><b>Note:</b> The component <i>bit_image</i> of the header
+specifies whether a bit- image file is present in the metafile file.
+Actually no metafile contains a pixel graphic; if, for instance, one
+draws in <i>GEMPAINT</i> an image named 'test', then the program
+creates besides a file 'test.img' another file 'test.gem'; the latter
+contains just one VDI command (<a href="vdi_escape.html#v_bit_image">v_bit_image</a>), and the component
+<i>bit_image</i> then has the value 1.
+</p>
+<p>When reading a metafile, no fixed length is used; instead, an
+appli- cation first reads the two first words (and with that the
+length) of the header. Subsequently the rest of the header is read.
+This is followed by any number of entries in the form:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Word</td>
+  <td align="left" valign="top">Contents</td>
+  <td align="left" valign="top">Assignment</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#contrl">contrl</a>[0]</td>
+  <td align="left" valign="top">VDI command number</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#contrl">contrl</a>[1]</td>
+  <td align="left" valign="top">Number of values in ptsin</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#contrl">contrl</a>[3]</td>
+  <td align="left" valign="top">Number of values in intin</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#contrl">contrl</a>[5]</td>
+  <td align="left" valign="top">Subfunction number</td>
+</tr>
+<tr>
+  <td align="center" valign="top">from 4</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#ptsin">ptsin</a>[]</td>
+  <td align="left" valign="top">Allocation of the <a href="vdi_bindings.html#ptsin">ptsin</a> field</td>
+</tr>
+<tr>
+  <td align="center" valign="top">then</td>
+  <td align="left" valign="top"><a href="vdi_bindings.html#intin">intin</a>[]</td>
+  <td align="left" valign="top">Allocation of the <a href="vdi_bindings.html#intin">intin</a> field</td>
+</tr>
+</table>
+</div>
+
+<p>The end of a metafile is indicated by the value -1 (for
+contrl[0]).
+</p>
+<p><b>Important:</b> Metafiles are always stored in the <i>Intel
+format</i> (low-high). Hence to handle metafiles on a 680X0 system,
+the lower- and higher- valued byte have to be swapped for each word as
+it is read.
+</p>
+<a name="Paper_20formats"></a>
+<a name="Page_20formats"></a>
+<a name="Formats_2C_20Paper"></a>
+<a name="Formats_2C_20Page"></a>
+<a name="Format_2C_20Letter"></a>
+<a name="Letter_20format"></a>
+<a name="Format_2C_20Legal"></a>
+<a name="Legal_20format"></a>
+<a name="Format_2C_20Half"></a>
+<a name="Half_20format"></a>
+<a name="Format_2C_20Ledger"></a>
+<a name="Ledger_20format"></a>
+<a name="DIN_20A3"></a>
+<a name="A3_20format"></a>
+<a name="DIN_20A4"></a>
+<a name="A4_20format"></a>
+<a name="DIN_20A5"></a>
+<a name="A5_20format"></a>
+<a name="DIN_20B5"></a>
+<a name="B5_20format"></a>
+<a name="Format_2C_20Wide"></a>
+<a name="Wide_20format"></a>
+<p>With the component <i>pagesize</i> one can obtain data about
+page-width and height. If one wants to create metafiles, then these
+two values should be assigned standard sizes. The following standard
+sizes are supported by most GEM programs:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Label</td>
+  <td align="left" valign="top">Inch</td>
+  <td align="left" valign="top">Centimeter</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Letter</td>
+  <td align="left" valign="top">8,50 * 11,00</td>
+  <td align="left" valign="top">21,59 * 27,94</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Legal</td>
+  <td align="left" valign="top">8,50 * 14,00</td>
+  <td align="left" valign="top">21,59 * 35,56</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Half</td>
+  <td align="left" valign="top">8,50 *  5,50</td>
+  <td align="left" valign="top">21,59 * 13,97</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Ledger</td>
+  <td align="left" valign="top">11,00 * 17,00</td>
+  <td align="left" valign="top">27,94 * 43,18</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DIN A3</td>
+  <td align="left" valign="top">11,69 * 16,54</td>
+  <td align="left" valign="top">29,70 * 42,00</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DIN A4</td>
+  <td align="left" valign="top">8,07 * 11,69</td>
+  <td align="left" valign="top">21,00 * 29,70</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DIN A5</td>
+  <td align="left" valign="top">5,85 *  8,27</td>
+  <td align="left" valign="top">14,80 * 21,00</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DIN B5</td>
+  <td align="left" valign="top">7,17 *  9,84</td>
+  <td align="left" valign="top">18,20 * 25,00</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Wide</td>
+  <td align="left" valign="top">14,00 * 11,00</td>
+  <td align="left" valign="top">35,56 * 27,94</td>
+</tr>
+</table>
+</div>
+
+<p>The values for <i>pagesize[0]</i> (width) and
+<i>pagesize[1]</i> (height) result from the centimeter values
+multiplied by 100.
+</p>
+<p>See also:
+<br><a href="#Metafile_20drivers">Metafile drivers</a> &nbsp; <a href="vdi_escape.html#Metafile_20functions">Metafile functions</a> &nbsp; <a href="#Metafile_20sub-opcodes">Sub-opcodes</a> &nbsp; <a href="#The_20XIMG_20format_20for_20pixel_20images">XIMG format</a> &nbsp; <a href="#The_20OUT_20file_20format">OUT file format</a>
+</p>
+<h4><a name="Metafile_20sub-opcodes">7.2.6.1 Metafile sub-opcodes</a></h4>
+<p>The <a href="gem_about.html">GEM</a> metafile format can be extended by user-defined
+sub-opcodes to almost any extent without giving rise to
+incompatibilities. One should merely pay attention to the following
+two points:
+</p>
+<ul>
+<li><p> As the numbers from 0 to 100 are reserved for the operating
+system, only sub-opcodes numbers from 101 on are available.
+<br>&nbsp;
+</p></li>
+<li><p> Each developer should make sure that any opcode planned by him
+is not already in use elsewhere, to ensure frictionless data
+exchanges.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>The following list contains a description of the opcodes defined
+and known at present:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Code Name</td>
+<td valign="top"> Description
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+<a name="GEM_START_GROUP"></a>
+<a name="vm_start_group"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;10 GEM_START_GROUP</td>
+<td valign="top"> Defines the start of a group, i.e. of a set of associated
+objects
+<a name="GEM_END_GROUP"></a>
+<a name="vm_end_group"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;11 GEM_END_GROUP</td>
+<td valign="top"> Marks the end of a group, i.e. of a set of associated objects
+<a name="GEM_BEZ_QUAL"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;32 GEM_BEZ_QUAL</td>
+<td valign="top"> See <a href="vdi_attribute.html#v_bez_qual">v_bez_qual</a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;34 ???</td>
+<td valign="top"> No information available at present
+<a name="GEM_NO_LINE_STYLE"></a>
+<a name="vm_no_outline"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;49 GEM_NO_LINE_STYLE</td>
+<td valign="top"> Any kind of line style should be switched off
+<a name="GEM_START_SHADOW"></a>
+<a name="vm_start_shadow"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;50 GEM_START_SHADOW</td>
+<td valign="top"> Says that the following VDI commands up to GEM_END_SHADOW
+should be used to draw a shadow for the first object after
+GEM_END_SHADOW
+<a name="GEM_END_SHADOW"></a>
+<a name="vm_end_shadow"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;51 GEM_END_SHADOW</td>
+<td valign="top"> Marks the end of a sequence of commands that are used for
+drawing an object shadow, and are introduced by GEM_START_SHADOW
+<a name="GEM_START_FILL"></a>
+<a name="vm_start_fill"></a>
+<a name="GEM_END_FILL"></a>
+<a name="vm_end_fill"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;80 GEM_START_FILL</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;81 GEM_END_FILL</td>
+<td valign="top"> All commands lying between these two codes are used to draw a
+filled area with or without a surround
+<br><b>Example:</b> Stepwise drawing of a polygon area with shadow
+and surround:
+<ul>
+<li> GEM_START_FILL
+</li>
+<li> GEM_START_SHADOW
+</li>
+<li> Set fill attribute for shadow
+</li>
+<li> <a href="vdi_output.html#v_fillarea">v_fillarea</a> displaced by dx and dy
+</li>
+<li> GEM_END_SHADOW
+</li>
+<li> Set fill attribute for the area
+</li>
+<li> <a href="vdi_output.html#v_fillarea">v_fillarea</a>
+</li>
+<li> Set line attribute for the surround
+</li>
+<li> <a href="vdi_output.html#v_pline">v_pline</a>
+</li>
+<li> GEM_END_FILL
+</li>
+</ul>
+
+<a name="VM_VER_APP"></a>
+<a name="vm_ver_app"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;101 VM_VER_APP</td>
+<td valign="top"> Gives information about the name and the version number of an
+application that created a metafile; the following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0]</td>
+<td valign="top"> = VM_VER_APP
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1]</td>
+<td valign="top"> = Version number
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2]</td>
+<td valign="top"> = Name of the application that
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> created the metafile
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[n]</td>
+<td valign="top"> &nbsp;
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The name of the application should always be given
+<i>without</i> the suffix, as this can be different on various GEM
+systems
+<a name="GEM_COLOR"></a>
+<a name="vm_color"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;102 GEM_COLOR</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;103 ???</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;107 ???</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;111 ???</td>
+<td valign="top"> No information available at present
+<a name="GEM_START_BGIF"></a>
+<a name="vm_start_bgif"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;170 GEM_START_BGIF</td>
+<td valign="top"> Starts text output with a BGI vector font; the following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_START_BGIF
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Non-proportional (value 0)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2] =</td>
+<td valign="top"> Name, e.g. EURO
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> ==&gt; intin[2] = 69
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[10]</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[11] =</td>
+<td valign="top"> Text with terminating NULL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[0] =</td>
+<td valign="top"> X-coordinate,
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[1] =</td>
+<td valign="top"> Y-coordinate of the text in 1/10 mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[2] =</td>
+<td valign="top"> Character width
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[3] =</td>
+<td valign="top"> Character height in 1/10 mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[4] =</td>
+<td valign="top"> <a href="proto_xfsl.html#Rotation">Rotation</a> in 1/10 degree
+
+</td></tr>
+</table>
+
+<br>Up to GEM_END_BGIF follow the <a href="vdi_output.html#v_pline">v_pline</a> commands that are required
+for depicting the text if a program cannot interpret these
+sub-opcodes.
+<a name="GEM_END_BGIF"></a>
+<a name="vm_end_bgif"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;171 GEM_END_BGIF</td>
+<td valign="top"> Marks the end of text output with a BGI vector font
+<a name="GEM_WIND"></a>
+<a name="vm_wind"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;190 GEM_WIND</td>
+<td valign="top"> Sets the position, zoom step and format of a window; the
+following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_WIND
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> X-position
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2] =</td>
+<td valign="top"> Y-position
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[3] =</td>
+<td valign="top"> Width
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[4] =</td>
+<td valign="top"> Height of the window in pixels
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[5] =</td>
+<td valign="top"> X-position,
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[6] =</td>
+<td valign="top"> Y-position of the slider (pixel)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[7] =</td>
+<td valign="top"> Zoom step in percent
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[8] =</td>
+<td valign="top"> Format (0 = portrait, 1 = landsc.)
+
+</td></tr>
+</table>
+
+<a name="GEM_GRID"></a>
+<a name="vm_grid"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;191 GEM_GRID</td>
+<td valign="top"> Permits permanent saving of raster settings of a window; the
+following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_GRID
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Raster inactive (for value 0)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2] =</td>
+<td valign="top"> Don't draw raster (for 0)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[3] =</td>
+<td valign="top"> Raster width in 1/10 mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[4] =</td>
+<td valign="top"> Raster height in 1/10 mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[5] =</td>
+<td valign="top"> Guideline spacing (horizontal)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[6] =</td>
+<td valign="top"> Guideline spacing (vertical) in 1/10mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[7] =</td>
+<td valign="top"> Guidelines (0) or dots (1)
+
+</td></tr>
+</table>
+
+<a name="GEM_ALIGN"></a>
+<a name="vm_align"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;192 GEM_ALIGN</td>
+<td valign="top"> Describes the reference object; the following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_ALIGN
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Don't draw reference object (0)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2] =</td>
+<td valign="top"> X-coordinate,
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[3] =</td>
+<td valign="top"> Y-coordinate of the reference object in 1/10 mm
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[4] =</td>
+<td valign="top"> Width
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[5] =</td>
+<td valign="top"> Height of the object in 1/10 mm
+
+</td></tr>
+</table>
+
+<a name="GEM_START_GREY"></a>
+<a name="vm_start_grey"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;193 GEM_START_GREY</td>
+<td valign="top"> Specifies a grey-tone as fill area; shades in the region of
+0..255 (white..black) are possible for this. The following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_START_GREY
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Grey-tone (0..255)
+
+</td></tr>
+</table>
+
+<br>The following commands up to GEM_END_GREY set a user-defined
+pattern with the corresponding grey-tone; they only serve for programs
+that can't cope with these opcodes.
+<a name="GEM_END_GREY"></a>
+<a name="vm_end_grey"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;194 GEM_END_GREY</td>
+<td valign="top"> Marks the end of a user-defined grey-tone pattern
+<a name="GEM_START_BEZIER"></a>
+<a name="vm_start_bezier"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;195 GEM_START_BEZIER</td>
+<td valign="top"> Defines a Bezier stroke; the following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_START_BEZIER
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Recursion depth (&lt; 5)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2] =</td>
+<td valign="top"> <b>Attributes of the anchor points</b> as bit-vector; set bits
+here mean:
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> Bit-0 = Corner
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> Bit-1 = Displaced
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> Bit-2 = Visible
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> Bit-3 = Line instead of Bezier
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">:</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[2n+1]</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[0] =</td>
+<td valign="top"> Coordinates of the n Bezier stroke (each consists of 4 points)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptsin[4n-1]</td>
+<td valign="top"> &nbsp;
+
+</td></tr>
+</table>
+
+<br>Up to GEM_END_BEZIER then follow <a href="vdi_output.html#v_pline">v_pline</a> calls which draw an
+equivalent polygon strokes for programs that do not understand the
+sub-opcode
+<a name="GEM_END_BEZIER"></a>
+<a name="vm_end_bezier"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;196 GEM_END_BEZIER</td>
+<td valign="top"> Marks the end of a Bezier stroke
+<a name="GEM_START_JOIN"></a>
+<a name="vm_start_join"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;197 GEM_START_JOIN</td>
+<td valign="top"> Permits the saving of more coordinates than the metafile driver
+allows. If an application finds this sub-opcode, then the ptsin
+fields of the following VDI blocks up to GEM_END_JOIN will be
+collected up in a large field. The following apply:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">intin[0] =</td>
+<td valign="top"> GEM_START_JOIN
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">intin[1] =</td>
+<td valign="top"> Number of coordinate pairs
+
+</td></tr>
+</table>
+
+<a name="GEM_END_JOIN"></a>
+<a name="vm_end_join"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;198 GEM_END_JOIN</td>
+<td valign="top"> Marks the end of a section defined by GEM_START_JOIN.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;199 ???</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;201 ???</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;203 ???</td>
+<td valign="top"> No information available at present
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;230 ???</td>
+<td valign="top"> No information available at present
+
+</td></tr>
+</table>
+
+<p><b>Note:</b> When reading a metafile it is imperative that a
+program should ignore unknown statements.
+</p>
+<p>See also: <a href="vdi_escape.html#v_write_meta">v_write_meta</a> &nbsp; <a href="#Binding_20of_20a_20metafile_20sub-opcode">Sample binding</a> &nbsp; <a href="#Analysis_20of_20a_20metafile">Analysis of a metafile</a>
+</p>
+<h4><a name="Analysis_20of_20a_20metafile">7.2.6.2 Analysis of a metafile</a></h4>
+<p>For understanding of the metafile format it can be useful to
+view the contents of a metafile as plain text. The tools required for
+this can be found in many mailboxes of the Mausnet.
+</p>
+<p><img src="bilder/gif/metafile.gif" alt="" title="" border="0" width="345" height="322"></p>
+<p><b>Example:</b> The illustration above shows a window of the
+graphics software <i>GEM-Look</i>, containing a vector graphic in
+metafile format.
+</p>
+<p>The software permits, amongst other things, to have the contents
+of a GEM metafile displayed in plain text, and even to work through
+this in any desired steps.
+</p>
+<p>In addition one can specify via a dialog exactly which
+information is to be paid regard to for the analysis, or to be output,
+and in what format the output should appear.
+</p>
+<p><img src="bilder/gif/meta_3.gif" alt="" title="" border="0" width="364" height="425"></p>
+<p>The plain text information will be displayed in a window, and
+can be (fully or partly) transferred to other programs via the
+clipboard.
+</p>
+<p>Due to the fact that all commands of the output window can also
+be executed individually and in any desired order, it is very easy to
+reproduce the commands saved in a metafile.
+</p>
+<p>See also:
+<br><a href="#Sample_20analysis_20of_20a_20metafile">Sample analysis</a> &nbsp; <a href="#Metafile_20format">Metafile format</a> &nbsp; <a href="#Metafile_20sub-opcodes">Metafile sub-opcodes</a>
+</p>
+<h4><a name="Binding_20of_20a_20metafile_20sub-opcode">7.2.6.3 Binding of a metafile sub-opcode</a></h4>
+<pre>/* The following code fragment permits the storing in a metafile the
+   name and the version number of the application that has created a
+   metafile... */
+
+GLOBAL void <a href="VDI_fundamentals.html#vm_ver_app">vm_ver_app</a>( int16_t <a href="vdi_bindings.html#vdi">vdi</a>_handle, int16_t version,
+       uint8_t *app_name)
+{
+    int16_t i;
+
+    <a href="vdi_bindings.html#contrl">contrl</a>[0] = 5;
+    <a href="vdi_bindings.html#contrl">contrl</a>[1] = 0;
+    <a href="vdi_bindings.html#contrl">contrl</a>[3] = 2 + strlen (app_name);
+    <a href="vdi_bindings.html#contrl">contrl</a>[5] = 99;                      /* <a href="vdi_escape.html#v_write_meta">v_write_meta</a> */
+    <a href="vdi_bindings.html#contrl">contrl</a>[6] = <a href="vdi_bindings.html#vdi">vdi</a>_handle;
+
+    <a href="vdi_bindings.html#intin">intin</a>[0] = <a href="VDI_fundamentals.html#VM_VER_APP">VM_VER_APP</a>;
+    <a href="vdi_bindings.html#intin">intin</a>[1] = version;
+
+    i = 2;
+    while ((<a href="vdi_bindings.html#intin">intin</a> [i++] = (int16_t) (uint8_t)*app_name++) != 0)
+                ;
+
+    <a href="vdi_bindings.html#vdi">vdi</a> ();
+} /* <a href="VDI_fundamentals.html#vm_ver_app">vm_ver_app</a> */
+</pre>
+<p>See also: <a href="vdi_bindings.html">VDI bindings</a> &nbsp; <a href="#Metafile_20format">Metafile format</a>
+</p>
+<h4><a name="Sample_20analysis_20of_20a_20metafile">7.2.6.4 Sample analysis of a metafile</a></h4>
+<pre>// This analysis was created by <a href="gem_about.html">GEM</a>-Look, the program for the
+// depiction and analysis of graphics in XIMG and metafile formats;
+// (c) 1994-1995 by Rolf Kotzian.
+//
+// It is not permitted to distribute parts of this analysis without
+// this header
+
+
+Analysis of: E:\C\GEISS\EXAMPLES\<a href="gem_about.html">GEM</a>_IMG\BEZIER.<a href="gem_about.html">GEM</a>
+
+Metafile ID            :     -1
+Length of the header   :     24
+<a href="gem_about.html">GEM</a>-Version            :    3.10
+NDC/RC Flag            :     RC
+Ausmaß minimales x     :  -2720    (Minimum dimension X)
+Ausmaß minimales y     :  -2136    (Minimum dimension Y)
+Ausmaß maximales x     :   2112    (Maximum dimension X)
+Ausmaß maximales y     :   1592    (Maximum dimension Y)
+Seiten-Breite          :  14.80 cm (Page width)
+Seiten-Höhe            :  21.00 cm (Page height)
+Koord.System linkes x  :  -3495    (Coordinate system left X)
+Koord.System linkes y  :   4960    (Coordinate system left Y)
+Koord.System rechtes x :   3495    (Coordinate system right X)
+Koord.System rechtes y :  -4960    (Coordinate system right Y)
+Bit-Image vorhanden?   :   nein    (Bit-image present?  :  No)
+
+
+***** Befehl #1 *****              (Command #1)
+
+<a href="vdi_attribute.html#vswr_mode">vswr_mode</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, mode)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 32
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #2 *****              (Command #2)
+
+<a href="vdi_attribute.html#vsl_type">vsl_type</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, style)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 15
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #3 *****              (Command #3)
+
+<a href="vdi_attribute.html#vsl_width">vsl_width</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, width)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 16
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#ptsin">ptsin</a>[0] = x = 1
+<a href="vdi_bindings.html#ptsin">ptsin</a>[1] = y = 1
+
+***** Befehl #4 *****              (Command #4)
+
+<a href="vdi_attribute.html#vsl_color">vsl_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 17
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #5 *****              (Command #5)
+
+<a href="vdi_attribute.html#vsl_ends">vsl_ends</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, beg_style, end_style)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 108
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+<a href="vdi_bindings.html#intin">intin</a>[1] = 0
+
+***** Befehl #6 *****              (Command #6)
+
+<a href="vdi_attribute.html#vsm_type">vsm_type</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, symbol)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 18
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #7 *****              (Command #7)
+
+<a href="vdi_attribute.html#vsm_height">vsm_height</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, height)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 19
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#ptsin">ptsin</a>[0] = x = 1
+<a href="vdi_bindings.html#ptsin">ptsin</a>[1] = y = 1
+
+***** Befehl #8 *****              (Command #8)
+
+<a href="vdi_attribute.html#vsm_color">vsm_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 20
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #9 *****              (Command #9)
+
+<a href="vdi_attribute.html#vst_rotation">vst_rotation</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, angle)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 13
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+
+***** Befehl #10 *****              (Command #10)
+
+<a href="vdi_attribute.html#vst_font">vst_font</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, font)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 21
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #11 *****              (Command #11)
+
+<a href="vdi_attribute.html#vst_color">vst_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 22
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #12 *****              (Command #12)
+
+<a href="vdi_attribute.html#vst_alignment">vst_alignment</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, hor_in, vert_in, hor_out, vert_out)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 39
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+<a href="vdi_bindings.html#intin">intin</a>[1] = 0
+
+***** Befehl #13 *****              (Command #13)
+
+<a href="vdi_attribute.html#vst_effects">vst_effects</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, effect)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 106
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+
+***** Befehl #14 *****              (Command #14)
+
+<a href="vdi_attribute.html#vst_point">vst_point</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, point, char_width, char_height, cell_width,
+           cell_height)
+
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 107
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 12
+
+***** Befehl #15 *****              (Command #15)
+
+<a href="vdi_attribute.html#vsf_interior">vsf_interior</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, style)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 23
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #16 *****              (Command #16)
+
+<a href="vdi_attribute.html#vsf_style">vsf_style</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 24
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #17 *****              (Command #17)
+
+<a href="vdi_attribute.html#vsf_color">vsf_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 25
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #18 *****              (Command #18)
+
+<a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, per_vis)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 104
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+
+***** Befehl #19 *****              (Command #19)
+
+<a href="vdi_escape.html#v_write_meta">v_write_meta</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, num_ints, ints, num_pts, pts)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 5
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 7
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 99
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 34
+<a href="vdi_bindings.html#intin">intin</a>[1] = 3
+<a href="vdi_bindings.html#intin">intin</a>[2] = 1
+<a href="vdi_bindings.html#intin">intin</a>[3] = 42
+<a href="vdi_bindings.html#intin">intin</a>[4] = 42
+<a href="vdi_bindings.html#intin">intin</a>[5] = 42
+<a href="vdi_bindings.html#intin">intin</a>[6] = 42
+
+***** Befehl #20 *****              (Command #20)
+
+<a href="vdi_control.html#v_bez_on">v_bez_on</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 11
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+***** Befehl #21 *****              (Command #21)
+
+<a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, per_vis)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 104
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+<a href="vdi_bindings.html#intin">intin</a>[1] = 1
+
+***** Befehl #22 *****              (Command #22)
+
+<a href="vdi_attribute.html#vsf_color">vsf_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 25
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 2
+
+***** Befehl #23 *****              (Command #23)
+
+<a href="vdi_attribute.html#vsf_interior">vsf_interior</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, style)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 23
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+
+***** Befehl #24 *****              (Command #24)
+
+<a href="vdi_attribute.html#vsf_style">vsf_style</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 24
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+
+***** Befehl #25 *****              (Command #25)
+
+<a href="vdi_attribute.html#vsl_color">vsl_color</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, index)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 17
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 3
+
+***** Befehl #26 *****              (Command #26)
+
+<a href="vdi_attribute.html#vsl_width">vsl_width</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, width)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 16
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 1
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#ptsin">ptsin</a>[0] = x = 1
+<a href="vdi_bindings.html#ptsin">ptsin</a>[1] = y = 0
+
+***** Befehl #27 *****              (Command #27)
+
+<a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, per_vis)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 104
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 1
+<a href="vdi_bindings.html#intin">intin</a>[1] = 1
+
+***** Befehl #28 *****              (Command #28)
+
+<a href="vdi_attribute.html#vsl_ends">vsl_ends</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, beg_style, end_style)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 108
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+<a href="vdi_bindings.html#intin">intin</a>[1] = 0
+
+***** Befehl #29 *****              (Command #29)
+
+<a href="vdi_output.html#v_bez">v_bez</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, count, xyarr, bezarr, minmax, npts, nmove)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 6
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 17
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 9
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#ptsin">ptsin</a>[0] = x = -2125
+<a href="vdi_bindings.html#ptsin">ptsin</a>[1] = y = 100
+<a href="vdi_bindings.html#ptsin">ptsin</a>[2] = x = -708
+<a href="vdi_bindings.html#ptsin">ptsin</a>[3] = y = -441
+<a href="vdi_bindings.html#ptsin">ptsin</a>[4] = x = 237
+<a href="vdi_bindings.html#ptsin">ptsin</a>[5] = y = 640
+<a href="vdi_bindings.html#ptsin">ptsin</a>[6] = x = 1654
+<a href="vdi_bindings.html#ptsin">ptsin</a>[7] = y = -981
+<a href="vdi_bindings.html#ptsin">ptsin</a>[8] = x = 237
+<a href="vdi_bindings.html#ptsin">ptsin</a>[9] = y = 640
+<a href="vdi_bindings.html#ptsin">ptsin</a>[10] = x = -1180
+<a href="vdi_bindings.html#ptsin">ptsin</a>[11] = y = 2261
+<a href="vdi_bindings.html#ptsin">ptsin</a>[12] = x = 2127
+<a href="vdi_bindings.html#ptsin">ptsin</a>[13] = y = 1723
+<a href="vdi_bindings.html#ptsin">ptsin</a>[14] = x = 2127
+<a href="vdi_bindings.html#ptsin">ptsin</a>[15] = y = 100
+<a href="vdi_bindings.html#ptsin">ptsin</a>[16] = x = 2127
+<a href="vdi_bindings.html#ptsin">ptsin</a>[17] = y = -1522
+<a href="vdi_bindings.html#ptsin">ptsin</a>[18] = x = -708
+<a href="vdi_bindings.html#ptsin">ptsin</a>[19] = y = 100
+<a href="vdi_bindings.html#ptsin">ptsin</a>[20] = x = 237
+<a href="vdi_bindings.html#ptsin">ptsin</a>[21] = y = -981
+<a href="vdi_bindings.html#ptsin">ptsin</a>[22] = x = 1182
+<a href="vdi_bindings.html#ptsin">ptsin</a>[23] = y = -2062
+<a href="vdi_bindings.html#ptsin">ptsin</a>[24] = x = -2124
+<a href="vdi_bindings.html#ptsin">ptsin</a>[25] = y = -2601
+<a href="vdi_bindings.html#ptsin">ptsin</a>[26] = x = -2597
+<a href="vdi_bindings.html#ptsin">ptsin</a>[27] = y = -1522
+<a href="vdi_bindings.html#ptsin">ptsin</a>[28] = x = -3070
+<a href="vdi_bindings.html#ptsin">ptsin</a>[29] = y = -441
+<a href="vdi_bindings.html#ptsin">ptsin</a>[30] = x = -1653
+<a href="vdi_bindings.html#ptsin">ptsin</a>[31] = y = -440
+<a href="vdi_bindings.html#ptsin">ptsin</a>[32] = x = -2125
+<a href="vdi_bindings.html#ptsin">ptsin</a>[33] = y = 100
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 2344
+<a href="vdi_bindings.html#intin">intin</a>[1] = 4112
+<a href="vdi_bindings.html#intin">intin</a>[2] = 4105
+<a href="vdi_bindings.html#intin">intin</a>[3] = 2320
+<a href="vdi_bindings.html#intin">intin</a>[4] = 4112
+<a href="vdi_bindings.html#intin">intin</a>[5] = 4105
+<a href="vdi_bindings.html#intin">intin</a>[6] = 2320
+<a href="vdi_bindings.html#intin">intin</a>[7] = 4112
+<a href="vdi_bindings.html#intin">intin</a>[8] = 12
+
+***** Befehl #30 *****              (Command #30)
+
+<a href="vdi_control.html#v_bez_off">v_bez_off</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 11
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+***** Befehl #31 *****              (Command #31)
+
+<a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a> (<a href="vdi_bindings.html#vdi">vdi</a>_handle, per_vis)
+<a href="vdi_bindings.html#contrl">contrl</a>[0] = 104
+<a href="vdi_bindings.html#contrl">contrl</a>[1] = 0
+<a href="vdi_bindings.html#contrl">contrl</a>[3] = 2
+<a href="vdi_bindings.html#contrl">contrl</a>[5] = 13
+
+<a href="vdi_bindings.html#intin">intin</a>[0] = 0
+<a href="vdi_bindings.html#intin">intin</a>[1] = 0
+
+
+// Ende der Analyse
+// <a href="gem_about.html">GEM</a>-Look, (c) 1994/95 by Rolf Kotzian
+</pre>
+<p>See also: <a href="#Analysis_20of_20a_20metafile">Analysis of a metafile</a> &nbsp; <a href="vdi_bindings.html">VDI bindings</a>
+</p>
+<h4><a name="Metafile_20version">7.2.6.5 Metafile version</a></h4>
+<p>The version number depends on which <a href="gem_about.html">GEM</a> system was used to
+produce the metafile; it is described by the formula:
+</p>
+<p><i>100 * main version number + sub-version number.</i>
+</p>
+<p><b>Example:</b> The value 301 represents Version 3.1
+</p>
+<h3><a name="NVDI">7.2.7 NVDI</a></h3>
+<a name="NVDIMac"></a>
+<p>NVDI (<b>N</b>ew<b><a href="vdi_main.html">VDI</a></b>) is a VDI developed by the
+<i>Behne brothers</i> which completely replaces the original from
+Atari. Apart from its very high speed, it offers the possibility of
+using vector fonts in the Speedo, and TrueType format (with a special
+module also Type-1). NVDI is also available in a special <i>Macintosh
+version</i> (NVDIMac), and enables any program that can output via
+GDOS (in connection with <a href="magic.html">MagiC</a> Mac) to also output on Apple printers
+and in networks.
+</p>
+<p>To establish which NVDI version one is using and what function
+range it offers one has to look for the NVDI cookie 'NVDI', which
+contains the version number in BCD format (e.g. 0x0410 for Version
+4.10).
+</p>
+<a name="EdDI"></a>
+<p>If you want to use <a href="#Off-screen_20bitmaps">off-screen bitmaps</a>, you should look for the <a href="bios_cookiejar.html#Cookie_2C_20EdDI">'EdDI' cookie</a> (e.g.
+with <a href="#is_EdDI">is_EdDI</a>). The LONGword following the ID is the address of a
+dispatcher, which is called up with the function number in register
+d0.w. Pure-C conventions apply for the call, i.e. the registers
+d0-d2/a0-a1 and the stack are used for parameter passing, d0-d2/a0-a1
+can be altered. The function 0 returns the EdDI version number in BCD
+format (e.g. 0x0110 for Version 1.10).
+</p>
+<p>See also:
+<br><a href="#Off-screen_20bitmaps">Off-screen bitmaps</a> &nbsp; <a href="vdi_control.html#v_opnbm">v_opnbm</a> &nbsp; <a href="vdi_control.html#v_clsbm">v_clsbm</a> &nbsp; <a href="#VDI_20fundamentals">VDI fundamentals</a> &nbsp;
+<a href="vdi_inquire.html#vq_scrninfo">vq_scrninfo</a> &nbsp; <a href="gem_about.html">GEM</a>
+</p>
+<h4><a name="is_EdDI">7.2.7.1 is_EdDI</a></h4>
+<p><b>Sample code for Pure-C:</b>
+</p>
+<pre>GLOBAL BOOLEAN is_EdDI ()
+{
+    int16_t (*func)(int16_t);
+
+    if (get_cookie (&quot;<a href="VDI_fundamentals.html#EdDI">EdDI</a>&quot;, (LONG *) &amp;func))
+        return ((*func)(0));
+
+    else return (FALSE);
+
+} /* is_EdDI */
+</pre>
+<h3><a name="Off-screen_20bitmaps">7.2.8 Off-screen bitmaps</a></h3>
+<p>It can be very useful for many applications if drawing functions
+can be applied not directly to the screen, but to an invisible screen.
+Such a &quot;hidden&quot; screen is called an off-screen bitmap.
+</p>
+<p>For creation of off-screen bitmaps one uses the function
+<a href="vdi_control.html#v_opnbm">v_opnbm</a>. This can have either the size of a bitmap specified that it
+is to allocate, or it can be passed a bitmap. The bitmap is managed in
+the same format as that of the screen, which makes fast copying
+between the two possible. The function <a href="vdi_control.html#v_clsbm">v_clsbm</a> closes a bitmap created
+with <a href="vdi_control.html#v_opnbm">v_opnbm</a>, and frees its memory if necessary.
+</p>
+<p>Raster operations between screen and off-screen bitmap should be
+made basically in a device-specific format. If the destination of a
+raster operation is specified as an off-screen bitmap with its <a href="vdi_structures.html#MFDB">MFDB</a>
+and if the handle belonging to this bitmap is used, then during
+blitting the bitmap will be clipped according to the coordinates set
+via <a href="vdi_control.html#vs_clip">vs_clip</a> on this workstation. So for copying a raster from the
+screen to an off-screen bitmap one should use the <a href="vdi_bindings.html#vdi">vdi</a>_handle of this
+bitmap.
+</p>
+<p>If, on the other hand, the bitmap is the source and the screen
+the destination, then one should use the handle of the screen
+workstation, as in that case the raster will be clipped according to
+the screen coordinates. If one uses the handle of a bitmap returned by
+<a href="vdi_control.html#v_opnbm">v_opnbm</a>, and <i>fd_addr</i> of a <a href="vdi_structures.html#MFDB">MFDB</a> contains 0, then the data of
+the bitmap will be used instead.
+</p>
+<p>See also: <a href="#NVDI">NVDI</a> &nbsp; <a href="#About_20the_20GDOS">GDOS</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="The_20OUT_20file_20format">7.2.9 The OUT file format</a></h3>
+<a name="OUTPUT_20format"></a>
+<p>The OUT format was developed by <i>Digital Research</i> and,
+like the <a href="#The_20XIMG_20format_20for_20pixel_20images">XIMG</a> or <a href="#Metafile_20format">metafile format</a> permits data exchange between any <a href="gem_about.html">GEM</a>
+applications. More exactly, it permits control characters for text
+attributes to be written to a file with the suffix &quot;.out&quot;,
+which are then recognized and taken into account by the output driver.
+</p>
+<p>This makes the OUT format particularly well suited for
+exchanging text files with attributes between various applications.
+OUT files are nothing more than ASCII files, which use the control code
+DC2 (ASCII value 18) for switching between text attributes; this is
+followed by a letter that describes the switching on or off of the
+attribute:
+</p>
+<p><b>Following control characters are defined:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Code</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 0</td>
+  <td align="left" valign="top">Bold on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 1</td>
+  <td align="left" valign="top">Bold off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 2</td>
+  <td align="left" valign="top">Italic on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 3</td>
+  <td align="left" valign="top">Italic off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 4</td>
+  <td align="left" valign="top">Underlined on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 5</td>
+  <td align="left" valign="top">Underlined off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 6</td>
+  <td align="left" valign="top">Superscript on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 7</td>
+  <td align="left" valign="top">Superscript off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 8</td>
+  <td align="left" valign="top">Subscript on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 9</td>
+  <td align="left" valign="top">Subscript off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 A</td>
+  <td align="left" valign="top">NLQ mode on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 B</td>
+  <td align="left" valign="top">NLQ mode off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 C</td>
+  <td align="left" valign="top">Expanded on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 D</td>
+  <td align="left" valign="top">Expanded off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 E</td>
+  <td align="left" valign="top">Light on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 F</td>
+  <td align="left" valign="top">Light off</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 G</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 V</td>
+  <td align="left" valign="top">Reserved, is ignored</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 W</td>
+  <td align="left" valign="top">Pica font (10 cpi)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 X</td>
+  <td align="left" valign="top">Elite font (12 cpi)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 Y</td>
+  <td align="left" valign="top">Condensed print</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DC2 Z</td>
+  <td align="left" valign="top">Proportional print</td>
+</tr>
+</table>
+</div>
+
+<p><b>Note:</b> Naturally one can also incorporate graphics in the
+output file; the syntax in this case runs:
+</p>
+<pre>(ESC)(ESC)<a href="gem_about.html">GEM</a>,x,y,w,h,C:\pathname\filename.img
+</pre>
+<p>The parameters x,y,w and h here are to be specified in character
+units relative to the current cursor position.
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="vdi_escape.html#v_alpha_text">v_alpha_text</a> &nbsp; <a href="#The_20XIMG_20format_20for_20pixel_20images">XIMG format</a> &nbsp; <a href="#Metafile_20format">Metafile format</a>
+</p>
+<h3><a name="Raster_20formats">7.2.10 Raster formats</a></h3>
+<p>For working with screens the <a href="vdi_raster.html">raster functions</a> play a special role; they
+are responsible for everything that has to do with movement or changes
+of screen clipping. Example: Scrolling within a document or the
+depiction of icons.
+</p>
+<p>Naturally, the raster functions can only perform their tasks
+efficien- tly if the same format is used for internal depiction as
+that used in video memory; otherwise the data would have to be
+converted for each individual call of a raster function. However, the
+internal structure of the video memory depends on the hardware of the
+graphics system in use - quite apart from the fact that the video
+memory need not necessarily be directly accessible to the processor.
+</p>
+<p>The number of bits per pixel required depends, naturally, on the
+number of colours that can be displayed simultaneously; for monochrome
+pixels 1 bit is sufficient, for 16 colours one already needs 4 bits.
+Depending on the video hardware in use, these bits can, of course, be
+arranged in completely different ways; one should not be surprised,
+therefore, that various formats are available for this purpose:
+</p>
+<a name="Image_20format_2C_20Pixel-oriented"></a>
+<a name="Pixel-oriented_20image_20format"></a>
+<p><b>Pixel-oriented format:</b> In this case, all bits belonging
+to a pixel are coded together in one or more bytes. In a system using
+16 colours, therefore, two pixels would be saved together in one byte
+in each case; for 256 colours, each pixel occupies one byte.
+</p>
+<a name="Image_20format_2C_20Plane-oriented"></a>
+<a name="Plane-oriented_20image_20format"></a>
+<p><b>Plane-oriented format:</b> In this case one treats the video
+memory as a collections of monochrome (i.e. single-coloured) image
+planes. To obtain the colour of a pixel, one combines the relevant
+bits from the individual planes to a colour value. This says nothing,
+of course, about how the individual planes are arranged in the video
+memory. A simple solution (common in the PC domain) is to store one
+plane after the other (sequentially) in video memory.
+</p>
+<p>So as not to be restricted to a given, hardware-dependent
+format, the VDI differentiates between the <i>device-depedent
+format</i> (which depends on the hardware), and the so-called
+<i>standard format.</i> The standard format is the same for all
+VDI systems, and can therefore be used any time one wants to import
+raster graphics from outside into the system (example: depiction of
+icons in a resource file). For conversion between the two fomats one
+can make use of the <a href="vdi_raster.html#vr_trnfm">vr_trnfm</a> function.
+</p>
+<a name="Standard_20format_20of_20the_20VDI"></a>
+<a name="VDI_2C_20Standard_20format_20of_20the"></a>
+<a name="Device-independent_20format"></a>
+<a name="Format_2C_20Device-independent"></a>
+<p><b>The VDI standard format is defined as follows:</b>
+</p>
+<ul>
+<li><p> The format is plane-oriented. Each image plane occupies a
+contiguous block of memory, and has the same number of image points.
+<br>&nbsp;
+</p></li>
+<li><p> The highest bit of a 16-bit WORD represents the furthest left
+pixel
+<br>&nbsp;
+</p></li>
+<li><p> Sequential words in video memory form the individual lines. The
+first WORD of such a line lies at the left image border; the first
+line of the plane codes the topmost pixel line.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>The following figure shows an example for the device-independent
+standard format with 3 colour planes, where each small square
+represents a pixel:
+</p>
+<p><img src="bilder/gif/raster_en.gif" alt="" title="" border="0" width="576" height="365"></p>
+<p><b>Warning:</b> In the monochrome graphics modes of the ST and
+TT030, the device-dependent format <i>happens to (!)</i> correspond
+to the device- independent one (i.e. the standard format). This does
+not mean, of course, that one may therefore dispense with the use of
+the <a href="vdi_raster.html#vr_trnfm">vr_trnfm</a> function. As one normally has no information about the
+device-specific format, this reason alone forbids any direct
+manipulation of the video memory.
+</p>
+<a name="Colour_20lookup_20table_20_28CLUT_29"></a>
+<a name="Lookup_20table"></a>
+<a name="CLUT"></a>
+<p>As a matter of principle, the <a href="About_the_VDI.html">VDI</a> works in a colour register
+oriented (colour lookup table or CLUT) manner. It starts off by
+assuming that there is a maximum number of colours that may be
+displayed simulta- neously, and that one can assign to these colour
+registers a palette of certain (relatively freely selectable) tints.
+As this feature is by no means self-evident, it can be inquired for
+via <a href="vdi_inquire.html#vq_extnd">vq_extnd</a>. There follow two examples for graphics modes
+<i>without</i> a colour lookup table:
+</p>
+<ul>
+<li><p> The TT030 graphic mode 'TT-high': there are only two colour
+registers and two tints (black and white), which may also not be
+swapped.
+<br>&nbsp;
+</p></li>
+<li><p> With True-Color graphics cards such as the Crazy-Dots-II, an
+'arbitrary' number of colours may be displayed simultaneously.
+Normally 24 bits per pixel are used for this, so that some 16 million
+colours are available. With such a large number of colours the idea of
+colour registers is out of the question: The number of tints
+principally displayable simultaneously far exceeds the typical number
+of image points.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<a name="Pixel_20value_20and_20VDI_20colour_20index"></a>
+<a name="VDI_20colour_20index_20and_20pixel_20value"></a>
+<a name="Colour_20index_20and_20pixel_20value_2C_20VDI"></a>
+<p><b>There remains the question how the pixel values in video
+memory are related to the VDI colour indices. Answer:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(a)</td>
+<td valign="top"> On historical grounds, the start point is that for a pixel in
+the VDI colour 0 (normally white) all bits are cleared, and for
+black image points (VDI colour 1) all bits are set. This is logical
+if only for the reason that by completely inverting all bits of the
+pixel display, white and black are swapped.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(b)</td>
+<td valign="top"> With the aid of the <a href="vdi_raster.html#v_get_pixel">v_get_pixel</a> function one can obtain both
+the VDI colour index as well as the pixel value for a given image
+coordinate.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>In addition, <i>Atari</i> and <i>Digital Research</i> have
+documented the standard assignments for 4, 8 and 16 colour
+palettes:</b>
+</p>
+<ul>
+<li><p> For four colours, the following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Pixel value</td>
+  <td align="left" valign="top">Colour index</td>
+  <td align="left" valign="top">Colour</td>
+  <td align="left" valign="top">Name</td>
+</tr>
+<tr>
+  <td align="center" valign="top">00</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">White</td>
+  <td align="left" valign="top">WHITE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">01</td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">Red</td>
+  <td align="left" valign="top">RED</td>
+</tr>
+<tr>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">Green</td>
+  <td align="left" valign="top">GREEN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Black</td>
+  <td align="left" valign="top">BLACK</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+<li><p> For eight colours the following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Pixel value</td>
+  <td align="left" valign="top">Colour index</td>
+  <td align="left" valign="top">Colour</td>
+  <td align="left" valign="top">Name</td>
+</tr>
+<tr>
+  <td align="center" valign="top">000</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">White</td>
+  <td align="left" valign="top">WHITE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">001</td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">Red</td>
+  <td align="left" valign="top">RED</td>
+</tr>
+<tr>
+  <td align="center" valign="top">010</td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">Green</td>
+  <td align="left" valign="top">GREEN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">011</td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top">Yellow</td>
+  <td align="left" valign="top">YELLOW</td>
+</tr>
+<tr>
+  <td align="center" valign="top">100</td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">Blue</td>
+  <td align="left" valign="top">BLUE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">101</td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top">Magenta</td>
+  <td align="left" valign="top">MAGENTA</td>
+</tr>
+<tr>
+  <td align="center" valign="top">110</td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top">Cyan</td>
+  <td align="left" valign="top">CYAN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">111</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Black</td>
+  <td align="left" valign="top">BLACK</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+<li><p> For 16 colours, the following apply:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Pixel value</td>
+  <td align="left" valign="top">Colour index</td>
+  <td align="left" valign="top">Colour</td>
+  <td align="left" valign="top">Name</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0000</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">White</td>
+  <td align="left" valign="top">WHITE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0001</td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">Red</td>
+  <td align="left" valign="top">RED</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0010</td>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">Green</td>
+  <td align="left" valign="top">GREEN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0011</td>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top">Yellow</td>
+  <td align="left" valign="top">YELLOW</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0100</td>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">Blue</td>
+  <td align="left" valign="top">BLUE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0101</td>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top">Magenta</td>
+  <td align="left" valign="top">MAGENTA</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0110</td>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top">Cyan</td>
+  <td align="left" valign="top">CYAN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0111</td>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top">Light grey</td>
+  <td align="left" valign="top">LWHITE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1000</td>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top">Dark grey</td>
+  <td align="left" valign="top">LBLACK</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1001</td>
+  <td align="left" valign="top">10</td>
+  <td align="left" valign="top">Light red</td>
+  <td align="left" valign="top">LRED</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1010</td>
+  <td align="left" valign="top">11</td>
+  <td align="left" valign="top">Light green</td>
+  <td align="left" valign="top">LGREEN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1011</td>
+  <td align="left" valign="top">14</td>
+  <td align="left" valign="top">Light Yellow</td>
+  <td align="left" valign="top">LYELLOW</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1100</td>
+  <td align="left" valign="top">12</td>
+  <td align="left" valign="top">Light Blue</td>
+  <td align="left" valign="top">LBLUE</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1101</td>
+  <td align="left" valign="top">15</td>
+  <td align="left" valign="top">Light Magenta</td>
+  <td align="left" valign="top">LMAGENTA</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1110</td>
+  <td align="left" valign="top">13</td>
+  <td align="left" valign="top">Light Cyan</td>
+  <td align="left" valign="top">LCYAN</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1111</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Black</td>
+  <td align="left" valign="top">BLACK</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+</ul>
+
+<p><b>Note:</b> For other colour depths, <i>no</i> unambiguous
+assignments exist. As there is also no general formula for a
+conversion, one has to resort to the function <a href="vdi_raster.html#v_get_pixel">v_get_pixel</a> when
+necessary.
+</p>
+<p>See also: <a href="aes_fundamentals.html#AES_20object_20colours">AES object colours</a> &nbsp; <a href="vdi_raster.html">Raster functions</a> &nbsp; <a href="vdi_inquire.html#vq_scrninfo">vq_scrninfo</a>
+</p>
+<h3><a name="SpeedoGDOS">7.2.11 SpeedoGDOS</a></h3>
+<a name="GDOS_2C_20Speedo-"></a>
+<p>SpeedoGDOS belongs to the youngest generation of the GDOS
+family, and is currently available in Version 5.0c. Besides the
+features of a 'normal' GDOS, it excels with the following
+possibilities:
+</p>
+<ul>
+<li> Support for vector fonts of the formats:
+<ul>
+<li> Speedo
+</li>
+<li> TrueType
+</li>
+<li> Type1
+</li>
+</ul>
+
+</li>
+<li> Possibilities for <a href="VDI_fundamentals.html#Track_20kerning">track</a>/<a href="VDI_fundamentals.html#Pair_20kerning">pair kerning</a>.
+</li>
+</ul>
+
+<p>To check whether SpeedoGDOS is <a href="xbios_sound.html#installed">installed</a> it is best to inquire
+via the <a href="bios_cookiejar.html">cookie jar</a>. The program installs a cookie with the ID 'FSMC' in
+the boot phase.
+</p>
+<p>See also: <a href="#About_20the_20GDOS">GDOS</a> &nbsp; <a href="#NVDI">NVDI</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h3><a name="Details_20about_20vector_20fonts">7.2.12 Details about vector fonts</a></h3>
+<p>When using the programs <a href="#NVDI">NVDI</a> or <a href="#SpeedoGDOS">SpeedoGDOS</a>, high quality vector
+fonts (in the formats Speedo, TrueType, and Type-1) are available also
+under <a href="gem_about.html">GEM</a>. As in supporting these font technologies some subtleties
+have to be taken note of, the following points are dealt with in this
+section:
+</p>
+<ul>
+<li> <a href="#Monospaced_20fonts">Monospaced fonts</a>
+</li>
+<li> <a href="#Font_20index_20and_20ID">Font index and ID</a>
+</li>
+<li> <a href="#Size_20of_20vector_20fonts">Size of vector fonts</a>
+</li>
+<li> <a href="#Height_20and_20width_20of_20vector_20fonts">Height and width of vector fonts</a>
+</li>
+<li> <a href="#Kerning">Kerning</a>
+</li>
+<li> <a href="#Positioning_20of_20vector_20text">Positioning of vector text</a>
+</li>
+<li> <a href="#Vector_20or_20bitmap_20font_3F">Differentiating vector and bitmap fonts</a>
+</li>
+</ul>
+
+<p>See also: <a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a> &nbsp; <a href="vdi_control.html#vst_unload_fonts">vst_unload_fonts</a>
+</p>
+<h4><a name="Monospaced_20fonts">7.2.12.1 Monospaced fonts</a></h4>
+<p>Some applications can only run with monospaced fonts or they can
+run faster when they recognize that a font is monospaced. The
+appropriate proceeding is the following one:
+</p>
+<ul>
+<li><p> If an extended version of <a href="vdi_inquire.html#vqt_name">vqt_name</a> exists (35 entries in
+<a href="vdi_bindings.html#intout">intout</a>), you should check the monospace-bit in intout[34].
+<br>&nbsp;
+</p></li>
+<li><p> If <a href="vdi_inquire.html#vqt_name">vqt_name</a> only offers the information that it refers to a
+vector font (34 entries in <a href="vdi_bindings.html#intout">intout</a>, intout[33] != 0), then for vector
+fonts one should call <a href="vdi_inquire.html#vqt_fontheader">vqt_fontheader</a>, and check bit 1 of FH_CLFGS.
+<br>&nbsp;
+</p></li>
+<li><p> If the font is not a vector font and the first two points above
+do not apply, the character widths have to be obtained individu- ally
+with <a href="vdi_inquire.html#vqt_width">vqt_width</a> and one should compare the character widths.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>If you use <a href="vdi_output.html#v_ftext">v_ftext</a> to display characters of a monospaced vector
+font, the width of the string can not be calculated with the return
+values of <a href="vdi_inquire.html#vqt_width">vqt_width</a> or <a href="vdi_attribute.html#vst_height">vst_height</a> but width <a href="vdi_inquire.html#vqt_advance32">vqt_advance32</a>, because
+characters of a vector font can have fractional widths - even if the
+font is monospaced - and <a href="vdi_output.html#v_ftext">v_ftext</a> uses these fractional width to place
+the characters.
+</p>
+<p>See also: <a href="#Details_20about_20vector_20fonts">Vector fonts</a> &nbsp; <a href="About_the_VDI.html">About the VDI</a> &nbsp; <a href="#About_20the_20GDOS">GDOS</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a> &nbsp;
+<a href="vdi_structures.html#fix31">fix31</a>
+</p>
+<h4><a name="Font_20index_20and_20ID">7.2.12.2 Font index and ID</a></h4>
+<a name="Font_2C_20Index_20of_20a"></a>
+<p><b>The index of a font</b> is a number between 1 and the number
+of available fonts. Depending on the number of <a href="xbios_sound.html#installed">installed</a> fonts, a font
+like &quot;Swiss 721&quot; has a different index (supposing that Swiss
+721 is one of the <a href="xbios_sound.html#installed">installed</a> fonts).
+</p>
+<a name="Font_2C_20Font-ID_20of_20a"></a>
+<p><b>The Font ID</b> of a font is a fix number which is (with a
+few exceptions) not depending on the number of <a href="xbios_sound.html#installed">installed</a> fonts or the
+used system - e.g. the id of &quot;Swiss 721&quot; is always 5003.
+</p>
+<p>Of course there are exceptions from this rule: Some TrueType and
+Type 1 fonts do not have an id. In this case will try zo creates a
+unique id based on the name. This id can depend on the ids of the
+other <a href="xbios_sound.html#installed">installed</a> fonts and therefore the same font might have another
+id on another computer with other fonts. To avoid problems like
+selecting the wrong font and to facilitate replacing not existing
+fonts, you should save the id <i>and the name</i> of a font.
+</p>
+<p>See also: <a href="#Details_20about_20vector_20fonts">Vector fonts</a> &nbsp; <a href="About_the_VDI.html">About the VDI</a> &nbsp; <a href="#About_20the_20GDOS">GDOS</a> &nbsp; <a href="guidelines_styles.html">Style guidelines</a>
+</p>
+<h4><a name="Size_20of_20vector_20fonts">7.2.12.3 Size of vector fonts</a></h4>
+<p>Most screen drivers return a resolution of &#x2248; 91 dpi,
+which also determines the size of vector fonts on-screen. As not every
+screen works at 91 dpi, programs when displaying text should
+<i>not</i> assume this fixed value, but instead respect the output of
+<a href="vdi_control.html#v_opnwk">v_opnwk</a>, <a href="vdi_control.html#v_opnvwk">v_opnvwk</a>, <a href="vdi_inquire.html#vq_extnd">vq_extnd</a> and <a href="vdi_control.html#v_opnbm">v_opnbm</a>.
+</p>
+<p>Otherwise, if the pixel sizes differ, display errors may occur.
+For printouts the more exact pixel sizes of <a href="vdi_inquire.html#vq_extnd">vq_extnd</a> should be used,
+so.
+</p>
+<h4><a name="Height_20and_20width_20of_20vector_20fonts">7.2.12.4 Height and width of vector fonts</a></h4>
+<p>You can set the height and the width of a vector font with the
+functions <a href="vdi_attribute.html#vst_arbpt32">vst_arbpt32</a> and <a href="vdi_attribute.html#vst_setsize32">vst_setsize32</a> in 1/65536 pt (1 pt &#x2248;
+1/72&quot; &#x2248; 353&#xb5;m).
+</p>
+<p>If the specified width or height is negative, the text is
+mirrored on the corresponding axis.
+</p>
+<h4><a name="Kerning">7.2.12.5 Kerning</a></h4>
+<p>Kerning is a process for manipulating spacing between characters
+to achieve a more consistent (better) appearance of the typeface. One
+can differentiate between two variants of kerning:
+</p>
+<a name="Track_20kerning"></a>
+<a name="Kerning_2C_20Track"></a>
+<ul>
+<li><p> <b>Track kerning:</b> This method uses a <i>constant
+offset</i> for all characters of a font. Fonts that support track
+kerning normally include several offsets so that one can choose
+normal, tight or very tight kerning, for instance.
+<br>&nbsp;
+<a name="Pair_20kerning"></a>
+<a name="Kerning_2C_20Pair"></a>
+</p></li>
+<li><p> <b>Pair kerning:</b> This is based on the realisation that
+<i>one</i> offset makes little sense for all characters of a font,
+because in many cases one can obtain an appreciably better appearance
+of the set type if the spacing for <i>each pair of characters can be
+set individually.</i> Fonts that support pair kernning therefore
+contain a table in which the optimum offset for each combination of
+(more exactly: for the most important) character pairs are noted.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Note:</b> Both track as well as pair kerning are switched
+off after the opening of a workstation. So to achieve better text
+depiction one should switch on pair kerning with <a href="vdi_attribute.html#vst_kern">vst_kern</a>.
+</p>
+<p>See also: <a href="vdi_attribute.html#vst_kern">vst_kern</a> &nbsp; <a href="vdi_inquire.html#vqt_pairkern">vqt_pairkern</a> &nbsp; <a href="vdi_inquire.html#vqt_trackkern">vqt_trackkern</a> &nbsp;
+<a href="vdi_attribute.html#vst_track_offset">vst_track_offset</a>
+</p>
+<h4><a name="Positioning_20of_20vector_20text">7.2.12.6 Positioning of vector text</a></h4>
+<p>When outputting vector fonts the VDI works internally with
+resolution steps of 1/65536 of a pixel, to ensure precise character
+positioning irrespective of the output device used and its actual
+resolution.
+</p>
+<p>To output the bitmaps for individual characters, these
+fixed-point values are converted to pixels by adding 32768 and then
+dividing by 65536.
+</p>
+<ul>
+<li><p> When track kerning is switched on, an offset that is obtained
+from <a href="vdi_inquire.html#vqt_trackkern">vqt_trackkern</a> is added to each character position.
+<br>&nbsp;
+</p></li>
+<li><p> When pair kerning is switched on, an offset that is returned by
+<a href="vdi_inquire.html#vqt_pairkern">vqt_pairkern</a> is added to each character position.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Warning:</b> Pair/track kerning and the positioning in
+1/65536 of a pixel will only be applied if <a href="vdi_output.html#v_ftext">v_ftext</a> is called! With
+<a href="vdi_output.html#v_gtext">v_gtext</a>, vector fonts behave mostly like bitmap fonts and neither
+kerning nor exact positio- ning are used.
+</p>
+<p>See also: <a href="VDI_fundamentals.html#Pair_20kerning">Pair kerning</a> &nbsp; <a href="VDI_fundamentals.html#Track_20kerning">Track kerning</a> &nbsp; <a href="vdi_structures.html#fix31">fix31 format</a>
+</p>
+<h4><a name="Vector_20or_20bitmap_20font_3F">7.2.12.7 Vector or bitmap font?</a></h4>
+<p>If the set font is a vector font, then <a href="vdi_inquire.html#vqt_name">vqt_name</a> returns 34
+entries in <a href="vdi_bindings.html#intout">intout</a> and <a href="vdi_bindings.html#intout">intout</a>[33] contains a non-zero value.
+</p>
+<p>If, instead, intout[33] is zero (or if only 33 entries are
+returned), then we are dealing with a bitmap font.
+</p>
+<h3><a name="VDI_20workstations">7.2.13 VDI workstations</a></h3>
+<p>A <i>workstation</i> is a general term for an input or output
+device; this can be a screen, a printer, a plotter, a camera, a
+graphics tablet or one of many other devices.
+</p>
+<p>In order to be able to access a given VDI device one must
+therefore first <i>open</i> the workstation. Depending on the state
+of affairs, one will have returned either an error-message or the
+workstation ID (handle) of the relevant device.
+</p>
+<p>A set of <i>features</i> belong to each workstation, which are
+unalterable and give information about the capabilities of the device.
+These include, amongst others, device type, coordinate system and
+colour capability. Besides the data returned on opening the
+workstation, an extended inquiry function permits obtaining further
+data about a device. This allows applications to take optimum
+advantage of the device capabilities (for instance by adapting their
+screen structure to the number of displayable screen pixels).
+</p>
+<p>In addition to the unalterable features of a workstation, there
+also some that can be changed; one speaks here about
+<i>attributes</i>, which describe the <i>current state</i> of the
+device. A good example is the line colour, which only has to be set
+once (and not perhaps for each individual call of drawing functions).
+The current attributes are saved by the VDI in internal structures
+separately for each individual workstation; thus an application can
+easily set different line colours for the screen and the printer, for
+instance. The VDI recognizes from the workstation handle which output
+device is meant.
+</p>
+<p><b>The following table shows some attributes with their
+standard values:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Attribute</td>
+  <td align="left" valign="top">Standard value</td>
+  <td align="left" valign="top">Set by</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Baseline angle</td>
+  <td align="left" valign="top">0 degrees</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_rotation">vst_rotation</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#Clipping">Clipping</a></td>
+  <td align="left" valign="top">Switched off</td>
+  <td align="left" valign="top"><a href="vdi_control.html#vs_clip">vs_clip</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Cursor</td>
+  <td align="left" valign="top">Hidden</td>
+  <td align="left" valign="top"><a href="vdi_input.html#v_show_c">v_show_c</a>, <a href="vdi_input.html#v_hide_c">v_hide_c</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Input mode</td>
+  <td align="left" valign="top">Request</td>
+  <td align="left" valign="top"><a href="vdi_input.html#vsin_mode">vsin_mode</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Fill pattern, free</td>
+  <td align="left" valign="top">Manufacturer's logo</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_udpat">vsf_udpat</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#Kerning">Kerning</a></td>
+  <td align="left" valign="top">Switched off</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_kern">vst_kern</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Line ends</td>
+  <td align="left" valign="top">Rectangular</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_ends">vsl_ends</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Line pattern, free</td>
+  <td align="left" valign="top">Continuous</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsl_udsty">vsl_udsty</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Line width</td>
+  <td align="left" valign="top">Nominal line width</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_width">vst_width</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Marker size</td>
+  <td align="left" valign="top">Nominal marker size</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsm_height">vsm_height</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="vdi_attribute.html#Write_20mode">Writing mode</a></td>
+  <td align="left" valign="top">Replace</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vswr_mode">vswr_mode</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="proto_xfsl.html#Text_20alignment">Text alignment</a></td>
+  <td align="left" valign="top">Left, baseline</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_alignment">vst_alignment</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Text effect</td>
+  <td align="left" valign="top">Normal</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_effects">vst_effects</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Perimeter</td>
+  <td align="left" valign="top">Visible</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vsf_perimeter">vsf_perimeter</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Character height</td>
+  <td align="left" valign="top">Nominal character height</td>
+  <td align="left" valign="top"><a href="vdi_attribute.html#vst_height">vst_height</a></td>
+</tr>
+</table>
+</div>
+
+<a name="Workstations_2C_20Virtual"></a>
+<a name="Virtual_20workstations"></a>
+<p>An exception applies to the screen, since this must be available
+for several processes simultaneously. For this reason the VDI
+offers so-called virtual workstations, which can only ever be used
+together with an already opened <i>physical</i> screen workstation.
+Each virtual workstation naturally has its own set of attributes, so
+that the programs do not get in the way of each other during screen
+output.
+</p>
+<p><b>Warning:</b> Not all features of the physical screen
+workstation are transferable to the virtual workstations. Keyboard and
+mouse still can be used only by one program at a time. The input
+functions may therefore be used <i>only</i> by the program that
+opened the physical screen workstation (this is normally the AES).
+</p>
+<p>A final note: As the management of workstation attributes
+requires memory space, which is requested dynamically as a rule, one
+should never assume that the opening of a workstation will work!
+</p>
+<p>See also: <a href="#GDOS_20drivers">GDOS drivers</a> &nbsp; <a href="vdi_control.html#v_opnwk">v_opnwk</a> &nbsp; <a href="vdi_control.html#v_opnvwk">v_opnvwk</a> &nbsp; <a href="vdi_inquire.html#vq_extnd">vq_extnd</a>
+</p>
+<h3><a name="The_20XIMG_20format_20for_20pixel_20images">7.2.14 The XIMG format for pixel images</a></h3>
+<p>Pixel images are stored under <a href="gem_about.html">GEM</a> in a standard format, the
+so-called bit-image (or XIMG) format. Graphics of this type are stored
+in a compressed form, and always have the suffix <i>'.IMG'.</i>
+</p>
+<p>The main advantage of this format is based on the fact that it
+is a GEM <i>standard format</i>, which is supported by almost all
+applications. A bit-image file consists of a header as well as pure
+pixel data. This header is defined in C-notation as follows:
+</p>
+<a name="XIMG-Header"></a>
+<pre>typedef struct
+{
+  int16_t version;         /* Version number (usually 1)                 */
+  int16_t headlen;         /* Length of header in 16-bit WORDs           */
+  int16_t planes;          /* Number of colour planes in graphic         */
+  int16_t pat_run;         /* Pattern length in bytes                    */
+  int16_t pix_width;       /* Pixel width of source device in 1/1000 mm  */
+  int16_t pix_height;      /* Pixel height of source device in 1/1000 mm */
+  int16_t sl_width;        /* Width of a scanline in pixels              */
+  int16_t sl_height;       /* Height of a scanline in pixels             */
+  int8_t  x_id[4];         /* Must be 'XIMG'                             */
+  int16_t color_model;     /* Colour model: 0=RGB, 1=CYM, 2=Pantone      */
+  <a href="RGB_LIST.html">RGB_LIST</a> color_table[];  /* Colour table                               */
+} XIMG;
+</pre>
+<p>The whole header is arranged in the <b>Motorola-68000
+format</b>, so that on computers with an Intel CPU, WORDs and
+LONGwords have to have the bytes swapped. The pure pixel data always
+start at <i>headlen</i> * 2 and is stored compressed (as mentioned
+above).
+</p>
+<p>The length of the patterns lies between 1 and 8, and with most
+screens has a length of 2 bytes. Each scanline information is made up
+of two components:
+</p>
+<ul>
+<li><p> A repeated portion of the following structure (in C-notation):
+<br>&nbsp;
+<pre>typedef struct
+{
+  int16_t sc_zero;    /* Always zero */
+  int8_t  sc_ff;      /* Always 255  */
+  int8_t  sc_cnt;     /* Number of coded image lines */
+} SCANLINE;
+</pre>
+</p></li>
+<li><p> The actual image information. This is stored in three different
+categories line by line.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<a name="Solid_20runs"></a>
+<tr><td nowrap="nowrap" valign="top">(a)</td>
+<td valign="top"> <b>Single colour pixel sequences (solid runs)</b> are stored
+as a single byte, where the high order bit determines the status of
+the point (i.e. 'on' or 'off'); the remaining 7 bits disclose how many
+bytes have to be output (i.e. the length of the run).
+<br>&nbsp;
+<a name="Pattern_20runs"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(b)</td>
+<td valign="top"> <b>Pattern runs</b> have 0 as the first byte, and the number
+of pattern repetitions as the second. The pattern length is contained
+in the header under <i>pat_run.</i> So the first two bytes are
+followed by eactly as many bytes as are required to represent the
+pattern.
+<br>&nbsp;
+<pre>typedef struct
+{
+  int8_t pr_zero;        /* Always zero      */
+  int8_t pr_cnt;         /* Number of bytes  */
+  int8_t pr_data[...];   /* Pattern data     */
+} PATTERNRUN;
+</pre>
+<a name="Bit-Strings"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">c)</td>
+<td valign="top"> <b>Image data that is hard or impossible to shorten (bit
+strings)</b> is stored unchanged. Here the first byte is 0x80 and the
+second contains the number of bytes. This is followed by the
+corresponding bytes with uncompressed image data.
+<br>&nbsp;
+<pre>typedef struct
+{
+  int8_t bs_first;       /* Always 0x80       */
+  int8_t bs_cnt;         /* Number of bytes   */
+  int8_t bs_data[...];   /* Image data        */
+} BITSTRING;
+</pre>
+
+</td></tr>
+</table>
+
+</p></li>
+</ul>
+
+<p>There follows in each case the image data for every coded colour
+plane consecutively. One should ensure that one line is always coded
+with the full number of bytes, even if the image is effectively
+narrower. Thus up to seven bits of superfluous data may be present.
+The pixel width of the image is given in the header under
+<i>sl_width.</i>
+</p>
+<p>See also: Metafile-Format &nbsp; <a href="vdi_escape.html#v_bit_image">v_bit_image</a> &nbsp; <a href="#The_20OUT_20file_20format">OUT file format</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_FOOT" href="About_the_VDI.html"><img src="udo_lf.gif" alt="About the VDI" title="About the VDI" border="0" width="24" height="24">About the VDI</a>
+<a name="UDO_nav_rg_FOOT" href="vdi_bindings.html"><img src="udo_rg.gif" alt="VDI bindings" title="VDI bindings" border="0" width="24" height="24">VDI bindings</a>
+</body>
+</html>

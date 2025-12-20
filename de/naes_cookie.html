@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Der N.AES-Cookie
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="n_aes.html"><img src="udo_up.gif" alt="N.AES" title="N.AES" border="0" width="24" height="24">N.AES</a>
+<a name="UDO_nav_lf_HEAD" href="naes_formerror.html"><img src="udo_lf.gif" alt="form_error in N.AES" title="form_error in N.AES" border="0" width="24" height="24">form_error in N.AES</a>
+<a name="UDO_nav_rg_HEAD" href="naes_cnf.html"><img src="udo_rg.gif" alt="Die N.AES-Konfigurationsdatei" title="Die N.AES-Konfigurationsdatei" border="0" width="24" height="24">Die N.AES-Konfigurationsdatei</a>
+
+<hr>
+
+<h1><a name="Der_20N.AES-Cookie">12.2 Der N.AES-Cookie</a></h1>
+<a name="N_AESINFO"></a>
+<p><a href="n_aes.html">N.AES</a> legt einen Cookie mit dem Namen 'nAES' an. Sein Wert ist
+ein Zeiger auf eine Struktur (readable), die folgendermaßen aufgebaut
+ist:
+</p>
+<pre>typedef struct {
+    unsigned int    version;
+    unsigned int    date;
+    unsigned int    time;
+    unsigned int    flags;
+    CNF_VAR         **config;
+    unsigned long   unused_2;
+} N_AESINFO;
+</pre>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">version:</td>
+<td valign="top"> Die hexadezimal codierte Versionsnummer von <a href="n_aes.html">N.AES</a>. Ein Wert von
+0x0058 würde Versionsnummer 0.5.8 bedeuten, ein Wert von 0x0107 die
+Version 1.0.7
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">date/time:</td>
+<td valign="top"> Das Erstelldatum und die Erstellzeit im <a href="tos_main.html">TOS</a>-Format, d.h so, wie
+es <a href="gemdos_datetime.html#Tgetdate">Tgetdate</a> und <a href="gemdos_datetime.html#Tgettime">Tgettime</a> liefern.
+<br>&nbsp;
+<br><b>Hinweis:</b>
+<br>Die beim Booten von N.AES ausgegebene Zeit entspricht dem
+Zeitpunkt der Compilation einer bestimmten Quelldatei von N.AES, die
+Zeitangabe, die man im Cookie vorfindet, wird mittels eines
+Patchprogrammes gesetzt und ist die eigentlich relevante Angabe.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">flags:</td>
+<td valign="top"> Bitmaske, deren Bits folgende Bedeutung haben:
+<br>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bit &nbsp;0 =</td>
+<td valign="top"> 0: ST-Version
+<br>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit &nbsp;0 =</td>
+<td valign="top"> 1: TT-Version (Compileroption '68020')
+<br>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit &nbsp;1 =</td>
+<td valign="top"> 0: normale Version
+<br>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit &nbsp;1 =</td>
+<td valign="top"> 1: <a href="xbios_dhs.html#Debug">Debug</a>-Version
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 15 =</td>
+<td valign="top"> Wenn diese Bit TRUE ist wurde der Cookie von <a href="xaaes.html">XaAES</a> angelegt.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">config:</td>
+<td valign="top"> Zeiger auf eine Liste der CNF-Variablen, die während das
+System läuft geändert werden können. Der Speicher ist (global)
+alloziert. Das mitgelieferte N_CONTRL.CPX macht gebrauch davon.
+<br>&nbsp;
+<pre>/* cnf types */
+#define CNF_TEND  0   /* Kennzeichnet das Ende der Liste. */
+#define CNF_TBOOL 1   /* true/false.                      */
+#define CNF_TWORD 2   /* 16 bit signed wert.              */
+#define CNF_TLONG 3
+/* weitere können folgen! */
+
+typedef enum {false, true} bool;
+
+typedef struct
+{
+  <a href="proto_xfsl.html#union">union</a> cnf_typ { bool b; WORD w; LONG l; }
+          val;            /* der Inhalt.             */
+  WORD    typ;            /* Typ, CNF_T...           */
+  BYTE    text[22];       /* Name, wie in <a href="naes_cnf.html#N_AES.CNF">N_AES.CNF</a>. */
+} CNF_INF;
+
+typedef struct
+{
+  BYTE    typ[16];  /* Kategorie, Text aus den Strings *
+                     * des Dialog-Baums CNF_TREE der   *
+                     * N_AESSYS.RSC.                   *
+                     * zB. &quot;Fenster&quot; oder &quot;System&quot;.    */
+  CNF_INF *cnf_inf; /* Die Variablen eben.             */
+} CNF_VAR;
+</pre>
+<br>Das Ende der Liste wird durch einen NULL-Zeiger signalisiert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">unused_2:</td>
+<td valign="top"> Freiplatz für spätere N.AES-Versionen
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="n_aes.html"><img src="udo_up.gif" alt="N.AES" title="N.AES" border="0" width="24" height="24">N.AES</a>
+<a name="UDO_nav_lf_FOOT" href="naes_formerror.html"><img src="udo_lf.gif" alt="form_error in N.AES" title="form_error in N.AES" border="0" width="24" height="24">form_error in N.AES</a>
+<a name="UDO_nav_rg_FOOT" href="naes_cnf.html"><img src="udo_rg.gif" alt="Die N.AES-Konfigurationsdatei" title="Die N.AES-Konfigurationsdatei" border="0" width="24" height="24">Die N.AES-Konfigurationsdatei</a>
+</body>
+</html>

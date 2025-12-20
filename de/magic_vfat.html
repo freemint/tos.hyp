@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: VFAT-XFS in MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_xfs.html"><img src="udo_lf.gif" alt="Das XFS-Konzept von MagiC" title="Das XFS-Konzept von MagiC" border="0" width="24" height="24">Das XFS-Konzept von MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_sharelib.html"><img src="udo_rg.gif" alt="Shared Libraries" title="Shared Libraries" border="0" width="24" height="24">Shared Libraries</a>
+
+<hr>
+
+<h1><a name="VFAT-XFS_20in_20MagiC">11.22 VFAT-XFS in MagiC</a></h1>
+<p>MagiC unterstützt ab Version 5.0 ein VFAT-XFS, mit dessen
+Hilfe sich lange Dateinamen im Windows95-Format auf dem Atari nutzen
+lassen.
+</p>
+<p><b>Vorteile dieses Konzepts:</b>
+</p>
+<ul>
+<li><p> bestehende Partitionen müssen nicht neu formatiert werden; die
+langen Dateinamen stehen also direkt zur Verfügung.
+<br>&nbsp;
+</p></li>
+<li><p> auf diese Weise erzeugte Dateien können direkt zwischen <a href="magic.html">MagiC</a>
+und Windows95 ausgetauscht werden, und das Bearbeiten der erzeugten
+Dateien ist auch ohne installiertes VFAT-XFS möglich (wichtig, falls
+z.B. einmal ohne MagiC gebootet wird).
+<br>&nbsp;
+</p></li>
+<li><p> da VFAT auf dem FAT-Konzept beruht, war eine einfache
+Implementierung ohne nennenswerten Speicherbedarf möglich.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Nachteile dieses Konzepts:</b>
+</p>
+<ul>
+<li><p> VFAT hat alle Probleme von FAT geerbt. So gibt es den bekannten
+Clusterverschnitt z.B. auch unter VFAT.
+<br>&nbsp;
+</p></li>
+<li><p> es gibt modernere Konzepte, die sowohl schneller als auch
+sicherer sind.
+<br>&nbsp;
+</p></li>
+<li><p> auf dem Atari fehlen derzeit noch Programme, die Volumes mit
+langen Dateinamen reparieren können. Diese müssten allen
+Dateinamenseinträge die unvollständig sind, oder von einem falschen
+Haupteintrag gefolgt werden, löschen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Technische Beschreibung des VFAT-Systems:</b>
+</p>
+<pre>typedef struct
+{
+    BYTE   head;       /* Bit 0..4: Nummer, Bit 6: Endofname */
+    UBYTE  name1[10];  /* 5 Unicode- Zeichen                 */
+    BYTE   attr;       /* Attribut (0x0f)                    */
+    BYTE   unused;     /* z.Zt. unbenutzt                    */
+    BYTE   chksum;     /* Checksumme des kurzen Namens       */
+    UBYTE  name2[12];  /* 6 Unicode- Zeichen                 */
+    WORD   stcl;       /* erster Cluster (0)                 */
+    UBYTE  name3[4];   /* 2 Unicode-Zeichen                  */
+} LDIR;
+</pre>
+<p><b>Hinweis:</b> Dabei ist <i>head</i> beim ersten Eintrag z.B.
+0x01, beim zweiten 0x02 und beim dritten 0x43, wenn der Name drei
+Einträge braucht.
+</p>
+<p>Pro Eintrag können 13 Zeichen abgelegt werden. Die Einträge
+mit dem langen Dateinamen liegen immer unmittelbar vor dem
+Haupteintrag. Die Unicode Zeichen liegen im Intel-Format vor. Im
+letzten Eintrag werden nach dem Nullbyte die nicht verwendeten Zeichen
+mit 0xff,0xff belegt. Die Reihenfolge der Einträge ist umgekehrt,
+d.h. die letzten 13 Zeichen des langen Namens liegen physikalisch an
+erster Stelle. Der letzte Verzeichniseintrag, der mit gesetztem Bit 6
+im Feld <i>head</i> gekennzeichnet ist, liegt physikalisch an erster
+Stelle.
+</p>
+<p>Die Komponente <i>stcl</i> ist immer Null; <i>chksum</i>
+berechnet sich aus dem kurzen Namen (im internen Format) durch
+abwechselndes Rechtsrotieren des bisherigen Ergebnisses und
+Aufaddieren der 11 Zeichen. Linux verwendet das Feld <i>unused</i>,
+um Flags für Groß-/Kleinschrift abzuspeichern. Die aktuelle
+Windows95-Version schreibt jedoch immer Nullen in dieses Feld, und so
+verhält sich auch <a href="magic.html">MagiC</a>. Weitere Hinweise:
+</p>
+<ul>
+<li><p> das Umbenennen von Dateien bei bis auf Klein-/Großschrift
+identischem Namen ist möglich. Beispiel: Durch das Umbenennen von
+'test.txt' in 'TEST.TXT' fällt der lange Name automatisch weg.
+<br>&nbsp;
+</p></li>
+<li><p> die Umsetzung Unicode &lt;-&gt; ASCII ist entsprechend dem
+<a href="VDI_fundamentals.html#NVDI">NVDI</a>-<a href="proto_xfsl.html#Mapping">Mapping</a> implementiert.
+<br>&nbsp;
+</p></li>
+<li><p> beim Erzeugen des Kurznamens werden Leerstellen durch
+Unterstriche ersetzt. Beispiel: 'Wassili Kandinsky.app&quot; -&gt;
+&quot;WASSILI_.APP&quot;
+<br>&nbsp;
+</p></li>
+<li><p> das VFAT-XFS kann (egal ob lange Namen zugelassen sind oder
+nicht) auch Ordner innerhalb der Verzeichnisstruktur verschieben.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="magic_xfs.html">XFS-Konzept in MagiC</a> &nbsp; <a href="magic_programs.html#VFATCONF">VFATCONF</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_xfs.html"><img src="udo_lf.gif" alt="Das XFS-Konzept von MagiC" title="Das XFS-Konzept von MagiC" border="0" width="24" height="24">Das XFS-Konzept von MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_sharelib.html"><img src="udo_rg.gif" alt="Shared Libraries" title="Shared Libraries" border="0" width="24" height="24">Shared Libraries</a>
+</body>
+</html>

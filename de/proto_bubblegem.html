@@ -1,0 +1,425 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: BubbleGEM
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_av.html"><img src="udo_lf.gif" alt="AV-Protokoll" title="AV-Protokoll" border="0" width="24" height="24">AV-Protokoll</a>
+<a name="UDO_nav_rg_HEAD" href="proto_dd.html"><img src="udo_rg.gif" alt="Drag&amp;Drop-Protokoll" title="Drag&amp;Drop-Protokoll" border="0" width="24" height="24">Drag&amp;Drop-Protokoll</a>
+
+<hr>
+
+<h1><a name="BubbleGEM">15.2 BubbleGEM</a></h1>
+<p align="center"><img src="bilder/gif/bubblegem.gif" alt="" title="" border="0" width="88" height="70"></p>
+<p>Die Icons werden immer zahlreicher und bunter, doch so manches
+mal verbirgt sich der Sinn - oder wozu war nochmal der Button da?
+Fragen, die sich jeder stellt.
+</p>
+<p>Die Antwort: BubbleGEM. Mittels dieses kleinen Progrämmchens
+kann jeder Programmierer die beliebte und umsatzfördernde
+Sprechblasenhilfe einbauen und jeder Benutzer mehr über die
+Arbeitsoberfläche erfahren.
+</p>
+<ul class="content">
+	<li>15.2.1 <a href="#Aufruf_20von_20BubbleGEM">Aufruf von BubbleGEM</a>
+	<li>15.2.2 <a href="#Aufrufroutine">Aufrufroutine</a>
+	<li>15.2.3 <a href="#Zeitgesteuerter_20Aufruf">Zeitgesteuerter Aufruf</a>
+	<li>15.2.4 <a href="#BubbleGEM-Cookies">BubbleGEM-Cookies</a>
+	<li>15.2.5 <a href="#BubbleGEM-Environmentvariable">BubbleGEM-Environmentvariable</a>
+	<li>15.2.6 <a href="#Schriftauswahl">Schriftauswahl</a>
+	<li>15.2.7 <a href="#AV_SENDCLICK_2C_20BubbleGEM">AV_SENDCLICK, BubbleGEM</a>
+	</li>
+</ul>
+<br>
+<h3><a name="Aufruf_20von_20BubbleGEM">15.2.1 Aufruf von BubbleGEM</a></h3>
+<p>Grundsätzlich gibt es zwei Möglichkeiten, BubbleGEM aufzurufen.
+In den direkt folgenden Abschnitten wird der Aufruf aus unmodalen
+Dialogen, also aus Fensterdialogen, beschrieben, der am einfachsten
+ist. Seit der Release 05 kann man BubbleGEM nun aber auch aus modalen
+Dialogen aufrufen.
+</p>
+<p>Als modernes Programm sucht man vor jedem Bubble-Aufruf per
+<a href="appl.html#appl_find">appl_find</a>(&quot;BUBBLE &quot;) die
+<a href="aes_main.html">AES</a>-Applikations-Identifikationsnummer (kurz: bubble_id) von BubbleGEM.
+Hat man die <a href="aes_main.html">AES</a>-ID erhalten, kann man die Nachricht BUBBLEGEM_SHOW
+(hexadezimal: 0xBABB) an die ap_id ver- schicken und erhält
+BUBBLEGEM_ACK (0xBABC) zurück.
+</p>
+<p>Wichtig ist, daß die übergebene nullterminierte Zeichenkette
+maximal 255 Zeichen lang sein darf und daß sie global lesbar sein
+muß. In Systemen mit Speicherschutz kommt es sonst zu
+Schutzverletzungen, was die Professionalität Ihres Programms nicht
+gerade unterstreichen würde. Daher unbedingt globalen Speicher
+anfordern!
+</p>
+<p>Die Nachricht BUBBLEGEM_SHOW sollte bereits losgesandt werden,
+wenn die rechte Maustaste heruntergedrückt wurde, nicht erst beim
+Los- lassen! Mit x und y übergibt man die Mauskoordinaten, an deren
+Stelle die Sprechblase dann gezeichnet wird.
+</p>
+<p>Ein Umbruch in der Blase wird von BubbleGEM automatisch
+vorgenommen, wer trotzdem manuell eingreifen will, kann den
+senkrechten Strich &quot;|&quot; dafür verwenden. Leerzeichen davor
+oder dahinter sind nicht notwendig.
+</p>
+<p>Ein kleines Beispiel in C:
+</p>
+<a name="BUBBLEGEM_SHOW"></a>
+<pre>#include &lt;portab.h&gt;
+
+/* BUBBLEGEM_SHOW - Nachricht:
+ * msg[0]   0xBABB
+ * msg[1]   ap_id
+ * msg[2]   0
+ * msg[3]   Maus X
+ * msg[4]   Maus Y
+ * msg[5/6] Pointer auf nullterminierte Zeichenkette im globalen
+ *          Speicher
+ * msg[7]   0
+ */
+
+...
+
+#define MGLOBAL     0x20
+
+#define <a href="proto_bubblegem.html#BUBBLEGEM_REQUEST">BUBBLEGEM_REQUEST</a>  0xBABA
+#define BUBBLEGEM_SHOW     0xBABB
+#define BUBBLEGEM_ACK      0xBABC
+#define <a href="proto_bubblegem.html#BUBBLEGEM_ASKFONT">BUBBLEGEM_ASKFONT</a>  0xBABD
+#define <a href="proto_bubblegem.html#BUBBLEGEM_FONT">BUBBLEGEM_FONT</a>     0xBABE
+#define BUBBLEGEM_HIDE     0xBABF
+
+#define MagX_COOKIE     0x4D616758L
+#define MiNT_COOKIE     0x4D694E54L
+...
+
+WORD msg[8];
+WORD bubble_id;
+BYTE *bubble_text;
+
+/* Feststellen, ob <a href="gemdos_memory.html#Mxalloc">Mxalloc</a>() vorhanden ist, wenn ja,
+ *  dann Speicherschutz-Modus auf &quot;Global&quot; setzen
+ */
+if ((get_cookie (MagX_COOKIE, &amp;val) == TRUE) ||
+   (get_cookie (MiNT_COOKIE, &amp;val) == TRUE))
+{
+  bubble_text = (BYTE *) <a href="gemdos_memory.html#Mxalloc">Mxalloc</a> (256, 0 | MGLOBAL);
+}
+else
+  bubble_text = (BYTE *) <a href="gemdos_memory.html#Malloc">Malloc</a> (256);
+
+if (!bubble_text)   /* Pointer ungültig, kein Speicher da */
+  return;
+
+if (rechte_maustaste_ueber_button_gedrueckt)
+{
+  /* Puffer füllen */
+  strncpy(bubble_text, &quot;Meine erste Sprechblasenhilfe.&quot;, 255);
+
+  bubble_id = <a href="appl.html#appl_find">appl_find</a>(&quot;BUBBLE  &quot;);
+
+  if (bubble_id &gt;= 0)
+  {
+    msg[0] = BUBBLEGEM_SHOW;
+    msg[1] = ap_id;
+    msg[2] = 0;
+    msg[3] = x;
+    msg[4] = y;
+    msg[5] = (WORD)(((LONG) bubble_text &gt;&gt; 16)
+             &amp; 0x0000ffff);
+    msg[6] = (WORD)((LONG) bubble_text &amp; 0x0000ffff);
+    msg[7] = 0;
+    if (<a href="appl.html#appl_write">appl_write</a>(bubble_id, 16, msg) == 0)
+    {
+      /* Fehler */
+    }
+  }
+}
+</pre>
+<a name="BUBBLEGEM_ACK"></a>
+<p>Als Antwortnachricht erhält man BUBBLEGEM_ACK (0xBABC) mit dem
+Pointer auf die Zeichenkette, deren Speicher man nun bei Bedarf
+freigeben kann. Die Arrayelemente 2, 3, 4 und 7 sind ausgenullt. Beim
+nichtmoda- len Aufruf kommt das BUBBLEGEM_ACK erst nach dem Schließen
+der Blase!
+</p>
+<pre>/* BUBBLEGEM_ACK (0xBABC)
+ *
+ * msg[0]   0xBABC
+ * msg[1]   ap_id
+ * msg[2]   0
+ * msg[3]   0
+ * msg[4]   0
+ * msg[5/6] Pointer aus BUBBLEGEM_SHOW
+ * msg[7]   Gleicher Wert wie msg[7] beim Senden von BUBBLEGEM_SHOW;
+ *          derzeit 0.
+ */
+
+/* kurzer Beispielcode */
+
+pointer = *(BYTE **) &amp;msg[5];
+
+if (pointer)
+  <a href="gemdos_memory.html#Mfree">Mfree</a>(pointer);
+</pre>
+<p>Zu bedenken ist, daß man die Zeichenketten am besten extern
+auslagert, damit Übersetzungen in andere Sprachen leichter fallen -
+also am besten ins Resource-File oder eine separate ASCII-Datei damit.
+</p>
+<p>Wenn bei BUBBLEGEM_SHOW das Bit BGS7_<a href="xbios_structures.html#MOUSE">MOUSE</a> (0x0004) in msg[7]
+gesetzt ist, werden die übergebenen Koordinaten nur zum Zeichnen
+verwendet; BubbleGEM ermittelt dann die Mauskoordinaten, anhand derer
+eine Bewegung der Maus erkannt wird (und die zum Schließen der Blase
+führt), kurz vor der Anzeige der Blase automatisch neu.
+</p>
+<p>Der Aufruf aus modalen Dialogen (siehe auch die <a href="#Aufrufroutine">Aufrufroutine</a>)
+erfolgt wie bei den unmodalen, vorausgesetzt, daß der BGEM-Cookie
+vorhanden ist. Man setzt im Gegensatz zum Aufruf aus unmodalen
+Dialogen jedoch BGS7_USRHIDE (0x0001) in msg[7].
+</p>
+<a name="BUBBLEGEM_HIDE"></a>
+<p>Außerdem muß nach der Mausauswertung durch die aufrufende
+Applikation BUBBLEGEM_HIDE (0xbabf) an BubbleGEM geschickt werden. Die
+Auswertung der Maus- und Tastenereignisse muß die Applikation beim
+Aufruf aus modalen Dialogen selbst übernehmen.
+</p>
+<p>Auf Systemen ohne <a href="wind.html#wind_update">wind_update</a>()-Testmodus werden evtl. doppelte
+Hilfstexte angezeigt (direkt nacheinander). Dies ist derzeit leider
+nicht anders realisierbar.
+</p>
+<h3><a name="Aufrufroutine">15.2.2 Aufrufroutine</a></h3>
+<p>Hier eine allgemeine Routine zum <a href="#Aufruf_20von_20BubbleGEM">Aufruf von BubbleGEM</a> in
+Pseudocode.
+</p>
+<pre>bubblegem:=<a href="appl.html#appl_find">appl_find</a>('BUBBLE  ');
+if bubblegem&lt;0 then
+  begin
+    pfad:=GetEnv('BUBBLEGEM');
+    if length(pfad)&gt;0 then
+      begin
+        { <a href="#BubbleGEM">BubbleGEM</a> nachstarten, ID in bubblegem merken }
+        if bubblegem&gt;=0 then <a href="evnt.html#evnt_timer">evnt_timer</a>(500,0)
+      end
+  end;
+if bubblegem&lt;0 then exit; { <a href="#BubbleGEM">BubbleGEM</a> nicht gefunden -&gt; Abbruch}
+StrPCopy(bubblebuf,hilfetext);
+msg[0]:=<a href="proto_bubblegem.html#BUBBLEGEM_SHOW">BUBBLEGEM_SHOW</a>;
+msg[1]:=apID;
+msg[2]:=0;
+msg[3]:=mx;
+msg[4]:=my;
+msg[5]:=integer(HiWord(bubblebuf));
+msg[6]:=integer(LoWord(bubblebuf));
+msg[7]:=0;
+if unmodaler_Aufruf then
+  begin
+    <a href="appl.html#appl_write">appl_write</a>(bubblegem,16,@msg);
+    <a href="evnt.html#evnt_timer">evnt_timer</a>(100,0)
+  end
+else
+  begin
+    { Aufruf aus einem systemmodalen Dialog heraus: }
+    if not(GetCookie('BGEM',bgemcookie)) then Bing { Fehler }
+      { modaler Aufruf nur möglich, wenn BGEM-Cookie vorhanden }
+    else
+      begin
+        msg[7]:=msg[7] or BGS7_USRHIDE;
+        <a href="appl.html#appl_write">appl_write</a>(bubblegem,16,@msg);
+        <a href="evnt.html#evnt_timer">evnt_timer</a>(10,0);
+        <a href="graf.html#graf_mkstate">graf_mkstate</a>(dummy,dummy,ms,dummy);
+        if (ms and 3)=0 then { keine Maustaste gedrückt? }
+          begin
+            bclicks:=258;
+            bmask:=3;
+            bstate:=0
+          end
+        else
+          begin
+            bclicks:=0;
+            bmask:=3;
+            bstate:=0
+          end;
+        if not(GetCookie('BHLP',delay)) then delay:=200
+        else
+          delay:=(delay shr 16) and 0x0000ffff;
+        <a href="graf.html#graf_mouse">graf_mouse</a>(<a href="graf.html#USER_DEF">USER_DEF</a>,bgemcookie-&gt;mhelp);
+        <a href="evnt.html#evnt_timer">evnt_timer</a>(delay,0);
+        <a href="evnt.html#evnt_multi">evnt_multi</a>(<a href="evnt.html#MU_KEYBD">MU_KEYBD</a> or <a href="evnt.html#MU_BUTTON">MU_BUTTON</a> or <a href="evnt.html#MU_M1">MU_M1</a>, bclicks, bmask,
+          bstate, 1, mX-6, mY-6, 13, 13, 0, 0, 0, 0, 0, msg,
+          0, 0, dummy, dummy, ms, dummy, dummy, dummy);
+        msg[0]:=<a href="proto_bubblegem.html#BUBBLEGEM_HIDE">BUBBLEGEM_HIDE</a>;
+        msg[1]:=apID;
+        msg[2]:=0;
+        msg[3]:=0;
+        msg[4]:=0;
+        msg[5]:=0;
+        msg[6]:=0;
+        msg[7]:=0;
+        <a href="appl.html#appl_write">appl_write</a>(bubblegem,16,@msg);
+        <a href="graf.html#graf_mouse">graf_mouse</a>(<a href="graf.html#ARROW">ARROW</a>,NULL)
+      end;
+    repeat
+      <a href="graf.html#graf_mkstate">graf_mkstate</a>(dummy,dummy,ms,dummy)
+    until (ms and 3)=0
+  end;
+</pre>
+<h3><a name="Zeitgesteuerter_20Aufruf">15.2.3 Zeitgesteuerter Aufruf</a></h3>
+<p>Die Anpassung von Applikationen ist denkbar einfach:
+</p>
+<a name="BUBBLEGEM_REQUEST"></a>
+<ul>
+<li><p> Beim Empfang von BUBBLEGEM_REQUEST (0xBABA) ruft man BubbleGEM
+ganz normal (allerdings mit den Koordinaten aus BUBBLEGEM_REQUEST)
+auf, nachdem man anhand der empfangenen Koordinaten festgestellt hat,
+ob man für diese Position eine Hilfe anbieten kann.
+<br>&nbsp;
+</p></li>
+<li><p> Die <a href="proto_ssp.html#Message">Message</a> BUBBLEGEM_REQUEST ist wie folgt aufgebaut: msg[0]
+:= BUBBLEGEM_REQUEST;
+<br>msg[1] := demonID;
+<br>msg[2] := 0;
+<br>msg[3] := winID; { <a href="aes_main.html">AES</a>-ID des Fensters unter dem Mauscursor }
+<br>msg[4] := mX; &nbsp;&nbsp;&nbsp;{ Koordinaten der Maus }
+<br>msg[5] := mY;
+<br>msg[6] := KStat; { Status der Umschalttasten }
+<br>msg[7] := 0;
+<br>&nbsp;
+</p></li>
+<li><p> Die zeitgesteuerte Hilfe funktioniert nur nichtmodal.
+<br>&nbsp;
+</p></li>
+<li><p> Damit der Hilfe-Dämon funktionieren kann, muß das System
+<a href="wind.html#wind_get">wind_get</a>(<a href="wind.html#WF_OWNER">WF_OWNER</a>) unterstützen.
+<br>&nbsp;
+</p></li>
+<li><p> Der Dämon ist an, wenn Bit BGC_DEMONACTIVE (0x0008) im
+BHLP-Cookie gesetzt ist; nach Änderung BUBBLEGEM_REQUEST (msg[3..7]
+ausgenullt) an BUBBLE.APP schicken (statt wie bisher an HLPDEMON.APP)
+<br>&nbsp;
+</p></li>
+<li><p> Wenn BGC_TOPONLY (0x0010) gesetzt ist, arbeitet der HelpDemon
+nur beim Top-Window.
+<br>&nbsp;
+</p></li>
+<li><p> An-/Ausschalten des Hilfe-Dämons auch per <a href="proto_av.html#VA_START">VA_START</a> (obwohl CPX
+besser, da Zustand an/aus gespeichert wird): &quot;-demonon&quot;
+(=&quot;- demon1&quot;), &quot;-demonoff&quot; (=&quot;-demon0&quot;)
+<br>&nbsp;
+</p></li>
+<li><p> Der Dämon-Timer ist per Default 200ms, er kann im Feld dtimer
+des BGEM-Cookies geändert werden.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="BubbleGEM-Cookies">15.2.4 BubbleGEM-Cookies</a></h3>
+<p>BHLP:
+</p>
+<p>BubbleGEM wertet den Cookie &quot;BHLP&quot; aus. Im oberen Word
+ist die Dauer der Mindest-Sichtbarkeit eingetragen, Standard sind 200
+Millisekunden. Das untere Word ist eine Bitmap; ist Bit 0 (0x0001 =
+BGC_FONTCHANGED) gesetzt, so bedeutet dies, daß <a href="proto_font.html#FONT_CHANGED">FONT_CHANGED</a>
+ausgewertet wird. Ist BGC_NOWINSTYLE (0x0002) (lies: no-win-style,
+nicht now-in-style) gesetzt, so wird die Hilfe als Sprechblase
+dargestellt (d.h. ein gelöschtes Bit entspricht der Windows-Hilfe!).
+Ein gesetztes Bit bei BGC_SENDKEY (0x0004) bewirkt, daß nach
+Schließen der Hilfe durch einen Tastendruck <a href="proto_av.html#AV_SENDKEY">AV_SENDKEY</a> an den
+Aufrufer geschickt wird. BGC_DEMONACTIVE (0x0008) bewirkt, daß Dämon
+eingeschaltet ist. BGC_TOPONLY (0x0010) bestimmt, ob der HelpDemon nur
+beim Top-Window arbeitet.
+</p>
+<p>BGEM:
+</p>
+<p>Zusätzlich wird der BGEM-Cookie gesetzt. Er ist nur zur
+Laufzeit von BubbleGEM vorhanden, d.h. er wird beim Start von <a href="#BubbleGEM">BubbleGEM</a>
+angelegt und bei <a href="evnt.html#AP_TERM">AP_TERM</a> entfernt.
+</p>
+<pre> typedef struct
+ {
+   long   magic;   /* 'BGEM'                                   */
+   long   size;    /* Größe dieser Struktur, derzeit 18        */
+   int    release; /* derzeit 7, nie kleiner als 5             */
+   int    active;  /* &lt;&gt;0, wenn gerade eine Hilfe angezeigt wird;
+                        0  sonst                               */
+   <a href="aes_structures.html#MFORM">MFORM</a> *mhelp;   /* Zeiger auf Hilfe-Mausform                */
+   int    dtimer;  /* Dämon-Timer; Default 200ms; ab Release 6 */
+ } BGEM;
+</pre>
+<p>Die Struktur liegt im globalen Speicher. <b>Wichtig:</b> dtimer
+ist das <b>einzige</b> Feld, das für Lesen <b>und</b> Schreiben
+freigegeben ist, alle anderen Felder sind <b>read only</b>!
+</p>
+<h3><a name="BubbleGEM-Environmentvariable">15.2.5 BubbleGEM-Environmentvariable</a></h3>
+<p>Will man BubbleGEM von Hand nachstarten, falls es noch nicht
+läuft, so findet man in der Environmentvariablen
+&quot;BUBBLEGEM&quot; den absoluten Pfad inklusive Programmnamen zum
+BUBBLE.APP, also für <a href="magic.html">MagiC</a> etwa:
+</p>
+<p><a href="magic_magxinf.html#UDO__23_ENV">#_ENV</a> BUBBLEGEM=D:\Tools\Bubble\Bubble.app
+</p>
+<h3><a name="Schriftauswahl">15.2.6 Schriftauswahl</a></h3>
+<a name="BUBBLEGEM_ASKFONT"></a>
+<a name="BUBBLEGEM_FONT"></a>
+<p>BUBBLEGEM_ASKFONT wird beim Start von <a href="#BubbleGEM">BubbleGEM</a> an den AV-Server
+oder an die Applikation mit der <a href="aes_main.html">AES</a>-ID 0 geschickt. Diese sollte dann
+mit der Nachricht BUBBLEGEM_FONT antworten (Jinnee macht das bspw.).
+</p>
+<pre>msg[0] = BUBBLEGEM_ASKFONT;
+msg[1] = apID;
+msg[2] = 0;
+msg[3] = 0;
+msg[4] = 0;
+msg[5] = 0;
+msg[6] = 0;
+msg[7] = 0;
+
+msg[0] = BUBBLEGEM_FONT;
+msg[1] = apID;
+msg[2] = 0;
+msg[3] = FontID;
+msg[4] = FontPt;
+msg[5] = 0;
+msg[6] = 0;
+msg[7] = 0;
+</pre>
+<p>Wenn BubbleGEM diese Nachricht empfängt, nimmt es ab sofort den
+Font mit der ID msg[3] und der Größe (in Punkt) msg[4] zur
+Darstellung der Hilfeblasen. ID und Größe werden ohne Prüfung
+übernommen. Außerdem reagiert <a href="#BubbleGEM">BubbleGEM</a> auf <a href="proto_font.html#FONT_CHANGED">FONT_CHANGED</a>, wenn das
+entsprechende Feld im CPX-Modul aktiviert ist.
+</p>
+<h3><a name="AV_SENDCLICK_2C_20BubbleGEM">15.2.7 AV_SENDCLICK, BubbleGEM</a></h3>
+<pre>msg[0] = <a href="proto_av.html#AV_SENDCLICK">AV_SENDCLICK</a>  /* 0x4709 */
+msg[1] = ap_id;
+msg[2] = 0;
+msg[3] = ev_mmox;
+msg[4] = ev_mmoy;
+msg[5] = ev_mmobutton;
+msg[6] = ev_mmokstate;
+msg[7] = ev_mbreturn;
+</pre>
+<p>AV_SENDCLICK wird verschickt, wenn die Blase durch Klicken geschlossen
+wurde (also nicht, wenn <a href="#BubbleGEM">BubbleGEM</a> mit gedrückter Maustaste aufgerufen
+wird und die Blase durch <b>Loslassen</b> geschlossen wird!).
+<a href="proto_av.html#AV_SENDCLICK">AV_SENDCLICK</a> ist das Pendant zu <a href="proto_av.html#AV_SENDKEY">AV_SENDKEY</a>.
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_av.html"><img src="udo_lf.gif" alt="AV-Protokoll" title="AV-Protokoll" border="0" width="24" height="24">AV-Protokoll</a>
+<a name="UDO_nav_rg_FOOT" href="proto_dd.html"><img src="udo_rg.gif" alt="Drag&amp;Drop-Protokoll" title="Drag&amp;Drop-Protokoll" border="0" width="24" height="24">Drag&amp;Drop-Protokoll</a>
+</body>
+</html>

@@ -1,0 +1,697 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: Shared libraries
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_vfat.html"><img src="udo_lf.gif" alt="VFAT-XFS in MagiC" title="VFAT-XFS in MagiC" border="0" width="24" height="24">VFAT-XFS in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="n_aes.html"><img src="udo_rg.gif" alt="N.AES" title="N.AES" border="0" width="24" height="24">N.AES</a>
+
+<hr>
+
+<h1><a name="Shared_20libraries">11.23 Shared libraries</a></h1>
+<p><u>Shared Libraries in MagiC from V6.00 onwards</u>
+</p>
+<ul>
+<li> <a href="#What_20are_20shared_20libraries_3F">What are shared libraries?</a>
+</li>
+<li> <a href="#Why_20shared_20libraries_3F">Why shared libraries?</a>
+</li>
+<li> <a href="#How_20do_20I_20use_20a_20library_3F">How do I use a library?</a>
+</li>
+<li> <a href="#How_20do_20I_20write_20a_20library_3F">How do I write a library?</a>
+</li>
+</ul>
+
+<p><b>Note:</b> Shared libraries were introduced already with
+MagiC Version 5.20. Due to a design error, they had to change the
+format of the library as of Version 6.00. As different
+&quot;magic&quot; IDs are used this can not cause crashes; it's just
+that the libraries for 6.00 will not be recognized by the old version
+5.20, and vice versa. Due to several inadequacies in version 5.20 one
+should in any case only create libraries for 6.00.
+</p>
+<h3><a name="What_20are_20shared_20libraries_3F">11.23.1 What are shared libraries?</a></h3>
+<p>Usually libraries with frequently used procedures are collected
+in their own object module and then linked with several programs
+during compilation. In that case each program receives a copy of the
+library, which is integrated firmly into the PRG file. On the other
+hand, shared libraries exist as separate files only once on the hard
+disk and can be used by several programs, even simultaneously.
+</p>
+<h3><a name="Why_20shared_20libraries_3F">11.23.2 Why shared libraries?</a></h3>
+<p>Compared to hard-linked libraries, using shared libraries
+results in a series of advantages:
+</p>
+<ul>
+<li> Saving of storage space on the hard disk. The more programs
+that use the same libraries, the greater the saving.
+</li>
+<li> Saving of storage space in main memory (RAM). This only comes
+into play when several programs that use the same library are loaded
+simultaneously.
+</li>
+<li> Systematic maintenance by the programmer: For an update it may
+suffice at times just to distribute a new library. All programs that
+use the library will then profit from the update. Additionally there
+will be fewer source texts to maintain. When a library has been
+altered there is no need to newly translate all of the programs using
+it.
+</li>
+</ul>
+
+<p>Naturally there are also disadvantages:
+</p>
+<ul>
+<li> Program loading takes somewhat longer; however this is so only
+if the library has not been loaded yet.
+</li>
+<li> There may be interaction between updates of various programs.
+When exchanging a library, several programs may be affected
+(positively or negatively).
+</li>
+<li> During installation of a program the files have to be copied to
+the XTENSION folder (normally in GEMSYS\MAGIC\ of the boot drive) or
+to the first folder specified in the searchlist SLBPATH (from MagiC
+6), so it is no longer possible to establish easily which shared
+library belongs to which program. Remedies, for instance:
+<ul>
+<li> Only place aliases in the XTENSION folder or the first folder
+specified by the environmental variable SLBPATH (see below)
+</li>
+<li> Leave the shared libraries in a subdirectory of the program and
+merely extend the environmental variable SLBPATH in MAGX.INF by this
+directory (possible from MagiC 6 onwards). If no SLBPATH variable
+exists as yet then one has to enter the XTENSION path in it first.
+</li>
+</ul>
+
+</li>
+</ul>
+
+<h3><a name="How_20do_20I_20use_20a_20library_3F">11.23.3 How do I use a library?</a></h3>
+<p>To start with, one needs the object module <a href="#SLB_BIND">SLB_BIND</a> for calling
+the two new DOS functions, for which one has to link the file <a href="#SLB.H">SLB.H</a>.
+</p>
+<p>For each library used one declares a descriptor of the type
+SHARED_LIB and a function pointer of the type SLB_EXEC.
+</p>
+<p>Each library is opened with <a href="gemdos_system.html#Slbopen">Slbopen</a> (opening and closing should
+only take place in user-mode), during which the following parameters
+are passed:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">char *name</td>
+<td valign="top"> The name of the library, in capitals, including the extension
+(&quot;.SLB&quot;). The library name is also the filename.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">char *path</td>
+<td valign="top"> If this parameter is not NULL, then first of all a search will
+be made for the library (the path must end with '\' in MagiC 5.20;
+this is no longer necessary in MagiC 6). The path should be an
+absolute one, so that the shared library knows where it lies. If the
+parameter is NULL or the library was not found in the specified path,
+then a search is made in the XTENSION folder.
+<br>From MagiC 6 onwards the environmental variable SLBPATH will be
+evaluated. Like PATH it contains a list of search-paths, each
+separated by ';'. If the variable is defined no additional search will
+be made in the XTENSION folder.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">LONG min_ver</td>
+<td valign="top"> Minimum required version number of the library.
+<br>If a program needs, say, version 3 but the library present is only
+version 2, then <a href="gemdos_errors.html#ERANGE">ERANGE</a> will be returned. The return value will be the
+actual version number of the library.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SHARED_LIB *sl</td>
+<td valign="top"> Pointer to the descriptor. When the library is opened the
+descriptor will be entered here.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SLB_EXEC *fn</td>
+<td valign="top"> Pointer to the function pointer. When the library is opened the
+function pointer will be entered here.
+
+</td></tr>
+</table>
+
+<p>Return values can be:
+</p>
+<pre>  &gt;= 0        All OK, version number of the library
+  <a href="gemdos_errors.html#ERANGE">ERANGE</a>      Version number too low
+  <a href="gemdos_errors.html#EACCDN">EACCDN</a>      Library already opened by this process
+  <a href="gemdos_errors.html#EFILNF">EFILNF</a>      Library not found
+  <a href="gemdos_errors.html#ENSMEM">ENSMEM</a>      Insufficient memory free
+  ...         Other error-codes.
+</pre>
+<p>The library can now be used and finally closed again with
+<a href="gemdos_system.html#Slbclose">Slbclose</a>. This is not absolutely necessary as all open libraries are
+closed automatically at program termination, but it is good
+programming practice. On no account may a library be closed more than
+once, since the kernel can not recognize such errors.
+</p>
+<p>Some libraries such as EDITOBJC.SLB, for instance, install new
+system calls, in this case the AES calls 210..217. For these
+libraries the function pointer is not needed. Otherwise all functions
+of the library are called via the function pointer. The library call
+function is declared in the following way:
+</p>
+<pre> typedef LONG cdecl (*SLB_EXEC)( SHARED_LIB sl, LONG fn,
+        WORD nargs, ... );
+</pre>
+<p>As regretably Pure-C has an error here, I was forced to declare
+this functions as 'typedef LONG (*SLB_EXEC)( void , ... );'.
+Unfortunately this inhibits all type checking. So take care!
+</p>
+<p>The call expects the following <b>parameters:</b>
+</p>
+<pre>     The descriptor of the library
+     A longword (!) for the function number
+     A WORD, that specifies the number of arguments in WORDs
+             (i.e. all &quot;...&quot; arguments)
+     Further arguments, depending on the function.
+</pre>
+<p>The best way is to make the call via a macro, which should be
+defined in a header file for the library, e.g.:
+</p>
+<p>JPEG.H:
+</p>
+<p>#define SLBJPEG_WANDELN (a,b) (*slbjpeg_exec)(slbjpeg, 7L, 4, a,
+b)
+</p>
+<p>With this <i>slbjpeg_exec</i> and <i>slbjpeg</i> will be
+ascertained at <a href="gemdos_system.html#Slbopen">Slbopen</a>, 7L is the function number for the call WANDELN
+(convert), 4 describes the length of the following arguments
+(&lt;a&gt; and &lt;b&gt; are two pointers =&gt; 2*4 bytes =&gt; 4
+WORDs), and <i>a</i> and <i>b</i> are the arguments of the function
+WANDELN.
+</p>
+<p>If the function is not present (the library contains a
+NULL-pointer for this function, or the function number is higher than
+the number of functions actually present), one will receive <a href="gemdos_errors.html#EINVFN">EINVFN</a> as
+the function result (in fact this only works correctly from MagiC 6
+onwards).
+</p>
+<h3><a name="How_20do_20I_20write_20a_20library_3F">11.23.4 How do I write a library?</a></h3>
+<p>For this too there is a sample library SLB_DEMO, which contains
+all the required elements and descriptions. The best thing is to copy
+<a href="#SLB_DEMO.C">SLB_DEMO.C</a>, <a href="#LIBHEAD.S">LIBHEAD.S</a> and <a href="#SLB_DEMO.PRJ">SLB_DEMO.PRJ</a> and then modify the files to
+suit your requirements. It is most important to ensure that bit 3 of
+the flag in the program header of a library is set; one can use
+<a href="#PH_BIT3.TTP">PH_BIT3.TTP</a> for this.
+</p>
+<p>LIBHEAD is the header for a shared library. The pointer to the
+function names can be omitted, otherwise it points to a table of
+pointers with the names of the library functions. The number of
+functions must be stated correctly, as must the table of functions and
+the library name, which is identical to the filename. When adding a
+function one has to ensure that the function number is adapted
+accordingly, and perhaps that the version number is increased.
+</p>
+<p>For publicly available shared libraries one has to ensure that
+documented function calls are never altered! They can either be
+supplemented with new parameters (the called function can inquire the
+number of parameters actually passed), or a new function number should
+be used.
+</p>
+<p>NULL-pointers are also permissible for the function pointers;
+they return a <a href="gemdos_errors.html#EINVFN">EINVFN</a> when the function is called.
+</p>
+<p>The following functions for (de-)initialization are obligatory:
+</p>
+<p><u>slb_init/slb_exit</u>
+</p>
+<p>These are called during loading and removal of the library
+respectively, and at that in supervisor-mode and in the context
+(process) of the library. Typically, slb_init loads a configuration
+file, allocates global memory for the library and opens a virtual
+VDI workstation. slb_exit writes back the configuration file,
+releases the memory again and closes the VDI workstation.
+</p>
+<p>If slb_init opens a file, then the handle can only be accessed
+again at slb_exit, as all other calls of the library run in the
+context of the calling application.
+</p>
+<p>From MagiC 6 onwards the library is passed a normal 'C'
+character string in the command line structure which contains the
+complete path of the shared library. If the shared library has to load
+configuration or RSC files, the path can be extracted and the filename
+of the configuration file assembled correspondingly.
+</p>
+<p>If slb_init terminates by reason of a bus error, for instance,
+then the caller will get <a href="gemdos_errors.html#EXCPT">EXCPT</a> as the result of the <a href="gemdos_system.html#Slbopen">Slbopen</a> call. In
+order to intercept an unplanned termination of the library, the kernel
+installs an <a href="bios_sysvars.html#etv_term">etv_term</a> handler for the library before calling
+slb_init/exit.
+</p>
+<p><u>slb_open/slb_close</u>
+</p>
+<p>These are called at the opening or closing of the library
+respectively. Once the library has been opened, the order is:
+</p>
+<pre>  slb_init()
+  slb_open()
+  slb_close()
+  slb_exit()
+</pre>
+<p>Unlike slb_init/slb_exit, slb_open/slb_close run in the context
+of the caller and in user-mode, with the user-stack of the caller,
+even if the <a href="gemdos_system.html#Slbopen">Slbopen</a> call was performed in supervisor-mode.
+</p>
+<p>The library can also allocate memory at slb_open, though this
+belongs to the caller and should be released again at slb_close. In
+order to permit allocation of this reserved memory to the caller, the
+library is also passed the current process descriptor at slb_open,
+slb_close and at every function call.
+</p>
+<p><b>Warning:</b> Due to a bug in 5.20, the passing of the PD
+to slb_open and slb_close only works from MagiC 6 onwards.
+</p>
+<p>The kernel ensures that the open/close calls are nested
+correctly, i.e. a process can not open a library more than once.
+</p>
+<p>The kernel ensures that the open/close calls are nested
+correctly, i.e. a process cannot open a library more than once.
+</p>
+<p><u>Functions</u>
+</p>
+<p>Functions are not obligatory, so a library can hook in system
+calls also via the AES or DOS that are removed again at
+termination, yet generally functions are made available.
+</p>
+<p>A function is called with the following parameters on the stack:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_structures.html#PD">PD</a> *pd</td>
+<td valign="top"> Process descriptor of the caller, corresponds to the associated
+slb_open()/close()
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">LONG fn</td>
+<td valign="top"> Function number. Practical when several functions are
+amalgamated (identical function pointers in LIBHEAD)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">WORD nargs</td>
+<td valign="top"> Number of the following arguments, in WORDs. If a function has
+a variable number of parameters, one can ascertain the actual number.
+Very useful for extensions, without having to incorporate new
+functions. <b>Example:</b> If a function always expects a pointer,
+but optionally also a WORD, it will receive either 2 or 3 as
+<i>nargs.</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">...</td>
+<td valign="top"> The remaining parameters
+
+</td></tr>
+</table>
+
+<p>The functions are executed in the context of the caller and with
+its stack. As this call is generally made in user-mode, multitasking
+will not be interrupted even for longer operations. Depending on the
+function, the function result can be a LONG, a WORD, void etc.
+</p>
+<p>A function may alter registers d0-d2 and a0-a1, all other
+registers have to be saved if appropriate. In particular, register a2
+must not be altered, so that Pure-C routines may be called.
+</p>
+<h3><a name="SLB_DEMO.C">11.23.5 SLB_DEMO.C</a></h3>
+<pre>/*
+*
+* Body of a &quot;shared library&quot;
+*
+* Andreas Kromke
+* 22.10.97
+*
+*/
+
+#include &lt;portab.h&gt;
+#include &lt;tos.h&gt;
+#include &lt;tosdefs.h&gt;
+#pragma warn -par
+
+typedef void *<a href="gemdos_structures.html#PD">PD</a>;
+
+char *mem;               /* Here global memory */
+
+/*****************************************************************
+*
+* The init-function is called once during loading the library.
+* For this it runs as a process of the library, i.e. files can
+* be opened and memory can be reserved that belong to the library
+* in each case.
+* Warning: The files opened in this way may _NOT_ be accessed
+*          by the library functions, because these run in the
+*          context of the caller.
+*
+* Warning: The init-function runs in supervisor mode, as a
+*          library generally does not have a user stack.
+*          Hence it must not use too much stack space (max. 1kB)
+*          and may not run too long (because multitasking is
+*          blocked in supervisor mode).
+*          But if necessary a user stack can be allocated and one
+*          can then switch to user mode.
+*
+*****************************************************************/
+
+extern LONG cdecl slb_init( void )
+{
+     mem = <a href="gemdos_memory.html#Malloc">Malloc</a>(4096L);
+     if     (mem)
+          return(<a href="gemdos_errors.html#E_OK">E_OK</a>);
+     else     return(<a href="gemdos_errors.html#ENSMEM">ENSMEM</a>);
+}
+
+/*****************************************************************
+*
+* The exit-function is called once during releasing the library.
+* For this it runs as a process of the library, i.e. files can
+* be opened and memory can be reserved that belong to the library
+* in each case.
+*
+* Warning: The exit-function runs in supervisor mode, as a
+*          library generally does not have a user stack.
+*          Hence it must not use too much stack space (max. 1kB)
+*          and may not run too long (because multitasking is
+*          blocked in supervisor mode).
+*          But if necessary a user stack can be allocated and one
+*          can then switch to user mode.
+*
+*****************************************************************/
+
+extern void cdecl slb_exit( void )
+{
+     <a href="gemdos_memory.html#Mfree">Mfree</a>(mem);
+}
+
+
+/*****************************************************************
+*
+* The open-function is called once during opening of the library
+* by an application process. For this it runs as a process of the
+* caller, i.e. files can be opened and memory can be reserved that
+* belong to the caller in each case.
+*
+* The kernel ensures that each process does not open the library
+* several times, and that the library is always closed properly.
+*
+* Warning: The open-function runs in user mode, and actually with
+*          the user stack of the caller. This means that the caller,
+*          even when running in supervisor mode, always has to make
+*          a sufficiently large usp available.
+*
+*****************************************************************/
+
+extern LONG cdecl slb_open( <a href="gemdos_structures.html#PD">PD</a> *pd )
+{
+     return(<a href="gemdos_errors.html#E_OK">E_OK</a>);
+}
+
+
+/*****************************************************************
+*
+* The close-function is called once during closing of the library
+* by an application process. For this it runs as a process of the
+* caller, i.e. files can be opened and memory can be reserved and
+* released, that belongs to the caller in each case.
+*
+* Warning: The close-function runs in user mode, and actually with
+*          the user stack of the caller. This means that the caller,
+*          even when running in supervisor mode, always has to make
+*          a sufficiently large usp available.
+*
+*****************************************************************/
+
+extern void cdecl slb_close( <a href="gemdos_structures.html#PD">PD</a> *pd )
+{
+}
+
+
+/*****************************************************************
+*
+* An example library function.
+* It is executed in the context of the caller, and actually with
+* the stack of the caller (depending on status usp or ssp).
+*
+* It is strongly recommended to call the functions of an SLB only in
+* user mode, so as to ensure compatibility to later implementations.
+*
+*****************************************************************/
+
+extern LONG cdecl slb_fn0( <a href="gemdos_structures.html#PD">PD</a> *pd, LONG fn, WORD nargs, char *s )
+{
+     <a href="gemdos_chrinout.html#Cconws">Cconws</a>(s);
+     <a href="gemdos_chrinout.html#Cconws">Cconws</a>(&quot;\r\n Key: &quot;);
+     <a href="gemdos_chrinout.html#Cconin">Cconin</a>();
+     return(<a href="gemdos_errors.html#E_OK">E_OK</a>);
+}
+</pre>
+<h3><a name="LIBHEAD.S">11.23.6 LIBHEAD.S</a></h3>
+<pre>/*
+*
+* Header for a &quot;shared library&quot;
+* This is used in place of the start-code of PureC
+*
+* It is _imperative_ to ensure that bit 3 of the flags
+* in the program header is set, so that the library
+* does not reserve the whole of the available memory.
+*
+* Warning: The SLB-concept of <a href="magic.html">MagiC</a> 5.20 still had an error,
+* which I have fixed in 6.00. For this the makeup had to be
+* modified slightly. SLBs for <a href="magic.html">MagiC</a> 6 therefore do not run
+* with those for <a href="magic.html">MagiC</a> 5.20 and vice versa.
+*
+* Andreas Kromke
+* 10.2.98
+*
+*/
+
+     XREF slb_init
+     XREF slb_exit
+     XREF slb_open
+     XREF slb_close
+     XREF slb_fn0
+
+     TEXT
+
+DC.L          $70004afc              ; Magical value (5.20: $42674e41)
+DC.L          name                   ; Pointer to name of library
+DC.L          1                      ; Version number
+DC.L          0                      ; Flags, at present 0L
+DC.L          slb_init               ; Is called after loading
+DC.L          slb_exit               ; Is called before removing
+DC.L          slb_open               ; Is called at opening
+DC.L          slb_close              ; Is called at closing
+DC.L          0                      ; Pointer to procedure name (optional)
+DC.L          0,0,0,0,0,0,0,0        ; Unused, always NULL
+DC.L          1                      ; Number of functions (5.20: .W)
+DC.L          slb_fn0                ; Function #0
+
+name:          DC.B     'DEMO.SLB',0
+
+     END
+</pre>
+<h3><a name="SLB_DEMO.PRJ">11.23.7 SLB_DEMO.PRJ</a></h3>
+<pre>slb_demo.slb
+.L[-S=256]     ; Minimum stack
+
+=
+
+libhead.s      ; Startup code for SLBs
+slb_demo.c (slb.h)
+
+pctoslib.lib
+pcstdlib.lib
+</pre>
+<h3><a name="PH_BIT3.TTP">11.23.8 PH_BIT3.TTP</a></h3>
+<pre>/*
+*
+* Program for the manipulation of bit 3 in the program header.
+* <a href="magic.html">MagiC</a> needs this bit, which is generally 0, to assign to
+* the program only the minimum amount of memory that is needed,
+* i.e. only basepage+text+data+symbol+BSS.
+* Is needed in particular for all SharedLibraries.
+*
+* Andreas Kromke
+* 25.10.97
+*
+*/
+
+#include &lt;portab.h&gt;
+#include &lt;tos.h&gt;
+#include &lt;tosdefs.h&gt;
+#include &lt;stdio.h&gt;
+
+/* ProgramHeader, <a href="gemdos_programs.html#Program_20header">Program header</a> for executable files                   */
+/************************************************************************/
+
+typedef struct {
+ WORD ph_branch;         /* 0x00: Must be 0x601a */
+ LONG ph_tlen;           /* 0x02: Length of TEXT segment */
+ LONG ph_dlen;           /* 0x06: Length of DATA segment */
+ LONG ph_blen;           /* 0x0a: Length of BSS  segment */
+ LONG ph_slen;           /* 0x0e: Length of the symbol table */
+ LONG ph_res1;           /* 0x12: Required by PureC */
+ LONG <a href="gemdos_programs.html#ph_prgflags">ph_prgflags</a>;       /* 0x16:    Bit 0: Don't clear heap */
+                         /*          Bit 1: Load into FastRAM */
+                         /*          Bit 2: <a href="gemdos_memory.html#Malloc">Malloc</a> from FastRAM */
+                         /*          Bit 3: Only t+d+b+s (<a href="magic.html">MagiC</a> 5.20) */
+                         /*          Bit 4,5,6,7: <a href="gemdos_programs.html#Memory_20protection">Memory protection</a> */
+                         /*          Bit 8: Unused */
+                         /*          Bit 9: Unused */
+                         /*          Bit 10: Unused */
+                         /*          Bit 11: SharedText (MiNT) */
+                         /*          Bit 12: Unused */
+                         /*          Bit 13: Unused */
+                         /*          Bit 14: Unused */
+                         /*          Bit 15: Unused */
+                         /*          Bits 31..28: TPA size */
+                         /*          (times 128k + 128k: Min. heap size) */
+ WORD ph_absflag;        /* 0x1a: Non-zero =&gt; do not relocate */
+} <a href="gemdos_programs.html#PH">PH</a>;
+
+
+
+WORD main( WORD argc, char *argv[] )
+{
+     <a href="gemdos_programs.html#PH">PH</a> ph;
+     WORD ret = 0;
+     LONG err;
+     WORD f;
+
+     for     (argc--,argv++; argc; argc--,argv++)
+          {
+          <a href="gemdos_chrinout.html#Cconws">Cconws</a>(&quot;File: &quot;);
+          <a href="gemdos_chrinout.html#Cconws">Cconws</a>(*argv);
+          err = <a href="gemdos_file.html#Fopen">Fopen</a>(*argv, RMODE_RW);    /* Open for reading + writing */
+          f = (WORD) err;                  /* File handle                */
+          err = <a href="gemdos_file.html#Fread">Fread</a>(f, sizeof(<a href="gemdos_programs.html#PH">PH</a>), &amp;ph);
+          if     ((err != sizeof(<a href="gemdos_programs.html#PH">PH</a>)) || (ph.ph_branch != 0x601a))
+               {
+               err = <a href="gemdos_errors.html#EPLFMT">EPLFMT</a>;
+               goto nextone;
+               }
+          <a href="gemdos_file.html#Fseek">Fseek</a>(0L, f, 0);                 /* File pointer to the start  */
+          ph.<a href="gemdos_programs.html#ph_prgflags">ph_prgflags</a> |= 8;             /* Set bit 3                  */
+          err = <a href="gemdos_file.html#Fwrite">Fwrite</a>(f, sizeof(<a href="gemdos_programs.html#PH">PH</a>), &amp;ph);
+
+      nextone:
+          if     (f &gt; 0)
+               <a href="gemdos_file.html#Fclose">Fclose</a>(f);
+          if     (err &lt; 0)
+               {
+               printf(&quot; =&gt; Error %ld&quot;, err);
+               ret = (WORD) err;
+               }
+          <a href="gemdos_chrinout.html#Cconws">Cconws</a>(&quot;\r\n&quot;);
+          }
+     return(ret);
+}
+</pre>
+<h3><a name="SLB_BIND">11.23.9 SLB_BIND</a></h3>
+<p><b>Warning:</b> The function <a href="gemdos_system.html#Slbopen">Slbopen</a> contains an additionnal
+parameter <i>param.</i> This no longer appears in the <a href="#SLB.H">SLB.H</a>. Best to
+just simply inore it.
+</p>
+<pre>/*
+*
+* Binding for the use of a &quot;shared library&quot;
+*
+* Andreas Kromke
+* 22.10.97
+*
+*/
+
+#include &lt;mgx_dos.h&gt;
+
+/*****************************************************************
+*
+* Opens a &quot;shared lib&quot;.
+*
+* Input:
+*     name             Name of the library, including extension
+*     path             Search path with '\', optional
+*     min_ver          Minimum required version number
+* Returns:
+*     sl               Library descriptor
+*     fn               Function for calling a library function
+*     &lt;ret&gt;            Actual version number, or error code
+*
+*****************************************************************/
+
+LONG <a href="gemdos_system.html#Slbopen">Slbopen</a>( char *name, char *path, LONG min_ver,
+        SHARED_LIB *sl, SLB_EXEC *fn,
+        LONG param )
+{
+  return(<a href="gemdos_trap.html#gemdos">gemdos</a>(0x16, name, path, min_ver, sl, fn, param));
+}
+
+
+/*****************************************************************
+*
+* Closes a &quot;shared lib&quot;.
+*
+* Returns:
+*     &lt;ret&gt;          <a href="gemdos_errors.html#EACCDN">EACCDN</a>, if library not opened
+*
+*****************************************************************/
+
+extern LONG <a href="gemdos_system.html#Slbclose">Slbclose</a>( SHARED_LIB sl )
+
+{
+  return(<a href="gemdos_trap.html#gemdos">gemdos</a>(0x17, sl));
+}
+
+</pre>
+<h3><a name="SLB.H">11.23.10 SLB.H</a></h3>
+<pre>/*
+*
+* Binding for the use of &quot;shared libraries&quot;
+*
+* Andreas Kromke
+* 22.10.97
+* Last change 19.2.99  - SLB_EXEC with cdecl corrected
+*
+* 19.2.99
+* - SLB_EXEC mit cdecl korrigiert
+* 20.8.99
+* - <a href="gemdos_system.html#Slbclose">Slbclose</a> korrigiert
+*/
+
+#ifndef LONG
+#include &lt;portab.h&gt;
+#endif
+
+typedef void *SHARED_LIB;
+
+/* old Version: typedef LONG (*SLB_EXEC)( void , ... ); */
+typedef LONG cdecl (*SLB_EXEC)( SHARED_LIB sl, LONG fn, WORD nargs, ... );
+
+extern LONG <a href="gemdos_system.html#Slbopen">Slbopen</a>( char *name, char *path, LONG min_ver,
+        SHARED_LIB *sl, SLB_EXEC *fn );
+extern LONG <a href="gemdos_system.html#Slbclose">Slbclose</a>( SHARED_LIB sl );
+</pre>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_vfat.html"><img src="udo_lf.gif" alt="VFAT-XFS in MagiC" title="VFAT-XFS in MagiC" border="0" width="24" height="24">VFAT-XFS in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="n_aes.html"><img src="udo_rg.gif" alt="N.AES" title="N.AES" border="0" width="24" height="24">N.AES</a>
+</body>
+</html>

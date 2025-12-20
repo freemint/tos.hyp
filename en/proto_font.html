@@ -1,0 +1,181 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: Font protocol
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_HEAD" href="proto_dhst.html"><img src="udo_lf.gif" alt="Document History protocol" title="Document History protocol" border="0" width="24" height="24">Document History protocol</a>
+<a name="UDO_nav_rg_HEAD" href="proto_gdps.html"><img src="udo_rg.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+
+<hr>
+
+<h1><a name="Font_20protocol">15.5 Font protocol</a></h1>
+<p><u>Description of the Font protocol, Revision 5</u>
+</p>
+<p>Minimal support of this protocol consists in the evaluation of
+the FONT_CHANGED message. Programs that support one of the (GDOS)
+attributes text angle, text width, kerning, text slope or the setting
+of the text size in 1/65536 points should also support the
+XFONT_CHANGED message, which offers additional information.
+</p>
+<p>With the message FONT_SELECT the font-selector can also be
+called up by the application. During this the currently set attributes
+can be passsed as well.
+</p>
+<p>If the application also supports the <a href="proto_xacc.html">XAcc</a>-2 protocol, then it
+can also reveal easily the FONT_ACK confirmation message, and search
+for font selectors in memory even without an environmental variable.
+</p>
+<ul>
+<a name="FONT_CHANGED"></a>
+<li><p> <tt>FONT_CHANGED</tt> message:
+<br>Message from the font-selector to an application that the font
+and/or character attributes (size, colour and effects) in one or more
+windows of the application should be changed. If the target
+application contains in its extended <a href="proto_xacc.html">XAcc</a> name the identifier
+'XFontAck' then this message has to be replied to with a FONT_ACK
+message. Otherwise the support for this message is optional.
+<br>&nbsp;
+<br>Negative values in msg[6/7] or zero in msg[4/5] represents no
+change.
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]  = FONT_CHANGED (0x7a18)
+msg[1]  = apID
+msg[2]  = 0
+msg[3]  = Handle of the affected window, or negative
+          value if the font for all windows should be
+          changed.
+msg[4]  = Font ID, or 0
+msg[5]  = Font size in points (&gt;0) or pixels (&lt;0)
+          or zero for no change
+msg[6]  = Font colour
+msg[7]  = Effects:
+          Bit 0: Bold
+          Bit 1: Light
+          Bit 2: Italics
+          Bit 3: Underlined
+          Bit 4: Outlined
+          Bit 5: Shadowed
+          Bit 6: Inverse
+          Bit 12: 1=Font is monospaced; 0=unknown
+          (remaining bits are reserved)
+</pre>
+</blockquote>
+<br>Bit 12 was introduced with Revision 5.
+<br>&nbsp;
+<a name="XFONT_CHANGED"></a>
+</p></li>
+<li><p> <tt>XFONT_CHANGED</tt> message:
+<br>Convey extended (GDOS) attributes. This message is optional and
+is sent <i>before</i> the FONT_CHANGED message, i.e. these values may
+be set only when the FONT_CHANGED message arrives and has the same
+sender (compare with msg[1]!). This avoids duplicated redraws and/or
+errors.
+<br>&nbsp;
+<br>The FONT_CHANGED message contains the size, rounded to a point
+value, i.e. programs that do not support XFONT_CHANGED can use this
+value.
+<br>&nbsp;
+<br>Font-selectors as a rule only understand this message when one
+of the conveyed attributes differs from the normal value!
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = XFONT_CHANGED (0x7a1b)
+msg[1]   = apID
+msg[2]   = 0
+msg[3/4] = Size in 1/65536 point (<a href="vdi_structures.html#fix31">fix31</a>)
+msg[5]   = Rotation angle in 1/10-degree (0-3599)
+msg[6]   = Slope in 1/10-degree (-1800 - 1800)
+msg[7]   = Width and kerning:
+           Bit 15:    Pair kerning
+           Bit 13/14: Track kerning mode (0-3)
+           Bit 0-12:  Width in points
+
+           In C:
+
+           typedef struct
+           {
+               unsigned int  pair  : 1;
+               unsigned int  track : 2;
+               unsigned int  width : 13;
+           } VECTOR_<a href="wind.html#INFO">INFO</a>;
+</pre>
+</blockquote>
+<a name="FONT_SELECT"></a>
+</p></li>
+<li><p> <tt>FONT_SELECT</tt> message:
+<br>With this message one can call a font-selector containing in its
+extended <a href="proto_xacc.html">XAcc</a> name the identifier 'XFontAck' that is present in
+memory. If the application and/or the font-selector does not support
+the <a href="proto_xacc.html">XAcc</a>-2 protocol, then one can still search for the contents of the
+(AES) environmental variable 'FONTSELECT'. In some cases this
+variable may contain several names (separated by semicolons), where
+the names optionally may include the path and file extender, so that
+under multitasking one can load the font-selector <i>in parallel.</i>
+<br>&nbsp;
+<br><b>Examples:</b>
+<br>&nbsp;
+<pre>setenv FONTSELECT=FONT_PAL;FONT_SEL
+setenv FONTSELECT=C:\FONTSEL\FONT_SEL.APP;C:\FONTSEL\FONT_PAL.APP
+</pre>
+<br>But for passive support of the Font protocol, an evaluation of
+the above-named FONT_CHANGED and XFONT_CHANGED messages suffices.
+<br>&nbsp;
+<br>Negative values in msg[6/7] or a zero in msg[4/5] mean that this
+parameter is not required, is not to be set, or has not yet been set.
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = FONT_SELECT (0x7a19)
+msg[1]   = apID
+msg[2]   = 0
+msg[3]   = Handle of the window whose font is to be set,
+           or a negative value if the font in all windows
+           of the application is to be changed
+msg[4]   = Font ID, or 0
+msg[5]   = Font size in points (&gt;0) or pixels (&lt;0), or zero
+           if the parameter is not required (see above)
+msg[6]   = Font colour
+msg[7]   = Effects (see above)
+</pre>
+</blockquote>
+<a name="FONT_ACK"></a>
+</p></li>
+<li><p> <tt>FONT_ACK</tt> message:
+<br>Inform the font-selector about whether the FONT_CHANGED message
+could be evaluated, or the font attributes could be set.
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = FONT_ACK (0x7a1a)
+msg[1]   = apID
+msg[2]   = 0
+msg[3]   = TRUE (1):  <a href="proto_ssp.html#Message">Message</a> was evaluated
+           FALSE (0): <a href="proto_ssp.html#Message">Message</a> was ignored
+msg[4-7] = 0 (reserved)
+</pre>
+</blockquote>
+</p></li>
+</ul>
+
+<p>See also: <a href="proto_xfsl.html">xFSL interface</a> &nbsp; <a href="proto_bubblegem.html#Font-selection">MagiC font-selection</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_FOOT" href="proto_dhst.html"><img src="udo_lf.gif" alt="Document History protocol" title="Document History protocol" border="0" width="24" height="24">Document History protocol</a>
+<a name="UDO_nav_rg_FOOT" href="proto_gdps.html"><img src="udo_rg.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+</body>
+</html>

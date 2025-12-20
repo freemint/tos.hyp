@@ -1,0 +1,214 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: Scrollable input fields
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_editable.html"><img src="udo_lf.gif" alt="Input fields in MagiC" title="Input fields in MagiC" border="0" width="24" height="24">Input fields in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_errors.html"><img src="udo_rg.gif" alt="Special error-messages in MagiC" title="Special error-messages in MagiC" border="0" width="24" height="24">Special error-messages in MagiC</a>
+
+<hr>
+
+<h1><a name="Scrollable_20input_20fields">11.7 Scrollable input fields</a></h1>
+<pre>/*******************************************************************
+*
+* This sample program demonstrates the use of scrollable
+* input fields in <a href="magic.html">MagiC</a> 3.
+*
+*******************************************************************/
+
+#include &lt;<a href="aes_fundamentals.html#aes">aes</a>.h&gt;
+#include &lt;tos.h&gt;
+#include &lt;string.h&gt;
+#include &lt;magx.h&gt;
+#include &quot;magxlib.h&quot;
+#include &quot;edscroll.h&quot;
+
+#define TLEN  30
+
+int  do_dialog    (<a href="aes_structures.html#OBJECT">OBJECT</a> *dialog);
+
+void main()
+{
+  <a href="aes_structures.html#OBJECT">OBJECT</a> *adr_dialog;
+  ULONG crdate;
+  int is_scroll;
+
+  <a href="aes_structures.html#XTED">XTED</a> xted;
+  char tmplt[TLEN+1],txt[TLEN+1];
+
+
+  /* Check whether the system can scrolledit */
+  /* ------------------------------------------ */
+
+  is_scroll = ((0 &lt; get_<a href="magic.html">MagiC</a>_ver(&amp;crdate)) &amp;&amp;
+    (crdate &gt;= 0x19950829L));
+
+     /* Register application with the <a href="aes_main.html">AES</a> */
+     /* ----------------------------- */
+
+     if   (<a href="appl.html#appl_init">appl_init</a>() &lt; 0)
+          <a href="gemdos_process.html#Pterm">Pterm</a>(1);
+
+     /* Resourcedatei laden */
+     /* ------------------- */
+     if   (!<a href="rsrc.html#rsrc_load">rsrc_load</a>("edscroll.rsc"))
+     {
+          <a href="form.html#form_alert">form_alert</a>(1, &quot;[3][ \&quot;EDSCROLL.RSC\&quot;|not found!][Cancel]&quot;);
+          goto err;
+     }
+
+     <a href="rsrc.html#rsrc_gaddr">rsrc_gaddr</a>(0, EDIT, &amp;adr_dialog);
+
+  /* Initialize scroll <a href="aes_structures.html#TEDINFO">TEDINFO</a>  */
+  /* ----------------------------- */
+
+  init_scrlted(adr_dialog+EDITTXT, is_scroll, &amp;xted,
+        txt, tmplt, TLEN);
+
+  strcpy(txt, &quot;Beispiel&quot;);
+
+  /* Dialog */
+  /* ------ */
+
+     <a href="wind.html#wind_update">wind_update</a>(<a href="wind.html#BEG_MCTRL">BEG_MCTRL</a>);
+     <a href="graf.html#graf_mouse">graf_mouse</a>(<a href="graf.html#ARROW">ARROW</a>, 0L);
+     do_dialog(adr_dialog);
+     <a href="wind.html#wind_update">wind_update</a>(<a href="wind.html#END_MCTRL">END_MCTRL</a>);
+     <a href="rsrc.html#rsrc_free">rsrc_free</a>();
+
+  err:
+     <a href="appl.html#appl_exit">appl_exit</a>();
+     <a href="gemdos_process.html#Pterm0">Pterm0</a>();
+}
+
+
+/****************************************************************
+*
+* do_dialog
+*
+****************************************************************/
+
+int do_dialog(<a href="aes_structures.html#OBJECT">OBJECT</a> *dialog)
+{
+     int cx, cy, cw, ch;
+     int exitbutton;
+
+     <a href="form.html#form_center">form_center</a>(dialog, &amp;cx, &amp;cy, &amp;cw, &amp;ch);
+     <a href="form.html#form_dial">form_dial</a>(<a href="form.html#FMD_START">FMD_START</a>, 0,0,0,0, cx, cy, cw, ch);
+     <a href="objc.html#objc_draw">objc_draw</a>(dialog, ROOT, MAX_DEPTH, cx, cy, cw, ch);
+     exitbutton = 0x7f &amp; <a href="form.html#form_do">form_do</a>(dialog, 0);
+     <a href="form.html#form_dial">form_dial</a>(<a href="form.html#FMD_FINISH">FMD_FINISH</a>, 0,0,0,0,cx, cy, cw, ch);
+     return(exitbutton);
+}
+
+
+/*******************************************************************
+*
+* Ascertain <a href="magic.html">MagiC</a> version
+* =======================
+*
+* If &lt;crdate&gt; != NULL, the creation date will be returned
+* in the form yyyymmdd. With '&lt;' and '&gt;' one can then
+* ascertain directly whether a given function is available
+* in the <a href="magic.html">MagiC</a> version in question.
+*
+* Return value:  0     No <a href="magic.html">MagiC</a> <a href="xbios_sound.html#installed">installed</a>
+*               -1     Still in AUTO folder
+*           0x0a0b     Version a.b
+*
+*******************************************************************/
+
+WORD get_<a href="magic.html">MagiC</a>_ver(ULONG *crdate)
+{
+  ULONG *cookie;
+  <a href="AESVARS.html">AESVARS</a> *av;
+
+  cookie = get_cookie('MagX');
+  if  (!cookie)
+    return(0);
+  else
+  {
+    av = ((<a href="bios_cookiejar.html#MAGX_COOKIE">MAGX_COOKIE</a> *) (*cookie))-&gt;aesvars;
+    if  (!av)
+      return(-1);
+    else if (crdate)
+    {
+      *crdate = av-&gt;date &lt;&lt; 16L;                /* yyyy0000 */
+      *crdate |= av-&gt;date &gt;&gt; 24L;               /* yyyy00dd */
+      *crdate |= (av-&gt;date &gt;&gt; 8L) &amp; 0xff00L;    /* yyyymmdd */
+      return(av-&gt;version);
+    }
+  }
+}
+
+
+/****************************************************************
+*
+* Makes an F(BOX)TEXT object scrollable if <a href="magic.html">MagiC</a> is running.
+*
+* If &lt;is_scroll&gt; is FALSE, only the text field will be converted
+* to a user character string.
+*
+* In the RCS, the text field should be left empty, but the template
+* and the validation character string have to be input, as the RCS
+* will strike otherwise.
+* For scrolling fields a new template has to be created, as the
+* one registered in the .RSC file cannot be used since it is too
+* short. The template created here consists only of '_' characters,
+* since this covers 99.9% of all applications for scrolling objects.
+* The length of the validation string is immaterial. i.e. has to be
+* at least 1, as the <a href="aes_main.html">AES</a> automatically duplicates the validation
+* string until the length of the text field has been filled.
+*
+* The maximum length for the input character string is in every case
+* (<a href="aes_structures.html#TEDINFO">TEDINFO</a>.te_txtlen - 1).
+*
+****************************************************************/
+
+void init_scrlted(<a href="aes_structures.html#OBJECT">OBJECT</a> *o, WORD is_scroll, <a href="aes_structures.html#XTED">XTED</a> *xted,
+        char *txt, char *tmplt, WORD len)
+{
+  <a href="aes_structures.html#TEDINFO">TEDINFO</a> *t;
+
+  t = o-&gt;ob_spec.tedinfo;
+  t-&gt;te_just = TE_LEFT;   /* Important! */
+  t-&gt;te_ptext = txt;
+  if  (is_scroll)
+  {
+    memset(tmplt, '_', len);  /* New template */
+    tmplt[len] = '\0';
+    xted-&gt;xte_ptmplt = tmplt;
+    xted-&gt;xte_pvalid = t-&gt;te_pvalid;
+    xted-&gt;xte_vislen = t-&gt;te_tmplen - 1;
+    xted-&gt;xte_scroll = 0;
+
+    t-&gt;te_tmplen = len+1;
+    t-&gt;te_ptmplt = NULL;
+    t-&gt;te_pvalid = (void *) xted;
+  }
+  t-&gt;te_txtlen = t-&gt;te_tmplen;
+}
+</pre>
+<p>See also: <a href="aes_about.html">About the AES</a> &nbsp; <a href="magic_editable.html">Input fields in MagiC</a> &nbsp; <a href="gem_about.html">GEM</a> &nbsp; <a href="aes_structures.html#TEDINFO">TEDINFO</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_editable.html"><img src="udo_lf.gif" alt="Input fields in MagiC" title="Input fields in MagiC" border="0" width="24" height="24">Input fields in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_errors.html"><img src="udo_rg.gif" alt="Special error-messages in MagiC" title="Special error-messages in MagiC" border="0" width="24" height="24">Special error-messages in MagiC</a>
+</body>
+</html>

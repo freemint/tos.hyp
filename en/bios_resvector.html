@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: Hooking into the reset vector
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_HEAD" href="bios_channels.html"><img src="udo_lf.gif" alt="The input/output channels of the BIOS" title="The input/output channels of the BIOS" border="0" width="24" height="24">The input/output channels of the BIOS</a>
+<a name="UDO_nav_rg_HEAD" href="bios_sysvars.html"><img src="udo_rg.gif" alt="The system variables" title="The system variables" border="0" width="24" height="24">The system variables</a>
+
+<hr>
+
+<h1><a name="Hooking_20into_20the_20reset_20vector">3.3 Hooking into the reset vector</a></h1>
+<p>The recipe for hooking your own routines into the reset-vector
+runs as follows:
+</p>
+<ul>
+<li><p> Set the system variable <a href="bios_sysvars.html#resvalid">resvalid</a> to the value 0x31415926, as
+therwise <i><a href="bios_sysvars.html#resvector">resvector</a></i> will be completely ignored by the BIOS ignore.
+<br>&nbsp;
+</p></li>
+<li><p> Write the address of your own function in the <a href="bios_sysvars.html#resvector">resvector</a> vector.
+<br>&nbsp;
+</p></li>
+<li><p> Jump back from the function via jmp(a6).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Important:</b> A jump back from the installed function via rts
+is <i>not</i> possible, since no stack has been initialised yet at
+this time. In practice one could proceed as follows, for instance:
+</p>
+<pre>RESMAGIC    equ       $31415926
+_<a href="bios_sysvars.html#resvalid">resvalid</a>   equ       $426
+_<a href="bios_sysvars.html#resvector">resvector</a>  equ       $42a
+            .text
+install:    move.l    _<a href="bios_sysvars.html#resvalid">resvalid</a>,oldvalid
+            move.l    #RESMAGIC,<a href="bios_sysvars.html#resvalid">resvalid</a>
+            move.l    _<a href="bios_sysvars.html#resvector">resvector</a>,oldreset
+            move.l    #newreset,_<a href="bios_sysvars.html#resvector">resvector</a>
+            rts
+
+            dc.b      &quot;XBRARESV&quot;
+oldreset:   dc.l      0
+
+newreset:   move.l    oldreset,_<a href="bios_sysvars.html#resvector">resvector</a>
+            move.l    oldvalid,_<a href="bios_sysvars.html#resvalid">resvalid</a>
+            jmp       (a6)
+
+            .bss
+oldvalid:   .ds.l     1
+</pre>
+<p><b>Warning:</b> So that multiple programs may install
+themselves, a clean de-installation must follow the handling of the
+function.
+</p>
+<p>See also: <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="the_system_vectors.html">System vectors</a> &nbsp; <a href="xbra_main.html">XBRA procedure</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_FOOT" href="bios_channels.html"><img src="udo_lf.gif" alt="The input/output channels of the BIOS" title="The input/output channels of the BIOS" border="0" width="24" height="24">The input/output channels of the BIOS</a>
+<a name="UDO_nav_rg_FOOT" href="bios_sysvars.html"><img src="udo_rg.gif" alt="The system variables" title="The system variables" border="0" width="24" height="24">The system variables</a>
+</body>
+</html>

@@ -1,0 +1,4199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: MagiC's XFS-concept
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_dfs.html"><img src="udo_lf.gif" alt="MagiC's DFS-concept" title="MagiC's DFS-concept" border="0" width="24" height="24">MagiC's DFS-concept</a>
+<a name="UDO_nav_rg_HEAD" href="magic_vfat.html"><img src="udo_rg.gif" alt="VFAT-XFS in MagiC" title="VFAT-XFS in MagiC" border="0" width="24" height="24">VFAT-XFS in MagiC</a>
+
+<hr>
+
+<h1><a name="MagiC_27s_20XFS-concept">11.21 MagiC's XFS-concept</a></h1>
+<a name="XFS-concept_20in_20MagiC"></a>
+<p>MagiC, just as MultiTOS, enables the incorporation of
+alternative filesystems (so-called XFSs) and with that the use of long
+filenames. However, for several reasons a different approach was
+chosen in MagiC to Atari's solution. This has the unfortunate
+consequence that the XFS's available for MultiTOS (Minix-XFS,
+CD-ROM-XFS, ...) <i>cannot</i> be used under MagiC. This chapter
+describes the following points:
+</p>
+<ul>
+<li> <a href="#General_20remarks_20about_20MagiC_27s_20XFS-concept">General remarks</a>
+</li>
+<li> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+</li>
+<li> <a href="#Data_20structures_20for_20an_20XFS">Data structures</a>
+</li>
+<li> <a href="#Installation_20of_20an_20XFS">Installation of an XFS</a>
+</li>
+<li> <a href="#Kernel_20functions_20for_20an_20XFS">Kernel functions for an XFS</a>
+</li>
+<li> <a href="#Symbolic_20links_20and_20the_20XFS-concept">Symbolic links</a>
+</li>
+</ul>
+
+<p>See also: <a href="magic_vfat.html">VFAT-XFS in MagiC</a> &nbsp; <a href="magic_dfs.html">MagiC's DFS-concept</a>
+</p>
+<h3><a name="General_20remarks_20about_20MagiC_27s_20XFS-concept">11.21.1 General remarks about MagiC's XFS-concept</a></h3>
+<a name="XFS-concept_2C_20General_20remarks"></a>
+<p><a href="gemdos_about.html">GEMDOS</a> was until now the most conservative part of the <a href="magic.html">MagiC</a>
+operating system. For network drivers, practically all DOS calls,
+including <a href="gemdos_process.html#Pexec">Pexec</a>, had to be recreated without being able to intervene
+at a deeper level. In Mag!X 1.x (as in TOS) the DOS was not even
+reentrant because a statically constructed stack was used.
+</p>
+<p>In MultiTOS/MiNT the problem is circumvented in such a way that
+a virtual system is laid over the GEMDOS which takes care of all
+higher management tasks, can incorporate other filesystems and uses
+GEMDOS only as a dumb filesystem driver. An advantage of this solution
+is its great flexibility and extendibility, but a decided drawback is
+the towering overhead when using the 'normal' DOS filesystem. But this
+is just the one that is utilized most frequently. In addition, the
+GEMDOS filesystem can gain no functionality, comfort or speed with the
+use of MiNT, since the old routines only execute with additional
+overhead. File-system accesses under MiNT are therefore generally
+<i>not</i> reentrant, i.e., as under MS-Windows, every floppy disk
+access paralyses the whole computer.
+</p>
+<p>A further property of MiNT is the attempt to undertake functions
+that all filesystems have in common in the kernel. Although this
+leaves the filesystem drivers (MiNT-XFSs) compact, due to the
+Inode-oriented format of the kernel functions an unfavourable
+structure is forced on the file drivers in some circumstances; in
+addition, generally many calls of the filesystem driver are required
+for one DOS call. Finally the MiNT kernel itself is very long, but to
+a large extent lies fallow as long as no filesystems other than DOS
+are in use.
+</p>
+<p><b>Under MagiC a different approach was chosen</b>, which
+included rewriting all GEMDOS functions from the ground up, including
+the low-level ones for the sector buffering, and to carve them up into
+three, four or five layers in which one can intervene from the outside
+(with loaded- in drivers). A side-effect resulted in an extension of
+the DOS file system functionality and an additional filesystem on the
+logical drive U:.
+</p>
+<p><b>The whole concept inclusive of accesses to the DOS
+filesystems is reentrant and runs in the background</b>. Thus it is
+possible to amend files on drive A: without markedly slowing down the
+computer during floppy disk accesses. Despite this MagiC has till now
+grown only by 10kB. Compared to MiNT, more functions were offloaded
+into the file system drivers, and while this makes them longer, it
+gives them the possibility of executing the functions much more
+efficiently. Also, the DOS filesystem has become somewhat faster
+rather than slower.
+</p>
+<p>Although realized completely in Assembler, we are dealing with
+an object-oriented operating system with virtual functions and multi-
+level heredity. A file descriptor (FD), as used by the kernel and made
+available by the XFS, is an object with special data and functions.
+But the XFS realizes also a derived object with further data fields
+and functions. Finally the <a href="magic_dfs.html">DFS</a> subdriver of the DOS_XFS must in
+turn accommodate further functions and data in the <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> and
+extrapolate the class further. Things look exactly the same with the
+DMD (drive medium descriptor). The kernel requires only a few
+statements, but the lower layers appreciably more, though always
+different ones.
+</p>
+<p><b>The layers in detail:</b>
+</p>
+
+<ol class="UDO_env_enumerate">
+<li> <b>The DOS kernel</b>. This lies in MagiC itself and is
+called directly by user programs via TRAP #1. It contains modules for
+memory management, for process management and for file management. The
+latter has the following sublayers:
+</li>
+<li> <b>The filesystem</b> (XFS = e<b>X</b>tended
+<b>F</b>ile-<b>S</b>ystem). Its construction is basically different
+from a MiNT-XFS, but fulfills the same purpose. MagiC for Ataris
+contains only a single XFS, the so- called DOS_XFS; others can be
+incorporated. The Macintosh version (MagiC Mac) contains a Mac-XFS
+<i>in addition.</i> Specifically this filesystem again makes use of
+subdrivers:
+
+<ol class="UDO_env_enumerate" type=a
+>
+<li> A DOS filesystem (DFS) is called up by DOS_XFS. This only
+contains the file functions, while the directory management is
+essentially taken on by the DOS_XFS. MagiC contains directly two
+DFSs. One for drive U:, a second for the FAT filesystems that lie on
+BIOS drives. More DFSs can be incorporated. The effort for a <a href="magic_dfs.html">DFS</a>
+is <i>appreciably lower</i> than for an XFS, as many functions are
+performed already by the DOS_XFS. The vital prerequisite is a DOS-
+conforming directory structure (with 32-bit entries and filenames in
+the 8+3 format). The kernel itself does <i>not</i> come into contact
+with the DFS but controls it transparently via the DOS-XFS.
+</li>
+</ol>
+
+</li>
+<li> <b>The file drivers</b> (<a href="magic_xfs.html#MX_DEV">MX_DEV</a>), which essentially take care
+of file reading and writing operations. They are created and managed
+by the XFS, but with functions such as <a href="gemdos_file.html#Fread">Fread</a> and <a href="gemdos_file.html#Fwrite">Fwrite</a> called
+directly by the kernel, which accrues extremely low overheads. The
+DOS_XFS actually contains only one file driver. This handles the
+updating of the directory at write accesses, for instance, and in turn
+calls a subdriver (MX_DDEV).
+
+<ol class="UDO_env_enumerate" type=a
+>
+<li> The subdriver MX_DDEV is only called by the DOS file driver of
+the DOS_XFS filesystem. The user can incorporate custom MX_DDEVs via
+the directory U:\\DEV. The kernel itself does not come into contact
+with the subdrivers.
+</li>
+</ol>
+
+</li>
+</ol>
+
+<p><b>Notes:</b>
+</p>
+<ul>
+<li><p> In contrast to MiNT, U:\PROC, U:\DEV etc. are not their own
+file systems but simply just subdirectories of the <a href="magic_dfs.html">DFS</a> for drive
+U:. Depending on the subdirectory, the U-DFS creates various file-
+types and -drivers. As the control of the directory is encumbent on the
+DOS_XFS, write accesses to a workstation, for instance, are logged in
+the directory by the file date-stamp. This even goes so far that a
+write access to the root of drive A: will alter the file date-stamp of
+U:\A automatically.
+<br>&nbsp;
+<br>Devices, pipes and shared memory blocks can be moved, deleted or
+renamed. Symbolic links can be created in all directories of drive U:;
+for instance, with 'ln -s U:\CON U:\CONSOLE' one can create an alias
+for the device file CON. One can also create empty files simply,
+though not folders since the drive U: has no memory allocated to it.
+<br>&nbsp;
+</p></li>
+<li><p> In contrats to MiNT, U:\ is not its own special filesystem. One
+just has to respect that only symbolic links can be created. The
+directories U:\A etc. are simply symbolic links, which can also be
+removed or renamed.
+<br>&nbsp;
+</p></li>
+<li><p> All directories of U: are restricted to 32 entries at present
+<br>&nbsp;
+</p></li>
+<li><p> The construction of all internal structures and the fast
+register- based parameter passing and return requires an
+implementation of all filesystems and drivers to be written in
+Assembler, at least for most of the functions
+<br>&nbsp;
+</p></li>
+<li><p> The construction of the MX_DDEV file driver has changed since
+MagiC V2.10. The sample driver DEV_LPT1 may not be used under MagiC
+V3.00 and higher. Actually the concepts have stayed the same, only a
+few constants have changed. A new sample driver is not yet available
+(at the time this was written).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_pipes.html">Test for pipes</a>
+</p>
+<h3><a name="The_20make-up_20of_20an_20XFS">11.21.2 The make-up of an XFS</a></h3>
+<a name="MagiC_2C_20Make-up_20of_20an_20XFS_20in"></a>
+<p>Since the implementation of an <a href="#MagiC_27s_20XFS-concept">XFS</a> can only be performed in
+Assembler, its description is given in Assembler syntax:
+</p>
+<pre><a href="#xfs_name">xfs_name</a>:       DS.B      8    /* Name of the filesystem              */
+<a href="#xfs_next">xfs_next</a>:       DS.L      1    /* Next driver                         */
+<a href="#xfs_flags">xfs_flags</a>:      DS.L      1    /* Flags, analogous to MiNT            */
+<a href="#xfs_init">xfs_init</a>:       DS.L      1    /* <a href="linea_init.html">Initialization</a>                      */
+<a href="#xfs_sync">xfs_sync</a>:       DS.L      1    /* Synchronization of the filesystem   */
+<a href="#xfs_pterm">xfs_pterm</a>:      DS.L      1    /* Notifies a program termination      */
+<a href="#xfs_garbcoll">xfs_garbcoll</a>:   DS.L      1    /* Garbage collection, or NULL         */
+<a href="#xfs_freeDD">xfs_freeDD</a>:     DS.L      1    /* Releases DD                         */
+<a href="#xfs_drv_open">xfs_drv_open</a>:   DS.L      1    /* Tests/initializes DMD (<a href="About_the_BIOS.html#Mediach">Mediach</a>)     */
+<a href="#xfs_drv_close">xfs_drv_close</a>:  DS.L      1    /* Forces a disk media change          */
+<a href="#xfs_path2DD">xfs_path2DD</a>:    DS.L      1    /* Returns a DD to a pathname          */
+<a href="#xfs_sfirst">xfs_sfirst</a>:     DS.L      1    /* Searches for first matching file    */
+<a href="#xfs_snext">xfs_snext</a>:      DS.L      1    /* Searches for next matching file     */
+<a href="#xfs_fopen">xfs_fopen</a>:      DS.L      1    /* Opens or creates a file             */
+<a href="#xfs_fdelete">xfs_fdelete</a>:    DS.L      1    /* Deletes a file                      */
+<a href="#xfs_link">xfs_link</a>:       DS.L      1    /* Required for <a href="gemdos_file.html#Frename">Frename</a> and <a href="gemdos_file.html#Flink">Flink</a>      */
+<a href="#xfs_xattr">xfs_xattr</a>:      DS.L      1    /* Required for <a href="gemdos_file.html#Fxattr">Fxattr</a>                 */
+<a href="#xfs_attrib">xfs_attrib</a>:     DS.L      1    /* Required for <a href="gemdos_file.html#Fattrib">Fattrib</a>                */
+<a href="#xfs_chown">xfs_chown</a>:      DS.L      1    /* Required for <a href="gemdos_file.html#Fchown">Fchown</a>                 */
+<a href="#xfs_chmod">xfs_chmod</a>:      DS.L      1    /* Required for <a href="gemdos_file.html#Fchmod">Fchmod</a>                 */
+<a href="#xfs_dcreate">xfs_dcreate</a>:    DS.L      1    /* Creates a directory                 */
+<a href="#xfs_ddelete">xfs_ddelete</a>:    DS.L      1    /* Deletes a directory                 */
+<a href="#xfs_DD2name">xfs_DD2name</a>:    DS.L      1    /* Returns the absolute pathname       */
+<a href="#xfs_dopendir">xfs_dopendir</a>:   DS.L      1    /* Opens a directory                   */
+<a href="#xfs_dreaddir">xfs_dreaddir</a>:   DS.L      1    /* Reads the next directory entry      */
+<a href="#xfs_drewinddir">xfs_drewinddir</a>: DS.L      1    /* Sets the dirhandle to 1st entry     */
+<a href="#xfs_dclosedir">xfs_dclosedir</a>:  DS.L      1    /* Closes the dirhandle                */
+<a href="#xfs_dpathconf">xfs_dpathconf</a>:  DS.L      1    /* Obtains various limits              */
+<a href="#xfs_dfree">xfs_dfree</a>:      DS.L      1    /* Obtains number of free blocks etc.  */
+<a href="#xfs_wlabel">xfs_wlabel</a>:     DS.L      1    /* Writes the disk name                */
+<a href="#xfs_rlabel">xfs_rlabel</a>:     DS.L      1    /* Reads the disk name                 */
+<a href="#xfs_symlink">xfs_symlink</a>:    DS.L      1    /* Creates a symbolic link             */
+<a href="#xfs_readlink">xfs_readlink</a>:   DS.L      1    /* Reads a symbolic link               */
+<a href="#xfs_dcntl">xfs_dcntl</a>:      DS.L      1    /* Required for <a href="gemdos_directory.html#Dcntl">Dcntl</a>                  */
+</pre>
+<p>See also: <a href="magic_dfs.html#The_20make-up_20of_20a_20DFS">Make-up of a DFS</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="xfs_attrib">11.21.2.1 xfs_attrib</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_attrib« - Required for <a href="gemdos_file.html#Fattrib">Fattrib</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int rwflag
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int attrib
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> char attr <u>or</u> long errcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; a0 =</td>
+<td valign="top"> SYMLINK *
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Unlike MiNT, MagiC does not implement this function as <a href="gemdos_file.html#Fxattr">Fxattr</a>,
+because this can mean a huge overhead in some circumstances. Here
+symbolic links must followed, i.e. the return of ELINK is permissible.
+<br>&nbsp;
+<br>The function xfs_attrib is not yet carried out tidily by
+DOS_XFS, symbolic links are not recognised.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_file.html#Fattrib">Fattrib</a> &nbsp; <a href="gemdos_file.html#Fxattr">Fxattr</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_chmod">11.21.2.2 xfs_chmod</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_chmod« - Required for <a href="gemdos_file.html#Fchmod">Fchmod</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_chmod alters the access rights of a file. The parameters
+correspond to those of <a href="gemdos_file.html#Fchmod">Fchmod</a>. Note that symbolic links are not
+followed.
+<br>&nbsp;
+<br>It is <i>not</i> supported by DOS_XFS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_file.html#Fchmod">Fchmod</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_chown">11.21.2.3 xfs_chown</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_chown« - Required for <a href="gemdos_file.html#Fchown">Fchown</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> uid
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> gid
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_chown alters the owner (user ID and group ID) of a file.
+The parameters correspond to those of <a href="gemdos_file.html#Fchown">Fchown</a>. Symbolic links are not
+followed, i.e. owner and group of the symbolic link are modified.
+<br>&nbsp;
+<br>It is <i>not</i> supported by DOS_XFS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_file.html#Fchown">Fchown</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dclosedir">11.21.2.4 xfs_dclosedir</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dclosedir« - schließt ein Verzeichnis
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20handle_20descriptor_20_28DHD_29">DHD</a> *dhd
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Analogous to MiNT.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Dclosedir">Dclosedir</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dcntl">11.21.2.5 xfs_dcntl</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dcntl« - Required for <a href="gemdos_directory.html#Dcntl">Dcntl</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int cmd
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> long arg
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_dcntl is required for <a href="gemdos_directory.html#Dcntl">Dcntl</a>. Every <a href="#MagiC_27s_20XFS-concept">XFS</a> should support
+<a href="gemdos_file.html#FUTIME">FUTIME</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dcreate">11.21.2.6 xfs_dcreate</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> Create a directory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name (without path)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_dcreate is required for <a href="gemdos_directory.html#Dcreate">Dcreate</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Dcreate">Dcreate</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_ddelete">11.21.2.7 xfs_ddelete</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_ddelete« - Delete a directory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The call xfs_ddelete had to be altered as of MagiC Version
+4.01.
+<br>&nbsp;
+<br><b>For MagiC &lt; 4.01 (kernel version &lt; 3) the following
+applies:</b>
+<br>During deletion one must ensure that no directory may be
+referenced by the kernel except by the call itself (i.e. <a href="#dd_refcnt">dd_refcnt</a>
+must == 1). In addition one must ensure that there are no files in the
+directory. ELINK may not be returned, symbolic links may not be
+processed. The access rights (if they exist) must be tested by the
+XFS.
+<br>&nbsp;
+<br><b>For MagiC &lt; 4.01 (kernel version &gt;= 3) the following
+applies:</b>
+<br>Reentrance problems gave rise to some changes, whereby the kernel
+takes over access control from the <a href="#MagiC_27s_20XFS-concept">XFS</a> and furthermore the kernel
+releases the DD, not the XFS: The kernel first of all opens the parent
+of the directory to be deleted with <a href="#xfs_path2DD">xfs_path2DD</a>, then it tests with
+<a href="#xfs_xattr">xfs_xattr</a> whether it is dealing with a symlink, and if appropriate
+deletes it with <a href="#xfs_fdelete">xfs_fdelete</a>.
+<br>&nbsp;
+<br>If it is dealing with a directory, the kernel opens this again
+with xfs_path2DD (mode 1) and releases the parent again with <a href="#xfs_freeDD">xfs_freeDD</a>.
+The check of <a href="#dd_refcnt">dd_refcnt</a> is performed by the kernel, hence the counter
+can and must be ignored by the XFS. The <a href="#MagiC_27s_20XFS-concept">XFS</a> must now ensure that
+the directory to be deleted or the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> cannot be opened or used by
+others (important for reentrant XFSs). The XFS then deletes the
+directory, but does not (!) release the DD, so that the kernel if
+successful (return value E_OK) can release its standard paths
+beforehand. The kernel then calls <a href="#xfs_freeDD">xfs_freeDD</a>. As usual the XFS must
+check that the directory is empty, or if access rights exist if
+appropriate.
+<br>&nbsp;
+<br>Again in context:
+<br>&nbsp;
+<ul>
+<li><p> The kernel ascertains the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> to be deleted, tests the
+reference counter
+<br>&nbsp;
+</p></li>
+<li><p> xfs_ddelete locks the DD. If this does not work then <a href="gemdos_errors.html#EACCDN">EACCDN</a> is
+returned
+<br>&nbsp;
+</p></li>
+<li><p> xfs_ddelete deletes the directory, provided it is empty; here
+the DD acts as a lock for parallel-runnning attempts to use the newly
+deleted directory
+<br>&nbsp;
+</p></li>
+<li><p> xfs_ddelete leaves the now invalid (but still serving as a
+lock) <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> still valid (in contrast to the old concept)
+<br>&nbsp;
+</p></li>
+<li><p> On success the kernel makes its standard paths invalid
+<br>&nbsp;
+</p></li>
+<li><p> The kernel releases the DD
+<br>&nbsp;
+</p></li>
+</ul>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Ddelete">Ddelete</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dfree">11.21.2.8 xfs_dfree</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dfree« - Obtain number of free blocks.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> long[4]
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_dfree is required for <a href="gemdos_directory.html#Dfree">Dfree</a>. DOS_XFS calls the appropriate
+<a href="magic_dfs.html">DFS</a> driver directly.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Dfree">Dfree</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_DD2name">11.21.2.9 xfs_DD2name</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_DD2name« - Return the absolute pathname.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int bufsize
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_DD2name is required for <a href="gemdos_directory.html#Dgetpath">Dgetpath</a> and <a href="gemdos_directory.html#Dgetcwd">Dgetcwd</a>. The path that
+belongs to the passed directory is copied after <i>name.</i> The path
+must be returned without the trailing '\', i.e. an empty string for
+the root directory. <i>bufsize</i>, as ever, is to be interpreted as
+including the terminating NULL-byte. If the buffer is too small
+(<i>bufsize</i> shorler than the path), then as in MiNT ERANGE must
+be returned.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dopendir">11.21.2.10 xfs_dopendir</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dopendir« - Open a directory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int tosflag
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> <a href="#The_20directory_20handle_20descriptor_20_28DHD_29">DHD</a> *dhd <u>or</u> Fehlercode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_dopendir is required for <a href="gemdos_directory.html#Dopendir">Dopendir</a>. As <i>tosflag</i> only
+0 and 1 are permitted at present. If <i>tosflag</i> == 0, filenames
+are not truncated, and the first four bytes returned by <a href="gemdos_directory.html#Dreaddir">D(x)readdir</a> contain
+the file index.
+<br>&nbsp;
+<br>If <i>tosflag</i> == 1, <a href="gemdos_directory.html#Dreaddir">Dreaddir</a> must truncate the filenames to
+8+3 and convert them to upper case, and may not return a file ID.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Dopendir">Dopendir</a> &nbsp; <a href="gemdos_directory.html#Dreaddir">Dreaddir</a> &nbsp; <a href="gemdos_directory.html#Dxreaddir">Dxreaddir</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dpathconf">11.21.2.11 xfs_dpathconf</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dpathconf« - Obtain various limits.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int which
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long value
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Analogous to MiNT. The DOS_XFS directly calls the appropriate
+<a href="magic_dfs.html">DFS</a> driver. <i>which</i> can take the following values:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">DP_MAXREQ (-1)</td>
+<td valign="top"> Obtain maximum valid value for <i>which</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_IOPEN">DP_IOPEN</a> (0)</td>
+<td valign="top"> Internal limit for number of open files
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_MAXLINKS">DP_MAXLINKS</a> (1)</td>
+<td valign="top"> Maximum number of links for a file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_PATHMAX">DP_PATHMAX</a> (2)</td>
+<td valign="top"> Maximum length for full pathnames
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_NAMEMAX">DP_NAMEMAX</a> (3)</td>
+<td valign="top"> Maximum length for filenames
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_ATOMIC">DP_ATOMIC</a> (4)</td>
+<td valign="top"> Block size
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_TRUNC">DP_TRUNC</a> (5)</td>
+<td valign="top"> Filename truncation, returns:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">DP_NOTRUNC (0)</td>
+<td valign="top"> Never truncate <a href="gemdos_errors.html#ERANGE">ERANGE</a> if nec.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DP_AUTOTRUNC (1)</td>
+<td valign="top"> Truncated to max. length
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DP_DOSTRUNC (2)</td>
+<td valign="top"> Truncated to 8+3
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_CASE">DP_CASE</a> (6)</td>
+<td valign="top"> Upper/lower case, returns:
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">DP_CASESENS (0)</td>
+<td valign="top"> Differentiate
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DP_CASECONV (1)</td>
+<td valign="top"> Converted to upper case
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">DP_CASEINSENS (2)</td>
+<td valign="top"> Not differentiated and not converted
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<br>As of the MagiC version of 21.5.95 the following are supported
+as well:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_MODEATTR">DP_MODEATTR</a> (7)</td>
+<td valign="top"> (as for <a href="gemdos_directory.html#Dpathconf">Dpathconf</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_directory.html#DP_XATTRFIELDS">DP_XATTRFIELDS</a> (8)</td>
+<td valign="top"> (as for <a href="gemdos_directory.html#Dpathconf">Dpathconf</a>)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Dpathconf">Dpathconf</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_dreaddir">11.21.2.12 xfs_dreaddir</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_dreaddir« - Read next directory entry.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20handle_20descriptor_20_28DHD_29">DHD</a> *dhd
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int size
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *buf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> <a href="gemdos_structures.html#XATTR">XATTR</a> *xattr <u>or</u> NULL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d2 =</td>
+<td valign="top"> long *xr (if xattr != NULL)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Analogous to MiNT. Supplants both <a href="gemdos_directory.html#Dreaddir">Dreaddir</a> as well as
+<a href="gemdos_directory.html#Dxreaddir">Dxreaddir</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_drewinddir">11.21.2.13 xfs_drewinddir</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_drewinddir« - Set directory handle to 1st entry.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20handle_20descriptor_20_28DHD_29">DHD</a> * dhd
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Analogous to MiNT.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="gemdos_directory.html#Drewinddir">Drewinddir</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_drv_close">11.21.2.14 xfs_drv_close</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_drv_close« - Force a disk media change.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The function xfs_drv_close also performs two tasks, depending
+on <i>mode</i>:
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li><p> <b><i>mode</i> = 0:</b>
+<br>The kernel requests the <a href="#MagiC_27s_20XFS-concept">XFS</a> to close the drive, if possible. If
+this is not permitted then EACCON must be returned, else all
+structures are to be released or caches written back and E_OK
+returned.
+<br>&nbsp;
+<br>Opened fies are recognized already by the kernel and closing of
+the drive will be prevented. However only those files that have a
+handle and are known to the kernel can be recognized here. For the
+sake of safety the kernel calls <a href="#xfs_sync">xfs_sync</a> before calling this function
+in case a write-back cache is being used. This strategy will be
+carried out also even if at some time a mechanism is built in that
+monitors eject buttons of interchangeable media drives or CD-ROMs,
+and bars ejection if necessary.
+<br>&nbsp;
+</p></li>
+<li><p> <b><i>mode</i> = 1:</b>
+<br>The kernel forces closing of the drive, the <a href="#MagiC_27s_20XFS-concept">XFS</a> has to return
+<a href="gemdos_errors.html#E_OK">E_OK</a>. No caches may be written back as the drive is already invalid
+(after a media change has been reported already). DDs and <a href="#The_20File_20Descriptor_20_28FD_29">FD</a>s do
+not have to be released as far as they are still referenced by the
+kernel, i.e. the kernel still performs <a href="#xfs_freeDD">xfs_freeDD</a> or <a href="#dev_close">dev_close</a> even
+after a media change.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<br>The internal DOS_XFS passes the call on to the <a href="magic_dfs.html">DFS</a> function
+of the same name, and in addition the <a href="#MagiC_27s_20XFS-concept">XFS</a> structures will be
+released if necessary.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_drv_open">11.21.2.15 xfs_drv_open</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_drv_open« - Test/initialize the DMD (<a href="About_the_BIOS.html#Mediach">Mediach</a>).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> MagiC supports exactly 26 simultaneously active filesystems
+that are assigned letters 'A'..'Z'. xfs_drv_open has two tasks:
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li><p> At the first access to a drive (say D:), the kernel creates a
+DMD (drive medium descriptor) and 'offers' this to the XFSs. The entry
+<a href="#d_dfs">d_dfs</a> is still a NULL-pointer, <a href="#d_drive">d_drive</a> is initialized (between 0 and
+25, corresponding to 'A'..'Z').
+<br>&nbsp;
+<br>The <a href="magic_dfs.html">DFS</a> drivers now attempt to recognize 'their' filesystem
+on the drive. If this succeeds, then d_xfs and <a href="#d_root">d_root</a> have to be
+initialized, in which case the return value is then <a href="gemdos_errors.html#E_OK">E_OK</a>. Else <a href="gemdos_errors.html#EDRIVE">EDRIVE</a>
+is reported, and the DOS_XFS tries the next DFS.
+<br>&nbsp;
+<br><b>Warning:</b> The root may not be released during the
+lifetime of a mounted filesystem. The reference counter of the root
+should be preloaded with 1 to prevent it being released with
+<a href="#xfs_freeDD">xfs_freeDD</a>. In the MagiC versions before 4.01 this was not necessary
+because the reference counter (in a 'dirty' way) was not incremented
+before the <a href="#xfs_path2DD">xfs_path2DD</a> call, nor decremented afterwards.
+<br>&nbsp;
+</p></li>
+<li><p> On subsequent access d_xfs is already initialized, and the
+<a href="magic_dfs.html">DFS</a> has the opportunity to test for a medium change. If everything
+is in order, E_OK has to be returned. Else the disk medium change
+routine of the kernel has to be called and E_CHNG returned. For this
+one obtains the pointer to the medium change routine of the kernel
+with <a href="gemdos_directory.html#Dcntl">Dcntl</a>.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<br>The internal DOS_XFS passes on the call to the DFS function of
+the same name, i.e. all DFS drivers are tried in turn.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_fdelete">11.21.2.16 xfs_fdelete</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_fdelete« - Delete a file.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name (without path)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_fdelete is required for <a href="gemdos_file.html#Fdelete">Fdelete</a>. When deleting a symlink,
+only this may be deleted but not a referenced file. This means that a
+return value of ELINK is <i>not permissible</i> here.
+<br>&nbsp;
+<br>Access right checks are left completely to the XFS. During
+deletion one should pay attention that no file may be referenced by
+the kernel (i.e. <a href="#fd_refcnt">fd_refcnt</a> != 0).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_flags">11.21.2.17 xfs_flags</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_flags« -Flags, analogous to MiNT.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Reserved. Should actually contain flags, but it is not used by
+the MagiC kernel. So please do not use it!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_fopen">11.21.2.18 xfs_fopen</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_fopen« - Open or create a file.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name (for opening)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int omode (fürs Öffnen)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int attrib (for creating)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> * <u>or</u> error-code
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; a0 =</td>
+<td valign="top"> SYMLINK *
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_fopen is used by the functions <a href="gemdos_file.html#Fopen">Fopen</a> and <a href="gemdos_file.html#Fcreate">Fcreate</a>. The
+open-mode in the lower-value byte is different to MiNT, because the
+MiNT modes are unfavourable for the implementation of inquiries. When
+calling Fopen via TRAP #1, the MiNT modes are converted by the kernel
+to the internal modes.
+<br>&nbsp;
+<br>These are the internal modes which have to be handled by the
+<a href="#MagiC_27s_20XFS-concept">XFS</a> driver (NOINHERIT is <i>not</i> supported, because according
+to TOS convention only the handles 0..5 are inherited). Otherwise
+the high byte corresponds to the MiNT conventions:
+<br>&nbsp;
+<pre>OM_RPERM   EQU  1   // File is opened for reading
+OM_WPERM   EQU  2   // File is opened for writing
+OM_EXEC    EQU  4   // File is opened for execution
+OM_APPEND  EQU  8   // Write accesses at end (kernel!)
+OM_RDENY   EQU  16  // Others may not read at same time
+OM_WDENY   EQU  32  // Others may not write at same time
+OM_NOCHECK EQU  64  // No check by the kernel
+</pre>
+<br>The bit OM_APPEND is taken note of by the kernel at a <a href="gemdos_file.html#Fwrite">Fwrite</a>
+call automatically; the kernel performs an <a href="gemdos_file.html#Fseek">Fseek</a> before every write
+access.
+<br>&nbsp;
+<br>OM_NOCHECK is set by the kernel if a file is opened or
+redirected (<a href="gemdos_file.html#Fforce">Fforce</a>) as a device, i.e. as handle -1, -2, -3 or -4. If
+this bit is set, then the <a href="#MagiC_27s_20XFS-concept">XFS</a> should not perform a check for
+multiple opening of the file (see also below for <a href="#fd_mode">fd_mode</a>), but leave
+this to the device driver.
+<br>&nbsp;
+<br>Here are the bits, which are used as in MiNT:
+<br>&nbsp;
+<pre>O_CREAT EQU  $200 // Create file, if it doesn't exist
+O_TRUNC EQU  $400 // Clear file, if it exists
+O_EXCL  EQU  $800 // Don't open file, if it exists
+</pre>
+<br>The kernel performs Fcreate as Fopen (O_CREAT +O_RDWR +
+O_TRUNC). O_COMPAT (i.e. specify only the TOS mode 0, 1 or 2), is
+in MagiC always equivalent to O_WDENY.
+<br>&nbsp;
+<br>The checking of the access rights is completely up to the XFS,
+the kernel does nothing; that would be fairly pointless anyway, since
+every filesystem has its own mechanisms and rights. The kernel is
+returned a pointer to an opened <a href="#The_20File_20Descriptor_20_28FD_29">FD</a>, i.e. the opening of the file
+driver must be performed by the XFS. The reference counter of the
+returned FD is to be incremented by the XFS, or initialized as 1 at
+the first opening. For symbolic links and disk media changes the same
+applies as for <a href="#xfs_sfirst">xfs_sfirst</a>.
+<br>&nbsp;
+<br><b>Fopen is implemented as follows under MiNT:</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> With &lt;lookup&gt; convert pathname-&gt;<a href="gemdos_structures.html#fcookie">fcookie</a>
+</li>
+<li> With &lt;getxattr&gt; obtain the access rights
+</li>
+<li> Test of access rights by the kernel
+</li>
+<li> With &lt;getdev&gt; obtain the file driver
+</li>
+<li> With &lt;getdev-&gt;open&gt; open the file
+</li>
+</ol>
+
+<br>This procedure is very protracted. DOS returns a pointer to the
+32-byte directory entry already when searching for a file, which
+serves directly for the checking of the attributes and with that the
+access rights, and also for opening the file. Hence MagiC expects
+direct implementation of the <a href="gemdos_file.html#Fopen">Fopen</a> call with all checks of the access
+rights. The return is an <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> structure, in which the file driver
+was entered and opened.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_freeDD">11.21.2.19 xfs_freeDD</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_freeDD« - Release a <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt;</td>
+<td valign="top"> void
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The kernel has decremeted the reference counter of a <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> to
+0, so that the DD is no longer referenced by the kernel. The function
+xfs_freeDD is called, say, when the kernel after the <a href="gemdos_file.html#Fopen">Fopen</a> no longer
+requires the path in which the opened file lies and which was passed
+to <a href="#xfs_fopen">xfs_fopen</a>. XFSs that do not perform garbage collection can release
+their DDs via this function.
+<br>&nbsp;
+<br>One must ensure that the root is never released. Either one
+builds in a special inquiry here, or (more elegant) already sets the
+reference counter of the root with <a href="#xfs_drv_open">xfs_drv_open</a> to 1.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_garbcoll">11.21.2.20 xfs_garbcoll</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_garbcoll« - Garbage collection.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> *d
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> 1L oder 0L
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The kernel urgently requires internal GEMDOS memory and uses
+xfs_garbcoll to perform a garbage collection. An <a href="#MagiC_27s_20XFS-concept">XFS</a> that does not
+use the kernel's internal memory management can place a NULL-pointer
+as a function here.
+<br>&nbsp;
+<br><b>Warning:</b> As many blocks as possible should be released.
+The return value is 1 if (at least) one block could be released.
+During a garbage collection the kernel runs through the whole list of
+mounted logical drives, so the XFS requests a garbage collection as
+many times as the number of drives it is managing at the time.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_init">11.21.2.21 xfs_init</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_init« - <a href="linea_init.html">Initialization</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Reserved. For MagiC-internal XFSs it contains their
+initialization. Not used with loaded-in XFSs.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_link">11.21.2.22 xfs_link</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_link« - Required for <a href="gemdos_file.html#Frename">Frename</a> and <a href="gemdos_file.html#Flink">Flink</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *olddir
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *newdir
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> char *oldname
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> char *newname
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d2 =</td>
+<td valign="top"> int flag_link
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_link is used both for <a href="gemdos_file.html#Frename">Frename</a> (d2 = 0) and also for <a href="gemdos_file.html#Flink">Flink</a>
+(d2 = 1). In the case of <a href="gemdos_file.html#Frename">Frename</a> a new directory entry has to be
+created and the old entry (reference to the file) deleted or
+overwritten.
+<br>&nbsp;
+<br>In the case of <a href="gemdos_file.html#Flink">Flink</a> a further reference to the same file is
+created and the old entry is not deleted. Both <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>s always lie in
+the same filesystem, so have the same <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a>. As for <a href="gemdos_file.html#Fdelete">Fdelete</a>, in the
+case of a symbolic link this has to be renamed or a further link
+created. This means that an ELINK return value is
+<i>impermissible</i> here (as for <a href="#xfs_fdelete">xfs_fdelete</a>).
+<br>&nbsp;
+<br>Flink is <i>not</i> supported by the DOS_XFS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_name">11.21.2.23 xfs_name</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_name« - Name of the filesystem.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The name is up till now just a comment; perhaps in the future
+it may offer the possibility of ascertaining which drivers are
+<a href="xbios_sound.html#installed">installed</a> and what, say, the driver responsible for drive A: is called
+(i.e. what sort of filesystem the floppy disk contains).
+<br>&nbsp;
+<br>The name of the integrated <a href="#MagiC_27s_20XFS-concept">XFS</a> is 'DOS_XFS ' (extended to 8
+characters with a space).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_next">11.21.2.24 xfs_next</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_next« - Next driver.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_next is simply a chaining pointer to the next driver. A new
+driver is always incorporated at the front, so always has the highest
+priority. This makes it possible to load a driver in place of the
+intergated DOS driver, for instance.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_path2DD">11.21.2.25 xfs_path2DD</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_path2DD« - Return a <a href="#The_20directory_20descriptor_20_28DD_29">directory descriptor (DD)</a> to a pathname.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">mode =</td>
+<td valign="top"> 0: The name is a file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">=</td>
+<td valign="top"> 1: The name is itself a directory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *reldir current directory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *pathname
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> char *restpfad
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">oder</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> ELINK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> Restpath without leading '\'
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> of the path in which the symbolic link lies; this is
+important for relative path specifications in the link
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> NULL, the path represents the parent of the root directory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">oder</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> Path of the symbolic link
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The kernel differentiates between two different types of
+descriptors, file descriptors (FD) and directory descriptors (DD),
+which can have an identical structure however. The xfs_path2DD
+function returns a descriptor for a path.
+<br>The reference counter of the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> must be incremented by 1 each
+time it is returned as a function value, as it is referenced by the
+kernel. The xfs_path2DD function corresponds to an 'opening' of the
+path; a kind of 'file handle' is returned to the kernel, which the
+kernel has to close again. The parsing of the path must always be
+taken care of by the XFS.
+<br>&nbsp;
+<br><b>Input parameters:</b>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&lt;mode&gt;</td>
+<td valign="top"> Determines whether the last path element is itself a directory
+(<i>mode</i> == 1), or whether the path is to be obtained in which
+this file lies
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;reldir&gt;</td>
+<td valign="top"> Directory from which the search is to start
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;pathname&gt;</td>
+<td valign="top"> The pathname, without drive letter and without leading '\'
+
+</td></tr>
+</table>
+
+<br><b>Output parameters:</b>
+<br>&nbsp;
+<br><u>1st case: An error has arisen</u>
+<br>&nbsp;
+<br>d0 contains the error-code
+<br>&nbsp;
+<br><u>2nd case: A directory descriptor (DD) could not be
+obtained</u>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&lt;d0&gt;</td>
+<td valign="top"> Pointer to the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>; the <a href="#MagiC_27s_20XFS-concept">XFS</a> has incremented the reference
+counter of the DD by 1
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;d1&gt;</td>
+<td valign="top"> Pointer to the remaining filenames without leading '\' or '/';
+if the end of the path was reached, this pointer points to the
+terminating NULL-byte
+
+</td></tr>
+</table>
+
+<br><u>3rd case: The XFS hit on a symbolic link during the )path
+evaluation</u>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&lt;d0&gt;</td>
+<td valign="top"> Contains the internal MagiC error-code ELINK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;d1&gt;</td>
+<td valign="top"> Pointer to the remaining path without the leading '\' or '/'
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;a0&gt;</td>
+<td valign="top"> Contains the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> of the path in which the symbolic link
+lies; the XFS has incremented the reference counter of the DD by 1
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;a1&gt;</td>
+<td valign="top"> This is the pointer to the link itself; a link starts with a
+WORD (16 bits) for the length of the path, followed by the path itself
+
+</td></tr>
+</table>
+
+<br><b>Warning:</b> The length must <i>include</i> the terminating
+NULL-byte and also be even. The link has to lie at an even memory
+address.
+<br>&nbsp;
+<br>The buffer for the link may be static or volatile since the
+kernel immediately copies the data elsewhere, with no possibility of a
+context change happening inbetween.
+<br>&nbsp;
+<br>If a1 == NULL is passed, a signal is sent to the kernel that the
+parent of the root directory was selected. If the path resides, say,
+on U:\A, then the kernel can fall back to U:\. The value of the return
+register a0 is ignored by the kernel, so no reference counter may be
+incremented.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_pterm">11.21.2.26 xfs_pterm</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_pterm« - Notify a program termination.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="gemdos_structures.html#PD">PD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt;</td>
+<td valign="top"> void
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The call xfs_pterm is made at every program termination and
+gives the <a href="#MagiC_27s_20XFS-concept">XFS</a> the opportunity to release internal structures or
+remove locks. The files visible to the kernel (i.e. those that are
+assigned a handle) are closed by the kernel beforehand. The reference
+counter for the standard directories is likewise decremented
+beforehand by the kernel.
+<br>&nbsp;
+<br>A pointer to a process descriptor is passed in a0.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_readlink">11.21.2.27 xfs_readlink</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_readlink« - Read a symbolic link.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> char *buf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int size
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_readlink is used for <a href="gemdos_file.html#Freadlink">Freadlink</a>. It is supported by DOS_XFS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_rlabel">11.21.2.28 xfs_rlabel</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_rlabel« - liest den Disknamen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> char *buf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int len
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_rlabel serves for reading the medium name. It is called by
+the kernel when <a href="gemdos_file.html#Fsfirst">Fsfirst</a> with attribute == 8 is performed. <i>name</i>
+is generally &quot;*.*&quot; and can be ignored. <i>len</i> is the
+length of the buffer <i>buf</i>; on overflow <a href="gemdos_errors.html#ERANGE">ERANGE</a> must be returned.
+<br>xfs_rlabel is also called for <a href="gemdos_directory.html#Dreadlabel">Dreadlabel</a>. In this case
+<i>name</i> == NULL.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_sfirst">11.21.2.29 xfs_sfirst</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_sfirst« - Search for first matching file.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> * srchdir
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name (ohne Pfad)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> <a href="gemdos_structures.html#DTA">DTA</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int attrib
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; a0 =</td>
+<td valign="top"> SYMLINK * (or Symlink if appropriate)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_sfirst is required for <a href="gemdos_file.html#Fsfirst">Fsfirst</a>. MiNT uses instead of this
+function a combination of <a href="gemdos_directory.html#Dreaddir">Dreaddir</a> and <a href="gemdos_file.html#Fxattr">Fxattr</a>, which however makes
+very many calls of the <a href="#MagiC_27s_20XFS-concept">XFS</a> driver necessary. The reserved area of
+the DTA can be used freely by the XFS; if this is too small, one
+has to proceed with similar heuristic methods to MiNT, i.e. pointers
+must be entered in the DTA that point to fixed descriptors.
+<br>&nbsp;
+<br>These descriptors however can be released again only with
+heuristic methods, because one never knows whether another <a href="gemdos_file.html#Fsnext">Fsnext</a> is
+coming or not. The kernel already gets the complete path with
+<a href="#xfs_path2DD">xfs_path2DD</a>, so that only the pure pathname is passed in a1. As with
+all DOS calls that process a path, the XFS must ensure that the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>
+is protected for the duration of the processing. This is particularly
+critical if the filesystem is reentrant.
+<br>&nbsp;
+<br>If a file searched for is a symbolic link, then one has to pass
+ELINK as error-code in d0 and the pointer to the link in a0. The
+kernel then simply calls Fxattr} to fill the DTA. If a disk media
+change has occurred, then <a href="bios_errors.html#E_CHNG">E_CHNG</a> is to be returned; the kernel then
+automatically repeats the function. This also applies for all other
+functions.
+<br>&nbsp;
+<br>In every case <a href="#xfs_dta_drive">xfs_dta_drive</a> has to be initialized correctly,
+e.g. with:
+<br>dta.dta_drive = srchdir-&gt;<a href="#dd_dmd">dd_dmd</a>-&gt;<a href="#d_drive">d_drive</a>. If E_OK or ELINK
+is returned without <a href="#xfs_dta_drive">xfs_dta_drive</a> being initialized, then the result
+is indeterminate.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_snext">11.21.2.30 xfs_snext</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_snext« - Search for the next matching file.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="gemdos_structures.html#DTA">DTA</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode,
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; a0 =</td>
+<td valign="top"> SYMLINK * (Symlink)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_snext is required for <a href="gemdos_file.html#Fsnext">Fsnext</a>. The kernel has already
+obtained from the DTA the relevant filesystem whose DMD is passed
+in a1. Here too a symbolic link may occur.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_symlink">11.21.2.31 xfs_symlink</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_symlink« - Create a symbolic link.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> * dir
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> char *to
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_symlink is required for <a href="gemdos_file.html#Fsymlink">Fsymlink</a>. A file has to be created
+under the new name <i>name</i> in the directory <i>dir</i> that
+points to the file <i>to.</i> The call is supported by DOS_XFS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_sync">11.21.2.32 xfs_sync</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_sync« - Synchronize the filesystem.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> *d
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt;</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The kernel notifies the <a href="#MagiC_27s_20XFS-concept">XFS</a> that on drive <i>d</i> all the
+buffers have been written back. Passed in register a0 is a pointer to
+a DMD (drive medium descriptor). This is created by the kernel.
+<br>&nbsp;
+<br>The return value will be an error-code. If the <a href="magic_dfs.html">DFS</a> does not
+manage the buffer (e.g. a RAMdisk), then a 0 has to be returned. The
+internal DOS_XFS simply calls the DFS function with the same name.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_wlabel">11.21.2.33 xfs_wlabel</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_wlabel« - Write the disk name.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_wlabel serves for (re)naming media. It is called by the
+kernel when <a href="gemdos_file.html#Fcreate">Fcreate</a> with attribute 8 is performed. If the disk name is
+stored as a special file, as for the DOS filesystem, then all other
+path-based <a href="#MagiC_27s_20XFS-concept">XFS</a> functions have to ignore the disk name.
+<br>&nbsp;
+<br>An empty name, or one consisting of '0xe5' (for TOS
+compatibility) must delete the disk name (provided that media without
+names are allowable). xfs_wlabel is also called for <a href="gemdos_directory.html#Dwritelabel">Dwritelabel</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="xfs_xattr">11.21.2.34 xfs_xattr</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »xfs_xattr« - Required for <a href="gemdos_file.html#Fxattr">Fxattr</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> char *name
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> <a href="gemdos_structures.html#XATTR">XATTR</a> *
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; a0 =</td>
+<td valign="top"> SYMLINK *
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> xfs_xattr is used for <a href="gemdos_file.html#Fxattr">Fxattr</a>. In the case <i>mode</i> == 0
+(i.e. follow symbolic links) one can return ELINK in d0 and a link in
+a0, else ELINK is inadmissible.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">mode == 0:</td>
+<td valign="top"> Follow symbolic links (or return ELINK if appropriate)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">== 1:</td>
+<td valign="top"> Do not follow (i.e. creale XATTR for the link)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20make-up_20of_20an_20XFS">Make-up of an XFS</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Data_20structures_20for_20an_20XFS">11.21.3 Data structures for an XFS</a></h3>
+<a name="XFS_2C_20Data_20structures_20for_20an"></a>
+<p>When working with an <a href="#MagiC_27s_20XFS-concept">XFS</a> the following data structures are
+important:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20directory_20descriptor_20_28DD_29">DD</a></td>
+<td valign="top"> (<a href="magic_xfs.html#Directory_20descriptor">Directory descriptor</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20directory_20handle_20descriptor_20_28DHD_29">DHD</a></td>
+<td valign="top"> (<a href="magic_xfs.html#Directory_20handle_20descriptor">Directory handle descriptor</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a></td>
+<td valign="top"> (<a href="magic_xfs.html#Drive_20medium_20descriptor">Drive medium descriptor</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20Disk_20Transfer_20Area_20_28DTA_29_20for_20XFSs">DTA</a></td>
+<td valign="top"> (Disk transfer area)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a></td>
+<td valign="top"> (<a href="magic_xfs.html#File_20descriptor">File descriptor</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#The_20device_20driver_20_28MX_DEV_29">MX_DEV</a></td>
+<td valign="top"> (Device driver)
+
+</td></tr>
+</table>
+
+<p>See also: <a href="magic_dfs.html#Data_20structures_20for_20a_20DFS">DFS structures</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="The_20directory_20descriptor_20_28DD_29">11.21.3.1 The directory descriptor (DD)</a></h4>
+<a name="Directory_20descriptor"></a>
+<a name="Descriptor_2C_20Directory"></a>
+<p>The directory descriptors must be created and managed by the
+XFS. All descriptors that are known to the kernel (i.e. those that are
+used as a standard path for a process) have a non-zero reference
+counter. The only exception is the DD for the root directory of a
+drive; here the reference counter is always 0, irrespective of whether
+a process has the root directory as a standard directory or not.
+</p>
+<p>For the kernel a DD looks like the following; these entries have
+to be created by the XFS:
+</p>
+<pre><a href="#dd_dmd">dd_dmd</a>:      DS.L      1    /* 0x00: Pointer to DMD                  */
+<a href="#dd_refcnt">dd_refcnt</a>:   DS.W      1    /* 0x04: Ref. counter for standard paths */
+</pre>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h5><a name="dd_dmd">11.21.3.1.1 dd_dmd</a></h5>
+<p>The associated filesystem is found here.
+</p>
+<h5><a name="dd_refcnt">11.21.3.1.2 dd_refcnt</a></h5>
+<p>The reference counter. dd_refcnt is used only by the kernel, has
+to be initialized to 0 by the <a href="#MagiC_27s_20XFS-concept">XFS</a> on creation of a DD (for the
+root better to 1, see above for <a href="#xfs_drv_open">xfs_drv_open</a>) and incremented by 1 at
+each handing over to the kernel (-&gt; <a href="#xfs_path2DD">xfs_path2DD</a>).
+</p>
+<p>This means that on returning a new <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> (which is thus not
+otherwise referenced by the kernel) <a href="#xfs_path2DD">xfs_path2DD</a> must set the reference
+counter to 1.
+</p>
+<p>If the reference counter is non-zero, the kernel has a pointer
+to this DD and it may in no way be released by the XFS. The kernel
+decrements the reference counter by 1 each time it no longer requires
+a DD. If the counter reaches 0 during this, then <a href="#xfs_freeDD">xfs_freeDD</a> is
+called. The <a href="#MagiC_27s_20XFS-concept">XFS</a> can then release the DD, or else only at a call of
+xfs_garbcoll (the garbage collection) or at <a href="#xfs_drv_close">xfs_drv_close</a>.
+</p>
+<p><b>Warning:</b> The root may not be released during the
+lifetime of the mounted filesystem. The root's reference counter
+should be preset to 1 to prevent it being released with <a href="#xfs_freeDD">xfs_freeDD</a>.
+</p>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="#Data_20structures_20for_20an_20XFS">Data structures for an XFS</a>
+</p>
+<h4><a name="The_20directory_20handle_20descriptor_20_28DHD_29">11.21.3.2 The directory handle descriptor (DHD)</a></h4>
+<a name="Directory_20handle_20descriptor"></a>
+<a name="Descriptor_2C_20Directory_20handle"></a>
+<p>The directory handles are required for
+<a href="gemdos_directory.html#Dopendir">Dopendir</a>/<a href="gemdos_directory.html#Dclosedir">Dclosedir</a>/<a href="gemdos_directory.html#Drewinddir">Drewinddir</a>. Unlike the file descriptors (FDs) the
+kernel does not hold a list of opened directory handles (DH). When a
+process terminates, the <a href="#MagiC_27s_20XFS-concept">XFS</a> is called via the function <a href="#xfs_pterm">xfs_pterm</a>
+and must release all DHs created for the process.
+</p>
+<p>The XFS can obtain the owner of a DH with the kernel pointer
+<i>act_pd.</i> For the kernel a DH looks like the following; these
+entries have to be created by the XFS:
+</p>
+<pre><a href="#dhd_dmd">dhd_dmd</a>:  DS.L   1   /* 0x00: Pointer to DMD  */
+</pre>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a>
+</p>
+<h5><a name="dhd_dmd">11.21.3.2.1 dhd_dmd</a></h5>
+<p>The associated filesystem is found here.
+</p>
+<h4><a name="The_20Drive_20Medium_20Descriptor_20_28DMD_29">11.21.3.3 The Drive Medium Descriptor (DMD)</a></h4>
+<a name="Drive_20medium_20descriptor"></a>
+<a name="Descriptor_2C_20Drive_20medium"></a>
+<p>The DMD is created by the kernel (!) for each opened drive and
+also released again if necessary. The <a href="#MagiC_27s_20XFS-concept">XFS</a> stores all data here that
+it has to memorize for the drive. The following fields are the ones
+that the kernel requires (the ancestor object from which the XFS
+derives its XFS-DMD):
+</p>
+<pre><a href="#d_xfs">d_xfs</a>:      DS.L   1    /* 0x00: The filesystem driver            */
+<a href="#d_drive">d_drive</a>:    DS.W   1    /* 0x04: Drive number 0..25               */
+<a href="#d_root">d_root</a>:     DS.L   1    /* 0x06: Pointer to DD of the root        */
+<a href="#d_biosdev">d_biosdev</a>:  DS.W   1    /* 0x0a: <a href="bios_main.html">BIOS</a> drive, or -1                */
+<a href="#d_driver">d_driver</a>:   DS.L   1    /* 0x0c: With devcode, defines the medium */
+<a href="#d_devcode">d_devcode</a>:  DS.L   1    /* 0x10: e.g. SCSI target and drive       */
+<a href="#d_dfs">d_dfs</a>:      DS.L   1    /* 0x14: DOS-specific filesystem driver   */
+</pre>
+<p>Other XFSs or DFSs enter further data into the DMD. One can
+envisage the DMD as an object class. A DMD derived for the DOS_XFS
+only has the additional entry <a href="#d_dfs">d_dfs</a>. The FAT enters extra data such as
+the cluster size and the number of sectors.
+</p>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>
+</p>
+<h5><a name="d_xfs">11.21.3.3.1 d_xfs</a></h5>
+<p>The associated filesystem driver (XFS) is found here. It is
+entered by <b><a href="#xfs_drv_open">xfs_drv_open</a></b>.
+</p>
+<h5><a name="d_drive">11.21.3.3.2 d_drive</a></h5>
+<p>d_drive specifies which logical drive ('A' .. 'Z') the
+filesystem is assigned to. This does not always have to correspond to
+a <b>BIOS drive</b>. This value is <i>always</i>(!) entered by the
+kernel when a drive is opened, before an <a href="#MagiC_27s_20XFS-concept">XFS</a> is entered.
+</p>
+<h5><a name="d_root">11.21.3.3.3 d_root</a></h5>
+<p>A pointer to the <a href="#The_20directory_20descriptor_20_28DD_29">DD</a> of the root directory can be found here.
+</p>
+<h5><a name="d_biosdev">11.21.3.3.4 d_biosdev</a></h5>
+<p>If dealing with a partition that is handled by BIOS's <a href="About_the_BIOS.html#Rwabs">Rwabs</a>,
+then the BIOS device number will be found here. Else -1 must be
+entered here (e.g. for drive U: or a <i>Macintosh</i> partition).
+</p>
+<h5><a name="d_driver">11.21.3.3.5 d_driver</a></h5>
+<p>Together with <a href="#d_devcode">d_devcode</a>, this determines the medium. That means
+that if d_driver and d_devcode are identical, both drives lie on the same
+medium, and if the medium is to be ejected then both filesystems have
+to be locked. With a hard disk partition, <a href="#d_biosdev">d_biosdev</a> is the <b>BIOS
+drive</b>, <b>d_driver</b> is arbitrary (e.g. pointer to the <a href="xhdi.html#XHDI">XHDI</a>
+structure), d_devcode is the <a href="xhdi.html#XHDI">XHDI</a> code of a medium, i.e. SCSI target and
+device number (one WORD in each case).
+</p>
+<h5><a name="d_devcode">11.21.3.3.6 d_devcode</a></h5>
+<p>Together with <a href="#d_driver">d_driver</a>, this determines the medium. That means
+that if d_driver and d_devcode are identical, both drives lie on the
+same medium, and if the medium is to be ejected then both filesystems
+have to be locked. With a hard disk partition, <a href="#d_biosdev">d_biosdev</a> is the
+<b>BIOS drive</b>, <b>d_driver</b> is arbitrary (e.g. pointer to the
+<a href="xhdi.html#XHDI">XHDI</a> structure), d_devcode is the <a href="xhdi.html#XHDI">XHDI</a> code of a medium, i.e. SCSI
+target and device number (one WORD in each case).
+</p>
+<h5><a name="d_dfs">11.21.3.3.7 d_dfs</a></h5>
+<p>This entry is <i>mandatory only for</i> <b>DOS filesystems</b>
+(i.e. already for a derived object) and contains a pointer to the
+<a href="magic_dfs.html">DFS</a> subdriver.
+</p>
+<h4><a name="The_20Disk_20Transfer_20Area_20_28DTA_29_20for_20XFSs">11.21.3.4 The Disk Transfer Area (DTA) for XFSs</a></h4>
+<p>The <a href="gemdos_structures.html#DTA">DTA</a> is used by the old DOS functions <a href="gemdos_file.html#Fsfirst">Fsfirst</a> and <a href="gemdos_file.html#Fsnext">Fsnext</a>,
+whose clumsy conception by the MS-DOS originators still weighs down
+the system like a curse. For the kernel the structure looks as
+follows:
+</p>
+<pre>dta_res1:        DS.B    20    /* 0x00: Not used by the kernel   */
+dta_drive:       DS.B     1    /* 0x14: Logical drive            */
+dta_attribute:   DS.B     1    /* 0x15: Found attribute          */
+dta_time:        DS.W     1    /* 0x16: Found time               */
+dta_date:        DS.W     1    /* 0x18: Found date               */
+dta_len:         DS.L     1    /* 0x1a: Found length             */
+dta_name:        DS.B    14    /* 0x1e: Found filename           */
+</pre>
+<p><b>Note:</b> The components <i>dta_attribute</i> to
+<i>dta_name</i> represent the documented user area; this has to be
+handled according to GEMDOS specifications.
+</p>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h5><a name="xfs_dta_res1">11.21.3.4.1 xfs_dta_res1</a></h5>
+<p>dta_res1 (from XFS) is not used by the kernel. Here the <a href="#MagiC_27s_20XFS-concept">XFS</a>
+may muck about.
+</p>
+<h5><a name="xfs_dta_drive">11.21.3.4.2 xfs_dta_drive</a></h5>
+<p>xfs_dta_drive contains the associated <b>logical</b> drive (0
+corresponds to drive A: etc). With this information the kernel can
+decide at <a href="gemdos_file.html#Fsnext">Fsnext</a> which <a href="#MagiC_27s_20XFS-concept">XFS</a> has to perform the task.
+</p>
+<h4><a name="The_20File_20Descriptor_20_28FD_29">11.21.3.5 The File Descriptor (FD)</a></h4>
+<a name="File_20descriptor"></a>
+<a name="Descriptor_2C_20File"></a>
+<p>The file descriptors must be created and managed by the XFS. All
+the descriptors that are known to the kernel have a non-zero reference
+counter. For the kernel an FD looks exactly like a <a href="#The_20directory_20descriptor_20_28DD_29">DD</a>, which is
+why the same data structure is used in the DOS_XFS.
+</p>
+<p>For the kernel an FD looks like the following; these entries
+have to be created by the XFS:
+</p>
+<pre><a href="#fd_dmd">fd_dmd</a>:      DS.L    1   /* 0x00: Pointer to DMD                       */
+<a href="#fd_refcnt">fd_refcnt</a>:   DS.W    1   /* 0x04: Reference counter for closing, or -1 */
+<a href="#fd_mode">fd_mode</a>:     DS.W    1   /* 0x06: Open-mode and flags                  */
+<a href="#fd_dev">fd_dev</a>:      DS.L    1   /* 0x08: Pointer to <a href="magic_xfs.html#MX_DEV">MX_DEV</a>                    */
+</pre>
+<p>The class derived from DOS_XFS (a 'DOS-FD') also has the
+additional fields:
+</p>
+<pre><a href="#fd_ddev">fd_ddev</a>:     DS.L    1    /* 0x0c: Pointer to MX_DDEV                  */
+<a href="#fd_name">fd_name</a>:     DS.B   11    /* 0x10: DD_FD: Name in internal format      */
+<a href="#fd_attr">fd_attr</a>:     DS.B    1    /* 0x1b: Attribute                           */
+<a href="#fd_owner">fd_owner</a>:    DS.L    1    /* 0x1c: DD_FD: Owner of an FD, or NULL      */
+<a href="#fd_parent">fd_parent</a>:   DS.L    1    /* 0x20: Pointer to the parent DD_FD         */
+<a href="#fd_children">fd_children</a>: DS.L    1    /* 0x24: DD_FD: List of all children         */
+<a href="#fd_next">fd_next</a>:     DS.L    1    /* 0x28: Pointer to FDs im same directory    */
+<a href="#fd_multi">fd_multi</a>:    DS.L    1    /* 0x2c: Pointer to FD of the same file      */
+<a href="#fd_multi1">fd_multi1</a>:   DS.L    1    /* 0x30: Pointer to first list element       */
+<a href="#fd_fpos">fd_fpos</a>:     DS.L    1    /* 0x34: Position of the file pointer        */
+<a href="#fd_dirch">fd_dirch</a>:    DS.B    1    /* 0x38: Bit0: 'dirty'                       */
+<a href="#fd_unused">fd_unused</a>:   DS.B    1    /* 0x39: Not used                            */
+<a href="#fd_time">fd_time</a>:     DS.W    1    /* 0x3a: Time  (8086)                        */
+<a href="#fd_date">fd_date</a>:     DS.W    1    /* 0x3c: Date (8086)                         */
+<a href="#fd_stcl">fd_stcl</a>:     DS.W    1    /* 0x3e: Starting cluster                    */
+<a href="#fd_len">fd_len</a>:      DS.L    1    /* 0x40: File length in bytes                */
+<a href="#fd_dirpos">fd_dirpos</a>:   DS.L    1    /* 0x44: Pos. of matching entry in directory */
+<a href="#fd_user1">fd_user1</a>:    DS.L    1    /* 0x48: Available for user allocation       */
+<a href="#fd_user2">fd_user2</a>:    DS.L    1    /* 0x4c: Available for user allocation       */
+</pre>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a> &nbsp; <a href="#The_20Drive_20Medium_20Descriptor_20_28DMD_29">DMD</a> &nbsp; <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> &nbsp; <a href="#The_20device_20driver_20_28MX_DEV_29">MX_DEV</a>
+</p>
+<h5><a name="fd_dmd">11.21.3.5.1 fd_dmd</a></h5>
+<p>fd_dmd contains a pointer to the associated filesystem.
+</p>
+<h5><a name="fd_refcnt">11.21.3.5.2 fd_refcnt</a></h5>
+<p>The reference counter. This entry is used <i>only by the
+kernel</i>, has to be decremented by 1 at each <b><a href="#dev_close">dev_close</a></b> call
+and initialized (to 1) by <a href="#xfs_fopen">xfs_fopen</a>.
+</p>
+<p>A reference counter of -1 signals that the <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> may never be
+released. This is necessary for, say, the device files U:\DEV\CON,
+U:\DEV\AUX etc. that are always available.
+</p>
+<h5><a name="fd_mode">11.21.3.5.3 fd_mode</a></h5>
+<p>fd_mode contains the mode, as described for <a href="#xfs_fopen">xfs_fopen</a>. If two
+<a href="#The_20File_20Descriptor_20_28FD_29">FD</a>s point to the same file, then the modes have to be compatible.
+<a href="references.html#Thanks">Thanks</a> to the simple MagiC-internal mode notation, a plain rotation
+and ANDing of the bits is sufficient, e.g.:
+</p>
+<pre>  move.w   fd_mode(a0),d1
+  btst     #BOM_NOCHECK,d1  ; No check by the XFS?
+  bne.b    _opf_nxt         ; Yes, <a href="magic_dfs.html#ddev_open">ddev_open</a> checks
+  ror.b    #4,d1
+  and.b    d0,d1
+  bne      opd_eaccdn       ; Conflict: return(<a href="gemdos_errors.html#EACCDN">EACCDN</a>)
+</pre>
+<h5><a name="fd_dev">11.21.3.5.4 fd_dev</a></h5>
+<p>fd_dev is the pointer to the device driver.
+</p>
+<h5><a name="fd_ddev">11.21.3.5.5 fd_ddev</a></h5>
+<p>Here the <a href="magic_dfs.html">DFS</a> has to enter the MX_DDEV (i.e. the device
+driver) at a <a href="magic_dfs.html#dfs_dir2FD">dfs_dir2FD</a> call.
+</p>
+<h5><a name="fd_name">11.21.3.5.6 fd_name</a></h5>
+<p>Here the name (8+3) is stored in an internal format. The name is
+valid only when it refers to a <b>subdirectory</b>, and <i>only in a
+prototype FD</i>, i.e. in <a href="#fd_multi1">fd_multi1</a>. The name of the root is an empty
+character string.
+</p>
+<h5><a name="fd_attr">11.21.3.5.7 fd_attr</a></h5>
+<p>Here the file attribute is stored. This is valid <i>only in a
+prototype FD</i>, i.e. in <a href="#fd_multi1">fd_multi1</a>. From the attribute one can
+recognize whether the <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> represents a directory.
+</p>
+<h5><a name="fd_owner">11.21.3.5.8 fd_owner</a></h5>
+<p>Here a pointer to the owner of an <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> is stored (i.e. a
+pointer to the <b>basepage</b>). A value of NULL signifies that the
+FD is not allocated at present.
+</p>
+<h5><a name="fd_parent">11.21.3.5.9 fd_parent</a></h5>
+<p>This is a chaining pointer to the <b>parent</b>, i.e. to the
+directory in which the file lies, or the parent directory of a
+subdirectory. fd_parent is valid <i>only for the prototype FD.</i>
+</p>
+<h5><a name="fd_children">11.21.3.5.10 fd_children</a></h5>
+<p>This is a list of all opened files and opened subdirecories.
+fd_children is valid <i>only for the prototype FD.</i>
+</p>
+<h5><a name="fd_next">11.21.3.5.11 fd_next</a></h5>
+<p>This is a pointer to the next <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> in the same directory, i.e.
+the next sibling; this can be an opened file or a subdirectory - in
+principle these are not differentiated.
+<br>fd_next is valid <i>only for the prototype FD.</i>
+</p>
+<h5><a name="fd_multi">11.21.3.5.12 fd_multi</a></h5>
+<p>If a file is opened several times, then a <b>'clone'</b> of the
+prototype <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> is created. Most of the FD fields are invalid for
+this clone; in essence only driver, mode and file position are valid.
+fd_multi is a chained list, wich is NULL-terminated.
+</p>
+<h5><a name="fd_multi1">11.21.3.5.13 fd_multi1</a></h5>
+<p>This is the associated prototype <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> that contains the valid
+file data. If a file is only opened once, then: fd-&gt;fd_multi1 ==
+fd.
+</p>
+<h5><a name="fd_fpos">11.21.3.5.14 fd_fpos</a></h5>
+<p>fd_fpos is the position of the file pointer; it is 0L for a
+device.
+</p>
+<h5><a name="fd_dirch">11.21.3.5.15 fd_dirch</a></h5>
+<p>Bit 0 of fd_dirch indicates whether a file has been altered and
+hence on closing the file the directory (<a href="#fd_parent">fd_parent</a>) has to be updated
+(does not happen when dealing with a folder). The other bits are
+<i>reserved</i> and are used in part by the DOS_XFS.
+</p>
+<h5><a name="fd_unused">11.21.3.5.16 fd_unused</a></h5>
+<p>Unused and reserved.
+</p>
+<h5><a name="fd_time">11.21.3.5.17 fd_time</a></h5>
+<p>fd_time is the time of day from the directory entry in <b>Intel
+format</b>.
+</p>
+<h5><a name="fd_date">11.21.3.5.18 fd_date</a></h5>
+<p>fd_date is the date from the directory entry in <b>Intel
+format</b>.
+</p>
+<h5><a name="fd_stcl">11.21.3.5.19 fd_stcl</a></h5>
+<p>fd_stcl is the starting cluster in <b>Motorola format</b>.
+</p>
+<h5><a name="fd_len">11.21.3.5.20 fd_len</a></h5>
+<p>fd_len is the file length in bytes in <b>Motorola format</b>.
+</p>
+<h5><a name="fd_dirpos">11.21.3.5.21 fd_dirpos</a></h5>
+<p>fd_dirpos is the position of the associated entry in the parent.
+It is valid <i>only for the prototype FD.</i>
+</p>
+<h5><a name="fd_user1">11.21.3.5.22 fd_user1</a></h5>
+<p>Together with <b><a href="#fd_user2">fd_user2</a></b>, 2 LONGwords available for free
+allocation by the user. The FAT_DFS stores here additional information
+for <b><a href="#fd_fpos">fd_fpos</a></b>, namely the current cluster. Other DFSs can store
+other data. These fields are valid initially only for the prototype
+<a href="#The_20File_20Descriptor_20_28FD_29">FD</a>, except that on opening (<b><a href="magic_dfs.html#ddev_open">ddev_open</a></b>) the data are copied
+explicitly from the prototype FD into the clone.
+</p>
+<h5><a name="fd_user2">11.21.3.5.23 fd_user2</a></h5>
+<p>Together with <b><a href="#fd_user1">fd_user1</a></b>, 2 LONGwords available for free
+allocation by the user. The FAT_DFS stores here additional information
+for <b><a href="#fd_fpos">fd_fpos</a></b>, namely the current cluster. Other DFSs can store
+other data. These fields are valid initially only for the prototype
+<a href="#The_20File_20Descriptor_20_28FD_29">FD</a>, except that on opening (<b><a href="magic_dfs.html#ddev_open">ddev_open</a></b>) the data are copied
+explicitly from the prototype FD into the clone.
+</p>
+<h4><a name="The_20device_20driver_20_28MX_DEV_29">11.21.3.6 The device driver (MX_DEV)</a></h4>
+<a name="MX_DEV"></a>
+<p>The device driver is inserted by the <a href="#MagiC_27s_20XFS-concept">XFS</a> into the file
+descriptor at the opening of a file, and called directly by the
+kernel. The device driver must make the following functions available:
+</p>
+<pre>typedef struct _mx_dev
+{
+  LONG  (*<a href="#dev_close">dev_close</a>)();
+  LONG  (*<a href="#dev_read">dev_read</a>)();
+  LONG  (*<a href="#dev_write">dev_write</a>)();
+  LONG  (*<a href="#dev_stat">dev_stat</a>)();
+  LONG  (*<a href="#dev_seek">dev_seek</a>)();
+  LONG  (*<a href="#dev_datime">dev_datime</a>)();
+  LONG  (*<a href="#dev_ioctl">dev_ioctl</a>)();
+  LONG  (*<a href="#dev_getc">dev_getc</a>)();
+  LONG  (*<a href="#dev_getline">dev_getline</a>)();
+  LONG  (*<a href="#dev_putc">dev_putc</a>)();
+} MX_DEV;
+</pre>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h5><a name="dev_close">11.21.3.6.1 dev_close</a></h5>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »dev_close«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long errcode
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> If <a href="#fd_refcnt">fd_refcnt</a> is not 0 already, <a href="#fd_refcnt">fd_refcnt</a> must be decremented
+(this must be accomplished by the <a href="#The_20device_20driver_20_28MX_DEV_29">MX_DEV</a>). On this occasion any
+buffers that may be present should be written back and directory
+entries updated. If fd_refcnt is 0, the <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> can be released. At a disk
+media change fd_refcnt is already 0 at a dev_close call, i.e. the FD just
+needs to be released.
+<br>&nbsp;
+<br>The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS writes back the directory
+data and then calls the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20device_20driver_20_28MX_DEV_29">Workstation driver</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h5><a name="dev_datime">11.21.3.6.2 dev_datime</a></h5>
+<p><b>For <a href="gemdos_file.html#Fdatime">Fdatime</a>.</b> The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes
+the call on to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver, if the function is supported in
+the MX_DDEV driver (pointer != NULL), otherwise the function will be
+performed <i>automatically</i> with the help of the <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> data.
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int d[2]</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int setflag</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long errcode</td>
+</tr>
+</table>
+</div>
+
+<h5><a name="dev_getc">11.21.3.6.3 dev_getc</a></h5>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »dev_getc«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> unsigned long c
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> dev_getc is used by the kernel for <a href="gemdos_file.html#Fgetchar">Fgetchar</a> and the
+character-oriented functions (<a href="gemdos_chrinout.html#Cconin">Cconin</a>, <a href="gemdos_chrinout.html#Cconout">Cconout</a>, <a href="gemdos_chrinout.html#Cauxin">Cauxin</a> etc.). In the
+case of a device, the return value may be a LONGword (e.g. for CON
+having the scancode of the key in the high-WORD), else a byte (always
+extended to 'unsigned'). At EOF, 0x0000FF1A must be returned.
+<br>&nbsp;
+<br><b><i>mode</i> means:</b>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">CMODE_COOKED (1)</td>
+<td valign="top"> Bit 0 set: Control characters ^C, ^S, ^Q will be processed
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CMODE_RAW (0)</td>
+<td valign="top"> Bit 0 not set: 'raw' mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CMODE_ECHO (2)</td>
+<td valign="top"> Bit 1 set: Input will be echoed
+
+</td></tr>
+</table>
+
+<br>The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes the call on to the
+<a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver if the function is supported in the MX_DDEV driver
+(pointer != NULL), otherwise the function is implemented automatically
+as dev_fread.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20device_20driver_20_28MX_DEV_29">Workstation driver</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h5><a name="dev_getline">11.21.3.6.4 dev_getline</a></h5>
+<p><b>For line-oriented input</b>. <i>mode</i> as in <a href="#dev_getc">dev_getc</a>.
+The return will be the number of characters input without terminatng
+characters or similar. The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes the
+dev_getline call on to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver if the function is
+supported in the MX_DDEV driver (pointer != NULL); otherwise the
+function is implemented auto matically as dev_fread. The line is then
+terminated with CR and LF;
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">char *buf</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long size</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int mode</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long amount</td>
+</tr>
+</table>
+</div>
+
+<h5><a name="dev_ioctl">11.21.3.6.5 dev_ioctl</a></h5>
+<p><b>For <a href="gemdos_file.html#Fcntl">Fcntl</a>.</b> The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes
+the dev_ioctl call directly to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver. Only the
+following functions are handled however: <a href="gemdos_file.html#FSTAT">FSTAT</a> and <a href="gemdos_file.html#FUTIME">FUTIME</a>. These
+should also be executed by other XFSs. Every file driver should
+support <a href="gemdos_file.html#FIONREAD">FIONREAD</a> and <a href="gemdos_file.html#FIONWRITE">FIONWRITE</a>.
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int cmd</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *buf</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long errcode</td>
+</tr>
+</table>
+</div>
+
+<h5><a name="dev_putc">11.21.3.6.6 dev_putc</a></h5>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »dev_putc«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> long value
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> unsigned long count
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> dev_putc is used by the kernel for <a href="gemdos_file.html#Fgetchar">Fgetchar</a> and the
+character-oriented functions (<a href="gemdos_chrinout.html#Cconin">Cconin</a>, <a href="gemdos_chrinout.html#Cconout">Cconout</a>, <a href="gemdos_chrinout.html#Cauxin">Cauxin</a> etc.). In the
+case of a terminal the return value must be 4L (i.e. 4 bytes written),
+otherwises 1L if writing was successful.
+<br>&nbsp;
+<br><b><i>mode</i> means:</b>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">CMODE_COOKED (1)</td>
+<td valign="top"> Bit 0 set: Control characters ^C, ^S, ^Q will be processed
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CMODE_RAW (0)</td>
+<td valign="top"> Bit 0 not set: 'raw' mode
+
+</td></tr>
+</table>
+
+<br>The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes the call on to the
+<a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver if the function is supported in the MX_DDEV driver
+(pointer != NULL), otherwise the function is automatically implemented
+as dev_fwrite.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20device_20driver_20_28MX_DEV_29">Workstation driver</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h5><a name="dev_read">11.21.3.6.7 dev_read</a></h5>
+<p>From the file <i>file</i>, <i>count</i> bytes are read into
+the buffer <i>buffer.</i> The return is the number of characters
+actually read. The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes the
+dev_read call directly to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver.
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long count</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">char *buffer</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long amount</td>
+</tr>
+</table>
+</div>
+
+<h5><a name="dev_seek">11.21.3.6.8 dev_seek</a></h5>
+<p><b>For <a href="gemdos_file.html#Fseek">Fseek</a>.</b> <i>mode</i> is, as in TOS, 0, 1 or 2. The
+return value will be the current position of the write/read pointer;
+device drivers must always return a 0L here. The file driver <a href="xbios_sound.html#installed">installed</a>
+by DOS_XFS passes the dev_seek call directly to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver.
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long where</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int mode</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long position</td>
+</tr>
+</table>
+</div>
+
+<h5><a name="dev_stat">11.21.3.6.9 dev_stat</a></h5>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »dev_stat«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> <a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a1 =</td>
+<td valign="top"> MAGX_UNSEL *unselect oder NULL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int rwflag
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> long apcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; d0 =</td>
+<td valign="top"> long status
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> dev_stat specifies the read/write status of the file. It is
+called for <a href="gemdos_file.html#Fselect">Fselect</a> (or for <a href="gemdos_chrinout.html#Cconos">Cconos</a>/<a href="gemdos_chrinout.html#Cconis">Cconis</a> etc.) for instance. In
+contrast to MiNT, it is left to the driver here whether it is
+interrupt-capable or not, i.e. whether it is able to call a waiting
+application in interrupt again or not. <i>rwflag</i> specifies
+whether the write or read status is inquired for.
+<br>&nbsp;
+<br><i>unselect</i> is either NULL or a pointer to the following
+structure:
+<br>&nbsp;
+<pre>typedef struct
+{
+   <a href="proto_xfsl.html#union">union</a>
+   {
+      void (*unsel) (MAGX_UNSEL *un);
+      long status;
+   }
+   long param;
+} MAGX_UNSEL;
+</pre>
+<br><b>Procedure:</b>
+<br>&nbsp;
+<br>Generally the following applies: If <i>unselect</i> is non-0,
+the return value must be returned not only as the function result (in
+d0.L) but also in unselect-&gt;status. This applies for all kinds of
+return values. One can optionally store a parameter in
+unsel-&gt;param.
+<br>&nbsp;
+<br><b>If <i>apcode</i> == NULL, polling will be performed, i.e.
+the application is not put to sleep. So the return will be:</b>
+<br>&nbsp;
+<br>0 = Not ready, 1 = Ready, &lt;0 = Error.
+<br>&nbsp;
+<br><b>If <i>apcode</i> ! = NULL (then <i>unselect</i> != NULL as
+well) then the return will be:</b>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&lt;0</td>
+<td valign="top"> Error
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> Not ready, device can only be polled
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> Ready
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&gt;0</td>
+<td valign="top"> Perhaps a pointer to a function that deinstalls the awakening
+interrupt again (corresonds more or less to unselect in MiNT)
+
+</td></tr>
+</table>
+
+<br><b>If the device is not ready and is interrupt-capable, then
+one proceeds as follows:</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> Initialize <i>unselect</i> with the address of the clean-up
+routine and an optional parameter; prototype on the lines of:
+<pre>void unselect( a0 = MAGX_UNSEL *un,a1 = void *ap_code );
+</pre>
+</li>
+<li> <a href="c_task_royal.html#Install">Install</a> interrupt for awakening, pass it <i>unselect</i> (and
+with it also the optional parameter) and appl
+</li>
+<li> Return pointer to the clean-up routine in d0
+</li>
+</ol>
+
+<br><b>The interrupt routine does the following:</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> The interrupt arrives
+</li>
+<li> unselect-&gt;status has 1 (OK) or &lt; 0 (not OK) written to it
+and the interrupt is deactivated! The application is awakened with:
+<pre>kernel-&gt;appl_IOcomplete( a0 = APPL *ap );
+</pre>
+</li>
+</ol>
+
+<br><b>The clean-up routine does the following:</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> The interrupt is deactivated.
+</li>
+<li> If it has not happened already, unsel-&gt;status will have a 1
+(arrived) or a 0 (not arrived) or &lt; 0 (error) entered into it. One
+must ensure that no IOcomplete and no write access to <i>unsel</i>
+can follow subsequently. A value that is not 1 but greater than zero
+is always interpreted as the address of the clean-up routine; this
+still has to be called if the interrupt has not arrived. If the
+interrupt entered a value of 2L, say, the kernel would assume that the
+interrupt has not arrived and that the address of the clean-up routine
+is still contained in the MAGX_UNSEL structure. A jump to address 2
+however is then deadly rather quickly!
+</li>
+</ol>
+
+<br>The DOS functions <a href="gemdos_file.html#Finstat">Finstat</a> and <a href="gemdos_file.html#Foutstat">Foutstat</a> at first attempt to
+execute the call as Fcntl} (<a href="gemdos_file.html#FIONREAD">FIONREAD</a> or <a href="gemdos_file.html#FIONWRITE">FIONWRITE</a>). If this
+subfunction of <a href="#dev_ioctl">dev_ioctl</a> does not exist (the file driver has to return
+<a href="gemdos_errors.html#EINVFN">EINVFN</a>!), then dev_stat is called. In that case one can state either
+that a 'character is available' (value == 1) or 'no character is
+available' (value == 0).
+<br>&nbsp;
+<br>The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS passes on the call directly
+to the <a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#The_20device_20driver_20_28MX_DEV_29">Workstation driver</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h5><a name="dev_write">11.21.3.6.10 dev_write</a></h5>
+<p>To the file <i>file</i>, <i>count</i> bytes are written from
+the buffer <i>buffer.</i> The return is the number of characters
+actually written. The file driver <a href="xbios_sound.html#installed">installed</a> by DOS_XFS updates the
+date/timestamp of the file and then passes the dev_write call to the
+<a href="magic_dfs.html#The_20device_20driver_20_28MX_DDEV_29">MX_DDEV</a> subdriver.
+</p>
+<p><b>Parameters:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="#The_20File_20Descriptor_20_28FD_29">FD</a> *file</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long count</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">char *buffer</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-&gt; d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long amount</td>
+</tr>
+</table>
+</div>
+
+<h3><a name="Installation_20of_20an_20XFS">11.21.4 Installation of an XFS</a></h3>
+<a name="XFS_2C_20Installation_20of_20an"></a>
+<p>An <a href="#MagiC_27s_20XFS-concept">XFS</a> is just a program that installs the driver and then
+terminates itself resident. The installation is performed with:
+<br>kernel = <b><a href="gemdos_directory.html#Dcntl">Dcntl</a>(<a href="gemdos_directory.html#KER_INSTXFS">KER_INSTXFS</a>, NULL, &amp;myxfs)</b>.
+</p>
+<p>The return is a pointer to important kernel functions, or an
+error- code. The kernel functions can also be inquired for
+independently of the installation of an XFS, namely with: kernel =
+<b><a href="gemdos_directory.html#Dcntl">Dcntl</a>(<a href="gemdos_directory.html#KER_GETINFO">KER_GETINFO</a>, NULL, NULL)</b>.
+</p>
+<p>The deinstallation of an XFS is <i>not</i> provided for.
+</p>
+<h3><a name="Kernel_20functions_20for_20an_20XFS">11.21.5 Kernel functions for an XFS</a></h3>
+<a name="XFS_2C_20Kernel_20functions_20for_20a"></a>
+<p>MagiC makes available to the <a href="xbios_sound.html#installed">installed</a> XFSs, DFSs or device
+drivers some kernel information as well as kernel functions. The same
+register conventions apply for the kernel functions as for the <a href="#MagiC_27s_20XFS-concept">XFS</a>
+functions, i.e. d0-d2 and a0-a2 may be destroyed. One can obtain a
+pointer to the structure that contains the kernel functions with:
+</p>
+<pre>     kernel = <a href="gemdos_directory.html#Dcntl">Dcntl</a> (<a href="gemdos_directory.html#KER_INSTXFS">KER_INSTXFS</a>, NULL, &amp;myxfs);   or
+     kernel = <a href="gemdos_directory.html#Dcntl">Dcntl</a> (<a href="gemdos_directory.html#KER_GETINFO">KER_GETINFO</a>, NULL, NULL);
+</pre>
+<p>In the first case an XFS is <a href="xbios_sound.html#installed">installed</a>, in the second case one
+only gets the kernel structure (perhaps for a <a href="magic_dfs.html">DFS</a> or a device
+driver). The build-up of the kernel structure in detail:
+</p>
+<a name="MX_KERNEL"></a>
+<pre>typedef struct
+{
+  WORD   <a href="#mxk_version">mxk_version</a>;
+  VOID (*<a href="#mxk_fast_clrmem">mxk_fast_clrmem</a>)      ( void *von, void *bis );
+  BYTE (*<a href="#mxk_toupper">mxk_toupper</a>)          ( char c );
+  VOID (*<a href="#mxk__sprintf">mxk__sprintf</a>)         ( char *dest, char *source, LONG *p );
+  VOID  *mxk_<a href="#mxk_act_pd">mxk_act_pd</a>;
+  APPL  *<a href="#mxk_act_appl">mxk_act_appl</a>;
+  APPL  *<a href="#mxk_keyb_app">mxk_keyb_app</a>;
+  WORD  *<a href="#mxk_pe_slice">mxk_pe_slice</a>;
+  WORD  *<a href="#mxk_pe_timer">mxk_pe_timer</a>;
+  VOID (*<a href="#mxk_appl_yield">mxk_appl_yield</a>)       ( void );
+  VOID (*<a href="#mxk_appl_suspend">mxk_appl_suspend</a>)     ( void );
+  VOID (*<a href="#mxk_appl_begcritic">mxk_appl_begcritic</a>)   ( void );
+  VOID (*<a href="#mxk_appl_endcritic">mxk_appl_endcritic</a>)   ( void );
+  LONG (*<a href="#mxk_evnt_IO">mxk_evnt_IO</a>)          ( LONG ticks_50hz, void *unsel );
+  VOID (*<a href="#mxk_evnt_mIO">mxk_evnt_mIO</a>)         ( LONG ticks_50hz, void *unsel, WORD cnt );
+  VOID (*mxk_evnt_emIO)        ( APPL *ap );
+  VOID (*<a href="#mxk_appl_IOcomplete">mxk_appl_IOcomplete</a>)  ( APPL *ap );
+  LONG (*<a href="#mxk_evnt_sem">mxk_evnt_sem</a>)         ( WORD mode, void *sem, LONG timeout );
+  VOID (*<a href="#mxk_Pfree">mxk_Pfree</a>)            ( void *pd );
+  WORD   <a href="#mxk_int_msize">mxk_int_msize</a>;
+  VOID  *<a href="#mxk_int_malloc">mxk_int_malloc</a>        ( void );
+  VOID   <a href="#mxk_int_mfree">mxk_int_mfree</a>         ( void *memblk );
+  VOID   <a href="#mxk_resv_intmem">mxk_resv_intmem</a>       ( void *mem, LONG bytes );
+  LONG   <a href="#mxk_diskchange">mxk_diskchange</a>        ( WORD drv );
+  LONG   <a href="#mxk_DMD_rdevinit">mxk_DMD_rdevinit</a>      ( DMD *dmd );
+  LONG   <a href="#mxk_proc_info">mxk_proc_info</a>         ( WORD code, <a href="gemdos_structures.html#PD">PD</a> *pd );
+  LONG   <a href="#mxk_mxalloc">mxk_mxalloc</a>           ( d0 = LONG amount, d1 = WORD mode, a0 = <a href="gemdos_structures.html#PD">PD</a> *pd );
+  LONG   <a href="#mxk_mfree">mxk_mfree</a>             ( a0 = void *block );
+  LONG   mxk_<a href="#mshrink">mshrink</a>           ( d0 = LONG newlen, a0 = void *block );
+} MX_KERNEL;
+</pre>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="mxk_version">11.21.5.1 mxk_version</a></h4>
+<p>mxk_version is the version number, which is simply 3 at present.
+For each change of the kernel structure the version number is
+increased, so that programs may adapt themselves accordingly.
+</p>
+<h4><a name="mxk_fast_clrmem">11.21.5.2 mxk_fast_clrmem</a></h4>
+<p>mxk_fast_clrmem is a fast memory clearance routine, which sets
+the memory block between <i>from</i> and <i>to</i> (exclusive) to 0.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *from</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *to</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_toupper">11.21.5.3 mxk_toupper</a></h4>
+<p>mxk_toupper converts the character <i>c</i> to upper case,
+respecting the national special characters (accents, umlauts etc.).
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">char c</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk__sprintf">11.21.5.4 mxk__sprintf</a></h4>
+<p>mxk__sprintf is a function that expects its arguments on the
+stack. Items to pass are the destination character string
+<i>dest</i>, the template <i>source</i> and the values to be entered
+<i>p[].</i> Depending on the formatting statement, the LONGwords are
+interpreted as 'unsigned int' (%W), 'signed long' (%L) or character
+string (%S).
+</p>
+<p>With %W the WORD lying further down in memory is used, the
+sequence %% inserts a 'percent' character.
+</p>
+<h4><a name="mxk_act_pd">11.21.5.5 mxk_act_pd</a></h4>
+<p>mxk_act_pd is the pointer to the current <b>basepage</b>; the
+address can be obtained also from the system header or the DOS
+variables.
+</p>
+<h4><a name="mxk_act_appl">11.21.5.6 mxk_act_appl</a></h4>
+<p>mxk_act_appl is a pointer to the <b>current application</b>
+(i.e. the running task). The build-up of the structure is <i>not
+documented.</i> Due to faster access, the pointer is used as the
+descriptor in place of the ap_id.
+</p>
+<h4><a name="mxk_keyb_app">11.21.5.7 mxk_keyb_app</a></h4>
+<p>mxk_keyb_app is the pointer to the application that currently
+'owns' the keyboard. The pointer can be used by device drivers that
+have to process the keyboard-owning application in a different way,
+for instance.
+</p>
+<h4><a name="mxk_pe_slice">11.21.5.8 mxk_pe_slice</a></h4>
+<p>mxk_pe_slice is used for preemptive multitasking. If
+<i>*pe_slice</i> == -1 then preemptive multitasking is switched off,
+and disk accesses are <i>not</i> interrupted.
+</p>
+<h4><a name="mxk_pe_timer">11.21.5.9 mxk_pe_timer</a></h4>
+<p>mxk_pe_timer is used for preemptive multitasking. If
+<i>*pe_slice</i> == -1 then preemptive multitasking is switched off,
+and disk accesses are <i>not</i> interrupted.
+</p>
+<h4><a name="mxk_appl_yield">11.21.5.10 mxk_appl_yield</a></h4>
+<p>mxk_appl_yield allocates CPU time to the system. It is important
+for drivers that cannot wait for an interrupt and have to prevent that
+their 'busy waiting' paralyses the system.
+</p>
+<h4><a name="mxk_appl_suspend">11.21.5.11 mxk_appl_suspend</a></h4>
+<p>mxk_appl_suspend works like <a href="appl.html#appl_yield">appl_yield</a>, though it allocates a
+lower priority to the application, perhaps as a background process.
+</p>
+<h4><a name="mxk_appl_begcritic">11.21.5.12 mxk_appl_begcritic</a></h4>
+<p>mxk_appl_begcritic signals that the current application has
+entered a critical phase and may not be terminated.
+</p>
+<h4><a name="mxk_appl_endcritic">11.21.5.13 mxk_appl_endcritic</a></h4>
+<p>mxk_appl_endcritic signals the end of the critical phase for the
+current application. If a termination command has arrived in the
+meantime then the program will be terminated.
+</p>
+<h4><a name="mxk_evnt_IO">11.21.5.14 mxk_evnt_IO</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »evnt_IO«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> long ticks_50hz
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> void *unsel
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> mxk_evnt_IO makes it possible to wait for <i>one</i> external
+event. The external event in question is either an interrupt or
+another application (which perhaps writes to a pipe for awakening).
+The function is used for the creation of device drivers:
+<br>&nbsp;
+<br><b>Procedure (see DEV_LPT1 as an example):</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> Block interrupts.
+</li>
+<li> Inquire whether the event (in the case of DEV_LPT1 the event is
+called: 'Centronics busy off') has arrived.
+</li>
+<li> If so, free interrupts and perform the action (in the case of
+DEV_LPT1: print character).
+</li>
+<li> If not, set up interrupt routine (in the case of DEV_LPT1:
+MFP-I0, i.e. 'Activate Centronics busy interrupt') and make available
+to it the current application (act_appl) and also a LONGword address
+into which the interrupt routine can write return messages. This
+address should have written to it the address of a routine that
+deinstalls the interrupt again, and can be followed by some user
+requirements. i.e. some further data. The unselect routine later gets
+a pointer to all this data and can evaluate the optional parameters
+for instance. The whole mechanism is required to guarantee a corrrect
+deinitialization of the interrupt in each case.
+</li>
+<li> Release interrupts.
+</li>
+<li> Call evnt_IO. In d0.w specify the number of 50Hz ticks for the
+timeout; 0 means 'no timeout'. In a0 give the address of the LONGword
+containing the address of the clean-up routine that deinstalls the
+interrupt again (which is followed by optional further parameters,
+provided the unselect routine understands these). In the case of
+incorporation of device drivers for <a href="gemdos_file.html#Fselect">Fselect</a>, only one optional
+LONGword is possible.
+<br>On arrival of the interrupt, the interrupt routine writes a
+status &lt; 0L (error) or 1L (OK) in place of the deinitialization
+routine into the status LONGword (which previously contained its own
+start address). Following this the routine will deinstall itself or
+make sure that no actions are performed on following interrupts.
+Finally the interrupt routine awakens the application assigned to the
+interrupt, using the call appl_IOcomplete with the application as
+parameter.
+</li>
+<li> evnt_IO returns either the value 0L (timeout, the interrupt has
+not arrived) or &lt; 0 (the interrupt has written an error-code to the
+status LONGword) or 1L (the interrupt has written a 1L into the status
+LONGword). Deinstallation of the interrupt is no longer required as
+the kernel has taken care of this if the interrupt routine did not do
+this itself on arrival of the interrupt.
+</li>
+</ol>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#Kernel_20functions_20for_20an_20XFS">Kernel functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="mxk_evnt_mIO">11.21.5.15 mxk_evnt_mIO</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »evnt_mIO«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> long ticks_50hz
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> void *unsel
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> int cnt
+
+</td></tr>
+</table>
+
+<br><u>or</u>
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> APPL *ap
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> mxk_evnt_mIO makes it possible to wait for <i>several</i>
+external events; this function is used by <a href="gemdos_file.html#Fselect">Fselect</a> (several files!) for
+instance.
+<br>&nbsp;
+<br><b>Procedure:</b>
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li> Create a LONGword table for n events with a length of 2*n.
+</li>
+<li> Enter the clean-up routine (unselect routine) for each event
+(followed by an optional LONGword parameter) and set up the interrupt.
+The order is important: one must prevent the unselect address
+overwriting the return value of an already arrived interrupt - if
+necessary block interrupts.
+</li>
+<li> Call evnt_mIO. The parameters are the same as in evnt_IO: in
+d1.w the number of events is passed, a0 is the start of the table.
+</li>
+<li> evnt_mIO offers no return value. The table must be searched
+through and the interrupts deinstalled (e.g. call the unselect
+routines); during this one can check which interrupts have arrived
+already.
+</li>
+<li> Call evnt_emIO with the current application. This call ensures
+that after deinstallation of all the interrupts their now useless
+messages to the application are deleted.
+</li>
+</ol>
+
+<br>Applications waiting for evnt_(m)IO events appear in the program
+manager as waiting for 'io' (input/output) or 'io ti' (input/output
+with timeout).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#Kernel_20functions_20for_20an_20XFS">Kernel functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="mxk_appl_IOcomplete">11.21.5.16 mxk_appl_IOcomplete</a></h4>
+<p>mxk_appl_IOcomplete wakes up an application that is waiting for
+evnt_(m)IO.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">APPL *ap</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_evnt_sem">11.21.5.17 mxk_evnt_sem</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »evnt_sem«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Parameters:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">d0 =</td>
+<td valign="top"> int mode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> void *sem
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> long timeout
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> mxk_evnt_sem is used for controlling semaphores. The following
+subfunctions are possible for <i>mode</i>:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0 <a href="#SEM_FREE">SEM_FREE</a></td>
+<td valign="top"> Release semaphore (without task-switching!)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1 <a href="#SEM_SET">SEM_SET</a></td>
+<td valign="top"> Set semaphore, wait if necessary
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2 <a href="#SEM_TEST">SEM_TEST</a></td>
+<td valign="top"> Obtain owner of semaphore (if necessary NULL)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3 <a href="#SEM_CSET">SEM_CSET</a></td>
+<td valign="top"> Set semaphore, if not set already
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">4 <a href="#SEM_GET">SEM_GET</a></td>
+<td valign="top"> Get semaphore if name is known
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">5 <a href="#SEM_CREATE">SEM_CREATE</a></td>
+<td valign="top"> Create semaphore, i.e. establish new one
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">6 <a href="#SEM_DEL">SEM_DEL</a></td>
+<td valign="top"> Remove semaphore
+
+</td></tr>
+</table>
+
+<br><a href="#SEM_SET">SEM_SET</a> and <a href="#SEM_CSET">SEM_CSET</a> are the only subfunctions that can initiate
+a task-switch.
+<br>&nbsp;
+<br>In contrast to <a href="wind.html#wind_update">wind_update</a>, the setting and releasing of
+semaphores can not be nested with these calls. If one attempts to
+reserve again a semaphore that is already reserved then this results
+in an error-code.
+<br>&nbsp;
+<br>On releasing the semaphores no task-switching will take place,
+i.e. though the semaphores may now belong to another application that
+has a 'ready' status, it has not yet been allocated any CPU time. If
+the situation is not critical then an <a href="appl.html#appl_yield">appl_yield</a> should be performed
+subsequently in each case.
+<br>&nbsp;
+<br>The screen semaphore has the name _SCR and may use mxk_evnt_sem
+only with the subfunction <a href="#SEM_TEST">SEM_TEST</a>.
+<br>&nbsp;
+<br><a href="#SEM_CREATE">SEM_CREATE</a> does not set the creator automatically as the owner.
+This is not necessary as no task-switching has taken place, so <a href="#SEM_SET">SEM_SET</a>
+can be performed afterwards without further ado.
+<br>&nbsp;
+<br><a href="#SEM_DEL">SEM_DEL</a> requires that the deleter is also the owner. On deletion
+all waiting applications are released; they receive, if waiting via
+evnt_sem(<a href="#SEM_SET">SEM_SET</a>, ..), a -2 as return value. People deleting system
+semaphores (those whose names start with a '_') have only themselves
+to blame!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#Kernel_20functions_20for_20an_20XFS">Kernel functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> &mdash;
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_FREE">11.21.5.18 SEM_FREE</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; 0</td>
+<td valign="top"> OK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> unused, <u>or</u> used by another APP
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_SET">11.21.5.19 SEM_SET</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> Timeout in 50Hz ticks
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; 0</td>
+<td valign="top"> OK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; 1</td>
+<td valign="top"> Timeout
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> was already set by me
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -2</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> has been removed in the meantime
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_TEST">11.21.5.20 SEM_TEST</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; &gt;0</td>
+<td valign="top"> Owner
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; 0</td>
+<td valign="top"> Not used
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_CSET">11.21.5.21 SEM_CSET</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> Timeout in 50Hz ticks
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; 0</td>
+<td valign="top"> OK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; 1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> set by another APP
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> was already set by me
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_GET">11.21.5.22 SEM_GET</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> Name of semaphore
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; &gt;0</td>
+<td valign="top"> Pointer to semaphore.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> not found
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_CREATE">11.21.5.23 SEM_CREATE</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore (32 bytes at even address)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">d1 =</td>
+<td valign="top"> Name void
+
+</td></tr>
+</table>
+
+<h4><a name="SEM_DEL">11.21.5.24 SEM_DEL</a></h4>
+<p><b>Parameters:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">a0 =</td>
+<td valign="top"> Pointer to semaphore
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-&gt; 0</td>
+<td valign="top"> OK
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-&gt; -1</td>
+<td valign="top"> <a href="powerdos.html#Semaphore">Semaphore</a> invalid
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<h4><a name="mxk_Pfree">11.21.5.25 mxk_Pfree</a></h4>
+<p>mxk_Pfree releases the memory for a process that was terminated
+with <a href="gemdos_process.html#Ptermres">Ptermres</a>. This is necessary to remove a device driver correctly.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *pd</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_int_msize">11.21.5.26 mxk_int_msize</a></h4>
+<p>mxk_int_msize gives the length of a memory block of the internal
+(kernel) memory management.
+</p>
+<h4><a name="mxk_int_malloc">11.21.5.27 mxk_int_malloc</a></h4>
+<p>mxk_int_malloc allocates an internal memory block. If there is
+no free memory any more then first a global <b>'garbage
+collection'</b> will be performed (see description of the <a href="#xfs_garbcoll">XFS</a>), and
+if this fails the system will be halted. Internal memory blocks may be
+reserved only in small lots, else one soon gets 'Out of internal
+memory' messages and the system locks up.
+</p>
+<h4><a name="mxk_int_mfree">11.21.5.28 mxk_int_mfree</a></h4>
+<p>mxk_int_mfree releases a memory block once more.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *memblk</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_resv_intmem">11.21.5.29 mxk_resv_intmem</a></h4>
+<p>mxk_resv_intmem extends the kernel memory. There is <i>no</i>
+possibility foreseen to claim memory back. As the kernel only reserves
+internal memory sufficient for the FAT drives on booting, it may be
+necessary for an <a href="#MagiC_27s_20XFS-concept">XFS</a> to reserve further kernel memory with this
+function at the start.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">void *mem</td>
+</tr>
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">long bytes</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_diskchange">11.21.5.30 mxk_diskchange</a></h4>
+<p>mxk_diskchange must be called when an <a href="#MagiC_27s_20XFS-concept">XFS</a> or <a href="magic_dfs.html">DFS</a> driver
+has recognized a disk <b>media change</b>. The XFS driver releases
+its files and structures and subsequently the kernel.
+</p>
+<p><b>Return values:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_errors.html#EDRIVE">EDRIVE</a></td>
+<td valign="top"> Invalid drive
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_errors.html#E_CHNG">E_CHNG</a></td>
+<td valign="top"> Valid drive with new disk medium
+
+</td></tr>
+</table>
+
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">int drv</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_DMD_rdevinit">11.21.5.31 mxk_DMD_rdevinit</a></h4>
+<p>As of kernel version 1.
+</p>
+<p>mxk_DMD_rdevinit initializes the fields <i><a href="#d_driver">d_driver</a></i> and
+<i><a href="#d_devcode">d_devcode</a></i> of the DMD and uses the field <i><a href="#d_biosdev">d_biosdev</a></i> for
+this. It is required for interchangeable disk mechanisms.
+</p>
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">DMD *dmd</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_proc_info">11.21.5.32 mxk_proc_info</a></h4>
+<p>As of kernel version 2.
+</p>
+<p>mxk_proc_info obtains data for the current process:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">d0 = 0:</td>
+<td valign="top"> 0: Highest available subfunction number
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> 1: Domain
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> 2: Process ID
+
+</td></tr>
+</table>
+
+<p><b>The following apply for this:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">d0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">WORD code</td>
+</tr>
+<tr>
+  <td align="right" valign="top">a0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="gemdos_structures.html#PD">PD</a> *pd</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="mxk_mxalloc">11.21.5.33 mxk_mxalloc</a></h4>
+<p>As of kernel version 4.
+</p>
+<p>mxk_mxalloc enables fast memory allocation, e.g. for a
+RAMdisk-XFS, without having to go via a trap.
+</p>
+<p><i>pd</i> specifies the process that is entered as the owner of
+the new block, therefore normally the basepage of the <a href="#MagiC_27s_20XFS-concept">XFS</a> driver
+should be passed.
+</p>
+<h4><a name="mxk_mfree">11.21.5.34 mxk_mfree</a></h4>
+<p>As of kernel version 4.
+</p>
+<p>mxk_mfree releases the memory allocated by <a href="#mxk_mxalloc">mxk_mxalloc</a>.
+</p>
+<h4><a name="mshrink">11.21.5.35 mshrink</a></h4>
+<p>As of kernel version 4.
+</p>
+<p>mxk_mshrink alters the size of a memory block.
+</p>
+<h3><a name="Symbolic_20links_20and_20the_20XFS-concept">11.21.6 Symbolic links and the XFS-concept</a></h3>
+<p>Symbolic links (also called <i>aliases</i> in the user
+documentation in accordance with Macintosh nomenclature) are files
+that are specially labelled in some way, and instead of data contain a
+path which in turn points to another file. Such a path can also point
+to a no longer or not yet existing file. Paths can be <i>absolute</i>
+or <i>relative</i>, where the latter have the directory in which the
+link lies as a reference.
+</p>
+<p><b>In memory such links are managed as structures:</b>
+</p>
+<pre>{
+   WORD n;         /* Rounded up to an even number, incl. EOS */
+   char path[n];   /* Path with EOS at end  */
+}
+</pre>
+<p><b>Note:</b> When some <a href="#MagiC_27s_20XFS-concept">XFS</a> functions come across a symlink
+they have to dereference it, i.e. they return to the kernel in d0 the
+error-code ELINK and in a0 a pointer to a structure of the above form.
+The kernel then looks after the dereferencing and the limiting of the
+maximum nesting depth (if the symlink points to another one).
+</p>
+<p>XFS functions that may return ELINK are:
+</p>
+<p><a href="#xfs_path2DD">xfs_path2DD</a>, <a href="#xfs_sfirst">xfs_sfirst</a>, <a href="#xfs_snext">xfs_snext</a>, <a href="#xfs_fopen">xfs_fopen</a>, <a href="#xfs_xattr">xfs_xattr</a>,
+<a href="#xfs_attrib">xfs_attrib</a>.
+</p>
+<p>See also: <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h3><a name="MX_DOSLIMITS">11.21.7 MX_DOSLIMITS</a></h3>
+<p>This structure is defined as follows:
+</p>
+<pre>typedef struct
+{
+    UWORD version;        /* Version number                 */
+    UWORD num_drives;     /* Max. number of drives          */
+    ULONG max_secsizb;    /* Max. sector size in bytes      */
+    UWORD min_nfats;      /* Min. number of FATs            */
+    UWORD max_nfats;      /* Max. number of FATs            */
+    ULONG min_nclsiz;     /* Min. number of sectors/cluster */
+    ULONG max_nclsiz;     /* Max. number of sectors/cluster */
+    ULONG max_ncl;        /* Max. number of clusters        */
+    ULONG max_nsec;       /* Max. number of sectors         */
+} MX_DOSLIMITS;
+</pre>
+<p>See also: <a href="gemdos_directory.html#Dcntl">Dcntl</a> &nbsp; <a href="gemdos_directory.html#KER_DOSLIMITS">KER_DOSLIMITS</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h3><a name="XFS_20structures">11.21.8 XFS structures</a></h3>
+<ul class="content">
+	<li>11.21.8.1 <a href="#dev_descr">dev_descr</a>
+	<li>11.21.8.2 <a href="#DEVDRV">DEVDRV</a>
+	<li>11.21.8.3 <a href="#FILESYS">FILESYS</a>
+	<li>11.21.8.4 <a href="#fs_descr">fs_descr</a>
+		</li>
+</ul>
+<br>
+<h4><a name="dev_descr">11.21.8.1 dev_descr</a></h4>
+<p>This structure is defined as follows:
+</p>
+<pre>struct dev_descr
+{
+    <a href="#DEVDRV">DEVDRV</a>  *driver;
+    SHORT   dinfo;
+    SHORT   flags;
+    <a href="gemdos_structures.html#struct_20tty">struct tty</a> *tty;
+    LONG    devdrvsiz;
+    LONG    reserved[4];
+};
+</pre>
+<p><b>Note:</b> The component <i>devdrvsiz</i> describes the size
+of the <a href="#DEVDRV">DEVDRV</a> structure.
+</p>
+<p>See also: <a href="gemdos_directory.html#Dcntl">Dcntl</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="DEVDRV">11.21.8.2 DEVDRV</a></h4>
+<p>This structure is defined as follows:
+</p>
+<pre>typedef struct devdrv
+{
+    LONG (*open)      (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f);
+    LONG (*write)     (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, BYTE *buf, LONG bytes);
+    LONG (*read)      (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, BYTE *buf, LONG bytes);
+    LONG (*lseek)     (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, LONG where, WORD whence);
+    LONG (*ioctl)     (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, WORD mode, VOID *buf);
+    LONG (*datime)    (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, WORD *timeptr, WORD rwflag);
+    LONG (*close)     (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, WORD pid);
+    LONG (*select)    (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, LONG proc, WORD mode);
+    VOID (*unselect)  (<a href="gemdos_structures.html#FILEPTR">FILEPTR</a> *f, LONG proc, WORD mode);
+    LONG reserved[3];
+} DEVDRV;
+</pre>
+<p>See also: <a href="gemdos_directory.html#Dcntl">Dcntl</a> &nbsp; <a href="#dev_descr">dev_descr</a> &nbsp; <a href="#FILESYS">FILESYS</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="FILESYS">11.21.8.3 FILESYS</a></h4>
+<p>This structure is defined as follows:
+</p>
+<pre>typedef struct filesys
+{
+    struct  filesys *next;
+    LONG    fsflags;
+    LONG    (*root)       (WORD drv, <a href="gemdos_structures.html#fcookie">fcookie</a> *fc);
+    LONG    (*lookup)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, <a href="gemdos_structures.html#fcookie">fcookie</a> *fc);
+    LONG    (*creat)      (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, UWORD mode,
+                           WORD attrib, <a href="gemdos_structures.html#fcookie">fcookie</a> *fc);
+    <a href="#DEVDRV">DEVDRV</a> *(*getdev)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc, LONG *devspecial);
+    LONG    (*getxattr)   (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc, <a href="gemdos_structures.html#XATTR">XATTR</a> *xattr);
+    LONG    (*chattr)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc, WORD attr);
+    LONG    (*chown)      (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc, WORD uid, WORD gid);
+    LONG    (*chmode)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc, UWORD mode);
+    LONG    (*mkdir)      (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, UWORD mode);
+    LONG    (*rmdir)      (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name);
+    LONG    (*remove)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name);
+    LONG    (*getname)    (<a href="gemdos_structures.html#fcookie">fcookie</a> *relto, <a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *pathname,
+                           WORD size);
+    LONG    (*rename)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *olddir, BYTE *oldname,
+                           <a href="gemdos_structures.html#fcookie">fcookie</a> *newdir, BYTE *newname);
+    LONG    (*opendir)    (DIR *dirh, WORD tosflag);
+    LONG    (*readdir)    (DIR *dirh, BYTE *nm, WORD nmlen, <a href="gemdos_structures.html#fcookie">fcookie</a> *fc);
+    LONG    (*rewinddir)  (DIR *dirh);
+    LONG    (*closedir)   (DIR *dirh);
+    LONG    (*pathconf)   (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, WORD which);
+    LONG    (*dfree)      (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, LONG *buf);
+    LONG    (*writelabel) (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name);
+    LONG    (*readlabel)  (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, WORD namelen);
+    LONG    (*symlink)    (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, BYTE *to);
+    LONG    (*readlink)   (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *buf, WORD len);
+    LONG    (*hardlink)   (<a href="gemdos_structures.html#fcookie">fcookie</a> *fromdir, BYTE *fromname,
+                           <a href="gemdos_structures.html#fcookie">fcookie</a> *todir, BYTE *toname);
+    LONG    (*fscntl)     (<a href="gemdos_structures.html#fcookie">fcookie</a> *dir, BYTE *name, WORD cmd, LONG arg);
+    LONG    (*dskchng)    (WORD drv);
+    LONG    (*release)    (<a href="gemdos_structures.html#fcookie">fcookie</a> *fc);
+    LONG    (*dupcookie)  (<a href="gemdos_structures.html#fcookie">fcookie</a> *dest, <a href="gemdos_structures.html#fcookie">fcookie</a> *src);
+} FILESYS;
+</pre>
+<p>See also: <a href="gemdos_directory.html#Dcntl">Dcntl</a> &nbsp; <a href="#fs_descr">fs_descr</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<h4><a name="fs_descr">11.21.8.4 fs_descr</a></h4>
+<p>This structure is defined as follows:
+</p>
+<pre>struct fs_descr
+{
+    <a href="#FILESYS">FILESYS</a> *file_system;
+    SHORT   dev_no;
+    LONG    flags;
+    LONG    reserved[4];
+};
+</pre>
+<p>See also: <a href="gemdos_directory.html#Dcntl">Dcntl</a> &nbsp; <a href="#MagiC_27s_20XFS-concept">MagiC's XFS-concept</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_dfs.html"><img src="udo_lf.gif" alt="MagiC's DFS-concept" title="MagiC's DFS-concept" border="0" width="24" height="24">MagiC's DFS-concept</a>
+<a name="UDO_nav_rg_FOOT" href="magic_vfat.html"><img src="udo_rg.gif" alt="VFAT-XFS in MagiC" title="VFAT-XFS in MagiC" border="0" width="24" height="24">VFAT-XFS in MagiC</a>
+</body>
+</html>

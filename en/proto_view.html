@@ -1,0 +1,594 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: View protocol
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_HEAD" href="proto_ssp.html"><img src="udo_lf.gif" alt="System Services Protocol (SSP)" title="System Services Protocol (SSP)" border="0" width="24" height="24">System Services Protocol (SSP)</a>
+<a name="UDO_nav_rg_HEAD" href="proto_vscreen.html"><img src="udo_rg.gif" alt="Virtual Screen protocol" title="Virtual Screen protocol" border="0" width="24" height="24">Virtual Screen protocol</a>
+
+<hr>
+
+<h1><a name="View_20protocol">15.11 View protocol</a></h1>
+<a name="Protocol_2C_20View"></a>
+<p>The View protocol was developed by <i>Peter Seitz</i> and
+<i>Dieter Fiebelkorn</i> to make it possible for a GEM application
+to display files (using an external viewer) without being forced to
+implement a viewer for the various file formats itself, and to provide
+a uniform method of communication between the application and the
+viewer (so that the application can use any viewer, rather than just
+one particular viewer).
+</p>
+<p>There are already several applications that can be used as
+viewers. They are <i>GEM-View</i>(Dieter Fiebelkorn),
+<i>1st-View/1st-Guide</i> (Guido Vollbending), and <i>ShowImage</i>
+(Peter Seitz). When installed as desk accessories, these applications can
+be instructed (by other applications) to view files.
+</p>
+<p>This experimental version of the View protocol is implemented in
+<i>GEM- View</i> and <i>ShowImage.</i> IT IS STRONGLY RECOMMENDED
+THAT ALL PROGRAMMERS USE AND EXPERIMENT WITH THIS PROTOCOL! We hope
+that eventually it will become a standard. Suggestions and comments
+are welcome; please send them to Peter Seitz at one of the following
+addresses:
+</p>
+<pre>  Peter Seitz, Robert-Koch-Str.6, 63225 Langen, GERMANY
+  E-Mail (Internet): seitz(at)rbg.informatik.th-darmstadt.de
+                  or seitz(at))isa.informatik.th-darmstadt.de
+</pre>
+<p>This protocol should be quite easy to implement for both the
+writers of viewers and the writers of applications. It should provide
+substantial benefits for the user as well, since he will be able to
+use his favourite viewer with all applications.
+</p>
+<p>&ndash;Peter Seitz
+</p>
+<p>In the following dicussion, 'viewer' refers to the desk
+accessory or application that is used to display the file(s) and
+'application' always refers to the program that requests the services
+of the viewer.
+</p>
+<ul class="content">
+	<li>15.11.1 <a href="#The_20purpose_28s_29_20of_20the_20View_20protocol">The purpose(s) of the View protocol</a>
+	<li>15.11.2 <a href="#Using_20the_20View_20protocol">Using the View protocol</a>
+	<li>15.11.3 <a href="#Implementing_20the_20View_20protocol">Implementing the View protocol</a>
+	<li>15.11.4 <a href="#The_20VIEW_XXX_20messages">The VIEW_XXX messages</a>
+	<li>15.11.5 <a href="#The_20View_20protocol_20messages">The View protocol messages</a>
+	</li>
+</ul>
+<br>
+<h3><a name="The_20purpose_28s_29_20of_20the_20View_20protocol">15.11.1 The purpose(s) of the View protocol</a></h3>
+<p>The <a href="#View_20protocol">View protocol</a> was developed to allow an application to:
+</p>
+<ul>
+<li><p> Determine if a viewer is already in memory (without knowing the
+name of the viewer). If no viewer is available, the application can
+start the viewer itself (if the name is available).
+<br>&nbsp;
+</p></li>
+<li><p> Determine what type of files can be displayed by the available
+viewer.
+<br>&nbsp;
+</p></li>
+<li><p> View files in various formats (using the viewer) and receive
+feedback from the viewer (using a uniform message protocol).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="Using_20the_20View_20protocol">15.11.2 Using the View protocol</a></h3>
+<p>It is very easy for the user to use the facilities of the View
+protocol. If there is a view-accessory (<i><a href="gem_about.html">GEM</a>-View, ShowImage</i>)
+that supports the <a href="#View_20protocol">View protocol</a>, and the application supports the View
+protocol, nothing needs to be done. If there is no resident view-
+accessory (or the desired viewer does not support the <a href="#View_20protocol">View protocol</a>)
+then the user should install an environmental variable called 'View'
+with the full pathname of the desired viewer as its value. The way
+that this can be done is described in '<a href="#Who_20is_20the_20viewer_3F">Who is the viewer?</a>'.
+</p>
+<h3><a name="Implementing_20the_20View_20protocol">15.11.3 Implementing the View protocol</a></h3>
+<p>The <a href="#View_20protocol">View protocol</a> is based on parts of the <a href="proto_xacc.html">XAcc</a> protocol, so a
+programmer planning to implement the <a href="#View_20protocol">View protocol</a> should obtain a
+copy of the <a href="proto_xacc.html">XAcc</a> protocol (xacc_mt.txt).
+</p>
+<h4><a name="Who_20is_20the_20viewer_3F">15.11.3.1 Who is the viewer?</a></h4>
+<p>First, an application should determine if there is a viewer that
+the user prefers. It does this by (in this order) looking for an
+environmental variable called 'View', looking for a cookie in the
+cookie jar called 'View', and then looking for an environmental
+variable called 'SHSHOW' (which is used by the MultiTOS desktop, too).
+All these names are case-sensitive.
+</p>
+<p>The value of each one of these variables is the full pathname of
+the viewer.
+</p>
+<p>The programmer can determine if one of the viewers is in memory
+(as a desk accessory, usually, but it is possible for the viewer to be
+an application under a multitasking operating system) using the
+<a href="appl.html#appl_find">appl_find</a> system call.
+</p>
+<p>To use the <a href="appl.html#appl_find">appl_find</a> system call, the path and the extension
+have to be removed from the name of the viewer and must be padded with
+spaces to a length of eight characters. If this is not done, the
+appl_find call will fail. It should be noted that appl_find is
+case-sensitive, so normally the value MUST be all upper case. It would
+not be wise to convert the name to upper case, however, as
+case-sensitive file systems may be used under MiNT or <a href="magic.html">MagiC</a>.
+</p>
+<p>If the viewer has not yet sent its <a href="proto_xacc.html">XAcc</a>-identification (the
+<a href="proto_xacc.html#ACC_ID">ACC_ID</a> message), the application does this now. This may be the case
+if the main application does not support the <a href="proto_xacc.html">XAcc</a> protocol.
+</p>
+<p>If no viewer is found, the application should check the extended
+name (introduced in version two of the <a href="proto_xacc.html">XAcc</a> protocol) of all
+applications and accessories that have sent <a href="proto_xacc.html">XAcc</a>-identification
+messages for the string '2View' (this is the application type
+'viewer') or the string 'NView' (this is the generic type 'viewer').
+If either of these strings is found, then the application/accessory in
+question supports the <a href="#View_20protocol">View protocol</a> and may be used as a viewer. As in
+the case of the environment variables, the case of '2View' and 'NView'
+is significant.
+</p>
+<p>If there is no viewer in memory but one of these environmental
+variables (or the cookie) was found, the application can try to load
+the viewer itself (using the pathname given in the variable). Please
+note that wildcards may be used in the extension of the viewer (a
+view-accessory could be named 'XXX.ACC' or 'XXX.ACX'). If the 'View'
+environmental variable was found, the viewer may be started as an
+accessory as well using Chameleon or MultiTOS. As a consequence of
+this, the viewer specified in the 'View' environmental variable must
+be able to run as both an application or an accessory. If the viewer
+cannot run as an accessory, it should be specified using the 'SHSHOW'
+environmental variable.
+</p>
+<p>Normally the user should use one of the enironmental variables
+('View' or 'SHSHOW'). These should be placed in the desktop
+environment, as all applications started by the desktop will inherit
+its environment. This can be done with special programs (ENVIRON.PRG,
+JCNBOOT.PRG) or, if MiNT is installed, by placing the following line in
+MINT.CNF:
+</p>
+<p>setenv View C:\<a href="gem_about.html">GEM</a>_VIEW\GEMVIEW.APP
+</p>
+<p>and/or
+</p>
+<p>setenv SHSHOW C:\<a href="gem_about.html">GEM</a>_VIEW\GEMSHOW.PRG
+</p>
+<p>Using <a href="magic.html">MagiC</a> the environment can be set by putting a '<a href="magic_magxinf.html#UDO__23_ENV">#_ENV</a>' -
+line in the MAGX.INF file, like the following:
+</p>
+<p>#_ENV View=F:\<a href="evnt.html#SHOW">SHOW</a>_IMG\<a href="evnt.html#SHOW">SHOW</a>_IMG.PRG
+</p>
+<p>The cookie should no longer be used.
+</p>
+<h4><a name="What_20kinds_20of_20files_20can_20be_20displayed_3F">15.11.3.2 What kinds of files can be displayed?</a></h4>
+<p>The <a href="proto_xacc.html">XAcc</a> Extended name of the viewer should contain an entry of
+the form 'X.ext' for every supported file format, where 'ext'
+may be one of the following:
+</p>
+<pre>  X.ART      - Art-Director
+  X.ASC      - ASCII
+    Paragraphs end with carriage return, and lines may end
+    with a linefeed.
+  X.B&amp;W      - Imagelab image
+  X.BLK      - GFA bit-block
+    There is a three-WORD header: width minus one, height
+    minus one, planes.
+  X.BMP      - OS/2 bitmap, MS-Windows bitmap
+  X.CFN      - Calamus font
+  X.CRG      - Calamus raster
+  X.CTX      - Calamus text
+  X.CVG      - Calamus vector
+  X.DOC      - 1stWord document
+  X.DOO      - Doodle Mono
+  X.ESM      - Enhanced Simplex
+  X.FNT      - GDOS font (and nothing else!)
+  X.<a href="gem_about.html">GEM</a>      - <a href="gem_about.html">GEM</a>-metafile
+  X.GIF      - GIF image
+  X.GVW      - <a href="gem_about.html">GEM</a>-View internal format
+    Used by <a href="gem_about.html">GEM</a>-View internally and should not be in this
+    list! (Hi, Dieter!)
+  //X.HEX    - Hex-Dump
+    This is obsolete.  It is now called 'XDump'
+  X.IFF      - IFF-file
+    The .IFF format in general! This should be present if any
+    IFF-filetypes are supported.
+  X.IFF.ILBM - IFF InterLeavedBitMap
+  X.IFF.type - Other IFF-filetypes
+  X.IMC      - Signum!2 image
+  X.IMG      - <a href="gem_about.html">GEM</a>-image, XIMG
+  X.JPG      - JPEG image
+  X.MAC      - MacPaint image
+  X.NEO      - Neochrome image
+  X.OUT      - The <a href="gem_about.html">GEM</a> 'OUT' file format
+    SEE:  <a href="vdi_escape.html#v_alpha_text">v_alpha_text</a>
+  X.PAC      - STAD image
+  X.PC[123]  - Degas compressed Image
+  X.PCX      - PC Paintbrush
+  X.P[BGP]M  - Portable Bitmap
+  X.PIC      - Screen-dump (current resolution)
+  X.PI[123]  - Degas uncompressed image
+  X.RLE      - MS-Windows bitmap
+  X.RSC      - <a href="gem_about.html">GEM</a> Resource file
+  X.RTF      - Rich Text Format
+  X.SDO      - Signum!2 document
+  X.SDK      - Signum!3 document
+  X.SNP      - Becker Snap-shot
+    This has a three-WORD header: width, height, planes.
+  X.SP[CU]   - Spectrum 512 image
+  X.SUN      - Sun raster file
+  X.TGA      - Targa image
+  X.TIF      - TIFF image
+  X.TN[123Y] - Tiny image
+  X.TXT      - ASCII
+    Lines end with a carriage return and a linefeed.  It would
+    be nice if a single linefeed (Unix) or a single CR (Macintosh)
+    would also be accepted.
+  X.XBM      - X-Bitmap file
+
+  XDump      - Hex-dump
+    This is not an extension, but means that the viewer is
+    able to show files as hexadecimal dumps.
+</pre>
+<p><b>Note:</b> [abc] means one of the characters 'a', 'b', or 'c'
+and not the string '[abc]'.
+</p>
+<p>All other entries starting with 'X.' are reserved for future
+versions! If you would like to add other formats, please contact Peter
+Seitz. It would be wise if the entries are unique.
+</p>
+<p>I recommend the support of X.IMG, X.GEM and X.OUT, as these
+are the standard formats for GEM data-exchanges!
+</p>
+<p>It should be noted that the file formats listed here that an
+application supports could be a clue as to which file formats the
+application will accept using the <a href="proto_dd.html">Drag&amp;Drop protocol</a>.
+</p>
+<h4><a name="How_20can_20I_20tell_20the_20viewer_20what_20is_20to_20be_20shown_3F">15.11.3.3 How can I tell the viewer what is to be shown?</a></h4>
+<p>Because of the XAcc2 protocol, the application knows which
+message- groups are supported and these messages may be used for
+communication if the application has the data already in memory (and
+not within a file).
+</p>
+<p>Use the <a href="#The_20VIEW_XXX_20messages">VIEW_xxx messages</a> (discussed below) when the data to be viewed is
+contained in a file. With these messages the application has extensive
+control over what is happening. These messages may be used if, and
+<b>only</b> if, the strings '2View' or 'NView' are found in the
+viewer's <a href="proto_xacc.html#Extended_20XAcc">Extended XAcc</a> name. This should normally be the case, though.
+</p>
+<p>This may be a problem if the viewer has been started by the
+application. In this case I would suggest to try to send the messages
+and see what happens. If the viewer does not support them, no reaction
+is given (as unknown messages should be ignored!). Otherwise, the
+viewer will send a response.
+</p>
+<p>The viewer is <b>strongly</b> recommended to support the
+<a href="proto_av.html#VA_START">VA_START</a> message! Of course this has to be tested in its protostatus
+(if possible, see above).
+</p>
+<p>There is no explicit support of the <a href="proto_dd.html">Drag&amp;Drop protocol</a>, as
+it was mainly a MiNT-specific extension (though it is included in
+MultiTOS and later in <a href="magic.html">MagiC</a>), but programs running under MiNT should
+understand this protocol!
+</p>
+<p>All other protocols, of course, may be used to communicate with
+the viewer (as long as they provide some method to determine whether
+or not they are supported).
+</p>
+<p><i>Please</i> keep in mind that pointers to strings in AES
+messages have to point to global-readable memory (if running in an
+environment with memory protection)!
+</p>
+<h4><a name="What_20does_20the_20viewer_20do_3F">15.11.3.4 What does the viewer do?</a></h4>
+<p>When the viewer is started, it should check the command line for
+a list of filenames to view. To be consistent with the direction that
+the Atari is moving, the viewer should support the ARGV argument-
+passing scheme developed by Atari.
+</p>
+<p>The viewer should support the <a href="proto_xacc.html">XAcc</a> protocol, and answer <a href="proto_xacc.html">XAcc</a>
+protocol messages.
+</p>
+<p>The viewer should use the [Alternate] + [X] key combination to
+send data using the <a href="proto_xacc.html">XAcc</a> protocol messages.
+</p>
+<p>If the viewer receives the <a href="proto_av.html#VA_START">VA_START</a> message, it should determine
+the type of the file and whether or not the type is supported by
+itself. The viewer does not have to send a reply to this message. If a
+reply is needed, the application should send the message to the viewer
+using the <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a> message.
+</p>
+<h3><a name="The_20VIEW_XXX_20messages">15.11.4 The VIEW_XXX messages</a></h3>
+<p>This is a description of the <a href="#View_20protocol">View protocol</a> messages. In contrast
+to to the <a href="proto_av.html#VA_START">VA_START</a> and <a href="proto_xacc.html#XAcc_20messages">XAcc messages</a>, these messages provide more
+refined control of what happens to the viewed file.
+</p>
+<p>Please remember that these messages may be used if, and
+<b>only</b> if, the strings '2View' or 'NView' are found in the
+viewer's <a href="proto_xacc.html#Extended_20XAcc">Extended XAcc</a> name as described above.
+</p>
+<p>In general, there are four messages; <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a>, which may be
+sent to the viewer, and <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>, <a href="proto_view.html#VIEW_OPEN">VIEW_OPEN</a> and <a href="proto_view.html#VIEW_CLOSED">VIEW_CLOSED</a> that
+are used to inform the application of what has happened to its file.
+</p>
+<p>The viewer is expected to answer <b>every</b> VIEW_FILE message it
+receives. At the very least, it should send a
+<a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>(<a href="proto_view.html#VIEWERR_ERROR">VIEWERR_ERROR</a>) message (see below). However, if the viewer
+does not send an answer and the application expects one, the
+application should recover by using a timeout value (ten seconds
+should be sufficient).
+</p>
+<p>It is possible for the viewer to send other messages (for
+example <a href="proto_av.html#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a>) before answering the <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a> message!
+</p>
+<p><b>Note:</b> All strings are NULL-terminated (as in the 'C'
+programming language).
+</p>
+<h4><a name="View_20a_20file">15.11.4.1 View a file</a></h4>
+<p>The <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a> message is used by the application to inform the
+viewer that a file is to be displayed.
+</p>
+<pre>msg[0]   = <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a>
+msg[3/4] = filename // Must be global-readable (due to MiNT's memory
+                    // protection)!
+msg[5/6] = 0        // Reserved!
+msg[7]   = 0        // Zero = new file, see below!
+</pre>
+<p>Notes about <i>filename</i>(9.10.1993)::
+</p>
+<ul>
+<li><p> If <i>filename</i> ends with a slash/backslash, or
+<i>filename</i> is a directory, the file-selector should be opened
+with <i>filename</i> as the current path.
+<br>&nbsp;
+</p></li>
+<li><p> If the terminating byte (0) of <i>filename</i> is followed by
+another string starting with an 'X' (0x58), this string gives the file
+type that <i>filename</i> should be displayed as (using the strings
+from '<a href="#What_20kinds_20of_20files_20can_20be_20displayed_3F">What kinds of files can be displayed?</a>' as a guide) if possible.
+This could be used to show hex-dumps ('XDump').
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>This message is always answered by the viewer:
+</p>
+<p>If the file could not be displayed, respond with the <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>
+message:
+</p>
+<pre>retmsg[0]   = <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>
+retmsg[3/4] = msg[3/4]  // Filename (same pointer!)
+retmsg[5]   = errcode   // See below.
+retmsg[6]   = 0         // Reserved!
+retmsg[7]   = msg[7]    // 0 or window identification.
+</pre>
+<p><i>filename</i> should <b>always</b> be the pointer received
+in VIEW_FILE, as only this way can the sender recognize which file was
+meant in case msg[7] is zero (and - of course - no new memory has to
+be allocated.
+</p>
+<p>The <i>errcode</i> variable may be a GEMDOS error-code (&lt;0)
+or one of the following:
+</p>
+<pre><a href="proto_view.html#VIEWERR_ERROR">VIEWERR_ERROR</a>   - The error is unspecified
+<a href="proto_view.html#VIEWERR_SIZE">VIEWERR_SIZE</a>    - The file is too large, or the wrong size
+<a href="proto_view.html#VIEWERR_COLOR">VIEWERR_COLOR</a>   - Unsupported resolution or color
+<a href="proto_view.html#VIEWERR_WID">VIEWERR_WID</a>     - Wrong window identification
+<a href="proto_view.html#VIEWERR_MEM">VIEWERR_MEM</a>     - Not enough memory
+</pre>
+<p>It is expected that the viewer informs the user about the error
+(by printing a message or displaying an alert box), since it will know
+what the problem is much better than the application.
+</p>
+<p>If the file has been displayed, but <b>no</b> further
+communication is possible, the viewer sends the <a href="proto_view.html#VIEW_OPEN">VIEW_OPEN</a> message:
+</p>
+<pre>retmsg[0]   = <a href="proto_view.html#VIEW_OPEN">VIEW_OPEN</a>
+retmsg[3/4] = msg[3/4]          // Filename (the recieved pointer)
+retmsg[5]   = viewprot_version  // Currently 0
+retmsg[6]   = 0                 // Reserved!
+retmsg[7]   = 0                 // 0 = no further communication!
+</pre>
+<p>If the file has been displayed, and <a href="#Further_20communication">further communication</a> is possible, the
+viewer sends the <a href="proto_view.html#VIEW_OPEN">VIEW_OPEN</a> message:
+</p>
+<pre>retmsg[0]   = <a href="proto_view.html#VIEW_OPEN">VIEW_OPEN</a>
+retmsg[3/4] = msg[3/4]          // Filename (the recieved pointer)
+retmsg[5]   = viewprot_version  // Currently 0
+retmsg[6]   = 0                 // Reserved!
+retmsg[7]   = wid               // Window ID (non-zero!)
+</pre>
+<p>The window identification <i>wid</i> refers to the AES
+identification of the window the file is being displayed in. This
+seems to be a unique number representing the file, which is used in
+further communication as an identifier.
+</p>
+<p>The currently defined <i>viewprot_version</i> is 0.
+</p>
+<h4><a name="Further_20communication">15.11.4.2 Further communication</a></h4>
+<p>Once a file is displayed (in a window) and the viewer has
+returned a non-zero window identification in msg[7], both the
+application and the viewer may send each other messages refering to
+this file/window.
+</p>
+<p>The 'msg[7]' variable will <b>always</b> contain the (non-zero)
+window identification as an identifier! As this is supposed to be
+unique, the 'msg[3/4]' variable should <b>not</b> be used to identify
+the file (if the 'msg[7]' variable is not zero).
+</p>
+<p>If the viewer receives a wrong window identification, it replies
+by sending a <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a> message:
+</p>
+<pre>retmsg[0]   = <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>
+retmsg[3/4] = msg[3/4]
+retmsg[5]   = <a href="proto_view.html#VIEWERR_WID">VIEWERR_WID</a>
+retmsg[6]   = 0
+retmsg[7]   = msg[7]    // The wrong window identification.
+</pre>
+<p>The application receiving this message must <b>not</b> use this
+window identification again, since the case may be that the viewer
+simply did not send <a href="proto_view.html#VIEW_CLOSED">VIEW_CLOSED</a>(wid).
+</p>
+<p>The application can perform some operations on the file being
+viewed:
+</p>
+<ul>
+<li><p> The window should be closed (and the memory used by the file
+freed):
+<br>&nbsp;
+<pre>msg[0]   = <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a>
+msg[3/4] = NULL         // Remove File
+msg[5/6] = 0
+msg[7]   = wid          // This (obviously) cannot be 0.
+</pre>
+</p></li>
+<li><p> If the application knows that the file has been changed, or
+wants another file to be displayed in the same window, it can send the
+following message:
+<br>&nbsp;
+<pre>msg[0]   = <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a>
+msg[3/4] = filename     // This may be different.
+msg[5/6] = 0
+msg[7]   = wid          // The identification of the window.
+</pre>
+<br>On the other side, the viewer should inform the application of
+what is happening to its file:
+<br>&nbsp;
+</p></li>
+<li><p> If the window is closed (the user closed it or the viewer
+received <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> or VIEW_FILE(NULL, wid)), then the viewer should send
+the following message:
+<br>&nbsp;
+<pre>msg[0]   = <a href="proto_view.html#VIEW_CLOSED">VIEW_CLOSED</a>
+msg[3/4] = filename     // This may be NULL and should be ignored!
+msg[5/6] = 0
+msg[7]   = wid
+</pre>
+<br>The <i>filename</i> should be the one from the VIEW_FILE message,
+otherwise it may be NULL, as no new global memory should be allocated.
+<br>&nbsp;
+</p></li>
+<li><p> If the window was closed due to an error, the VIEW_FAILED message
+may be sent instead:
+<br>&nbsp;
+<pre>msg[0]   = <a href="proto_view.html#VIEW_FAILED">VIEW_FAILED</a>
+msg[3/4] = filename     // This may be NULL and should be ignored!
+msg[5]   = errcode      // See above.
+msg[6]   = 0
+msg[7]   = wid
+</pre>
+<br>If the viewer does not have the ability to store the
+identification of the application, it may not inform the application
+when a window was closed without a message from the application. This
+is very easy to implement, but may lead to unexpected results. Please
+send your experiences to Peter Seitz (the addresses he can be
+contacted at are shown above).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h4><a name="View_20data_20from_20memory">15.11.4.3 View data from memory</a></h4>
+<p>In Version 1.04 of the <a href="#View_20protocol">View protocol</a> a new message (VIEW_DATA) has
+been added, which is used to view data that has already been read into
+memory.
+</p>
+<p>To indicate the support of this new message, the string
+'XViewData' must be within the viewer's <a href="proto_xacc.html#Extended_20XAcc">Extended XAcc</a> name.
+</p>
+<pre>msg[0]   = <a href="proto_view.html#VIEW_DATA">VIEW_DATA</a>
+msg[3/4] = data     // Pointer to data, incl. header (see below)
+msg[5/6] = length   // Total length of header + data
+msg[7]   = wid      // Same as with <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a> (see above)
+</pre>
+<p>where <i>data</i> points to:
+</p>
+<pre>LONG  type;         // eg '.IMG'
+WORD  head_length;  // Offset to beginning of data, word alligned!
+CHAR[]  name;       // 0-terminated name of variable length
+</pre>
+<p>If the <i>type</i> is 0, the viewer should try to figure it out
+itself. Other possible value for <i>type</i> are all file-types
+listed in '<a href="#What_20kinds_20of_20files_20can_20be_20displayed_3F">What kinds of files can be displayed?</a>' but without the 'X'
+at the beginning (e.g. 'Dump' means that starting at '<i>data</i> +
+<i>head_length</i>', '<i>length - head_length</i>' bytes should be
+displayed as a hex-dump).
+</p>
+<p>Please note that:
+</p>
+<ul>
+<li> <i>data</i> has to point to an even adress,
+</li>
+<li> <i>data</i> has to point to global readable memory,
+</li>
+<li> <i>head_length</i> is even,
+</li>
+<li> the data of the file is found at <i>data</i> +
+<i>head_length</i> and is in the same form, as it would be in a file
+of type <i>type.</i>
+</li>
+</ul>
+
+<p>The viewer receiving VIEW_DATA answers the same way as <a href="proto_view.html#VIEW_FILE">VIEW_FILE</a>,
+but <i>filename</i> (= msg[3/4]) should be set to the value of
+<i>data.</i> The application <b>must not</b> free the memory pointed
+to by <i>data</i> before receiving the answer from the viewer; in
+case of a timeout it should ask the user what to do.
+</p>
+<h3><a name="The_20View_20protocol_20messages">15.11.5 The View protocol messages</a></h3>
+<a name="View_20protocol_2C_20The_20messages"></a>
+<a name="VIEW_FILE"></a>
+<a name="VIEW_FAILED"></a>
+<a name="VIEW_OPEN"></a>
+<a name="VIEW_CLOSED"></a>
+<a name="VIEW_DATA"></a>
+<a name="VIEW_GETMFDB"></a>
+<a name="VIEW_SETMFDB"></a>
+<a name="VIEW_MFDB"></a>
+<a name="VIEWERR_ERROR"></a>
+<a name="VIEWERR_SIZE"></a>
+<a name="VIEWERR_COLOR"></a>
+<a name="VIEWERR_WID"></a>
+<a name="VIEWERR_MEM"></a>
+<p>At last, the definitions for the messages:
+</p>
+<pre>
+#define VIEW_FILE    0x5600
+#define VIEW_FAILED  0x5601
+#define VIEW_OPEN    0x5602
+#define VIEW_CLOSED  0x5603
+#define VIEW_DATA    0x5604
+#define VIEW_GETMFDB 0x5610
+#define VIEW_SETMFDB 0x5611
+#define VIEW_MFDB    0x5612
+
+#define VIEWERR_ERROR 0
+#define VIEWERR_SIZE  1
+#define VIEWERR_COLOR 2
+#define VIEWERR_WID   3
+#define VIEWERR_MEM   4
+
+// 0x56xx = 'V' as in 'View'!
+</pre>
+<p>All other message values ranging from 0x5600 to 0x56FF are
+reserved for future extensions of the <a href="#View_20protocol">View protocol</a> and should be
+ignored for now.
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_FOOT" href="proto_ssp.html"><img src="udo_lf.gif" alt="System Services Protocol (SSP)" title="System Services Protocol (SSP)" border="0" width="24" height="24">System Services Protocol (SSP)</a>
+<a name="UDO_nav_rg_FOOT" href="proto_vscreen.html"><img src="udo_rg.gif" alt="Virtual Screen protocol" title="Virtual Screen protocol" border="0" width="24" height="24">Virtual Screen protocol</a>
+</body>
+</html>

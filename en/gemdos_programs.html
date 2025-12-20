@@ -1,0 +1,254 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: The program format
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="gemdos_pipes.html"><img src="udo_lf.gif" alt="Pipes, Test for" title="Pipes, Test for" border="0" width="24" height="24">Pipes, Test for</a>
+<a name="UDO_nav_rg_HEAD" href="gemdos_tpa.html"><img src="udo_rg.gif" alt="Program launch and TPA" title="Program launch and TPA" border="0" width="24" height="24">Program launch and TPA</a>
+
+<hr>
+
+<h1><a name="The_20program_20format">5.5 The program format</a></h1>
+<a name="GEMDOS_2C_20Program_20format_20under"></a>
+<p>A program file under GEMDOS consists of the following segments:
+</p>
+<ul>
+<li> Header
+</li>
+<li> TEXT, DATA and BSS segment
+</li>
+<li> Symbol table (optional)
+</li>
+<li> Relocation table (optional)
+</li>
+</ul>
+
+<p><b>The header is built up as follows:</b>
+</p>
+<a name="PH"></a>
+<a name="Program_20header"></a>
+<a name="Header_20of_20a_20program"></a>
+<pre>typedef struct
+{
+   WORD  ph_branch;        /* Branch to start of the program  */
+                           /* (must be 0x601a!)               */
+
+   LONG  ph_tlen;          /* Length of the TEXT segment      */
+   LONG  ph_dlen;          /* Length of the DATA segment      */
+   LONG  ph_blen;          /* Length of the BSS segment       */
+   LONG  ph_slen;          /* Length of the symbol table      */
+   LONG  ph_res1;          /* Reserved, should be 0;          */
+                           /* Required by PureC               */
+   LONG  <a href="gemdos_programs.html#ph_prgflags">ph_prgflags</a>;      /* Program flags                   */
+   WORD  ph_absflag;       /* 0 = Relocation info present     */
+} PH;
+</pre>
+<a name="Symbol_20table"></a>
+<p>A symbol table in <i>Digital Research format</i> consists of a
+series of 14 byte long entries, made up of the symbol name (maximum 8
+bytes; any shorter names are terminated with a 0!), a 2 byte long
+symbol type and the actual symbol value (4 bytes). The supported
+symbol types are summarized in the following table:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Symbol type</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x0100</td>
+  <td align="left" valign="top">In the BSS</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x0200</td>
+  <td align="left" valign="top">In program text</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x0280</td>
+  <td align="left" valign="top">Start of an object module</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x02c0</td>
+  <td align="left" valign="top">Start of a library</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x0400</td>
+  <td align="left" valign="top">In DATA segment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x0800</td>
+  <td align="left" valign="top">External</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x1000</td>
+  <td align="left" valign="top">Register</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x2000</td>
+  <td align="left" valign="top">Globales Symbol</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x4000</td>
+  <td align="left" valign="top">Equated</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x8000</td>
+  <td align="left" valign="top">Defined</td>
+</tr>
+</table>
+</div>
+
+<a name="Relocation_20table"></a>
+<p>Many development systems (e.g. Pure-C) however use their own
+(usually more efficient) symbol format. As programs under TOS may
+be loaded at any arbitrary location in working memory (and must be
+capable of running there), a program file normally contains a
+<i>relocation table,</i> with whose aid the addresses specified in
+the program code can be recalculated to the segments actually
+allocated.
+</p>
+<p>Whether relocation information is present or not can be gathered
+from the element <i>ph_absflag</i> of the program header (see above).
+Basically only a relocation of 32-bit values (i.e. addresses) is
+possible; prior to GEMDOS Version 0.15 (or TOS Version 1.04) the
+relocation information was limited to a maximum of 32 kbytes.
+</p>
+<p>The relocation table itself starts with a 32-bit value which
+marks the offset of the first value to be relocated <i>relative</i>
+to the start of the TEXT segment. Single bytes are then used for all
+following offsets. <b>To be able to handle offsets greater than 255
+correctly, one proceeds as follows:</b> If a 1 is found as an offset
+(this is not possible due to the characteristics of the MC-680x0
+processor family) then the value 254 is added automatically to the
+offset. For very large offsets this procedure can of course be
+repeated. Incidentally, an <i>empty</i> relocation table is flagged
+with a LONG value of 0.
+</p>
+<p>See also: <a href="gemdos_file.html#Fcntl">Fcntl</a> &nbsp; <a href="ARHEADER.html#ARHEADER">ARHEADER</a> &nbsp; <a href="OHEADER.html">OHEADER</a> &nbsp; <a href="OSHEADER.html">OSHEADER</a> &nbsp; <a href="gemdos_file.html#PSETFLAGS">PSETFLAGS</a> &nbsp;
+<a href="#The_20program_20flags">The program flags</a>
+</p>
+<h3><a name="The_20program_20flags">5.5.1 The program flags</a></h3>
+<a name="Flags_20of_20a_20program"></a>
+<a name="ph_prgflags"></a>
+<p>With program flags one is dealing with a bit-vector within the
+program header, which is built up as follows:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bits</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;0</td>
+<td valign="top"> <b><a href="magic_programs.html#Fastload">Fastload</a> flag.</b> If this bit is set, then the stack will
+not be cleared, but only the BSS segment preinitialized.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;1</td>
+<td valign="top"> If this bit is set, then the program may be loaded into the
+fast alternate RAM
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;2</td>
+<td valign="top"> If this bit is set, memory requests via <a href="gemdos_memory.html#Malloc">Malloc</a> may be allocated
+from alternate RAM
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;3</td>
+<td valign="top"> Reserved, should be NULL
+<br>Used for the <a href="magic_sharelib.html#How_20do_20I_20write_20a_20library_3F">Shared library</a>.
+<a name="Memory_20protection"></a>
+<a name="Protection_2C_20Memory"></a>
+<a name="Memory_20protection_2C_20Modes_20for"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;4-7</td>
+<td valign="top"> <b>Memory protection mode</b>
+<a name="Memory_20protection_2C_20Private"></a>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0 = Private:</td>
+<td valign="top">
+<br>Only the process itself, and the operating system, may access the
+memory
+<a name="Memory_20protection_2C_20Global"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1 = Global:</td>
+<td valign="top">
+<br>The memory is completely unprotected and hence all programs can
+access it
+<a name="Memory_20protection_2C_20Super"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2 = Super:</td>
+<td valign="top">
+<br>The memory can be accessed by all processes that run in
+supervisor-mode
+<a name="Memory_20protection_2C_20Read_20only"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3 = Read only:</td>
+<td valign="top">
+<br>Any process can read from the memory; but writing is only
+permitted by the process itself, as well as the operating system
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">8-11</td>
+<td valign="top"> Reserved, should be NULL
+<a name="Shared_20text"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;12</td>
+<td valign="top"> <b>Shared text</b>.If this bit is set, then the TEXT segment
+of the program may be <i>shared.</i> If such a program is launched
+three times, for instance, then 3 different DATA and BSS segments
+exist, but only a common TEXT segment. <b>Warning:</b> The bit should
+only be set if the program does not perform any absolute accesses to
+the DATA or BSS segments.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">13-27</td>
+<td valign="top"> Reserved, should be NULL.
+<a name="TPA_20size_20field"></a>
+<a name="Size_20field_20of_20the_20TPA"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">28-31</td>
+<td valign="top"> <b>TPA size field</b>. Here one can specify in steps of 128
+kbyte the maximum amount of memory to be allocated to the program from
+alternate RAM if the computer has more ST-RAM then alternate RAM. The
+16 possible value represent allocations between 128 kbyte and 2 Mbyte.
+
+</td></tr>
+</table>
+
+<p>See also: <a href="#The_20program_20format">Program header</a> &nbsp; <a href="gemdos_tpa.html">Program launch and TPA</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="gemdos_pipes.html"><img src="udo_lf.gif" alt="Pipes, Test for" title="Pipes, Test for" border="0" width="24" height="24">Pipes, Test for</a>
+<a name="UDO_nav_rg_FOOT" href="gemdos_tpa.html"><img src="udo_rg.gif" alt="Program launch and TPA" title="Program launch and TPA" border="0" width="24" height="24">Program launch and TPA</a>
+</body>
+</html>

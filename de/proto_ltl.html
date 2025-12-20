@@ -1,0 +1,477 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: LTL-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_gdps.html"><img src="udo_lf.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+<a name="UDO_nav_rg_HEAD" href="proto_olga.html"><img src="udo_rg.gif" alt="OLGA-Protokoll" title="OLGA-Protokoll" border="0" width="24" height="24">OLGA-Protokoll</a>
+
+<hr>
+
+<h1><a name="LTL-Protokoll">15.7 LTL-Protokoll</a></h1>
+<p>Bei den meisten Compilersprachen wird ein Programm zunächst
+compiliert (d.h. vom Quelltext in den Maschinencode übersetzt) und
+dann gelinkt (d.h. mit anderen Programmteilen und
+Bibliotheksfunktionen zusammengefügt und als Programmdatei
+abgespeichert) bevor es ausgeführt werden kann. Beim
+Load-Time-Linking (kurz <q>LTL</q>) spart man sich den letzten Schritt
+auf, bis das Programm ausgeführt werden soll. Erst dann fügt der
+sogenannte Loader das Programm zusammen, ohne es jedoch als
+Programmdatei abzuspeichern. Der Linkvorgang findet also im
+Hauptspeicher, unmittelbar vor der Ausführung des Programms, statt.
+</p>
+<p>Dieser Text beschreibt ein Protokoll, über das eine Shell mit
+einem Loader, also einem Program, das Load-Time-Linking implementiert,
+kommunizieren kann. Dieses Protokoll wurde erstmals von der
+Entwicklungsumgebung Chatwin und dem Oberon-System STJ-Oberon-2
+verwendet. Das Protokoll ist aber so gehalten, daß es prinzipiell
+auch von anderen Shells und Loadern verwendet werden kann.
+</p>
+<ul class="content">
+	<li>15.7.1 <a href="#Der_20OBNL-Cookie">Der OBNL-Cookie</a>
+	<li>15.7.2 <a href="#Die_20OBNCOMM-Struktur">Die OBNCOMM-Struktur</a>
+	<li>15.7.3 <a href="#Nachrichten_20der_20Shell_20an_20den_20Loader">Nachrichten der Shell an den Loader</a>
+	<li>15.7.4 <a href="#Nachrichten_20des_20Loaders_20an_20die_20Shell">Nachrichten des Loaders an die Shell</a>
+	<li>15.7.5 <a href="#Beispiel:_20Chatwin_20und_20STJ-Oberon-2">Beispiel: Chatwin und STJ-Oberon-2</a>
+	</li>
+</ul>
+<br>
+<a name="OBNL"></a>
+<h3><a name="Der_20OBNL-Cookie">15.7.1 Der OBNL-Cookie</a></h3>
+<p>Die Kommunikation zwischen Shell und Loader geschieht über
+einen Cookie namens <tt>OBNL</tt>. Dieser zeigt auf eine Routine, über
+die die Shell den Loader aufrufen kann. Folglich muß der Cookie vom
+Loader angelegt werden.
+</p>
+<p>Die Routine, auf die der OBNL-Cookie zeigt, ist wie folgt
+deklariert:
+</p>
+<blockquote>
+<pre>int <a href="proto_xfsl.html#cdecl">cdecl</a> obnload ( <a href="#OBNCOMM">OBNCOMM</a> *com );
+</pre>
+</blockquote>
+<p>D.h. daß der Routine auf dem Stack ein Zeiger auf eine Struktur
+<tt>OBNCOMM</tt> übergeben wird und daß die Routine einen 16-Bit-Wert
+im Register D0 zurückliefert.
+</p>
+<a name="OBNCOMM"></a>
+<h3><a name="Die_20OBNCOMM-Struktur">15.7.2 Die OBNCOMM-Struktur</a></h3>
+<p>Die Struktur <tt>OBNCOMM</tt> hat folgenden Aufbau:
+</p>
+<blockquote>
+<pre>typedef struct _obncomm
+{
+  int   type;
+  void *ptr;
+  int   chr;
+  void *env;
+} OBNCOMM;
+</pre>
+</blockquote>
+<p>Das Feld `<tt>type</tt>' enthält jeweils eine Nachrichtennummer.
+In Abhängigkeit von dieser Nummer sind dann die anderen Einträge der
+Struktur belegt.
+</p>
+<p><q><tt>int</tt></q> ist eine vorzeichenbehaftete 16-Bit-Zahl,
+<q><tt>void *</tt></q> ist ein Zeiger auf <q>irgendwas</q>, d.h. es ist
+zunächst nicht genauer spezifiziert, auf welche Art von Daten der
+Zeiger zeigt.
+</p>
+<h3><a name="Nachrichten_20der_20Shell_20an_20den_20Loader">15.7.3 Nachrichten der Shell an den Loader</a></h3>
+<p>Die Shell kann die folgenden Nachrichten an den Loader senden:
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="left" valign="top">Nummer</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#CL_INIT">CL_INIT</a></td>
+  <td align="left" valign="top">0x6500</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#CL_COMMAND">CL_COMMAND</a></td>
+  <td align="left" valign="top">0x6501</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#CL_TIME">CL_TIME</a></td>
+  <td align="left" valign="top">0x6502</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<br>
+<p>Nachrichten von der Shell an den Loader beginnen immer mit
+<tt>CL_</tt>.
+</p>
+<p><b>Bitte beachten:</b> Es handelt sich hierbei <i>nicht</i> um
+AES-Nachrichten! Die Kommunikation geschieht über die Routine, auf die
+der <a href="#OBNL">OBNL</a>-Cookie zeigt.
+</p>
+<h4><a name="CL_INIT">15.7.3.1 CL_INIT</a></h4>
+<p>Über die Nachricht <tt>CL_INIT</tt> teilt die Shell dem Loader
+mit, daß sie das <a href="#LTL-Protokoll">LTL-Protokoll</a> unterstützt. Gleichzeitig übergibt
+sie dem Loader die Adresse einer Funktion, über die der Loader
+bestimmte Aktionen in der Shell auslösen kann.
+</p>
+<p>Die Funktion in der Shell hat die gleichen Parameter wie die
+Funktion, auf die der <a href="#OBNL">OBNL</a>-Cookie zeigt:
+</p>
+<blockquote>
+<pre>int <a href="proto_xfsl.html#cdecl">cdecl</a> obnshell ( <a href="#OBNCOMM">OBNCOMM</a> *com );
+</pre>
+</blockquote>
+<br>
+<p>Belegung der OBNCOMM-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>CL_INIT</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> Adresse der Funktion in der Shell
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="CL_COMMAND">15.7.3.2 CL_COMMAND</a></h4>
+<p>Die Shell soll ein Kommando ausführen, das ein
+Load-Time-Linking erfordert. Sie reicht daraufhin das komplette
+Kommando an den Loader weiter.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>CL_COMMAND</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> Zeiger auf einen nullterminierten String, der das gesamte
+eingegebene Kommando (also inkl. Parameter) enthält.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> Zeiger auf das Environment.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="CL_TIME">15.7.3.3 CL_TIME</a></h4>
+<p>Wenn längere Zeit keine Benutzereingaben vorliegen und die
+Shell auch sonst nichts zu tun hat, so kann sie den Loader
+benachrichtigen, damit dieser evtl. Arbeiten im Hintergrund erledigen
+kann.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>CL_TIME</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Nachrichten_20des_20Loaders_20an_20die_20Shell">15.7.4 Nachrichten des Loaders an die Shell</a></h3>
+<p>Der Loader kann folgende Nachrichten an die Shell schicken:
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="left" valign="top">Nummer</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#LC_WRCHAR">LC_WRCHAR</a></td>
+  <td align="left" valign="top">0x6503</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#LC_WRSTR">LC_WRSTR</a></td>
+  <td align="left" valign="top">0x6504</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#LC_OUTBUF">LC_OUTBUF</a></td>
+  <td align="left" valign="top">0x6505</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#LC_CLOSEWIN">LC_CLOSEWIN</a></td>
+  <td align="left" valign="top">0x6506</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#LC_OPENWIN">LC_OPENWIN</a></td>
+  <td align="left" valign="top">0x6507</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<br>
+<p>Nachrichten von dem Loader an die Shell beginnen immer mit
+<tt>LC_</tt>.
+</p>
+<p><b>Bitte beachten:</b> Es handelt sich hierbei <i>nicht</i> um
+AES-Nachrichten! Die Kommunikation geschieht über die Routine, die die Shell
+dem Loader bei <tt><a href="#CL_INIT">CL_INIT</a></tt> mitgeteilt hat.
+</p>
+<h4><a name="LC_WRCHAR">15.7.4.1 LC_WRCHAR</a></h4>
+<p>Der Loader schickt der Shell ein Zeichen, das in der Console
+ausgegeben werden soll.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>LC_WRCHAR</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> das auszugebende Zeichen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="LC_WRSTR">15.7.4.2 LC_WRSTR</a></h4>
+<p>Der Loader schickt der Shell einen nullterminierten String, der
+in der Console ausgegeben werden soll.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>LC_WRSTR</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> Zeiger auf den auszugebenden String
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="LC_OUTBUF">15.7.4.3 LC_OUTBUF</a></h4>
+<p>Der Loader weist die Shell an, evtl. noch gepufferte Zeichen
+jetzt in der Console auszugeben.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>LC_OUTBUF</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="LC_CLOSEWIN">15.7.4.4 LC_CLOSEWIN</a></h4>
+<p>Der Loader weist die Shell an, alle evtl. gerade offenen Fenster
+zu schließen. Dieser Aufruf wird beim Start eines GEM-Moduls unter
+SingleTOS benötigt.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>LC_CLOSEWIN</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="LC_OPENWIN">15.7.4.5 LC_OPENWIN</a></h4>
+<p>Der Loader weist die Shell an, alle zuvor bei
+<tt><a href="#LC_CLOSEWIN">LC_CLOSEWIN</a></tt> geschlossenen Fenster wieder zu öffnen.
+</p>
+<br>
+<p>Belegung der <a href="#OBNCOMM">OBNCOMM</a>-Struktur:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">type</td>
+<td valign="top"> <tt>LC_OPENWIN</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ptr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">chr</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">env</td>
+<td valign="top"> undefiniert
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="Beispiel:_20Chatwin_20und_20STJ-Oberon-2">15.7.5 Beispiel: Chatwin und STJ-Oberon-2</a></h3>
+<p>Als Beispiel soll hier kurz aufgeführt werden, wie Chatwin
+(Shell) und STJ-Oberon-2 (Loader) das <a href="#LTL-Protokoll">LTL-Protokoll</a> implementieren:
+</p>
+<ul>
+<li><p> Der Oberon-Loader richtet den <tt><a href="#OBNL">OBNL</a></tt>-Cookie ein und
+startet dann Chatwin nach.
+<br>&nbsp;
+</p></li>
+<li><p> Chatwin erkennt am Vorhandensein des Cookies, daß LTL
+gewünscht ist und meldet sich mit dem Aufruf <tt><a href="#CL_INIT">CL_INIT</a></tt> beim
+Loader an. Dabei übergibt Chatwin einen Zeiger auf eine Funktion,
+über die der Loader wiederum Aktionen in Chatwin auslösen kann.
+<br>&nbsp;
+</p></li>
+<li><p> Wann immer Chatwin nun angewiesen wird, eine Datei mit der
+Extension <tt>*.OBJ</tt> zu starten, übergibt er diese Datei und die
+evtl. übergebenen Parameter mittels der Nachricht <tt><a href="#CL_COMMAND">CL_COMMAND</a></tt>
+an den Loader.
+<br>&nbsp;
+<br>Der Loader muß nun das Programm starten. Handelt es sich um ein
+<a href="tos_main.html">TOS</a>-Programm, so kann er die Ausgaben dieses Programms über die
+Nachrichten <tt><a href="#LC_WRCHAR">LC_WRCHAR</a></tt> und <tt><a href="#LC_WRSTR">LC_WRSTR</a></tt> in das Console-Fenster
+von Chatwin ausgeben lassen. Handelt es sich um ein GEM-Programm,
+so kann der Loader Chatwin unter SingleTOS dazu auffordern, alle seine
+Fenster zu schließen (Nachricht <tt><a href="#LC_CLOSEWIN">LC_CLOSEWIN</a></tt>), bevor das
+Programm gestartet wird.
+<br>&nbsp;
+<br><b>Anmerkung:</b> Chatwin erkennt anhand der Extension, ob für
+eine Datei ein Load-Time-Linking durchzuführen ist. In älteren
+Versionen ist die Extension <tt>*.OBJ</tt> fest vorgegeben, ab Chatwin
+3.04 kann die Extension in der Environmentvariablen <tt>$LTLEXT</tt>
+angegeben werden. Dadurch ist Chatwin auch für andere Sprachen
+gerüstet, die nicht <tt>*.OBJ</tt> als Extension für die Objektfiles
+verwenden.
+<br>&nbsp;
+</p></li>
+<li><p> Wenn längere Zeit keine Benutzereingaben und auch keine
+sonstigen Aufgaben anliegen, gibt Chatwin Zeit an den Loader ab, indem
+er die Nachricht <tt><a href="#CL_TIME">CL_TIME</a></tt> schickt. Der Loader kann dadurch
+bestimmte Aufgaben im Hintergrund erledigen.
+<br>&nbsp;
+</p></li>
+<li><p> Für das Programmende gibt es kein spezielles Protokoll: Wenn
+Chatwin beendet wird, beendet sich auch der Loader.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_gdps.html"><img src="udo_lf.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+<a name="UDO_nav_rg_FOOT" href="proto_olga.html"><img src="udo_rg.gif" alt="OLGA-Protokoll" title="OLGA-Protokoll" border="0" width="24" height="24">OLGA-Protokoll</a>
+</body>
+</html>

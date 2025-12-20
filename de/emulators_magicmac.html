@@ -1,0 +1,1346 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: MagiC Mac-Spezifika
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="emulators.html"><img src="udo_up.gif" alt="Emulatoren" title="Emulatoren" border="0" width="24" height="24">Emulatoren</a>
+<a name="UDO_nav_lf_HEAD" href="emulators.html"><img src="udo_lf.gif" alt="Emulatoren" title="Emulatoren" border="0" width="24" height="24">Emulatoren</a>
+<a name="UDO_nav_rg_HEAD" href="emulators_magicpc.html"><img src="udo_rg.gif" alt="MagiC PC-Schnittstelle" title="MagiC PC-Schnittstelle" border="0" width="24" height="24">MagiC PC-Schnittstelle</a>
+
+<hr>
+
+<h1><a name="MagiC_20Mac-Spezifika">14.1 MagiC Mac-Spezifika</a></h1>
+<p><a href="magic.html">MagiC</a> Mac ist eine Implementation des im Atari-Bereich bekannten
+<a href="magic.html">MagiC</a> auf die Hardware der Apple (Power-) Macintosh Computer. Dieser
+Abschnitt beschreibt die folgenden Punkte:
+</p>
+<ul>
+<li> <a href="#Allgemeines_20zu_20MagiC_20Mac">Allgemeines</a>
+</li>
+<li> <a href="#MagiC_20Mac_20und_20Power-Macs">Besonderheiten bei Power-Macs</a>
+</li>
+<li> <a href="#Cookies_20unter_20MagiC_20Mac">Cookies</a>
+</li>
+<li> <a href="#Dateisysteme_20unter_20MagiC_20Mac">Dateisysteme</a>
+</li>
+<li> <a href="#Einschr_C3_A4nkungen_20von_20MagiC_20Mac">Einschränkungen der Betriebssystemfunktionen</a>
+</li>
+<li> <a href="#Exceptions_20unter_20MagiC_20Mac">Exceptions unter MagiC Mac</a>
+</li>
+<li> <a href="#Sauberes_20Programmieren">Sauberes Programmieren</a>
+</li>
+<li> <a href="#Der_20Shutdown_20in_20MagiC_20Mac">Shutdown</a>
+</li>
+<li> <a href="#XCMDs_20unter_20MagiC_20Mac">XCMDs unter MagiC Mac</a>
+</li>
+<li> <a href="#Die_20Zusammenarbeit_20von_20MagiC_20und_20MacOS">Zusammenarbeit von MagiC und MacOS</a>
+</li>
+</ul>
+
+<p>Wer Fragen hat oder wer bestimmte Features für die
+Atari-Mac-Schnittstelle vermißt, wende sich bitte an den Autor des
+<a href="magic.html">MagiC</a> Mac-Kernels, bevor er an Internas herumbastelt, die bei der
+nächsten <a href="magic.html">MagiC</a> Mac-Version dann vielleicht nicht mehr funktionieren.
+</p>
+<p>Querverweis: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="bios_main.html">BIOS</a> &nbsp; <a href="xbios_main.html">XBIOS</a> &nbsp; <a href="gem_about.html">GEM</a>
+</p>
+<h3><a name="Allgemeines_20zu_20MagiC_20Mac">14.1.1 Allgemeines zu MagiC Mac</a></h3>
+<p>Der Kern der 'Emulation' der Atari-Umgebung auf dem Macintosh
+liegt in der Umprogrammierung der PMMU. Sowohl Atari- als auch
+Macintosh-Programme gehen davon aus, daß sie in den untersten 2 KB
+des Adreßraums bestimmte Variablen (die sog. Systemvariablen)
+vorfinden. Wenn nun ein Atari-Programm läuft, erwartet es aber dort
+andere Werte als z.B. das Mac-Betriebssystem. Der sog. Kernel von
+<a href="magic.html">MagiC</a> Mac sorgt nun dafür, daß je nachdem, ob gerade eine Mac- oder
+eine Atari-Routine läuft, die passenden Systemvariablen im unteren
+Adreßbereich vorliegen. Dies geschieht durch entsprechende
+Programmierung der PMMU, einem Coprozessor für die
+<a href="gemdos_memory.html">Speicherverwaltung</a>.
+</p>
+<p><b>So gibt es also zwei MMU-Modi:</b> Den Mac- und den
+Atari-Modus. Zwischen ihnen kann mittels zweier Routinen hin- und
+hergeschaltet werden. Ausgehend davon, daß der Mac-Modus der normale
+Modus ist, gibt es folgende Veränderungen beim Übergang in den
+Atari-Modus:
+</p>
+<ul>
+<li><p> Ein Speicherbereich, der irgendwo auf dem Macintosh-Heap
+alloziert wurde, wird ab Adresse $0 im Atari-Adreßraum eingeblendet.
+Dieser Bereich ist zwischen 4 und 32KB lang und enthält garantiert
+ausschließlich die Exception-Vektortabelle und die dokumentierten
+Systemvariablen.
+<br>&nbsp;
+</p></li>
+<li><p> Der Adreßraum von $00FF8000 bis $00FFFFFF (und entsprechend
+$FFFF8000 bis $FFFFFFFF) wird ausgeblendet. Dies ist beim Atari der
+I/O-Adreßraum der normalerweise beim Macintosh nicht zur Verfügung
+steht (dort ist beim Macintosh höchstens RAM).
+<br>&nbsp;
+<br>Damit Programme nicht irrtümlich diesen Adreßraum als RAM
+ansprechen, falls beim Macintosh dort solches vorliegt, wird durch
+diese Ausblendung jeder Zugriff zu einem Bus-Fehler führen.
+Allerdings ist es möglich, daß spezielle Atari-kompatible Hardware
+im Macintosh installiert wird, woraufhin dieser Adreßraum dann diese
+Harware an den entsprechenden Stellen einblendet. <b>Das heißt:</b>
+Ein Programm, das erkennt, daß es unter <a href="magic.html">MagiC</a> auf dem Mac läuft,
+sollte <i>nicht</i> automatisch davon ausgehen, daß keine
+Atari-Hardware im I/O-Bereich vorhanden ist, sondern sollte weiterhin
+mit einem Testzugriff (durch Umlenken des Bus-Fehler-Vektors) prüfen,
+ob Zugriffe auf die Bausteine möglich sind.
+<br>&nbsp;
+</p></li>
+<li><p> RAM, das weder zur TPA von MagiC, noch zum <a href="magic.html">MagiC</a> OS oder den
+Kernel-Daten und -Routinen gehört, ist im Atari-Adreßraum nicht
+vorhanden, d.h. Zugriffe außerhalb des speziell für Atari-Programme
+reservierten Bereichs führen zu einem Bus-Fehler. Dies schützt
+andere Macintosh-Applikationen besser vor fehlerhaften
+Atari-Programmen. Dieser Schutz funktioniert allerdings <i>nur</i>
+bei 68K-Rechnern, <i>nicht</i> bei PowerPCs!
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="gemdos_tpa.html">Programmstart und TPA</a>
+</p>
+<h3><a name="MagiC_20Mac_20und_20Power-Macs">14.1.2 MagiC Mac und Power-Macs</a></h3>
+<p><a href="magic.html">MagiC</a> Mac läuft natürlich auch auf den neuen PCI-Maschinen von
+Apple (Power Macintosh 7600, 8200, 8500 und 9500). <b>Beim Einsatz
+auf dieser Hardware sollten die folgenden Punkte beachtet werden:</b>
+</p>
+<ul>
+<li><p> Die von <a href="magic.html">MagiC</a> nicht benutzten, aber im Mac-Adreßraum
+vorhandenen Adreßbereiche können <i>nicht</i> ausgeblendet und
+damit auch <i>nicht</i> zugriffsgeschützt werden. D.h., daß bei
+Zugriffen außerhalb der TPA und dem Programm- und Heap-Bereich von
+<a href="magic.html">MagiC</a> Mac <i>keine</i> Bus-Errors gemeldet werden, wie es bei den
+68K-Rechnern der Fall ist.
+<br>&nbsp;
+</p></li>
+<li><p> Bei den PowerMac-Modellen seit Mitte 1995 wird der obere
+Adreßbereich für PCI- Karten und/oder ROM verwendet. So erhält man
+beim Zugriff auf den Atari-I/O-Bereich bei $FFFF8000-$FFFFFFFF
+<i>keinen</i> Bus-Error sondern <b>undefinierte Daten.</b> Dies ist
+leider nicht zu ändern. Es wird daher empfohlen, daß Programme nur
+auf den I/O-Bereich bei $00FF8000-$00FFFFFF zugreifen, um entweder das
+Vorhandensein von Bausteinen zu prüfen (indem ein Zugriff darauf
+gemacht wird und geprüft wird, ob dabei ein Bus-Error auftritt) oder
+mit der Hardware-Erweiterung <i>McSTout</i> arbeiten zu können für
+den Fall, daß sie auch für die PCI-Macs verfügbar gemacht wird.
+Programme können diesen Umstand ggf. an Bit 5 in <a href="emulators_magicmac.html#UDO__25mmcookie_flgs1">Cookie.flags1</a> erkennen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="gemdos_tpa.html">Programmstart und TPA</a>
+</p>
+<h3><a name="Cookies_20unter_20MagiC_20Mac">14.1.3 Cookies unter MagiC Mac</a></h3>
+<p><a href="magic.html">MagiC</a> Mac unterstützt natürlich auch den <a href="bios_cookiejar.html">Cookie-Jar</a>, und legt
+die folgenden Cookies an:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Cookie</td>
+<td valign="top"> Bedeutung in <a href="magic.html">MagiC</a> Mac
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_CPU">_CPU</a></td>
+<td valign="top"> enthält den Wert 20, 30 oder 40. Auf 68000-Rechnern läuft MM
+nicht; bei PowerPC-Maschinen wird eine 68020 angezeigt.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_FDC">_FDC</a></td>
+<td valign="top"> $014D6163 - Die 3 letzten Bytes ergeben den Text 'Mac'
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_FPU">_FPU</a></td>
+<td valign="top"> die üblichen Werte. Bei 68040 steht hier nur dann 8 drin, wenn
+auch die zugehörige FPU-Software installiert ist.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_MCH">_MCH</a></td>
+<td valign="top"> keine Atari-kompatible Hardware vorhanden (-1).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_SND">_SND</a></td>
+<td valign="top"> 0
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20_VDO">_VDO</a></td>
+<td valign="top"> keine Atari-kompatible Video-Hardware vorhanden (-1).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20MagX">MagX</a></td>
+<td valign="top"> Analog zu <a href="magic.html">MagiC</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20MgMc">MgMc</a></td>
+<td valign="top"> Zeigt auf eine <a href="#Der_20Cookie_20von_20MagiC_20Mac">MgMcCookie</a>-Struktur.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20MNAM">MNAM</a></td>
+<td valign="top"> Zeiger auf Null-terminierten String mit dem Namen des Rechners.
+Dieser dient nur zur Information für den Benutzer.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="bios_cookiejar.html#Cookie_2C_20PMMU">PMMU</a></td>
+<td valign="top"> Null. Zeigt an, daß die MMU belegt ist und nicht von anderen
+Programmen benutzt werden darf.
+
+</td></tr>
+</table>
+
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h3><a name="Dateisysteme_20unter_20MagiC_20Mac">14.1.4 Dateisysteme unter MagiC Mac</a></h3>
+<p><a href="magic.html">MagiC</a> Mac erlaubt wie MagiC die Einbindung alternativer
+Dateisysteme. Zur Zeit werden die folgenden Systeme unterstützt:
+</p>
+<ul>
+<li><p> <b>FAT-Dateisysteme nach <a href="tos_main.html">TOS</a>-Konventionen:</b> So können
+Floppy-Disks sowie Hard-Disks im Atari-üblichen Format mit allen
+<a href="tos_main.html">TOS</a>-Funktionen (<a href="gemdos_main.html">GEMDOS</a>, aber auch z.B. Rwabs) angesprochen werden.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Mac-Dateisysteme:</b> Da diese keine FAT haben, ist der
+Zugriff auf diese Laufwerke nur über GEMDOS, nicht jedoch über <a href="bios_main.html">BIOS</a>,
+möglich.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Das Mac-Dateisystem unter <a href="magic.html">MagiC</a> Mac:</b>
+</p>
+<p>Da die GEMDOS-Funktionen meist direkt auf die
+Mac-Dateisystemfunktionen abgebildet sind, können alle unter MacOS
+benutzbaren Dateiformate auch unter <a href="magic.html">MagiC</a> Mac benutzt werden, d.h.,
+sobald man ein Laufwerk auf dem Mac 'mounten' kann, ist es oder ein
+Ordnerinhalt davon auch als Laufwerk unter MM anmeldbar. Damit können
+in der Regel auch CD-ROMs oder Netzwerklaufwerke ohne weitere Treiber
+in <a href="magic.html">MagiC</a> Mac benutzt werden. <a href="magic.html">MagiC</a> Mac erlaubt z.B. auch das
+Mac-typische Auswerfen von Diskette.
+</p>
+<p>Querverweis: <a href="magic_xfs.html">XFS-Konzept in MagiC</a> &nbsp; <a href="gemdos_directory.html#Dpathconf">Dpathconf</a>
+</p>
+<h3><a name="Einschr_C3_A4nkungen_20von_20MagiC_20Mac">14.1.5 Einschränkungen von MagiC Mac</a></h3>
+<p><a href="magic.html">MagiC</a> Mac implementiert <i>nicht</i> alle Funktionen, die
+MagiC für ATARIs bietet. <a href="aes_main.html">AES</a>, <a href="vdi_main.html">VDI</a> &amp; <a href="gemdos_main.html">GEMDOS</a> sind vollständig
+implementiert, beim <a href="bios_main.html">BIOS</a> &amp; <a href="xbios_main.html">XBIOS</a> gibt es aber Einschränkungen. Es
+ist jedoch möglich, daß durch Zusätze, wie <i>McSTout</i> oder
+einen Sound-Treiber, einige der Funktionalitäten wiederhergestellt
+werden.
+</p>
+<ul>
+<li><p> Nicht implementierte bzw. ignorierte Funktionen beim <a href="xbios_main.html">XBIOS</a>:
+<br>Initmouse, Mfpint, Ikbdws, Jdisint, Jenabint, Giaccess, Offgibit, Ongibit,
+Xbtimer, Dosound.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Außerdem gibt es Einschränkungen bei einigen Funktionen,
+hauptsächlich in Verbindung mit dem Dateisystem und den Devices:</b>
+</p>
+<ul>
+<li><p> Das MIDI-Device ist z.Zt. nicht benutzbar, es sei denn, die
+Hardware-Erweiterung <i>McSTout</i> mit MIDI-Option ist installiert.
+Es kann auch sein, daß MIDI später über eine der seriellen
+Schnittstellen des Macs realisiert wird, so daß man lediglich sagen
+kann: Ob MIDI benutzbar ist, muß der Benutzer festlegen - ein
+Programm kann das praktisch nicht selbst erkennen! Für Midiws() gilt
+das gleiche.
+<br>&nbsp;
+</p></li>
+<li><p> Das IKBD-Device ist nicht vorhanden.
+<br>&nbsp;
+</p></li>
+<li><p> Liefert Getbpb() Null, kann es sein, daß eine Mac-formatierte
+Disk einliegt, die sich <i>dennoch</i> mit den <a href="gemdos_file.html">Dateifunktionen</a> über
+Laufwerk A: ansprechen läßt.
+<br>&nbsp;
+</p></li>
+<li><p> Liegt eine Mac-formatierte Disk im Floppy-Laufwerk, liefert
+Rwabs() einen Fehler (&quot;drive not ready&quot;). Die Dateien auf
+der Disk können ggf. <i>dennoch</i> mit den GEMDOS-<a href="gemdos_file.html">Dateifunktionen</a>
+angesprochen werden.
+<br>&nbsp;
+</p></li>
+<li><p> Drvmap() liefert auch gesetzte Bits bei den Laufwerken, die
+Mac-formatiert sind und somit nur über GEMDOS und nicht mit <a href="About_the_BIOS.html#Rwabs">Rwabs</a>()
+ansprechbar sind.
+<br>&nbsp;
+</p></li>
+<li><p> Getrez() liefert immer 2 (ST-High), ist also unbrauchbar.
+<br>&nbsp;
+</p></li>
+<li><p> Setscreen() kann die phys. Adresse nur ändern, wenn der Benutzer
+<a href="magic.html">MagiC</a> Mac im ST-Auflösungsemulationsmodus (z.B. ST-High) gestartet
+hat. Um zu erkennen, ob dies der Fall ist, sollte man zuerst die Adr.
+mit Setscreen() zu ändern versuchen und dann mit Physbase() ermitteln, ob
+sich die Adresse ändern ließ.
+<br>&nbsp;
+</p></li>
+<li><p> Floprd(), Flopwr(), und Flopver() funktionieren nicht, wenn
+Mac-formatierte Disks eingelegt sind (erst ab MM 1.2.2 implementiert).
+Die Bad-Sector-Liste bei Flopver() meldet im Fehlerfall alle Sektoren
+der Spur als defekt, da die genaue Spur nicht ermittelt werden kann.
+<br>&nbsp;
+</p></li>
+<li><p> Flopfmt() kann seit MM 1.2.2 Disks formatieren, aber nur 80
+Spuren, 2 Seiten und je nach eingelegter Disk 9 bzw. 18 Sektoren pro
+Spur. Über den MgMc-Cookie kann hierzu ermittelt werden, was für
+eine Disk (DD oder HD) sich im Laufwerk befindet. <b>Nicht
+wundern:</b> Der Mac bietet nur eine Funktion, um <i>alle Spuren auf
+einmal</i> zu formatieren. Deswegen wird das bei MM so gelöst, daß
+bei Aufruf von Flopfmt() für Spur 0 (bzw. 79, je nachdem, wo
+angefangen wird) gleich die ganze Disk formatiert wird und bei Aufruf
+von <a href="xbios_drive.html#Flopfmt">Flopfmt</a> für die restlichen Spuren nichts passiert, die Funktion
+also sofort mit Fehlercode Null zurückkehrt. Auch ist es so, daß im
+Fall eines Formatierproblems für alle Spuren ein Fehler gemeldet
+wird. Die zu formatierende Disk muß folglich völlig in Ordnung sein.
+<br>&nbsp;
+</p></li>
+<li><p> Rsconf(): Die MPF-spezifischen Parameter werden ignoriert.
+<br>&nbsp;
+</p></li>
+<li><p> Puntaes() kennt mehrere Modi, <a href="magic.html">MagiC</a> Mac wird ggf. beendet.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="bios_main.html">BIOS</a> &nbsp; <a href="xbios_main.html">XBIOS</a> &nbsp; <a href="gem_about.html">GEM</a>
+</p>
+<h3><a name="Exceptions_20unter_20MagiC_20Mac">14.1.6 Exceptions unter MagiC Mac</a></h3>
+<p>Ein Atari-Programm kann, wie auf einem echten Atari, die <a href="the_system_vectors.html">Exceptionvektoren</a>
+benutzen, sprich: umlenken. Allerdings darf das Programm dabei nur die
+Exception-Vektoren im Adreßbereich zw. $0 und $400 benutzen, nicht
+etwa die, auf die das VBR zeigt (denn es zeigt woanders hin!). Wer
+sich daran nicht hält, kann Schwierigkeiten mit späteren Versionen
+von <a href="magic.html">MagiC</a> Mac bekommen. Programme, die die <a href="bios_cookiejar.html#Cookie_2C_20PMMU">PMMU</a> benutzen, z.B.
+<i>OUTSIDE</i>, können unter <a href="magic.html">MagiC</a> Mac <i>nicht</i> laufen.
+</p>
+<p><b>Folgende Atari-Interrupts werden z.Zt. vom Kernel
+simuliert:</b>
+</p>
+<ul>
+<li><p> $070: Autovektor-Interupt Level 4 (VBL).
+<br>&nbsp;
+</p></li>
+<li><p> $114: MFP-Interrupt 5 (200 Hz System-Timer).
+<br>&nbsp;
+</p></li>
+<li><p> $118: MFP-Interrupt 6 (IKBD). Allerdings wird hier nur das
+Ereignis von Tastendrücken und Mausbewegungen simuliert, d.h., der
+Interrupt-Handler erfährt die spezifische Art des Ereignisses auf
+eine andere Art als beim Atari.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Die Interrupts treten bedingt durch die Mac-Hardware jedoch
+evtl. mit <i>anderen Prioritäten</i> auf; die Interrupt-Maske des SR
+hat somit u.U. andere Werte als beim Atari. Der Vektor bei $400
+(<a href="bios_sysvars.html#etv_timer">etv_timer</a>) wird natürlich vom <a href="magic.html">MagiC</a> OS auch angesprungen, als
+Unterroutine vom Interrupt-Handler für MFP Intr. 5, ganz wie beim
+Original-Atari auch. Ebenso kann sich ein Programm, das Maus- oder
+Tastenereignisse erfahren möchte, über die <a href="xbios_main.html">XBIOS</a>-Funktion <a href="xbios_interface.html#Kbdvbase">Kbdvbase</a>()
+in die Ereignisvektoren ganz wie beim Atari einhängen.
+</p>
+<p><b>Noch ein wichtiger Hinweis zu Interrupts:</b> Beim Mac muß,
+damit Tastatur, Maus und Timer funktionieren, die Interrupt-Maske (im
+CPU-Register SR) stets auf Null stehen. Beim Atari dagegen steht sie
+normalerweise auf drei. Programme, die nun Code, wie z.B. MOVE
+#$2300,SR enthalten, werden einen Macintosh in einen
+<i>Schlafzustand</i> versetzen, bei dem nur noch ein Reset hilft. Wer
+also die Interrupt-Maske nur zeitweise verändert sollte dies so
+machen (funktioniert auf Atari und Mac gleichermaßen):
+</p>
+<pre>  MOVE SR,-(A7)    ; altes SR merken
+  ORI  #$0700,SR   ; alle Interrupts für einen kritischen Zugriff sperren
+  ...
+  MOVE (A7)+,SR    ; am Ende altes SR wiederherstellen
+</pre>
+<p>Wer unbedingt den Rechner wieder in einen Grundzustand bringen
+will, sollte <i>nicht</i> MOVE #$2300,SR sondern besser MOVE
+#$2000,SR benutzen. Auf dem Atari wird dann in kürzester Zeit von der
+HBL-Interrupt-Routine das SR auf $2300 hochgesetzt. So kommt man auf
+beiden Maschinen mit dem selben Code zum Ziel.
+</p>
+<p>Werden Interrupt- oder andere asynchrone Routinen mittels
+MacOS-Funktionen installiert und sollen dann diese Funktionen vom Mac-
+in den Atari-Modus schalten, sind einige Dinge zu beachten, die weiter
+unten genauer beschrieben sind:
+</p>
+<ul>
+<li><p> Setzen eines Semaphores (s. intrLock/intrUnlock).
+<br>&nbsp;
+</p></li>
+<li><p> Abfrage, ob zu dem Zeitpunkt eine Atari-Modusumschaltung
+überhaupt möglich ist (s. atariModePossible).
+<br>&nbsp;
+</p></li>
+<li><p> Deinstallation der Routine beim Beenden von <a href="magic.html">MagiC</a> Mac (s.
+macAppSwitch).
+<br>&nbsp;
+</p></li>
+<li><p> Vor der Umschaltung in den Atari-Modus muß sichergestellt
+sein, daß der Stack Pointer (SP) innerhalb des Atari-Adreßraums
+befindet, weil es sonst zum doppelten Bus-Error kommt und die CPU
+stehen bleibt.
+<br>&nbsp;
+<br><b>Merke:</b> 1. Es kann sein, daß der Aufruf der Routine
+durch das MacOS dann erfolgt, wenn eine andere Mac-Applikation läuft
+und dann ist der aktuelle Stack <i>nicht</i> der von <a href="magic.html">MagiC</a> Mac. 2.
+Bei den 68K-Maschinen ist im Atari-Modus nur der Adreßraum der 2
+TPAs, den untersten 32KB, ggf. der I/O-Bereich sowie der Bereich der
+<a href="magic.html">MagiC</a> Mac-Applikation sichtbar, anderer Speicher vom MacOS und anderen
+Mac-Applikationen wird ausgeblendet, dort gibt's dann nur Bus-Errors.
+<b>Fazit:</b> Um sicherzustellen, daß beim Schalten in den Atari
+MMU-Modus der SP im Atari-Adreßraum liegt, muß vorher ein
+Stack-Bereich dafür reserviert werden und dieser dann benutzt werden.
+Um sicherzustellen, daß der Stack groß genug ist (1-2 KB sind
+<i>deutlich zu wenig!</i>), ist der Cookie-Wert <a href="#minStackSize">minStackSize</a> zu
+beachten!
+<br>&nbsp;
+</p></li>
+<li><p> Immer in den Supervisor-Modus wechseln, bevor 'modeAtari'
+aufgerufen wird (sonst läuft's nicht unter Virtual Memory). Dazu wird
+folgender Code vorgeschlagen:
+<br>&nbsp;
+<pre>        clr     d0
+        move    sr,d0
+        btst    #13,d0
+        bne     ok1
+        moveq   #8,D0        ;   EnterSupervisorMode
+        dc.w    $A08D        ;   _DebugUtil
+  ok1:
+        move    d0,-(a7)     ; Sichern des alten Modus
+
+        ; hier nun <a href="#modeAtari">modeAtari</a> ... <a href="#modeMac">modeMac</a> usw. aufrufen.
+
+        move.w  (a7)+,sr     ; alten Modus wiederherstellen
+</pre>
+</p></li>
+<li><p> Mac-Subroutinen dürfen in der Regel nur die Register
+D0-D2/A0/A1 verändern, jedoch nicht, wie beim Atari oft üblich, A2!
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="gemdos_tpa.html">Programmstart und TPA</a> &nbsp; <a href="bios_resvector.html">Reset-Vektor</a> &nbsp; <a href="bios_sysvars.html">Systemvariablen</a>
+</p>
+<h3><a name="Sauberes_20Programmieren">14.1.7 Sauberes Programmieren</a></h3>
+<p>Wenn auch die spezifische Implementation von <a href="#MagiC_20Mac-Spezifika">MagiC Mac</a> nicht für
+jeden ATARI-Programmierer von Interesse ist, so gibt es doch einige
+Grundregeln, die man auch auf ATARI-Ebene einhalten sollte, um
+weitgehend sicher zu sein, daß die Programme auch auf <a href="magic.html">MagiC</a> Mac
+laufen können. Hier sind u.a. die folgenden Punkte zu nennen:
+</p>
+<a name="Code_2C_20selbstmodifizierender"></a>
+<a name="Selbstmodifizierender_20Code"></a>
+<a name="CPU-Cache_20l_C3_B6schen"></a>
+<a name="Cache_20l_C3_B6schen_2C_20CPU-"></a>
+<a name="L_C3_B6schen_20des_20CPU-Caches"></a>
+<a name="MC680x0-Cache_20l_C3_B6schen"></a>
+<ul>
+<li><p> <b>Selbstmodifizierender Code</b>
+<br>Wenn Code (gilt auch für XBRA-Vektoren) verändert wird, muß
+unbedingt der CPU-Cache gelöscht werden. Zwar kann man durch
+Ausprobieren feststellen, daß dies auf einer 68020 mit ihrem kleinen
+Cache nicht nötig ist, jedoch kann man nie sicher sein: Auf dem Mac
+gibt es einen 68K-Emulator für die PowerPC-Maschinen, der eine 68020
+simuliert, jedoch erstens einen größeren Cache als die echte 68020
+hat (incl. Datencache, der sonst erst bei der 68030 vorhanden ist) und
+zweitens auch noch den Code in PowerPC-Code kompiliert.
+<br>&nbsp;
+<br>Wird dann der Code vom ATARI-Programm verändert, kann der
+Emulator das nur erkennen, wenn ein Befehl zum Cache-Löschen
+ausgeführt wird. Ebenso ist ein Cache-Löschen bei den 68040/60-CPUs
+in der Regel vonnöten! Hier ist der Code, mit dem in solchen Fällen
+der gesamte Cache zu löschen ist:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Prozessor</td>
+<td valign="top"> Code
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">68020/30</td>
+<td valign="top">
+<pre>      MOVE  CACR,D
+      ORI.W #$0808,D0
+      MOVE  D0,CACR
+</pre>
+<br>oder auch so:
+<pre>      DC.W  $4E7A,$0002,$0040,$0808,$4E7B,$0002
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">68040/60</td>
+<td valign="top">
+<pre>      NOP
+      CPUSHA DC/IC
+</pre>
+<br>oder:
+<pre>      DC.W   $4E71,$F4F8
+</pre>
+
+</td></tr>
+</table>
+
+<br>Der Prozessor-Typ sollte dabei durch Inspektion des <a href="bios_cookiejar.html#Cookie_2C_20_CPU">_CPU</a>
+-Cookies ermittelt werden.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Interrupts sperren</b>
+<br>Falls kurzzeitig die Interrupts gesperrt werden müssen, dann
+danach <i>niemals</i> das SR auf den festen Wert $2300 setzen,
+sondern möglichst vor dem Sperren das alte SR sichern (z.B. auf dem
+Stack) und hinterher wieder zurückladen. Wenn unbedingt ein
+Rücksetzen des SR, unabhängig vom alten SR, erfolgen soll, dann die
+Interrupt-Maske auf Null und <i>nicht</i> auf Drei setzen, also z.B.
+MOVE #$2000,SR statt MOVE #$2300,SR. Das ATARI-Betriebssystem sorgt
+dann automatisch für das Umsetzen auf Maskenwert 3, während beim Mac
+die Maske auf 0 bleibt, sonst geht nämlich nix mehr.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Hardware-Zugriffe</b>
+<br>Bevor man bestimmte Hardware-Register direkt programmieren will
+(z.B. den Centronics-Port zum Drucken), sollte man den <a href="bios_cookiejar.html#Cookie_2C_20_MCH">_MCH</a> -Cookie
+prüfen. Ist sein Wert $FFFFFFFF (dez. -1), dann heißt das, daß
+<i>keine</i> ATARI-Hardware vorhanden ist (das PRG also z.B. auf dem
+Macintosh läuft) und deswegen auch erst gar nicht versucht werden
+sollte, auf die Hardware zuzugreifen, weil dort dann RAM sein könnte,
+was natürlich <i>nicht</i> durch solche Zugriffe verändert werden
+darf.
+<br>&nbsp;
+</p></li>
+<li><p> <b>Supervisor-Modus</b>
+<br>Seit den Multitasking-Betriebssystemen, wie MultiTOS und <a href="magic.html">MagiC</a>,
+sollte kein Programm mehr den Supervisor-Stackpointer eigenmächtig
+umsetzen, z.B., um einen größeren Stack zu haben, weil sonst
+unabsehbare Abstürze passieren können (auf den PCI-Macs ist z.B. ein
+sehr großer Supervisor-Stack notwendig, mind. 8MB, u.U. aber auch
+24MB - dies kann nur das Betriebssystem wissen und korrekt
+installieren). <b>Wichtig:</b> Um in den Supervisor-Modus zu
+gelangen, <i>keinesfalls</i> die GEMDOS-Funktion <a href="gemdos_system.html#Super">Super</a>() verwenden,
+sondern <a href="xbios_special.html#Supexec">Supexec</a>() aus dem <a href="xbios_main.html">XBIOS</a>. Nur <a href="xbios_special.html#Supexec">Supexec</a>() kann sicherstellen,
+daß ein ausreichend großer Supervisor-Stack verwendet wird.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis:
+<br><a href="guidelines_rules.html">Programmier-Guidelines</a> &nbsp; <a href="guidelines_styles.html">Style-Guidelines</a> &nbsp; <a href="xbra_main.html">XBRA-Verfahren</a>
+</p>
+<h3><a name="Der_20Shutdown_20in_20MagiC_20Mac">14.1.8 Der Shutdown in MagiC Mac</a></h3>
+<a name="Shutdown_20in_20MagiC_20Mac"></a>
+<p>Unter <a href="#MagiC_20Mac-Spezifika">MagiC Mac</a> wird der <a href="gemdos_system.html#Shutdown">Shutdown</a> vom Programm 'shutdown.prg'
+übernommen; sofern sich dabei alle z.Zt. aktiven (Atari-) Programme
+beenden ließen, wird auch <a href="magic.html">MagiC</a> Mac selbst beendet. Für einige
+Programmierer dürfte interessant sein, wie man <a href="magic.html">MagiC</a> Mac <i>ohne
+Nachfrage</i> beenden kann. Dies kann in zwei Schritten erfolgen:
+</p>
+<ul>
+<li> In den Macintosh-Modus wechseln (per <a href="#modeMac">modeMac</a>)
+</li>
+<li> Ausführen der Mac-Routine <i>ExitToShell</i>.
+</li>
+</ul>
+
+<p><b>In Pure-C könnte dies z.B. folgendermaßen aussehen:</b>
+</p>
+<pre>  static pascal void ExitToShell (void) 0xA9F4;
+  <a href="emulators_magicmac.html#MgMcCookie">MgMcCookie</a> *mgmc;
+  ...
+  ...
+  get_cookie (&quot;MgMc&quot;, &amp;mgmc);  /* Zeiger auf MgMc-Cookie-Struktur  */
+  mgmc-&gt;<a href="#modeMac">modeMac</a> ();            /* zum Mac-Modus wechseln           */
+  ExitToShell ();              /* Beendet MM sofort ohne Nachfrage */
+</pre>
+<p>Wichtig könnten diese Informationen etwa bei der Programmierung
+eines eigenen shutdown.prg werden.
+</p>
+<p>Querverweis:
+<br><a href="magic_shutdown.html">Allgemeines zum Shutdown</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp; <a href="magic_shutdown.html#Shutdown_20in_20MultiTOS">Shutdown in MultiTOS</a> &nbsp;
+<a href="magic_shutdown.html#Shutdown_20in_20MagiC">Shutdown in MagiC</a> &nbsp; <a href="magic_shutdown.html#Der_20Shutdown_20aus_20Sicht_20der_20Applikation">Shutdown beim Empfänger</a> &nbsp; <a href="magic_shutdown.html#Der_20Shutdown_20aus_20Sicht_20des_20Initiators">Shutdown beim Initiator</a> &nbsp;
+</p>
+<h3><a name="XCMDs_20unter_20MagiC_20Mac">14.1.9 XCMDs unter MagiC Mac</a></h3>
+<p>XCMDs sind kleine externe Code-Module für
+<i>Macintosh</i>-Applikationen. Sie können in der Regel ziemlich
+einfach mit den Entwicklungswerkzeugen unter MacOS erzeugt werden
+(z.B. mit Metrowerks <i>CodeWarrior</i> oder Symantec C). Ab Version
+1.2.2 erlaubt <a href="magic.html">MagiC</a> Mac auch die einfache Benutzung solcher
+CODE-Module von Programmen aus, die unter <a href="magic.html">MagiC</a> laufen. Dies
+erleichtert die Entwicklung von Programmen oder Treibern, die
+Funktionen vom Macintosh nutzen wollen, weil diese Teile dann mit
+einem Macintosh-Compiler erstellt werden können, anstatt umständlich
+die Interfaces unter einem Atari-Entwicklungssystem noch einmal
+nachbilden zu müssen.
+</p>
+<p>Ein Beispiel für ein solches XCMD befindet sich im Ordner
+<i>'Demo XCMD'</i> der original <a href="magic.html">MagiC</a> Mac-Dokumentation. Das erzeugte
+Modul kann dann einfach in den Ordner <i>'<a href="magic.html">MagiC</a> Mac XCMDs'</i> gelegt
+werden. Dieser Ordner muß sich im selben Verzeichnis wie die <a href="magic.html">MagiC</a>
+Mac-Applikation befinden. Beim Start von <a href="magic.html">MagiC</a> Mac wird dieser Ordner
+nach Dateien mit dem Dateityp 'xCmd' durchsucht und die darin
+enthaltenen XCMD Resourcen geladen und ausgeführt. Diese XCMDs
+können sich dabei bei <a href="magic.html">MagiC</a> Mac registrieren und stehen damit
+MagiC-Programmen zur Verfügung.
+</p>
+<p><b>Eine Anwendung zeigt das Pure C-Programm im Ordner
+'MGMC_API' der original <a href="magic.html">MagiC</a> Mac-Dokumentation</b>. Es zeigt, wie
+einfach ein installiertes XCMD geöffnet und aufgerufen werden kann.
+Die dazu über den Cookie (xcmdMgrPtr) angebotenen Funktionen gehen
+dabei automatisch ggf. in den Supervisor-Modus und schalten auf die
+Mac-Umgebung (per <a href="#callMacContext">callMacContext</a>) um und regeln auch die Parameterübergabe. Der
+Aufruf der XCMD-Funktionen auf diese Weise ist also nur erlaubt, wenn
+der Atari-Modus aktiv ist und wenn der Aufruf nicht von einem
+Interrupt aus erfolgt.
+</p>
+<p>Wenn die XCMD-Funktionen aus Interrupts oder im Mac-Modus
+aufgerufen werden sollen, kann über &quot;xcmdMgrPtr-&gt;getAdr&quot;
+die Einsprungadresse des XCMD-Dispatchers ermittelt werden und dann
+direkt angesprungen werden.
+</p>
+<p>Weitere Informationen zu XCMDs befinden sich im Quelltext 'Demo
+XCMD.c' der original <a href="magic.html">MagiC</a> Mac-Dokumentation.
+</p>
+<h3><a name="Die_20Zusammenarbeit_20von_20MagiC_20und_20MacOS">14.1.10 Die Zusammenarbeit von MagiC und MacOS</a></h3>
+<p><a href="magic.html">MagiC</a> Mac hängt sich direkt in alle Interrupt-Vektoren, die der
+Macintosh benutzt. Wenn <a href="magic.html">MagiC</a> läuft und ein Hardware-Interrupt
+auftritt, schaltet <a href="magic.html">MagiC</a> Mac die MMU zurück in den normalen
+Macintosh-Modus. Am Ende der IntrRoutine wird zurück in den
+Atari-Modus gewechselt und das unter MagiC laufende Programm
+fortgeführt. Solange der Mac-Modus aktiv ist, mischt sich <a href="magic.html">MagiC</a> Mac
+<i>nicht</i> weiter in die Intr-Bearbeitung ein, sondern nur, solange
+der Atari-Modus aktiv ist.
+</p>
+<p>Immer dann, wenn vom Mac-Modus zurück in den Atari-Modus
+gewechselt wird, wird noch überprüft, ob eine bestimmte Zeit
+verstrichen ist (in Ticks gemessen; ein Tick ist ca. 1/60s), um dann
+ggf. periodische Aufgaben zu erledigen. Diese werden hier Mac-Tasks
+genannt.
+</p>
+<p><b>Mac-Tasks erledigen u.a. folgende Dinge:</b>
+</p>
+<ul>
+<li><p> Pollen der Mac-Events (Funktionen GetOSEvent bzw.
+WaitNextEvent).
+<br>&nbsp;
+</p></li>
+<li><p> Auswerten von Befehl-Q und Befehl-W.
+<br>&nbsp;
+</p></li>
+<li><p> Auswerten externer Apple-Events, z.B. <a href="powerdos.html#Suspend">Suspend</a>/Resume (<a href="magic.html">MagiC</a> Mac
+in den Hintergrund schalten) und externes Beenden.
+<br>&nbsp;
+</p></li>
+<li><p> Rechenzeitabgabe an andere Mac-Applikationen (durch
+WaitNextEvent).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Die Entscheidung, ob zum Pollen der Events GetOSEvent oder
+WaitNextEvent (WNE) benutzt wird, kann über die Preferences und auch
+eine Cookie-Funktion eingestellt werden. Nur, wenn WNE benutzt wird,
+wird auch Rechenzeit an andere Mac-Applikationen abgegeben.
+</p>
+<p>Mac-Tasks dürfen nur ausgeführt werden, wenn sicher ist, daß
+gerade keine andere MacOS-Funktion bearbeitet wird, denn das MacOS ist
+nicht reentrant. <b>Mac-Tasks werden deshalb nur dann ausgeführt,
+wenn alle folg. Bedingungen zutreffen:</b>
+</p>
+<ul>
+<li><p> Nach der Unterbrechung (Interrupt oder Aufruf von mode_atari)
+wird der Atari-Modus aktiv sein und die Interrupt-Level-Maske ist
+Null, d.h, es ist <i>kein</i> anderer Interrupt in Bearbeitung (um
+dies sicherzustellen, muß in Intr-Handlern, die vom Mac-Modus in den
+Atari-Modus wechseln, intrLock korrekt benutzt werden, s.u.).
+<br>&nbsp;
+</p></li>
+<li><p> Es wird gerade keine Routine im Mac-Kontext ausgeführt
+(<a href="#callMacContext">callMacContext</a>).
+<br>&nbsp;
+</p></li>
+<li><p> <a href="magic.html">MagiC</a> Mac ist <i>nicht</i> dabei, sich zu beenden.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="Der_20Cookie_20von_20MagiC_20Mac">14.1.11 Der Cookie von MagiC Mac</a></h3>
+<p>Das Betriebssystem <a href="magic.html">MagiC</a> Mac [eine Portierung von MagiC auf die
+Hardware des Apple (Power) Macintosh] legt einen Cookie <a href="bios_cookiejar.html#Cookie_2C_20MgMc">MgMc</a> an, der
+auf die folgende Struktur zeigt:
+</p>
+<a name="UDO__25mmcookie_flgs1"></a>
+<a name="MgMcCookie"></a>
+<pre>typedef struct
+{
+  SHORT   vers;                 /* Versionskennung im BCD-Format       */
+  SHORT   size;                 /* Größe der Struktur in Bytes         */
+  LONG    flags1;               /* verschiedene Flags:                 */
+                                /*                                     */
+                                /* Bit-0: 640*400-Emulation aktiv      */
+                                /* Bit-1: Rechts-Shift möglich         */
+                                /* Bit-2: 2-Tasten-Maus                */
+                                /* Bit-3: 68K-Emulation auf Power-PC   */
+                                /* Bit-4: u. I/O-Bereich nicht vorh.   */
+                                /* Bit-5: o. I/O-Bereich nicht vorh.   */
+                                /*                                     */
+                                /* Hinweis: Bit-2 steht erst ab        */
+                                /* der Version 1.01, Bit-3 ab Version  */
+                                /* 1.05 und die folgenden erst ab Ver- */
+                                /* sion 1.10 zur Verfügung.            */
+  PixMap  *scrnPMPtr;           /* Zeiger auf Screen-Beschreibung      */
+  BOOLEAN *updatePalette;       /* Ist zu setzen, um Farbtabellen      */
+                                /* zu restaurieren                     */
+  ProcPtr <a href="#modeMac">modeMac</a>;              /* MMU-Umschaltung auf Mac-Modus       */
+  ProcPtr <a href="#modeAtari">modeAtari</a>;            /* MMU-Umschaltung auf Atari-Modus     */
+  ProcPtr <a href="#getBaseMode">getBaseMode</a>;          /* Liefert in D0.W den MMU-Modus.      */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /*    0 = Macintosh                    */
+                                /* &lt;&gt; 0 = Atari                        */
+  ProcPtr getIntrCount;         /* Liefert in D0.L Intr-<a href="powerdos.html#Semaphore">Semaphore</a>-     */
+                                /* Zähler (0 = frei)                   */
+  ProcPtr <a href="#intrLock">intrLock</a>;             /* Erhöht Interrupt-<a href="powerdos.html#Semaphore">Semaphore</a>-Zähler   */
+  ProcPtr intrUnlock;           /* Erniedrigt Inter.-<a href="powerdos.html#Semaphore">Semaphore</a>-Zähler  */
+  ProcPtr <a href="#callMacContext">callMacContext</a>;       /* Führt Routine im Mac-Kontext aus;   */
+                                /* Proc-Adr auf Stack.                 */
+                                /*                                     */
+                                /* Achtung: Die RegisterD0-D2/A0/A1    */
+                                /* A5 und A7 werden zerstört.          */
+  Ptr     atariZeroPage;        /* Zeiger auf Atari-Speicherbereich    */
+                                /* $0-$800 im Macintosh-Adreßraum      */
+  Ptr     macA5;                /* Wert des A5-Regist. im Mac-Kontext  */
+  ProcPtr <a href="#macAppSwitch">macAppSwitch</a>;         /* Aufruf durch <a href="magic.html">MagiC</a>-Kernel (D0/4(A7).*/
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /*   0 = <a href="powerdos.html#Suspend">Suspend</a>                       */
+                                /*   1 = Resume                        */
+                                /*   2 = Quit                          */
+                                /* 3/4 = atariModePossbile wechselt    */
+  ProcPtr <a href="#controlSwitch">controlSwitch</a>;        /* Aufruf durch <a href="magic.html">MagiC</a>-Kernel (D0/4(A7) */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /* 0 = Atari-Screen verstecken         */
+                                /* 1 = Atari-Screen zeigen             */
+  LONG    hardwareAttr1;        /* z.Zt. undefiniert.                  */
+  LONG    hardwareAttr2;        /* z.Zt. undefiniert.                  */
+  Ptr     magiC_BP;             /* <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a> des <a href="magic.html">MagiC</a> OS.              */
+  Ptr     auxOutName;           /* Pascal-String für AUX-Ausg.-Device  */
+  Ptr     auxInName;            /* Pascal-String für AUX-Eing.-Device  */
+  ProcPtr <a href="#auxControl">auxControl</a>;           /* Aufruf durch <a href="magic.html">MagiC</a>-Kernel (D0/4(A7) */
+                                /* Es gilt:                            */
+                                /*                                     */
+                                /* 0 = <a href="powerdos.html#Suspend">Suspend</a>                         */
+                                /* 1 = Resume                          */
+                                /* 2 = Quit                            */
+  <a href="PrintDesc.html">PrintDesc</a> *printDescPtr;
+  GenProc   <a href="#configKernel">configKernel</a>;       /* Aufruf (C-Konvention) Atari-Modus   */
+  BOOLEAN   *<a href="#atariModePossible">atariModePossible</a>; /* Zeiger auf ein Flag das anzeigt, ob */
+                                /* der Aufruf von <a href="#modeAtari">modeAtari</a> z.Zt. er-  */
+                                /* laubt ist.                          */
+  <a href="MacVersion.html">MacVersion</a> *<a href="#versionOfMacAppl">versionOfMacAppl</a>; /* Version der <a href="magic.html">MagiC</a> Mac-Applikation   */
+                                /* (ab Version 1.06)                   */
+  VOID       *hwEmulSupport;    /* interner Gebrauch (ab Version 1.07) */
+  <a href="FlpDrvInfo.html">FlpDrvInfo</a> *floppyDrvInfoPtr; /* zeigt auf Infos für Laufwerke A und */
+                                /* B (ab Version 1.07)                 */
+  XCMDgrRec *xcmdMgrPtr;        /* XCMD-Interface (ab Version 1.08)    */
+  ProcPtr   <a href="#giveTimeToMac">giveTimeToMac</a>;      /* Aufrufen im Mac-Kontext falls idle  */
+  LONG      <a href="#minStackSize">minStackSize</a>;       /* Mindest-Supervisor-Stackgröße       */
+  GenProc   ext;                /* Hilfsroutinen, Aufr. aus Atari-Mode */
+  GenProc   <a href="#extMac">extMac</a>;             /* analog 'ext'; Aufruf aus Mac-Modus  */
+  ProcPtr   <a href="#stackLoad">stackLoad</a>;          /* (ab 1.11 / <a href="magic.html">MagiC</a> Mac 2.0)           */
+  ProcPtr   <a href="#stackUnload">stackUnload</a>;        /* (ab 1.11 / <a href="magic.html">MagiC</a> Mac 2.0)           */
+  LONG      reserved[3];        /* z.Zt. undefiniert                   */
+} MgMcCookie;
+</pre>
+<p><b>Hinweise:</b>
+</p>
+<ul>
+<li><p> Die Komponenten <i>giveTimeToMac</i> und <i>minStackSize</i> stehen erst
+ab Version 1.09 zur Verfügung; alle weiteren Komponenten erst ab
+Version 1.10.
+<br>&nbsp;
+</p></li>
+<li><p> Unbenutzte Bits und undefinierte Werte sind stets Null!
+<br>&nbsp;
+</p></li>
+<li><p> Alle Zeiger bleiben konstant, d.h., es ist erlaubt, sich einmal
+die Zeigerinhalte zu kopieren und damit dann zu arbeiten.
+<br>&nbsp;
+</p></li>
+<li><p> Aufruf nach C-Konvention bedeutet, daß Parameter auf dem Stack
+übergeben werden und daß Register D0-D2/A0-A2 zerstört werden
+können.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis:
+<br><a href="#MagiC_20Mac-Typvereinbarungen">MagiC Mac-Typvereinbarungen</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="MagiC_20Mac-Typvereinbarungen">14.1.11.1 MagiC Mac-Typvereinbarungen</a></h4>
+<p>Im folgenden eine Liste von Typvereinbarungen, die im
+Zusammenhang mit <a href="magic.html">MagiC</a> Mac eine Rolle spielen:
+</p>
+<pre>typedef char Boolean;
+typedef char *Ptr, **Handle;
+typedef unsigned char *StringPtr;
+typedef void PixMap;
+typedef Handle THPrint;
+typedef void (*ProcPtr)(void);
+
+typedef long <a href="proto_xfsl.html#cdecl">cdecl</a> (*GenProc) (short function, void *data);
+typedef Boolean <a href="proto_xfsl.html#cdecl">cdecl</a> (*PrSetupProc) (Boolean alwaysInteractively);
+</pre>
+<p><b>Hinweis:</b> Die XCMD-Strukturen sind im File 'MgMc_API.h'
+der Original-Dokumentation von <a href="magic.html">MagiC</a> Mac enthalten.
+</p>
+<p>Querverweis: <a href="typedefs.html">Typdefinitionen in MagiC</a>
+</p>
+<h4><a name="mmc_flg1_bit4">14.1.11.2 mmc_flg1_bit4</a></h4>
+<p>Der untere I/O-Bereich ($00FF8000-$00FFFFFF) ist <i>nicht</i>
+als solcher vorhanden, d.h., dort kann sich ganz normales RAM, wie an
+jeder anderen Stelle auch, befinden. In diesem Fall wird auch
+<i>keine</i> Unterscheidung zw. ST- und TT-RAM gemacht - das ganze
+von <a href="magic.html">MagiC</a> Mac benutzte RAM, auch das oberhalb von 16MB, wird als
+<b>ST-RAM</b> verfügbar gemacht.
+</p>
+<p>Das bedeutet natürlich, daß in diesem Fall Programme
+<i>keine</i> I/O-Zugriffe auf diesem Bereich machen dürfen! Ist
+dieses Bit gelöscht, kann ein Programm jedoch dort Zugriffe machen
+und mit einem Bus-Error rechnen, wenn keine Atari-kompatible Hardware
+(wie z.B. <i>McSTout</i>) dort installiert ist.
+</p>
+<h4><a name="mmc_flg1_bit5">14.1.11.3 mmc_flg1_bit5</a></h4>
+<p>Der obere I/O-Bereich ($FFFF8000-$FFFFFFFF) ist <i>nicht</i>
+als solcher zugänglich (siehe <b>Besonderheiten bei Power-Macs</b>);
+bei Zugriff erhält man <i>keinen</i> Bus-Error sondern Daten aus dem
+Macintosh-ROM.
+</p>
+<h4><a name="auxControl">14.1.11.4 auxControl</a></h4>
+<p>... ist für den HSMODEM-Treiber gedacht: Der Word-Parameter auf
+dem Stack bestimmt, ob die Ports freigegeben werden sollen (2 = ganz
+schließen, 0 = schließen, aber ggf. DTR halten) oder eine
+Wiederbelegung des Ports erlaubt ist (Wert = 1). Zwischen Wert-0 und
+Wert-1 können sich die Namen (auxInPort, auxOutPort) geändert haben.
+</p>
+<p><b>Hinweis:</b> Der Aufruf sollte im Atari-Supervisor-Modus
+stattfinden, der USP ist undefiniert.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="callMacContext">14.1.11.5 callMacContext</a></h4>
+<p>... dient dazu, die notwendige Macintosh-Umgebung zum Aufruf
+beliebiger MacOS-Routinen herzustellen. <b>Die Routine muß im
+Mac-Modus aufgerufen werden, im Supervisor-Modus und nicht aus einem
+Interrupt heraus.</b>
+</p>
+<p>Dazu ist auf dem Stack die Adresse der Routine zu übergeben,
+die als Subroutine im Mac-Kontext aufzurufen ist. Für die aufgerufene
+Routine wird der normale User-Stack von <a href="magic.html">MagiC</a> Mac verwendet, zudem
+wird das Register A5 mit macA5 geladen und im Falle, daß Virtual
+Memory aktiv ist, auch in den User-Modus geschaltet. Da diese Funktion
+den Stack wechselt, ist <i>keine</i> Parameterübergabe über den Stack möglich.
+Die Register D0-D2/A0/A1/A5/A7 werden sowohl beim Aufruf als auch bei
+der Rückkehr der Subroutine verändert (jedoch haben A5/A7 nach
+Rückkehr von 'callMacContext' die selben Werte wie vor dem Aufruf).
+Die anderen Register werden <i>nicht</i> verändert und können zur
+Parameterübergabe und -rückgabe benutzt werden.
+</p>
+<p>Die Ausführung dieser Subroutine bringt implizit den Aufruf von
+<a href="#intrLock">intrLock</a> und intrUnlock mit sich, das heißt, währenddessen werden
+keine Mac-Tasks bearbeitet, auch wenn dabei zeitweise in den
+Atari-Modus gewechselt wird. Um trotzdem die Bearbeitung von Mac-Tasks
+zu ermöglichen, kann die Funktion '<a href="#giveTimeToMac">giveTimeToMac</a>' aufgerufen werden.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="configKernel">14.1.11.6 configKernel</a></h4>
+<p>... bietet Zugriff auf einige der Einstellungen, die sonst nur
+über die Macintosh-Seite interaktiv zugänglich sind. Dazu wird in
+der Regel im 'function'-Parameter eine Funktionsnummer und im
+'data'-Parameter ein Zeiger auf eine Variable übergeben, die vor dem
+Aufruf den zu setzenden Wert enthalten muß oder -1 für den Fall,
+daß kein neuer Wert gesetzt werden soll.
+</p>
+<p>Nach dem Aufruf enthält die Variable den aktuellen Wert. Die
+Einstellungen werden in die &quot;Preferences&quot; übernommen, wenn
+nichts anderes angegeben ist. Die Funktionen:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wert</td>
+<td valign="top"> Beschreibung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> data zeigt auf ein Byte, das bestimmt, ob der 200Hz-Timer durch
+den MacOS-Timer simuliert werden soll. <b>Es gilt:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">nein</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">ja (default)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> Bestimmt, ob Mac-Hintergrundprozesse aufgerufen werden sollen.
+<b>Es gilt:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">nein</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">ja</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3</td>
+<td valign="top"> Bestimmt, ob IDLE-Zustand bei <i>Powerbooks</i> erlaubt ist.
+<b>Es gilt:</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">nein</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">ja</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">4</td>
+<td valign="top"> Analog (1), für das Flag 'UnlockMemOnMacSide' (siehe auch
+unter <a href="#atariModePossible">atariModePossible</a>): Ist es ungleich Null, wird der von <a href="magic.html">MagiC</a> Mac
+belegte Speicher für die TPA zum Auslagern freigegeben, falls Virtual
+Memory aktiv ist. Andernfalls läßt er sich nicht auslagern. Wird
+z.Zt. nicht in den Prefs gesichert.
+
+</td></tr>
+</table>
+
+<p>Querverweis: <a href="gemdos_tpa.html">Programmstart und TPA</a> &nbsp; <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a>
+</p>
+<h4><a name="controlSwitch">14.1.11.7 controlSwitch</a></h4>
+<p>Hier können sich Atari-Routinen per <a href="xbra_main.html">XBRA-Verfahren</a> einhängen.
+Sie werden dann im Atari-Modus (Supervisor-Modus) aufgerufen, wenn
+eines der angegebenen Ereignisse eintritt. Dies ist z.B. nötig, wenn
+ein Atari-Programm sich bestimmter Macintosh-Routinen bedient. So kann
+sich z.B. ein Programm, das die Sound-Routinen des Mac benutzt,
+hierüber informieren lassen, wenn <a href="magic.html">MagiC</a> Mac beendet wird, um dann die
+Sound-Kanäle zu schließen und Speicher freizugeben.
+</p>
+<p>Folgende Werte werden in D0.W und auf dem Stack übergeben (und
+müssen dort auch bleiben):
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wert</td>
+<td valign="top"> Beschreibung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> <b>Hide</b>
+<br>Maus- und Tastaturkontrolle für <a href="magic.html">MagiC</a> setzen aus, weil z.B. ein
+Mac-Dialog geöffnet ist. Es sollten dann auch keine Ausgaben auf den
+Bildschirm geschehen (z.B. bei Interruptroutinen), weil damit sonst
+der Macintosh-Dialog überschrieben werden könnte.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> <b>Show</b>
+<br>Gegenteil von Hide.
+
+</td></tr>
+</table>
+
+<p><b>Hinweis:</b> Die Routine muß im Atari-Supervisor-Modus
+aufgerufen werden, der USP ist undefiniert.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="getBaseMode">14.1.11.8 getBaseMode</a></h4>
+<p>Falls getBaseMode in einem Interrupt aufgerufen wird, liefert
+die Funktion den Modus, der zum Zeitpunkt vor der
+Interrupt-Bearbeitung bestand.
+</p>
+<h4><a name="intrLock">14.1.11.9 intrLock</a></h4>
+<p>... muß aufgerufen werden, bevor von einer Macintosh-Routine,
+die im Interrupt laufen könnte, eine Umschaltung in den Atari-Modus
+erfolgt. Zusätzlich muß vor der Umschaltung damit gerechnet werden,
+daß ein fremder Stack aktiv ist, der <i>nicht</i> zum Adreßraum des
+Atari-Modus gehört.
+</p>
+<p>Deshalb muß zuvor auf einen Stack (siehe <a href="#minStackSize">minStackSize</a>) aus dem
+Atari-Adreßraum gewechselt werden. Nach der Rückschaltung in den
+Macintosh-Modus muß selbstverständlich intrUnlock aufgerufen werden.
+</p>
+<p>Mit Hilfe dieser Intr-<a href="powerdos.html#Semaphore">Semaphore</a> wird erkannt, wann die CPU
+Befehle unter <a href="magic.html">MagiC</a> im Nicht-Interrupt-Zustand ausführt. Dieser
+Zustand muß erkannt werden, weil nur dann die
+Macintosh-Hintergrundprozesse und sonstige Macintosh-Routinen
+gefahrlos vom <a href="magic.html">MagiC</a> Mac-Kernel durch seine Interrupt-Kontrollroutinen
+aufgerufen werden können. (Während Interrupt-Routinen oder
+Macintosh-Routinen abgearbeitet werden, darf keine Mac-Routine vom
+<a href="magic.html">MagiC</a> Mac-Kernel aufgerufen werden, weil das MacOS nicht reentrant
+ist. Während dieser Zeit werden keine Mac-Events bearbeitet; auch
+Befehl-W/-Q funktionieren dann nicht).
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="macAppSwitch">14.1.11.10 macAppSwitch</a></h4>
+<p>Hier können sich Atari-Routinen per <a href="xbra_main.html">XBRA-Verfahren</a> einhängen.
+Sie werden dann im Atari-Modus (Supervisor-Modus) aufgerufen, wenn
+eines der angegebenen Ereignisse eintritt. Dies ist z.B. nötig, wenn
+ein Atari-Programm sich bestimmter Macintosh-Routinen bedient. So kann
+sich z.B. ein Programm, das die Sound-Routinen des Mac benutzt,
+hierüber informieren lassen, wenn <a href="magic.html">MagiC</a> Mac beendet wird, um dann die
+Sound-Kanäle zu schließen und Speicher freizugeben.
+</p>
+<p>Folgende Werte werden in D0.W und auf dem Stack übergeben (und
+müssen dort auch bleiben):
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wert</td>
+<td valign="top"> Beschreibung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> <b><a href="powerdos.html#Suspend">Suspend</a></b>
+<br><a href="magic.html">MagiC</a> Mac tritt in den Hintergrund - eine andere
+Macintosh-Applikation kommt in den Vordergrund (z.B. der Finder).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> <b>Resume</b>
+<br><a href="magic.html">MagiC</a> Mac ist wieder die Vordergrundapplikation auf
+Macintosh-Seite.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> <b>Quit</b>
+<br><a href="magic.html">MagiC</a> Mac wird beendet.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3</td>
+<td valign="top"> Flag <a href="#atariModePossible">atariModePossible</a> wird danach FALSE
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">4</td>
+<td valign="top"> Flag atariModePossible ist wieder TRUE
+
+</td></tr>
+</table>
+
+<p><b>Hinweis:</b> Die Routine muß im Atari-Supervisor-Modus
+aufgerufen werden, der USP ist undefiniert.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="atariModePossible">14.1.11.11 atariModePossible</a></h4>
+<p>... zeigt auf ein Byte, das anzeigt, ob augenblicklich ein
+Wechsel vom Mac- in den Atari-MMU-Modus möglich ist (0=verboten,
+1=erlaubt). Solange der Macintosh ohne Virtual Memory (auch
+RAM-Doubler) läuft, ist der Aufruf von '<a href="#modeAtari">modeAtari</a>' immer möglich,
+wenn jedoch VM aktiv ist und das Flag &quot;UnlockMemOnMacSide&quot;
+auch ungleich Null ist, wird beim Wechsel vom <a href="magic.html">MagiC</a>- zum
+Mac-Bildschirm der von MM für die TPA belegte Speicher zum Auslagern
+freigegeben.
+</p>
+<p>Sobald die VM-Verwaltung jedoch einen Block auslagert, sind die
+von MM berechneten MMU-Tabellen nicht mehr gültig und müßten vor
+der nächsten Umschaltung in den Atari-Modus erst neu berechnet
+werden. Dies wird jedoch nicht automatisch getan, sondern erst, wenn
+zurück zum Atari-Bildschirm gewechselt wird. Aus diesem Grund dürfen
+Interrupt- und andere asynchrone Routinen, die unter <a href="magic.html">MagiC</a> Mac mittels
+MacOS-Funktionen installiert sind, unter den beschriebenen Umständen
+<i>keine</i> Atari-Modusumschaltung vornehmen.
+</p>
+<p>Atari-Programme, die sich in die Atari-Vektoren einhängen (z.B.
+den VBL-Vektor bei $70), müssen dies alles nicht beachten, weil im
+Fall, daß die MMU-Tabellen ungültig werden, die Atari-Interrupts
+erst gar nicht mehr simuliert werden. Für den Fall, daß weitere
+Maßnahmen ergriffen werden sollen, bevor bzw. nachdem sich der Status
+des Flags ändert, kann auch eine Routine über <a href="#macAppSwitch">macAppSwitch</a>
+installiert werden, die dann mit den Werten 3 und 4 in D0.W dieses
+Ereignis anzeigt).
+</p>
+<p>Querverweis: <a href="gemdos_tpa.html">Programmstart und TPA</a> &nbsp; <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a>
+</p>
+<h4><a name="modeAtari">14.1.11.12 modeAtari</a></h4>
+<p>Bevor diese Funktion aufgerufen werden kann, müssen folgende
+Bedingungen zutreffen:
+</p>
+<ul>
+<li><p> Der Mac-Modus muß aktiv sein.
+<br>&nbsp;
+</p></li>
+<li><p> Die CPU muß sich im Supervisor-Modus befinden. Unter Virtual
+Memory laufen Mac-Programme und auch die Mac-Interrupt-Routinen im
+User-Modus. Falls von dort heraus zeitweise in den Atari-Modus
+gewechselt werden soll, muß zuvor in den Supervisor-Modus gewechselt
+werden. Siehe dazu 'EnterSupervisorMode'.
+<br>&nbsp;
+</p></li>
+<li><p> Der aktuelle Stack muß im Atari-Adreßraum liegen, sonst
+bleibt CPU sofort wg. doppeltem Bus-Error stehen, sofern das Programm
+auf einem 68K-Rechner läuft, weil dann andere Bereiche, also auch der
+Stack-Bereich, nicht mehr ansprechbar sind. Beachte hierzu auch
+<a href="#minStackSize">minStackSize</a>.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#atariModePossible">atariModePossible</a> muß anzeigen, daß der MMU-Switch erlaubt
+ist. Andernfalls erscheint bei installiertem MacsBug die Meldung:
+&quot;Fatal Error: Atari-Mode currently not available (MMU-Tables
+invalid)&quot;.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="modeMac">14.1.11.13 modeMac</a></h4>
+<p>... kann jederzeit aufgerufen werden, auch in
+Interrupt-Routinen, sofern sich das Programm z.Zt. im Atari-Modus und
+im Supervisor-Modus befindet. Danach kann auf den gesamten
+Mac-Adreßraum zugegriffen werden.
+</p>
+<p>Der Speicher, der im Atari-Modus bei Adresse Null beginnt,
+beginnt im Mac-Modus dort, wohin <i>atariZeroPage</i> zeigt. Wurde
+von einer normalen Atari-Anwendung aus mittels modeMac in den
+Mac-Modus gewechselt, dürfen nur solche MacOS-Routinen aufgerufen
+werden, die auch im Interrupt aufgerufen werden dürfen (siehe 'Inside
+Macintosh'), ggf. muß dazu noch das Register A5 mit dem Wert aus
+macA5 belegt werden. Andere Routinen sollten nur über <a href="#callMacContext">callMacContext</a>
+aufgerufen werden, insbesondere solche, die QuitDraw-Routinen benutzen
+&ndash; ggf. ist das auszuprobieren. Falls ein Aufruf von callMacContext
+nötig ist, erkannt man es oft daran, daß sonst Busfehler auftreten
+oder keine Texte in <a href="guidelines_styles.html#Dialogboxen">Dialogboxen</a> usw. erscheinen.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="versionOfMacAppl">14.1.11.14 versionOfMacAppl</a></h4>
+<p>Hierüber kann die Versionskennung von der laufenden <a href="magic.html">MagiC</a>
+Mac-Applikation ermittelt werden (also die Kennung, die auch imFinder
+angezeigt werden kann). Damit können Programme sich endlich auf die
+MM-Versionen einstellen.
+</p>
+<h4><a name="giveTimeToMac">14.1.11.15 giveTimeToMac</a></h4>
+<p>... dient dazu, Zeit an die Mac-Event-Bearbeitung von <a href="magic.html">MagiC</a> Mac
+abzugeben, wenn sich der Rechner längere Zeit (sinnvoll ab 1/60s) im
+Mac-Modus befindet, z.B., während auf Beendigung von asynchronen
+Bearbeitungen gewartet wird.
+</p>
+<p><b>'giveTimeToMac' kann dann beliebig oft aufgerufen
+werden</b>; die Mac-Events werden trotzdem nur so oft gepollt, wie in
+den Prefs eingestellt ist (normal: jede 1/60s, dies ist auch die
+maximale Frequenz). Um die Routine aufzurufen, muß der vollständige
+Mac-Context hergestellt sein, d.h., der Applikations-Stack aktiv und
+A5 entspr. gesetzt sein (dies wird z.B. durch <a href="#callMacContext">callMacContext</a> erreicht.
+Die Routine macht keine sonstigen Aktionen, die nicht auch sonst
+passieren, wenn der Atari-Modus aktiv ist und dabei automatisch
+zyklisch die Mac-Events gepollt werden. Als Besonderheit gilt, daß
+die Routine nicht ein anstehendes Quit-Kommando auswertet, damit die
+Routine, die 'giveTimeToMac' aufruft, davon ausgehen kann, daß sie
+gleich wieder drankommt (sofern nicht ein fataler Fehler auftritt).
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="minStackSize">14.1.11.16 minStackSize</a></h4>
+<p>... gibt die Mindestgröße für Supervisor-Stacks an, falls ein
+Programm selbst so einen Stack reservieren muß (beispielsweise dann,
+wenn eine Callback-Routine vom MacOS aufgerufen wird und diese dann
+eine Routine im Atari-Modus aufrufen will, weil dazu sichergestellt
+werden muß, daß sich der SP beim Umschalten in den Atari-Modus
+innerhalb des Atari-Adreßraums befindet und dies nur durch einen
+eigenen, lokalen Stack zu bewerkstelligen ist).
+</p>
+<p><b>Achtung:</b> Man sollte sich unbedingt an diesen Wert
+halten, da z.B. zwar auf den 68K-Maschinen in der Regel 5KB reichen,
+auf den neueren PCI-PowerMacs jedoch schon über 12KB nötig sind,
+wenn das <a href="gemdos_mintnet.html">Netzwerk</a> (Ether-Talk) aktiv ist! Am Besten ist es jedoch,
+wenn man völlig darauf verzichtet, einen eigenen Supervisor-Stack
+anzulegen, um solche Schwierigkeiten in Zukunft zu vermeiden. Im
+Zweifel sollte mit dem Autor des <a href="magic.html">MagiC</a> Mac-Kernels <a href="contact.html">Kontakt</a> aufgenommen
+werden!
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="ext">14.1.11.17 ext</a></h4>
+<p>... bietet diverse Hilfsfunktionen des <a href="magic.html">MagiC</a> Mac-Kernels. Aufruf
+muß aus dem Atari-Modus (User- oder Supervisor-Modus) geschehen.
+Aufrufe aus Interrupts sind <i>nicht</i> erlaubt.
+</p>
+<p>Dazu wird im &quot;function&quot;-Parameter eine Funktionsnummer
+und im &quot;data&quot;-Par. ein Zeiger auf evtl. zusätzlich
+benötigte Daten übergeben. Bei Aufruf nicht definierter
+Funktionsnummern wird immer als Funktionsergebnis -1 zurückgegeben.
+Die Funktionen:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wert</td>
+<td valign="top"> Beschreibung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> <b>extMax</b>
+<br>&quot;data&quot; ist unbenutzt (Null übergeben!),
+zurückgeliefert wird die höchste implementierte Funktionsnummer.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> <b>extAlert</b>
+<br>Zeigt einen generischen Mac-Dialog (Alert) an. &quot;data&quot;
+zeigt auf einen Null-terminierten String (maximal 255 Zeichen lang!),
+der in dem Dialog angezeigt wird. Achtung: Umlaute müssen Mac-Codes
+haben. Zum Zeilentrennen einfach ein CR einfügen. Rückgabe: Immer
+Null.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> <b>extAUXOpenErr</b>
+<br>Zeigt einen Mac-Alert an mit dem (entspr. der Sprache angepaßten)
+Text, daß der serielle Port nicht geöffnet werden kann, weil er
+belegt ist (wird von HSMODEM/MACM1 benötigt). &quot;data&quot; ist
+unbenutzt. Rückgabe: Immer Null.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3</td>
+<td valign="top"> <b>extFSSpecToPath</b>
+<br>Konvertiert einen Macintosh-Dateipfad in einen GEMDOS-konformen
+Pfad. &quot;data&quot; zeigt auf folg. Struktur: Zuerst ein FSSpec
+(siehe Mac-Doku), dahinter ein Puffer mit Platz für 256 Zeichen.
+Dieser Puffer wird mit einem C-String gefüllt, der einen
+vollständigen Pfadnamen beschreibt, mit dem über
+GEMDOS-<a href="gemdos_file.html">Dateifunktionen</a> auf die Datei zugegriffen werden kann. Es kann
+später auch gut sein, daß dies ein Pfad über das Pseudo-Laufwerk
+&quot;u:\&quot; ist, in dem dann alle z.Zt. vorhandenen Mac-Laufwerke
+verfügbar sind. Dabei muß auch damit gerechnet werden, daß es sich
+um Datei- und Ordnernamen handelt, die nicht ins 8.3-Schema passen.
+<br>Handelt es sich um einen Ordner, ist der Pfad auf jeden Fall mit
+&quot;\&quot; abgeschlossen. Wenn kein Pfad nicht ermittelt werden
+kann, weil z.B. keines der konfigurierten <a href="magic.html">MagiC</a>-Laufwerke den
+betreffenden Ordner sichtet, gibt die Funktion den Wert -2 zurück. Im
+Erfolgsfall wird 0 geliefert.
+
+</td></tr>
+</table>
+
+<p><b>Achtung:</b> Diese Funktion kostet u.U. viel Zeit, da die
+von MM benutzten Verzeichnisse ggf. durchsucht werden müssen, daher
+nicht sorglos dauernd aufrufen, wenn es vermeidbar ist.
+</p>
+<p>Querverweis: <a href="bios_cookiejar.html#Cookie_2C_20MgMc">Cookie von MagiC Mac</a> &nbsp; <a href="bios_cookiejar.html#Cookie-_20und_20XBRA-Liste">Cookie- und XBRA-Liste</a>
+</p>
+<h4><a name="extMac">14.1.11.18 extMac</a></h4>
+<p>Entspricht 'ext', jedoch muß Aufruf aus dem Mac-Kontext (siehe
+'<a href="#callMacContext">callMacContext</a>') geschehen. Ist vorteilhaft, wenn sich das Programm
+wg. Aufruf anderer Mac-Funktionen bereits im Mac-Modus befindet.
+Aufrufe aus Interrupts sind i.d.R. nicht erlaubt.
+</p>
+<h4><a name="stackLoad">14.1.11.19 stackLoad</a></h4>
+<p><i>stackLoad</i> aktiviert einen neuen CPU-Stack (A7).
+</p>
+<p>Dies ist dann nötig, wenn aus einem Mac-Kontext, bei dem ein
+beliebiger CPU-Stack aktiv ist, eine Routine im ATARI-Kontext
+aufgerufen werden soll, also, bevor ein Modus-Wechsel mit
+&quot;<a href="#modeAtari">modeAtari</a>&quot; erfolgt. Das Wechseln auf einen anderen Stack
+ist dann nötig, weil evtl. der Bereich, den A7 gerade benutzt, durch
+den Wechsel zum Atari-Modus ausgeblendet wird und es dann zu einem
+CPU-Stillstand käme (siehe auch Kap. &quot;Interrupt-Handler unter
+<a href="magic.html">MagiC</a> Mac&quot;).
+</p>
+<p>Anstatt einfach selbst den A7 azf den neuen Stack zu setzen,
+sollte 'stackLoad' benutzt werden. Diese Funktion tut im Grunde das
+selbe, jedoch informiert sie zusaetzlich das MacOS davon (durch Setzen
+weniger globaler Variablen). Damit wird erreicht, dass das MacOS
+waehrenddessen nicht den A7 periodisch überprüft. Denn sonst könnte
+es auf bestimmten MacOS-Versionen (vor 7.5 und wieder ab 7.5.3) zur
+Meldung eines Stack-Überlaufs durch das MacOS kommen, obwohl dies gar
+nicht der Fall ist.
+</p>
+<p>Falls Virtual Memory aktiviert ist, wird hiermit außerdem
+erreicht, daß dieser Stack-Bereich nicht ausgelagert werden kann, was
+sonst u.U. einen Rechnerstillstand zur Folge haben kann.
+</p>
+<p>Benutzung: In A0 ist ein Zeiger auf ein MemArea-Struktur (s.o.)
+zu übergeben. Darin muß der Zeiger auf den Beginn (niedrigste
+Adresse) des Stacks sowie seine Länge (beachte '<a href="#minStackSize">minStackSize</a>'!)
+enthalten sein. Die Routine zerstört die Register A0 und A1 und setzt
+A7 auf den Wert von &lt;MemArea.start+MemArea.length&gt;.
+</p>
+<h4><a name="stackUnload">14.1.11.20 stackUnload</a></h4>
+<p>Dioe Umkehrung zu '<a href="#stackLoad">stackLoad</a>'. Aufzurufen, wenn der zuvor aktiv
+gewesene Stack wieder benutzt werden soll.
+</p>
+<p>Die Routine zerstört das Register A0 (A7 erhält wieder den
+Wert von vor dem <a href="#stackLoad">stackLoad</a>-Aufruf).
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="emulators.html"><img src="udo_up.gif" alt="Emulatoren" title="Emulatoren" border="0" width="24" height="24">Emulatoren</a>
+<a name="UDO_nav_lf_FOOT" href="emulators.html"><img src="udo_lf.gif" alt="Emulatoren" title="Emulatoren" border="0" width="24" height="24">Emulatoren</a>
+<a name="UDO_nav_rg_FOOT" href="emulators_magicpc.html"><img src="udo_rg.gif" alt="MagiC PC-Schnittstelle" title="MagiC PC-Schnittstelle" border="0" width="24" height="24">MagiC PC-Schnittstelle</a>
+</body>
+</html>

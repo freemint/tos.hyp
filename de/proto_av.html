@@ -1,0 +1,2795 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: AV-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="protocols.html"><img src="udo_lf.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_rg_HEAD" href="proto_bubblegem.html"><img src="udo_rg.gif" alt="BubbleGEM" title="BubbleGEM" border="0" width="24" height="24">BubbleGEM</a>
+
+<hr>
+
+<h1><a name="AV-Protokoll">15.1 AV-Protokoll</a></h1>
+<a name="Protokoll_2C_20AV-"></a>
+<a name="VA-Protokoll"></a>
+<p>Das AV-Protokoll (Accessory-Venus) wurde von <i>Stefan
+Eissing</i> entwickelt und zuerst im alternativen Desktop
+<i>Gemini</i> eingesetzt. Mittlerweile wird dieses Protokoll jedoch
+von vielen weiteren Shells (Ease, MagXDesk, Thing, ...) unterstützt.
+Dieser Abschnitt beschreibt die Version des Protokolls aus der
+Gemini-Distribution vom 29. Januar 1995 (Gemini 1.a).
+</p>
+<p>Die Kommunikation zwischen zwei Prozessen erfolgt beim
+AV-Protokoll über den Austausch von (erweiterten) AES-Nachrichten, die sich
+einer der folgenden Kategorien zuteilen lassen:
+</p>
+<ul>
+<li> <a href="#AV-Funktionen">AV-Funktionen</a> (Client &ndash;&gt; Server)
+</li>
+<li> <a href="#VA-Funktionen">VA-Funktionen</a> (Server &ndash;&gt; Client)
+</li>
+</ul>
+
+<p><b>Achtung:</b> An dieser Stelle sei darauf hingewiesen, daß
+im Hinblick auf zukünftige Betriebssystem-Versionen zur Kommunikation
+zwischen verschiedenen Programmen benutzte oder über Zeiger
+zugewiesene Speicherbereiche global sein müssen (<a href="gemdos_memory.html#Mxalloc">Mxalloc</a>-Funktion mit
+Global-Flag). Andernfalls wird es beim Einsatz auf Rechnern mit PMMU
+(z.B. Atari-TT oder Falcon) zu Speicherschutzverletzungen kommen.
+</p>
+<p>Sollten in Nachrichten Pfade oder Dateinamen vorkommen, so muß immer
+der <i>absolute</i> Pfad angegeben werden (also mit Laufwerk) und die
+Laufwerksbuchstaben <i>müssen</i> Großbuchstaben sein. Pfade
+sollten immer mit einem Backslash enden!
+</p>
+<p>Mit <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> kann jede Applikation nachfragen, welche Nachrichten
+verstanden werden (nicht alle Shells unterstützen das vollständige
+Protokoll). Es wäre schön, wenn auch andere Programme auf dieses
+Protokoll reagieren würden. Zumindest AV_SENDKEY ist sicher leicht zu
+implementieren und ist die einzige Methode, wie über Nachrichten
+Tastaturdrücke simuliert werden können.
+</p>
+<p>Unter normalem <a href="tos_main.html">TOS</a> fragt dazu ein Accessorie, wenn es eine
+<a href="evnt.html#AC_CLOSE">AC_CLOSE</a>-Nachricht vom AES erhalten hat, die Applikation (mit ID) 0
+per AV_PROTOKOLL ob sie etwas davon versteht. In einer Multitasking-Umgebung
+(MultiTOS, MiNT/N.AES oder <a href="magic.html">MagiC</a>) muß aber das Programm nicht mehr
+die ID 0 haben, zudem kommt es (fast) nicht mehr zu AC_CLOSE-Nachrichten.
+Außerdem können nicht nur <a href="aes_fundamentals.html#Accessories">Accessories</a>, sondern auch normale
+Programme mit dem AV-Server kommunizieren wollen. Was tun?
+</p>
+<p>Wenn es mehr als eine Hauptapplikation geben kann, dann sollte
+das Programm bzw. Accessory versuchen, mit GEMINI <a href="contact.html">Kontakt</a> aufzunehmen.
+Die ID kann ja mit <a href="appl.html#appl_find">appl_find</a> ermittelt werden. Scheitert dies, so kann
+noch nach AVSERVER oder dem Inhalt der (<a href="aes_main.html">AES</a>)-Environmentvariable
+AVSERVER gesucht werden. Besonders die letzte Möglichkeit erlaubt
+eine leichte Konfiguration von außen. Die neuen Versionen der Library
+VAFUNC von <i>Stephan Gerle</i> (in gutsortierten Mailboxen
+erhältlich) verfahren fast genauso.
+</p>
+<p>Querverweis: <a href="evnt.html#Nachrichten">Nachrichten</a> <a href="proto_dd.html">Drag&amp;Drop-Protokoll</a> <a href="proto_olga.html">OLGA-Protokoll</a>
+</p>
+<h3><a name="Quoting_20im_20AV-Protokoll">15.1.1 Quoting im AV-Protokoll</a></h3>
+<a name="AV-Protokoll_2C_20Quoting_20im"></a>
+<p>Mit Quoting ist im AV-Protkoll gemeint, daß Dateinamen optional
+mit einfachen Anführungszeichen 'name' versehen werden können. Dies
+ist aber nur erlaubt, wenn beide Parteien (Server und Client) sich
+darüber einig sind, d.h. es verstehen können.
+</p>
+<p>Wie geht das also vor sich? Angenommen der Server schickt an
+eine Applikation einen Dateinamen, der ein Leerzeichen enthält. Eine
+Applikation, die Quoting <i>nicht</i> kann, wird statt einem
+<i>zwei</i> Dateinamen erkennen, da normalerweise Leerzeichen
+Dateinamen trennen. Versteht die Applikation aber Quoting (Bit 4 in
+seinem Protokollstatus), so wird der Server den Dateinamen mit ''
+umgeben und die Applikation erkennt, daß das Leerzeichen zum
+Dateinamen gehört. Gleiches gilt natürlich auch für Dateinamen, die
+von einer Applikation an einen Server geschickt werden.
+</p>
+<p>Die Frage bleibt, wie man denn nun einfache Anführungszeichen
+überträgt. Nun, solche Zeichen, die zum Dateinamen gehören, werden
+einfach verdoppelt. Aus Zorro's Hypertext wird für die Übertragung
+'Zorro''s Hypertext'. In diesen Fällen wird also die gleiche Methode
+wie beim Drag&amp;Drop-Protokoll eingesetzt.
+</p>
+<p>Querverweis:
+<br><a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> &nbsp; <a href="#VA_ACC_QUOTING_28a_29">VA_ACC_QUOTING(a)</a> &nbsp; <a href="#VA_SERVER_QUOTING_28a_29">VA_SERVER_QUOTING(a)</a> &nbsp;
+<a href="#VA_PROTOSTATUS">VA_PROTOSTATUS</a> &nbsp; <a href="proto_dd.html">Drag&amp;Drop-Protokoll</a>
+</p>
+<h3><a name="AV-Funktionen">15.1.2 AV-Funktionen</a></h3>
+<p>Diese Nachrichten werden von einer Applikation an <i>Gemini</i> bzw.
+einen vorhandenen AV-Server geschickt.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_ACCWINDCLOSED">AV_ACCWINDCLOSED</a></td>
+<td valign="top"> Applikation hat ein Fenster geschlossen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a></td>
+<td valign="top"> Applikation hat ein Fenster geöffnet.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a></td>
+<td valign="top"> Ermitteln des Zeichensatzes der Console.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a></td>
+<td valign="top"> Ermitteln des Zeichensatzes für Dateien.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_ASKOBJECT">AV_ASKOBJECT</a></td>
+<td valign="top"> Ermitteln des derzeit selektierten Objektes.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_COPY_DRAGGED">AV_COPY_DRAGGED</a></td>
+<td valign="top"> Informieren über eine Kopier-Aktion.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_COPYFILE">AV_COPYFILE</a></td>
+<td valign="top"> Dateien bzw. Ordner kopieren.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_DELFILE">AV_DELFILE</a></td>
+<td valign="top"> Dateien bzw. Ordner löschen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a></td>
+<td valign="top"> Informieren über verschobene Objekte.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_EXIT">AV_EXIT</a></td>
+<td valign="top"> Aus dem AV-Protokoll ausklinken.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_FILEINFO">AV_FILEINFO</a></td>
+<td valign="top"> Datei- bzw. Ordnerinformation anzeigen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_GETSTATUS">AV_GETSTATUS</a></td>
+<td valign="top"> Aktuellen Status ermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a></td>
+<td valign="top"> Öffnet das Console-Fenster.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_OPENWIND">AV_OPENWIND</a></td>
+<td valign="top"> Öffnet ein Datei-Fenster.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_PATH_UPDATE">AV_PATH_UPDATE</a></td>
+<td valign="top"> Inhalt eines Verzeichnisses wurde geändert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a></td>
+<td valign="top"> Informieren über unterstützte Nachrichten.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_SENDCLICK">AV_SENDCLICK</a></td>
+<td valign="top"> Maus-Ereignis senden.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_SENDKEY">AV_SENDKEY</a></td>
+<td valign="top"> Tastatur-Ereignis senden.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_SETWINDPOS">AV_SETWINDPOS</a></td>
+<td valign="top"> Position für Verzeichnisfenster festlegen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_STARTED">AV_STARTED</a></td>
+<td valign="top"> Antwort auf eine <a href="#VA_START">VA_START</a>-Nachricht.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_STARTPROG">AV_STARTPROG</a></td>
+<td valign="top"> Starten einer Applikation bzw. Datei.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_STATUS">AV_STATUS</a></td>
+<td valign="top"> Aktuellen Status setzen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_VIEW">AV_VIEW</a></td>
+<td valign="top"> Viewer für einen bestimmten Dateityp laden.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_WHAT_IZIT">AV_WHAT_IZIT</a></td>
+<td valign="top"> Information über Position auf dem Bildschirm.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#AV_XWIND">AV_XWIND</a></td>
+<td valign="top"> Öffnet ein Datei-Fenster.
+
+</td></tr>
+</table>
+
+<p>Querverweis: <a href="#VA-Funktionen">VA-Funktionen</a> &nbsp; <a href="evnt.html#Nachrichten">Nachrichten</a>
+</p>
+<h4><a name="AV_ACCWINDCLOSED">15.1.2.1 AV_ACCWINDCLOSED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_ACCWINDCLOSED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4726
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server mit, daß ein Fenster
+geschlossen wurde. Dies braucht die Applikation nur in dem Fall zu
+tun, wenn sie selbst das Fenster schließt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">AES-Handle des Fensters</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_ACCWINDOPEN">15.1.2.2 AV_ACCWINDOPEN</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_ACCWINDOPEN«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4724
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht kann eine Applikation dem AV-Server
+mitteilen, daß sie ein Fenster geöffnet hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">AES-Handle des geöffneten Fensters</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ACCWINDCLOSED">AV_ACCWINDCLOSED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_ASKCONFONT">15.1.2.3 AV_ASKCONFONT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_ASKCONFONT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4714
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht fragt eine Applikation den AV-Server nach
+dem eingestellten Zeichensatz für das Console-Fenster.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a> &nbsp; <a href="#VA_CONFONT">VA_CONFONT</a> &nbsp; <a href="#VA_FILEFONT">VA_FILEFONT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_ASKFILEFONT">15.1.2.4 AV_ASKFILEFONT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_ASKFILEFONT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4712
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht fragt eine Applikation den AV-Server nach
+dem eingestellten Zeichensatz für Dateinamen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a> &nbsp; <a href="#VA_CONFONT">VA_CONFONT</a> &nbsp; <a href="#VA_FILEFONT">VA_FILEFONT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_ASKOBJECT">15.1.2.5 AV_ASKOBJECT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_ASKOBJECT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4716
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht fragt eine Applikation den AV-Server nach
+dem derzeit selektierten Objekt. Es wird der Name des derzeit
+selektierten Objektes zurückgegeben; ist kein Objekt selektiert, so
+ist der String leer.
+<br>&nbsp;
+<br>Falls mehrere Objekte selektiert sind, so sind ihre Namen durch
+Leerzeichen getrennt.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_OBJECT">VA_OBJECT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_COPY_DRAGGED">15.1.2.6 AV_COPY_DRAGGED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_COPY_DRAGGED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4728
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Über diese Nachricht teilt eine Applikation dem AV-Server mit,
+daß die Objekte, die auf sein Fenster gezogen wurden, zu kopieren
+sind. Dies kann z.B. nach dem Ziehen von Objekten auf das
+<i>TreeView</i>-Fenster erwünscht sein.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Status der Tastatur (Alt,Control,Shift)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4+5</td>
+  <td align="left" valign="top">Zeiger auf einen String, der den Namen des Zielobjektes enthält.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Achtung: Dies muss ein Pfad sein.</td>
+</tr>
+</table>
+</div>
+
+<br>Diese Nachricht ist nur als Antwort auf die Mitteilung VA_DRAGACCWIND
+gedacht.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_DRAGACCWIND">VA_DRAGACCWIND</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_COPYFILE">15.1.2.7 AV_COPYFILE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_COPYFILE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4755
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Dieser Befehl weist den AV-Server an, bestimmte Dateien oder
+Ordner zu kopieren bzw. zu verschieben.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf Quelldateien/Ordner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf den Zielordner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Verschiedene Flags</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 0 = Originale löschen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 1 = Kopien umbenennen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 2 = Ziel einfach überschreiben</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 3 = Nur symbolische Links der Quellen erzeugen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;     = (Bit 0 ist dann bedeutungslos)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 4-15 = reserviert, immer 0</td>
+</tr>
+</table>
+</div>
+
+<br>Mehrere Dateien müssen durch Leerzeichen voneinander getrennt,
+und Ordner stets mit abschließendem '\' angegeben werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_FILECOPIED">VA_FILECOPIED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_DELFILE">15.1.2.8 AV_DELFILE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_DELFILE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4757
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Dieser Befehl weist den AV-Server an, bestimmte Dateien bzw.
+Ordner zu löschen.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf die zu löschenden Dateien bzw. Ordner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Mehrere Dateien bzw. Ordner müssen stets durch Leerzeichen
+getrennt, und Ordner immer mit abschließendem '\' angegeben werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_FILEDELETED">VA_FILEDELETED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_DRAG_ON_WINDOW">15.1.2.9 AV_DRAG_ON_WINDOW</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_DRAG_ON_WINDOW«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4734
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server mit, daß Objekte auf
+eines seiner mittels AV_WHATIZIT erfragten Fenster gezogen worden
+sind.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">x-Position, wohin die Maus gezogen wurde</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">y-Position, wohin die Maus gezogen wurde</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Status der Tastatur (Alt,Control,Shift)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6+7</td>
+  <td align="left" valign="top">Zeiger auf einen String, der die Namen der Objekte enthält.</td>
+</tr>
+</table>
+</div>
+
+<br>Die Namen sind Namen von Dateien, Ordnern oder Laufwerken,
+jeweils durch ein Leerzeichen getrennt. Namen von Ordnern oder
+Laufwerken enden mit einem Backslash.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_DRAG_COMPLETE">VA_DRAG_COMPLETE</a> &nbsp; <a href="#VA_DRAGACCWIND">VA_DRAGACCWIND</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_EXIT">15.1.2.10 AV_EXIT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_EXIT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4736
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server mit, daß sie nicht mehr
+am Protokoll teilnimmt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">AES-ID der Applikation</td>
+</tr>
+</table>
+</div>
+
+<br>Das Absetzen dieser Nachricht sollte auf keinen Fall vergessen
+werden!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="appl.html#appl_init">appl_init</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_FILEINFO">15.1.2.11 AV_FILEINFO</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_FILEINFO«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4753
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit diesem Befehl wird der AV-Server aufgefordert, einen
+Informations-Dialog für eine bestimmte Datei bzw. einen Ordner
+anzuzeigen.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf Datei bzw. Ordnernamen (ggfs. durch Leerzeichen getrennt)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Mehrere Ordner bzw. Dateien werden durch Leerzeichen getrennt.
+Ordnernamen müssen mit abschließendem '\' übergeben werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_FILECHANGED">VA_FILECHANGED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_GETSTATUS">15.1.2.12 AV_GETSTATUS</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_GETSTATUS«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4703
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation erfragt beim AV-Server den aktuellen Status,
+den es diesem per AV_STATUS einmal gegeben hat.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_STATUS">AV_STATUS</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_OPENCONSOLE">15.1.2.13 AV_OPENCONSOLE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_OPENCONSOLE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4718
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation fordert den AV-Server auf, das Console-Fenster
+zu öffnen. Ist dieses bereits offen, so wird es nach vorne gebracht.
+<br>&nbsp;
+<br>Diese Aktion ist vor allem dann sinnvoll, wenn eine Applikation
+ein <a href="tos_main.html">TOS</a>-Programm mittels der <i>system</i>-Funktion starten möchte.
+<br>&nbsp;
+<br><b>Achtung:</b> GEM-Programme dürfen von einer Applikation
+auf keinen Fall per <i>system</i> gestartet werden. Ferner sollte
+diese Nachricht nur auf ausdrücklichen Wunsch des Benutzers
+eingesetzt werden, da sie ansonsten schnell zur Verwirrung führen
+kann.
+<br>&nbsp;
+<br>Diese Nachricht steht z.Zt. nur in Gemini zur Verfügung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENWIND">AV_OPENWIND</a> &nbsp; <a href="#AV_XWIND">AV_XWIND</a> &nbsp; <a href="#VA_CONSOLEOPEN">VA_CONSOLEOPEN</a> &nbsp; <a href="#VA_XOPEN">VA_XOPEN</a> &nbsp;
+<a href="#VA_WINDOPEN">VA_WINDOPEN</a> &nbsp; <a href="#AV_STARTPROG">AV_STARTPROG</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_OPENWIND">15.1.2.14 AV_OPENWIND</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_OPENWIND«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4720
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation fordert den AV-Server auf, ein Datei-Fenster
+zu öffnen.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den Pfad des Fensters</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf Wildcard der darzustellenden Daten</td>
+</tr>
+</table>
+</div>
+
+<br>Die Nachricht sollte nur dann eingesetzt werden, wenn die
+Ursache für den Benutzer klar ersichtlich ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a> &nbsp; <a href="#AV_XWIND">AV_XWIND</a> &nbsp; <a href="#VA_CONSOLEOPEN">VA_CONSOLEOPEN</a> &nbsp; <a href="#VA_WINDOPEN">VA_WINDOPEN</a> &nbsp;
+<a href="#VA_XOPEN">VA_XOPEN</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_PATH_UPDATE">15.1.2.15 AV_PATH_UPDATE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_PATH_UPDATE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4730
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server mit, daß sich der Inhalt
+eines Verzeichnisses geändert hat. Dieses kann dann neu eingelesen
+bzw. dargestellt werden.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den absoluten Pfad</td>
+</tr>
+</table>
+</div>
+
+<br>In Gemini wirkt dies auch auf die Unterverzeichnisse. Ein Update
+von 'C:\' sorgt also dafür, daß alles, was mit Laufwerk C:\ zu tun
+hat, aktualisiert wird.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENWIND">AV_OPENWIND</a> &nbsp; <a href="#AV_XWIND">AV_XWIND</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_PROTOKOLL">15.1.2.16 AV_PROTOKOLL</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_PROTOKOLL«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4700
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht sollte bei anderen Applikationen und dem
+AV-Server nachgefragt werden, ob und welche <a href="evnt.html#Nachrichten">Nachrichten</a> verstanden
+werden.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Bit 0 = VA_SETSTATUS</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 1 = VA_START</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 2 = AV_STARTED</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 3 = VA_FONTCHANGED</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 4 = <a href="#Quoting_20im_20AV-Protokoll">Quoting von Dateinamen</a> wird verstanden und benutzt</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 5 = <a href="#VA_PATH_UPDATE">VA_PATH_UPDATE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 6-15 = reserviert, immer 0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4+5</td>
+  <td align="left" valign="top">reserviert, immer 0</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6+7</td>
+  <td align="left" valign="top">Zeiger auf den Programm-Namen wie er</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">auch bei appl_find übergeben</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">werden muß (8 Zeichen lang und nullterminiert).</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_STARTED">AV_STARTED</a> &nbsp; <a href="#VA_FONTCHANGED">VA_FONTCHANGED</a> &nbsp; <a href="#VA_SETSTATUS">VA_SETSTATUS</a> &nbsp; <a href="#VA_START">VA_START</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_SENDCLICK">15.1.2.17 AV_SENDCLICK</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_SENDCLICK«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4709
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation schickt dem AV-Server einen Maus-Event.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">ev_mmox</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">ev_mmoy</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">ev_mmobutton</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">ev_mmokstate</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">ev_mbreturn</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="evnt.html#evnt_button">evnt_button</a> &nbsp; <a href="evnt.html#evnt_multi">evnt_multi</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_SENDKEY">15.1.2.18 AV_SENDKEY</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_SENDKEY«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4710
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation schickt dem AV-Server einen Tastatur-Event,
+den sie möglicherweise selbst nicht versteht.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Status der Tastatur (ev_mmokstate)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Scancode der Taste  (ev_mkreturn)</td>
+</tr>
+</table>
+</div>
+
+<br>Als inoffizielle Erweiterung (&quot;CodeAlpha&quot;) existiert
+ein Konzept, mit dem auch ASCII Zeichen übertragen werden können, zu
+denen kein Scancode existiert. Hierzu wird als Scancode 0, als ASCII
+Wert der gewünschte und in msg[5] der Wert $5048 übergeben,
+letzteres um anzuzeigen, daß msg[4] tatsächlich gültig ist und
+keine Umrechnung über Scancode-Tabellen erforderlich ist.
+<br>&nbsp;
+<br>Diese Nachricht sollte nach Möglichkeit immer unterstützt
+werden, da mit ihrer Hilfe u.a. ein applikationsübergreifendes
+Wechseln der Fenster realisiert werden kann.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="evnt.html#evnt_keybd">evnt_keybd</a> &nbsp; <a href="evnt.html#evnt_multi">evnt_multi</a> &nbsp; <a href="scancode.html">Scan-Code Tabelle</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_SETWINDPOS">15.1.2.19 AV_SETWINDPOS</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_SETWINDPOS«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4759
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit diesem Befehl kann ein Client angeben, an welcher Position
+und mit welcher Größe das nächste Verzeichnisfenster vom AV-Server
+geöffnet werden soll.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">x-Position</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">y-Position</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Breite</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">Höhe des Fensters</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Bei den Werten in Word-3 und Word-4 handelt es sich um
+<i>absolute</i> Koordinaten. Wird durch <a href="#AV_XWIND">AV_XWIND</a> kein neues Fenster
+geöffnet (sondern nur ein bereits geöffnetes Fenster getoppt), so
+hat dieser Befehl keine Wirkung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENWIND">AV_OPENWIND</a> &nbsp; <a href="#AV_XWIND">AV_XWIND</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_STARTED">15.1.2.20 AV_STARTED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_STARTED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4738
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server mit, daß es die
+VA_START-Nachricht verstanden hat. Der Server kann daraufhin den
+Speicher des Strings, der an die Nachricht gehängt war, freigeben.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf eine Kommandozeile, in der Pfad oder</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Dateinamen stehen können, und der auch NULL sein darf.</td>
+</tr>
+</table>
+</div>
+
+<br>Um zu erkennen, um welche VA_START-Nachricht es sich handelt,
+werden die Werte von VA_START zurückgeliefert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_START">VA_START</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_STARTPROG">15.1.2.21 AV_STARTPROG</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_STARTPROG«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4722
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation fordert den AV-Server auf, ein Programm zu
+starten.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den Programmnamen mit komplettem Pfad</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf eine Kommandozeile (kann NULL sein)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">beliebiges 16-Bit Wort, welches in VA_PROGSTART wieder zurückgeliefert wird.</td>
+</tr>
+</table>
+</div>
+
+<br>In Gemini werden auch die angemeldeten Applikationen mit
+berücksichtigt. Dadurch ist es möglich eine Datei anzugeben, für
+die dann ein Programm gesucht wird.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_PROGSTART">VA_PROGSTART</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_STATUS">15.1.2.22 AV_STATUS</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_STATUS«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4704
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation teilt dem AV-Server seinen Status mit, der von
+diesem gespeichert und später per AV_GETSTATUS wieder abgefragt werden
+kann.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf einen String der keine Steuerzeichen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">enthalten, und nicht länger als 256 Zeichen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">sein darf. Der Zeiger darf auch NULL sein.</td>
+</tr>
+</table>
+</div>
+
+<br>Die Applikation muss sich vorher beim Server per AV_PROTOKOLL
+angemeldet haben.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_GETSTATUS">AV_GETSTATUS</a> &nbsp; <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_VIEW">15.1.2.23 AV_VIEW</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_VIEW«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4751
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit diesem Befehl wird der AV-Server angewiesen, den Viewer
+für eine bestimmte Datei aufzurufen.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den Namen der anzuzeigenden Datei.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">0 = Startet den Viewer</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">1 = Startet den Editor</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Es darf nur eine <i>einzelne</i> Datei angegeben werden; ist
+kein entsprechender Viewer vorhanden, so erhält der Benutzer eine
+Fehlermeldung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_VIEWED">VA_VIEWED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_WHAT_IZIT">15.1.2.24 AV_WHAT_IZIT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_WHAT_IZIT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4732
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation fragt beim AV-Server nach, was sich an einer
+bestimmten Position auf dem Bildschirm befindet.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">x-Koordinate</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">y-Koordinate</td>
+</tr>
+</table>
+</div>
+
+<br>Die Koordinaten sind normale Pixelkoordinaten mit Ursprung in
+der linken oberen Bildschirmecke.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#VA_THAT_IZIT">VA_THAT_IZIT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="AV_XWIND">15.1.2.25 AV_XWIND</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »AV_XWIND«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4740
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Eine Applikation fordert den AV-Server auf, ein Datei-Fenster
+zu öffnen. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf den Pfad für das Fenster</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf Wildcard als Filter für die Anzeige</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">Bitmaske</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0001 = Fenster evtl. toppen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0002 = Wildcard soll nur selektieren</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">0x0004 = Vorhandenes Fenster soll</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; weiterverwendet werden.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Alle anderen Bits müssen auf Null gesetzt werden.</td>
+</tr>
+</table>
+</div>
+
+<br>Diese Nachricht sollte nur dann eingesetzt werden, wenn die
+Ursache für den Benutzer klar ersichtlich ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#AV-Funktionen">AV-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a> &nbsp; <a href="#AV_OPENWIND">AV_OPENWIND</a> &nbsp; <a href="#VA_CONSOLEOPEN">VA_CONSOLEOPEN</a> &nbsp; <a href="#VA_WINDOPEN">VA_WINDOPEN</a> &nbsp;
+<a href="#VA_XOPEN">VA_XOPEN</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="VA-Funktionen">15.1.3 VA-Funktionen</a></h3>
+<p>Diese Nachrichten werden von einem vorhandenen AV-Server an eine
+Applikation geschickt.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_ACC_QUOTING_28a_29">VA_ACC_QUOTING(a)</a></td>
+<td valign="top"> Protokoll-Status auf Quoting testen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_CONFONT">VA_CONFONT</a></td>
+<td valign="top"> Zeichensatz der Console übermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_CONSOLEOPEN">VA_CONSOLEOPEN</a></td>
+<td valign="top"> Ermitteln, ob Console-Fenster geöffnet ist.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_COPY_COMPLETE">VA_COPY_COMPLETE</a></td>
+<td valign="top"> Antwort auf AV_COPY.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_DRAGACCWIND">VA_DRAGACCWIND</a></td>
+<td valign="top"> Objekte wurden auf Appl.-Fenster gezogen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_DRAG_COMPLETE">VA_DRAG_COMPLETE</a></td>
+<td valign="top"> <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a>-Aktion ist beendet.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_FILECHANGED">VA_FILECHANGED</a></td>
+<td valign="top"> Antwort auf <a href="#AV_FILEINFO">AV_FILEINFO</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_FILECOPIED">VA_FILECOPIED</a></td>
+<td valign="top"> Antwort auf <a href="#AV_COPYFILE">AV_COPYFILE</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_FILEDELETED">VA_FILEDELETED</a></td>
+<td valign="top"> Antwort auf <a href="#AV_DELFILE">AV_DELFILE</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_FILEFONT">VA_FILEFONT</a></td>
+<td valign="top"> Zeichensatz für Dateien übermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_FONTCHANGED">VA_FONTCHANGED</a></td>
+<td valign="top"> Ein eingestellter Zeichensatz wurde verändert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_OBJECT">VA_OBJECT</a></td>
+<td valign="top"> Liefert die Namen der selektierten Objekte.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_PATH_UPDATE">VA_PATH_UPDATE</a></td>
+<td valign="top"> Inhalt eines Verzeichnisses wurde geändert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_PROGSTART">VA_PROGSTART</a></td>
+<td valign="top"> Information, ob Programm gestartet werden konnte.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_PROTOSTATUS">VA_PROTOSTATUS</a></td>
+<td valign="top"> Antwort auf <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_SERVER_QUOTING_28a_29">VA_SERVER_QUOTING(a)</a></td>
+<td valign="top"> Protokoll-Status auf Quoting testen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_SETSTATUS">VA_SETSTATUS</a></td>
+<td valign="top"> Status einer Applikation übermitteln.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_START">VA_START</a></td>
+<td valign="top"> Eine Applikation wurde aktiviert.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_THAT_IZIT">VA_THAT_IZIT</a></td>
+<td valign="top"> Informiert über Objekt an Bildschirmposition.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_VIEWED">VA_VIEWED</a></td>
+<td valign="top"> Antwort auf <a href="#AV_VIEW">AV_VIEW</a>.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_WINDOPEN">VA_WINDOPEN</a></td>
+<td valign="top"> Gibt an, ob das Console-Fenster geöffnet ist.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#VA_XOPEN">VA_XOPEN</a></td>
+<td valign="top"> Gibt an, ob ein Fenster geöffnet werden konnte.
+
+</td></tr>
+</table>
+
+<p>Querverweis: <a href="#AV-Funktionen">AV-Funktionen</a> &nbsp; <a href="evnt.html#Nachrichten">Nachrichten</a>
+</p>
+<h4><a name="VA_ACC_QUOTING_28a_29">15.1.3.1 VA_ACC_QUOTING(a)</a></h4>
+<p>Dies ist ein Test des Protokollstatus auf Quoting. In C läßt
+sich der Test als Makro wie folgt realisieren:
+</p>
+<pre>#define VA_ACC_QUOTING(a)   ((a) &amp; 0x10)
+</pre>
+<h4><a name="VA_CONFONT">15.1.3.2 VA_CONFONT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_CONFONT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4715
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Liefert den derzeit eingestellten Zeichensatz für das
+Console-Fenster. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Zeichensatznummer (ID)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Zeichensatzgröße (Points)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a> &nbsp; <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a> &nbsp; <a href="#VA_FILEFONT">VA_FILEFONT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_CONSOLEOPEN">15.1.3.3 VA_CONSOLEOPEN</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_CONSOLEOPEN«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4719
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Gibt zurück, ob das Console-Fenster nach vorne gebracht worden
+ist.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">&nbsp;0&nbsp; = nein</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&lt;&gt;0 = ja</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_COPY_COMPLETE">15.1.3.4 VA_COPY_COMPLETE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_COPY_COMPLETE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4729
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht ist eine direkte Antwort auf <a href="#AV_COPY_DRAGGED">AV_COPY_DRAGGED</a>.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Status des Kopierens</td>
+</tr>
+</table>
+</div>
+
+<br>Ein Wert &lt;&gt; 0 gibt an, daß wirklich etwas kopiert oder
+verschoben worden ist. Dies kann die Applikation evtl. zum Neuaufbau
+eines Fensters nutzen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_COPY_DRAGGED">AV_COPY_DRAGGED</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_DRAGACCWIND">15.1.3.5 VA_DRAGACCWIND</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_DRAGACCWIND«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4725
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server teilt einer Applikation mit, daß Objekte auf
+eines seiner mittels <a href="#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a> angemeldeten Fenster gezogen
+worden sind.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">AES-Handle des Fensters</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">x-Position der Maus</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">y-Position der Maus</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6+7</td>
+  <td align="left" valign="top">Zeiger auf einen String, der die Namen der Objekte enthält.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a> &nbsp; <a href="#AV_ACCWINDCLOSED">AV_ACCWINDCLOSED</a> &nbsp; <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_DRAG_COMPLETE">15.1.3.6 VA_DRAG_COMPLETE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_DRAG_COMPLETE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4735
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server teilt einer Applikation mit, daß die Aktion die
+per <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a> ausgelöst wurde, beendet ist.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Word 3</td>
+<td valign="top"> Status der Aktion
+<br>&nbsp;
+<br>Ein Wert &lt;&gt; 0 bedeutet, daß wirklich etwas kopiert oder
+verschoben wurde. Dies kann die Applikation evtl. zum Neuaufbau eines
+Fensters nutzen.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>Der zurückgelieferte Wert entspricht dem, der auch bei
+AV_COPY_COMPLETE zurück gegeben wird.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a> &nbsp; <a href="#VA_DRAGACCWIND">VA_DRAGACCWIND</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_FILECHANGED">15.1.3.7 VA_FILECHANGED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_FILECHANGED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4754
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom AV-Server als Antwort auf eine
+<a href="#AV_FILEINFO">AV_FILEINFO</a>-<a href="proto_ssp.html#Message">Message</a> an den Client geschickt.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Word 3+4</td>
+<td valign="top"> Zeiger auf die Namen der Dateien bzw. Ordner die bei AV_FILEINFO
+übergeben wurden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Word 5-7</td>
+<td valign="top"> reserviert (immer 0)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>Beachtet werden sollte, daß der Benutzer die Dateinamen im
+Dialog verändert haben könnte, und deshalb ggfs. der über die
+Wörter 3+4 erreichbare String nicht mehr mit dem von <a href="#AV_FILEINFO">AV_FILEINFO</a>
+übereinstimmt.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_FILEINFO">AV_FILEINFO</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_FILECOPIED">15.1.3.8 VA_FILECOPIED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_FILECOPIED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4756
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom AV-Server als Antwort auf eine
+AV_COPYFILE-<a href="proto_ssp.html#Message">Message</a> an den Client geschickt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0 = Fehler</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">1 = alles ok</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_COPYFILE">AV_COPYFILE</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_FILEDELETED">15.1.3.9 VA_FILEDELETED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_FILEDELETED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4758
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom AV-Server als Antwort auf eine
+AV_DELFILE-<a href="proto_ssp.html#Message">Message</a> an den Client geschickt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0 = Fehler</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">1 = alles ok</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_DELFILE">AV_DELFILE</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_FILEFONT">15.1.3.10 VA_FILEFONT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_FILEFONT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4713
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Liefert den derzeit eingestellten Zeichensatz für ein
+Dateifenster zurück.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Zeichensatznummer (ID)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Zeichensatzgröße (Points)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a> &nbsp; <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a> &nbsp; <a href="#VA_CONFONT">VA_CONFONT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_FONTCHANGED">15.1.3.11 VA_FONTCHANGED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_FONTCHANGED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4739
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server informiert eine Applikation darüber, daß sich
+einer der eingestellten Zeichensätze verändert hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">Zeichensatz für Dateifenster (ID)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Größe des Zeichensatzes (Points)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">Zeichensatz für Console-Fenster (ID)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6</td>
+  <td align="left" valign="top">Größe des Zeichensatzes (Points)</td>
+</tr>
+</table>
+</div>
+
+<br>Die Nachricht wird an alle Applikationen geschickt, die vorher
+schon einmal einen Zeichensatz beim AV-Server erfragt haben.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a> &nbsp; <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a> &nbsp; <a href="#VA_FILEFONT">VA_FILEFONT</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_OBJECT">15.1.3.12 VA_OBJECT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_OBJECT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4717
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Liefert die Namen der derzeit selektierten Objekte.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf eine Kommandozeile mit den Namen der selektierten Objekte.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_ASKOBJECT">AV_ASKOBJECT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_PATH_UPDATE">15.1.3.13 VA_PATH_UPDATE</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_PATH_UPDATE«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4760
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Mit dieser Nachricht teilt der AV-Server einem Client mit, daß
+sich der Inhalt eines Verzeichnisses geändert hat.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf das Verzeichnis</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Das angegebene Verzeichnis ist stets mit dem Zeichen '\'
+abgeschlossen. Der Client muss zunächst per <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> anzeigen,
+daß er diese Nachricht versteht, und beim Eintreffen derselben dann
+alle betroffenen Unterverzeichnisse neu einlesen bzw. schließen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_PROGSTART">15.1.3.14 VA_PROGSTART</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_PROGSTART«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4723
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server informiert eine Applikation, ob ein angegebenes
+Programm gestartet wurde.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">&nbsp;0&nbsp; = nicht gestartet</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&lt;&gt;0 = gestartet</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Returncode des Programms</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 7</td>
+  <td align="left" valign="top">16-Bit Wort aus AV_STARTPROG</td>
+</tr>
+</table>
+</div>
+
+<br>Im allgemeinen wird die Applikation im Fehlerfall sofort eine
+Nachricht bekommen; falls das Programm aber gestartet wird, erhält
+die Applikation diese Nachricht erst nach dem Start des Programms, da
+die Routine, welche den <a href="gemdos_process.html#Pexec">Pexec</a> ausführt, nicht mehr wissen kann, das
+eine Applikation noch schnell eine Nachricht bekommen muss. Bei einem
+GEM-Programm kann man den Erfolg auch an dem <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> erkennen.
+<br>&nbsp;
+<br>Die Fehlererkennung ist leider nicht optimal; ferner weist der
+Rückgabewert nicht aus, ob das Programm fehlerfrei gelaufen ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_STARTPROG">AV_STARTPROG</a> &nbsp; <a href="#VA_START">VA_START</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_PROTOSTATUS">15.1.3.15 VA_PROTOSTATUS</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_PROTOSTATUS«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4701
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Dem Sender von <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> wird mitgeteilt, daß der
+Empfänger etwas von diesem Protokoll weiß. Die Worte 3-7 des
+Nachrichtenpuffers enthalten die Information, welche <a href="evnt.html#Nachrichten">Nachrichten</a>
+verstanden werden.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">WORD 3</td>
+  <td align="left" valign="top">Bit 0 = <a href="#AV_SENDKEY">AV_SENDKEY</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 1&nbsp; = <a href="#AV_ASKFILEFONT">AV_ASKFILEFONT</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 2&nbsp; = <a href="#AV_ASKCONFONT">AV_ASKCONFONT</a>, <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 3&nbsp; = <a href="#AV_ASKOBJECT">AV_ASKOBJECT</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 4&nbsp; = <a href="#AV_OPENWIND">AV_OPENWIND</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 5&nbsp; = <a href="#AV_STARTPROG">AV_STARTPROG</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 6&nbsp; = <a href="#AV_ACCWINDOPEN">AV_ACCWINDOPEN</a>, <a href="#AV_ACCWINDCLOSED">AV_ACCWINDCLOSED</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 7&nbsp; = <a href="#AV_STATUS">AV_STATUS</a>, <a href="#AV_GETSTATUS">AV_GETSTATUS</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 8&nbsp; = <a href="#AV_COPY_DRAGGED">AV_COPY_DRAGGED</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 9&nbsp; = <a href="#AV_PATH_UPDATE">AV_PATH_UPDATE</a>, <a href="#AV_WHAT_IZIT">AV_WHAT_IZIT</a>, <a href="#AV_DRAG_ON_WINDOW">AV_DRAG_ON_WINDOW</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 10 = <a href="#AV_EXIT">AV_EXIT</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 11 = <a href="#AV_XWIND">AV_XWIND</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 12 = <a href="#VA_FONTCHANGED">VA_FONTCHANGED</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 13 = <a href="#AV_STARTED">AV_STARTED</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 14 = <a href="#Quoting_20im_20AV-Protokoll">Quoting von Dateinamen</a> wird</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; verstanden und benutzt.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 15 = <a href="#AV_FILEINFO">AV_FILEINFO</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">WORD 4</td>
+  <td align="left" valign="top">Bit 0 = <a href="#AV_COPYFILE">AV_COPYFILE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 1 = <a href="#AV_DELFILE">AV_DELFILE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 2 = <a href="#AV_VIEW">AV_VIEW</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 3 = <a href="#AV_SETWINDPOS">AV_SETWINDPOS</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 4 = erlaubt Anlegen symbolischer Links</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;     &nbsp; mit <a href="#AV_COPYFILE">AV_COPYFILE</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Bit 5 = <a href="#AV_SENDCLICK">AV_SENDCLICK</a></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5</td>
+  <td align="left" valign="top">reserviert</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 6+7</td>
+  <td align="left" valign="top">Zeiger auf den Programmnamen, wie er auch bei appl_find übergeben werden muss.</td>
+</tr>
+</table>
+</div>
+
+<br>Gesetzte Bits signalisieren, daß eine Nachricht bzw. eine
+Nachrichtengruppe verstanden wird. Alle nicht belegten Bits
+(insbesondere in den Worten 4 und 5) sind für zukünftige Zwecke
+reserviert, und sollten daher mit Null vorbesetzt werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_PROTOKOLL">AV_PROTOKOLL</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_SERVER_QUOTING_28a_29">15.1.3.16 VA_SERVER_QUOTING(a)</a></h4>
+<p>Dies ist ein Test des Protokollstatus auf Quoting. In C läßt
+sich der Test als Makro wie folgt realisieren:
+</p>
+<pre>#define VA_SERVER_QUOTING(a)  ((a) &amp; 0x40)
+</pre>
+<h4><a name="VA_SETSTATUS">15.1.3.17 VA_SETSTATUS</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_SETSTATUS«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4705
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server teilt einer Applikation den abgespeicherten
+Status bei Nachfrage durch AV_GETSTATUS mit.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf einen String, der keine Steuerzeichen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">enthält. Ein NULL-Wert gibt an, daß kein Status</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">gespeichert war.</td>
+</tr>
+</table>
+</div>
+
+<br>Der gelieferte Status kann anschließend von der Applikation
+gesetzt werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_GETSTATUS">AV_GETSTATUS</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_START">15.1.3.18 VA_START</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_START«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4711
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom AV-Server zum Start einer Applikation
+benötigt. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3+4</td>
+  <td align="left" valign="top">Zeiger auf eine Kommandozeile, in welcher</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">Pfade oder Dateinamen stehen, oder NULL.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_STARTPROG">AV_STARTPROG</a> &nbsp; <a href="#AV_STARTED">AV_STARTED</a> &nbsp; <a href="#VA_PROGSTART">VA_PROGSTART</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_THAT_IZIT">15.1.3.19 VA_THAT_IZIT</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_THAT_IZIT«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4733
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server teilt einer Applikation auf Nachfrage mit, was
+sich an einer bestimmten Position auf dem Bildschirm befindet.
+<br>&nbsp;
+<a name="VA_OB_UNKNOWN"></a>
+<a name="VA_OB_TRASHCAN"></a>
+<a name="VA_OB_SHREDDER"></a>
+<a name="VA_OB_CLIPBOARD"></a>
+<a name="VA_OB_FILE"></a>
+<a name="VA_OB_FOLDER"></a>
+<a name="VA_OB_DRIVE"></a>
+<a name="VA_OB_WINDOW"></a>
+<a name="VA_OB_NOTEPAD"></a>
+<a name="VA_OB_NOTE"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">ID der zuständigen Applikation</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4</td>
+  <td align="left" valign="top">Typ des Objektes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_UNKNOWN&nbsp;&nbsp;&nbsp;(0) = unbekannt</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_TRASHCAN&nbsp;&nbsp;(1) = Papierkorb</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_SHREDDER&nbsp;&nbsp;(2) = Reißwolf</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_CLIPBOARD&nbsp;(3) = Klemmbrett</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_FILE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(4) = Datei</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_FOLDER&nbsp;&nbsp;&nbsp;&nbsp;(5) = Ordner</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_DRIVE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(6) = Laufwerkssymbol</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_WINDOW&nbsp;&nbsp;&nbsp;&nbsp;(7) = Fenster</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_NOTEPAD&nbsp;&nbsp;&nbsp;(8) = Notizblock</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">VA_OB_NOTE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(9) = &nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 5+6</td>
+  <td align="left" valign="top">Zeiger auf den Namen des Objektes, oder NULL.</td>
+</tr>
+</table>
+</div>
+
+<br>Alle anderen Werte sind für zukünftige Zwecke reserviert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_WHAT_IZIT">AV_WHAT_IZIT</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_VIEWED">15.1.3.20 VA_VIEWED</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_VIEWED«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4752
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Diese Nachricht wird vom AV-Server als Antwort auf eine
+AV_VIEW-<a href="proto_ssp.html#Message">Message</a> an den Client verschickt.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">0 = Fehler</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">1 = alles ok</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 4-7</td>
+  <td align="left" valign="top">reserviert (immer 0)</td>
+</tr>
+</table>
+</div>
+
+<br>Mit Hilfe dieser Nachricht teilt der Server dem Client mit, ob
+die gewünschte Datei angezeigt wird, oder nicht. Die Antwort wird
+sofort und immer verschickt, falls ein Fehler aufgetreten ist;
+anderenfalls erhält man die Antwort in einer Multitasking-Umgebung
+sobald der Viewer aktiv ist (oder unter Single-<a href="tos_main.html">TOS</a> nach Beendigung des
+Viewers) falls der Server nicht vorher beendet wurde (z.B. durch
+Auslagerung vor dem Start des Viewers).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_VIEW">AV_VIEW</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_WINDOPEN">15.1.3.21 VA_WINDOPEN</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_WINDOPEN«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4721
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server informiert eine Applikation darüber, ob das
+Console-Fenster geöffnet werden konnte.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENCONSOLE">AV_OPENCONSOLE</a> &nbsp; <a href="#VA_CONSOLEOPEN">VA_CONSOLEOPEN</a> &nbsp; <a href="#AV-Protokoll">AV-Protokoll</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="VA_XOPEN">15.1.3.22 VA_XOPEN</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »VA_XOPEN«
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Nummer:</td>
+<td valign="top"> 0x4741
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Der AV-Server informiert eine Applikation darüber, ob ein
+angegebenes Fenster geöffnet werden konnte.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Word 3</td>
+  <td align="left" valign="top">&nbsp;0&nbsp; = nein</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&lt;&gt;0 = ja</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#VA-Funktionen">VA-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#AV_OPENWIND">AV_OPENWIND</a> &nbsp; <a href="#AV_XWIND">AV_XWIND</a> &nbsp; <a href="#VA_WINDOPEN">VA_WINDOPEN</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="protocols.html"><img src="udo_lf.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_rg_FOOT" href="proto_bubblegem.html"><img src="udo_rg.gif" alt="BubbleGEM" title="BubbleGEM" border="0" width="24" height="24">BubbleGEM</a>
+</body>
+</html>

@@ -1,0 +1,709 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: GDPS: Gerti's Driver Piping System
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_HEAD" href="proto_font.html"><img src="udo_lf.gif" alt="Font protocol" title="Font protocol" border="0" width="24" height="24">Font protocol</a>
+<a name="UDO_nav_rg_HEAD" href="proto_ltl.html"><img src="udo_rg.gif" alt="LTL protocol" title="LTL protocol" border="0" width="24" height="24">LTL protocol</a>
+
+<hr>
+
+<h1><a name="GDPS:_20Gerti_27s_20Driver_20Piping_20System">15.6 GDPS: Gerti's Driver Piping System</a></h1>
+<p>As of: 1990-08-23
+</p>
+<ul class="content">
+	<li>15.6.1 <a href="#General_20description">General description</a>
+	<li>15.6.2 <a href="#Definition_20of_20the_20driver_20daisy_20chain">Definition of the driver daisy chain</a>
+	<li>15.6.3 <a href="#Data_20structure">Data structure</a>
+	<li>15.6.4 <a href="#Driver_20types">Driver types</a>
+	</li>
+</ul>
+<br>
+<h3><a name="General_20description">15.6.1 General description</a></h3>
+<p>This driver concept is intended to enable calling of
+memory-resident device drivers of various types from any desired
+programs. The communication between the programs and the drivers takes
+place via a data structure made available by the driver. A fixed
+kernel for the data structure is prescribed for this, which must be
+adhered to by all drivers that comply with this standard. In addition,
+some extensions are possible. From the version numbers the calling
+program then can establish if and which extensions of the data
+structure are present. All data structures are upwardly compatible.
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> Preliminary remarks
+<br>&nbsp;
+<br>All values that require more than 1 byte are defined always in
+the order MSB...LSB. The sample codes are formulated in 68000
+Assembler. The description for ATARI ST follows.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<h3><a name="Definition_20of_20the_20driver_20daisy_20chain">15.6.2 Definition of the driver daisy chain</a></h3>
+<p>Basis of the GDPS is the vector $41C which is unused by the
+operating system. Normally this vector contains 0L. In GDPS this
+vector points to the header of the first device driver in the chain.
+This header is built up as follows (rAdr=relative Address, S=Size):
+</p>
+<pre>     rAdr S  Meaning
+
+      OH  L  Pointer to the next driver header, or 0 in last driver
+             of the chain
+      4H  L  'GDPS' = 0x47445053 magic string as identifier for GDPS
+</pre>
+<p>From this follows the method for linking a driver in and out of
+the chain.
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> Linking in of a driver
+<br>&nbsp;
+<br>The driver copies the vector placed at 0x41C into its header.
+Subsequently it enters the address of its header into 0x41C.
+<br>&nbsp;
+<br>Assembler example (to be executed in supervisor-mode):
+<br>&nbsp;
+<pre>    len     header(pe),a0  * Address of the GDPS header
+    clr.l   (a0)           * Initialize NEXT to 0
+    cmp.l   0x41C,a0       * = old value
+    beq     unten          * Yes, no endless chaining!
+    move.l  0x41C,(a0)     * sonst NEXT eintragen
+    move.l  a0,0x41C       * and link header into the chain
+</pre>
+</p></li>
+<li><p> Unlinking of a driver
+<br>&nbsp;
+<br>The driver searches the chain for the pointer to its header. It
+then replaces it with a pointer found in its header.
+<br>&nbsp;
+<br>Assembler example (to be executed in supervisor-mode):
+<br>&nbsp;
+<pre>               move.l  #0x41C,a0
+               lea     header(pe),a1
+   search:     cmp.l   (a0),a1
+               beq     found
+               move.l  (a0),a0
+               bra     search
+   found:      move.l  (a1),(a0)
+</pre>
+</p></li>
+<li><p> Searching for a driver
+<br>&nbsp;
+<br>Searches for a driver too should be performed in
+supervisor-mode. As the operating system does not set the variable
+0x41C to 0 at a warm start, one has to check for the magic string for
+each vector found.
+<br>&nbsp;
+<br>There follows a sample routine in GFA Basic notation that writes
+the found and valid vectors into an integer array:
+<br>&nbsp;
+<pre>   DIM vector%(31)                 ! Here addresses of the drivers lie
+   index%=0                        ! Initialize counter to 0
+   adr%=SLPEEK($41C)               ! Address of the first driver
+   WHILE adr%&lt;&gt;0 AND SLPEEK(adr%+4)=$47445053
+                                   ! Test: Address valid and magic OK?
+      vector%(index%)=adr%         ! If yes, remember address
+      inc index%                   ! Increment counter by one
+   WEND
+   PRINT index%;&quot; Driver found!&quot;
+</pre>
+</p></li>
+</ol>
+
+<h3><a name="Data_20structure">15.6.3 Data structure</a></h3>
+<pre> rAdr S  Meaning
+  0H  L  Pointer to the next driver header, or 0 in last driver of
+         the chain
+  4H  L  'GDPS' = 0x47445053 magic string as identifier for GDPS
+  8H  W  100 = Version number (Data structure definition) * 100
+  AH  W  Driver type
+  CH  L  Pointer to driver info, 0-terminated string,  max. 32 chars.
+ 10H  L  Pointer to programmer/Copyright, 0-terminated string, max.
+         32 characters
+ 14H onwards follows the driver-specific data structure.
+</pre>
+<h3><a name="Driver_20types">15.6.4 Driver types</a></h3>
+<p>There may be any number of drivers in memory, even drivers of
+the same type!
+</p>
+<p>The driver types are first subdivided into groups:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Group</td>
+  <td align="left" valign="top">Driver type</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">000-0FF</td>
+  <td align="left" valign="top">Graphical input devices</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">100-1FF</td>
+  <td align="left" valign="top">Graphical output devices</td>
+</tr>
+<tr>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">200-2FF</td>
+  <td align="left" valign="top">Various input interfaces (ports)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">300-3FF</td>
+  <td align="left" valign="top">Various output interfaces (ports)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">400-4FF</td>
+  <td align="left" valign="top">I/O interfaces</td>
+</tr>
+<tr>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top">500-5FF</td>
+  <td align="left" valign="top">Mass storage</td>
+</tr>
+<tr>
+  <td align="left" valign="top">6-F</td>
+  <td align="left" valign="top">600-FFF</td>
+  <td align="left" valign="top">Reserved</td>
+</tr>
+<tr>
+  <td align="left" valign="top">10-FF</td>
+  <td align="left" valign="top">1000-FFFF</td>
+  <td align="left" valign="top">'Private' drivers, whose data structure is not</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">contained in the DPS definitions</td>
+</tr>
+</table>
+</div>
+
+<ul class="content">
+	<li>15.6.4.1 <a href="#Scanner_20driver_20group">Scanner driver group</a>
+	<li>15.6.4.2 <a href="#GDPS_2C_20virtual_20memory_20management">GDPS, virtual memory management</a>
+		</li>
+</ul>
+<br>
+<h4><a name="Scanner_20driver_20group">15.6.4.1 Scanner driver group</a></h4>
+<p><b><a href="introduction.html">Introduction</a>:</b> With bi-level data, a set bit corresponds
+to a pixel that is present. With multi-value data, a 0 corresponds to
+`nothing` and with increasing values the relevant colour intensity or
+brightness rises.
+</p>
+<p><b>Warning:</b> With commands in the 10xH group, greyscale
+images are inverted!
+</p>
+<pre>  14H  W  Scanner description
+          If this WORD contains the value 0 then the scanner/driver is
+          not yet initialized, execute command 105H
+          Bit 0: Bi-level possible
+              1: Dithering possible
+              2: Multi-value possible
+              3: Multi-value and dithering possible
+              4: Bi-level colour possible
+              5: Colour dithering possible
+              6: Multi-value in colour possible
+              7: Multi-value in colour and dithering possible
+              8: Compression of data (see below) possible
+              9: Block-wise return possible
+             10: Single sheet feed with separate command
+             11: Single sheet feed automatic
+             12: Prescan possible
+             13: Virtual memory management possible
+                 (GDPS-Version &gt;= 1.10)
+             14: Reserved (0)
+             15: Reserved (0)
+            Multi-value and dithering: Special mode, always 2 bits/pixel
+  16H  W  Number of colours
+  18H  W  Possible multi-value bit depths
+          Makeup:  Bit 0 set: Monochrome possible
+                   Bit 1 set: 2 grey-steps possible
+                   Bit 2 set: 4 grey-steps possible
+                   Bit 3 set: 8 grey-steps possible
+                   etc...
+  1AH  W  Reserve scanner
+  1CH  W  Command to scanner (0=Ready, 1-FFH reserved!!!)
+  1EH  L  Pointer to command structure
+</pre>
+<p>A scanner driver with its own user interface is assumed here. If
+a program wants to address the scanner driver, then this is done as
+follows:
+</p>
+<pre>   a) <a href="powerdos.html#Wait">Wait</a> until WORD 1AH = 0 (scanner free)
+   b) Reserve scanner be entering a WORD in 1AH
+   c) Create a command structure
+   d) Enter the pointer to the command structure in 1EH
+   e) Enter the command in 1CH
+   f) In an <a href="proto_xfsl.html#EVENT">EVENT</a> loop (!!) (timer- or multi-event) wait until the
+      command WORD of the scanner driver is set to 0 again
+   g) Repeat steps from c) onwards as often as required
+   h) Release scanner (enter 0 in 1AH)
+</pre>
+<p>The command structure to be made available by the calling
+program has three tasks:
+</p>
+<pre>   a) Passsing of the command structure
+   b) Return of a success or error message
+   c) Return of the parameters used
+</pre>
+<p>Makeup of the command structure:
+</p>
+<pre>   00H  W  Return value, is initialized by the calling program to 0.
+           After processing the command, the scanner driver enters
+           0xFFFF (=OK) or a positive error-message here.
+           If the scanner is operating in block mode, then 0xFFFE is
+           entered after a block and 0xFFFF after the last block. If
+           working in block mode AND in colour, there are two options:
+           a) The scanner scans the colour separations individually;
+              then the passing will proceed as above, but several
+              times corresponding to the number of colours.
+           b) The scanner scans all colours simultaneously; in that
+              case 0xFFFD is entered after the blocks. The returned
+              block then consists of 'number of colours' equal-sized
+              areas.
+   02H  W  Permitted scan modes. Makeup of this WORD is as for 14H;
+           a set bit denotes that the scanner driver may use the
+           corresponding mode.
+   04H  W  Permitted bit depths (makeup as above for 18H)
+   06H  L  Pointer to memory
+   0AH  L  Number of bytes in memory (Return: Number of bytes used)
+   0EH  W  Bytes per scanline, or 0 (always mod 2!)
+   10H  W  Number of scanlines, or 0
+   12H  W  Width of the image in 1/10 mm, or 0
+   14H  W  Height of the image in 1/10 mm, or 0
+   16H  W  Resolution in main scan direction (X) in dpi, or 0
+   18H  W  Resolution in sub scan direction (Y) in dpi, or 0
+           (For return: Resolution = Resolution * zoom factor!)
+   1AH  W  Modulo value for scanlines (in bytes, e.g. 2 = 2*n bytes
+           per scanline)
+   1CH  W  X-position of the image in 1/10 mm
+   1EH  W  Y-position of the image in 1/10 mm
+
+Since GDPS Version &gt;= 1.10:
+   20H  L  Serial number of the calling program
+   24H  W  (!I)add_bits:(!i) Additional memory required by program (in bits
+           per pixel)
+   26H  L  Pointer to 'Dchange_pointer' (function of the vmm)
+   2AH  L  Pointer to 'Dupdate' (function of the vmm)
+   2EH  W  (!I)v_handle(!i) READ (vmm)
+   30H  W  (!I)v_handle(!i) WRITE (vmm)
+   32H  W  (!I)virt_flag(!i) (1 = vmm being used)
+</pre>
+<p>vmm = <a href="#GDPS_2C_20virtual_20memory_20management">virtual memory management</a>
+</p>
+<p>After processing a command the scanner driver enters the
+<i>actually used values</i> into this data structure.
+</p>
+<p>If the image size is to remain fixed, then this can be defined
+with the WORDS 0EH, 10H or 12H, 14H, 1CH, 1EH. If both value pairs are
+preset, the default in bytes will be used. If the scanner is not able
+to scan in this format, a change may be made to suitable values if
+necessary; therefore, check the return vales!!
+</p>
+<p><b>Compression:</b>
+</p>
+<p>Bi-level and dither data are <i>always</i> packed in such a way
+that 8 pixels are present in a byte. For this the first pixel is
+entered in the most significant bit.
+</p>
+<p>Multi-value data are present either uncompressed, in which case
+one pixel occupies exactly one byte. Here (with fewer than 256 grey
+steps) the data is always formatted to the MS bit, and the LS bits are
+filled if appropriate (depending on the scanner with 0 or 1). In
+compressed form the multi-value data are packed in such a way that
+byte borders are not exceeded; if necessary empty bits are filled with
+(depending on the scanner) with 0 or 1:
+</p>
+<pre>                 +--+--+--+--+--+--+--+--+
+   2 bits/pixel  |B1|B0|B1|B0|B1|B0|B1|B0|   -&gt; 4 pixels/byte
+                 +--+--+--+--+--+--+--+--+
+
+                 +--+--+--+--+--+--+--+--+
+   3 bits/pixel  |B2|B1|B0|--|B2|B1|B0|--|   -&gt; 2 pixels/byte
+                 +--+--+--+--+--+--+--+--+
+
+                 +--+--+--+--+--+--+--+--+
+   4 bits/pixel  |B3|B2|B1|B0|B3|B2|B1|B0|   -&gt; 2 pixels/byte
+                 +--+--+--+--+--+--+--+--+
+
+                 +--+--+--+--+--+--+--+--+
+   5 bits/pixel  |B4|B3|B2|B1|B0|--|--|--|   -&gt; 1 pixel/byte
+                 +--+--+--+--+--+--+--+--+
+
+                 +--+--+--+--+--+--+--+--+
+   6 bits/pixel  |B5|B4|B3|B2|B1|B0|--|--|   -&gt; 1 pixel/byte
+                 +--+--+--+--+--+--+--+--+
+   etc.
+</pre>
+<p>If the compression bit is not set in the command structure, then
+the data are decompressed by the scanner driver if necessary. If the
+bit is set, however, then after processing the command one has to test
+whether the data are really compressed.
+</p>
+<p>Fixed commands:
+</p>
+<pre>   100H: Scan
+           The user dialog is called up, and if appropriate the scan
+           process is performed
+   101H: Continue
+           In block mode this command continues the scan
+   102H: Scan without dialog
+           The scanning process is initiated without further user
+           intervention; the same user-set parameters are used as
+           for the previous scan
+   103H: Next sheet
+           The next sheet is fed in from the single-sheet tray
+   104H: Prescan
+           Executes a prescan with set parameters
+   105H: Initialize scanner/driver
+           Gets device description from scanner
+</pre>
+<p>Commands 102H and 103H are meant specially for automatic optical
+character recognition (OCR).
+</p>
+<p>Since GDPS Version 1.10 new commands exist (as above, but
+instead of 10xH, 20xH is used). If these commands are used, one can
+work in a virtual mode provided <i>virt_flag</i>=1. Furthermore
+greyscale images with these commands are delivered as follows:
+</p>
+<pre>      0=black
+    255=white
+</pre>
+<p><b>Warning:</b> With 20xH commands the calling program must
+pass the extended command structure according to GDPS 1.10 !!!
+</p>
+<p><b>Error-messages in return value:</b>
+</p>
+<pre>   FFFEH: Block ready, further blocks follow
+   FFFFH: Scan process (possibly for one colour) completed, last (or
+          only) data block is present
+      0H: <a href="powerdos.html#Wait">Wait</a> and have a cup of tea (if appropriate wait with an
+          <a href="proto_xfsl.html#EVENT">EVENT</a> loop)
+      1H: Unknown command
+      2H: Scanner error
+      3H: Abort by the user
+      4H: Out of paper (only with single-sheet feed)
+      5H: Out of memory: The user has set too large a paper format
+      6H: Scanner not yet initialized
+</pre>
+<p>The error-messages are displayed to the user of the driver. They
+only serve as information for the calling program.
+</p>
+<h4><a name="GDPS_2C_20virtual_20memory_20management">15.6.4.2 GDPS, virtual memory management</a></h4>
+<pre>#define VOR              1
+#define ZURUECK         -1
+#define MITTE            0
+
+/********************************************************************/
+/*                        Scanner structures                        */
+/********************************************************************/
+typedef struct                   /* Passing structure for scanner   */
+{
+   void  *next;                  /* Pointer to the next driver      */
+   char  ident[4];               /* Magic GDPS as driver identifier */
+   int   version;                /* Version number, currently &lt; 200 */
+   int   type;                   /* Driver type, 0 for scanner      */
+   char  *info;                  /* Pointer to driver info and to   */
+   char  *copyright;             /* the Copyright message           */
+   int   devdescr;               /* Device description flags        */
+   int   colours;                /* Number of colours, 0=B/W        */
+   int   deep;                   /* Possible bit-depths             */
+   int   free;                   /* Flag whether scanner is free    */
+   int   scommand;               /* Command to scanner              */
+   void  *command;               /* Pointer to the command structure*/
+} SCANHEADER;
+
+typedef struct                 /* Command structure for GDPI scanners*/
+{
+   int   result;                 /* Result that reports drivers     */
+   int   modes;                  /* Permitted scan modes            */
+   int   depth;                  /* Image depth in bits/pixel       */
+   void  *vmemory:               /* Where image should be placed    */
+   long  vmaxlen;                /* Available memory                */
+   int   bytewidth;              /* Width of a line in bytes        */
+   int   height;                 /* Height of the image in lines    */
+   int   mmwidth;                /* Width (!U)and(!u)               */
+   int   mmheight;               /* Height in 1/10 millimeters      */
+   int   xdpi;                   /* Resolution in X (!U)and(!u)     */
+   int   ydpi;                   /* Y direction                     */
+   int   modulo;                 /* 2=&gt;image becomes word-aligned   */
+   int   start_x;                /* Top left corner X in 1/10 mm    */
+   int   start_y;                /* Top left corner Y in 1/10 mm    */
+   long  ser_no;                 /* Serial number                   */
+
+/****
+The following part is defined only for calls of the scanners with
+the commands of the 0x2XX series
+******/
+   int     add_bits;              /* Specifies how many additional   */
+                                  /* bits are required. For instance */
+                                  /* CRANACH Studio has 2 masks for  */
+                                  /* each image. If one scans a bit- */
+                                  /* map, the program requires not   */
+                                  /* just 1 bit per pixel, but three */
+                                  /* bits. In a similar way, with a  */
+                                  /* greyscale picture one has to    */
+                                  /* calculate 8 + 2 = 10 pixels. If */
+                                  /* this value is not allowed for,  */
+                                  /* then it may happen that after   */
+                                  /* scanning CRANACH Studio can not */
+                                  /* open its window, because though */
+                                  /* memory is available for the     */
+                                  /* scanned image, there is none    */
+                                  /* for the required masks.         */
+                                  /* One needs, for exampple, two    */
+                                  /* additional bits for the mask.   */
+   void *Dchange_pointer;         /* Pointer to this function        */
+   void *Dupdate;                 /* Pointer to that function        */
+   int  read;                     /* Virtual read buffer index       */
+   int  write;                    /* Virtual write buffer index      */
+   int  virt_flag;                /* Flag whether working with       */
+                                  /* virtual memory management(1=yes)*/
+} SCANCOM;
+SCANCOM scancom;
+
+void *Dchange_pointer(
+                        void *pointer,
+                         int v_handle,
+                         int richtung,
+                         long *max_vor,
+                         long *max_zurueck
+                       );
+</pre>
+<p>void Dupdate(int v_handle);
+</p>
+<p>All tms products work with virtual memory management. This means
+that it does not have to access memory areas that are present in RAM.
+The virtual memory management implemented in tms products was
+optimized for the requirements of images.
+</p>
+<p>General procedure: The driver passes in scancom.write a virtual
+handle. With this handle one can then access the virtual data. The
+data are obtained automatically from the hard drive when required, and
+stored.
+</p>
+<p>One possible application would be:
+</p>
+<p>UCHAR *real;
+<br>long max_forward, max_back;
+</p>
+<p>scancom-&gt;vmemory points to the free virtual memory. This is
+to be treated just like normal memory. so, say, free memory from addr
+16MB to addr 50MB with scancom-&gt;vmemory = addr 30MB. As this
+address does not really exist, the pointer must be mapped to the real
+memory and the data loaded from the hard drive. This is achieved with
+the function Dchange_pointer.
+</p>
+<pre> real = (UCHAR*)Dchange_pointer(
+                                   scancom-&gt;vmemory,
+                                   scancom-&gt;write,
+                                   FORWARD,
+                                   &amp;max_forward,
+                                   &amp;max_back
+                                 );
+</pre>
+<p>So <i>real</i> now points to an area of RAM.
+</p>
+<p><i>scancom-&gt;write</i> is the memory handle passed by the
+program.
+</p>
+<p><i>FORWARD</i> tells the memory management that we want to move
+as far as possible to the start of the memory. This optimizes disk
+accesses.
+</p>
+<p><i>max_forward</i> returns how many bytes from <i>real</i> one
+may move forward in the memory.
+</p>
+<p><i>max_back</i> returns how many bytes from <i>real</i> one
+may move backwards in the memory.
+</p>
+<p>If these limits are reached then Dchange_pointer must be called
+anew. The minimum lengths for <i>max_forward</i> and <i>max_back</i>
+are:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="center" valign="top">FORWARD</td>
+  <td align="center" valign="top">BACK</td>
+  <td align="center" valign="top">MID</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max_forward:</i></td>
+  <td align="center" valign="top">32k</td>
+  <td align="center" valign="top">0k</td>
+  <td align="center" valign="top">16k</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max_back:</i></td>
+  <td align="center" valign="top">0k</td>
+  <td align="center" valign="top">32k</td>
+  <td align="center" valign="top">16k</td>
+</tr>
+</table>
+</div>
+
+<p>Der Ram Speicher ist in 6 Blöcke unterteilt, von denen jeder
+einen he RAM memory is subdivided into 6 blocks, which each can
+represent a separate or also an overlapping portion of the virtual
+memory. To guarantee with overlapping blocks that after a memory
+alteration all blocks will reproduce the current memory contents, call
+the function Dupdate(scancom-&gt;write). This updates the other
+blocks. However, one only needs to use Dupdate before accessing a
+different block. For a scanner driver that only uses the block
+scancom-&gt;write, it suffices therefore to call
+Dupdate(scancom-&gt;write) at the end of the scanning process.
+</p>
+<p><a href="bios_cookiejar.html#Sample_20code">Sample code</a> for the deletion of 10 MB as of address 32 MB:
+</p>
+<pre>v_pointer=32MB
+size=10MB
+
+while(size&gt;0)
+{
+        real=Dchange_pointer(
+                              v_pointer,
+                              scancom-&gt;write,
+                              FORWARD,
+                              &amp;max_forward,
+                              &amp;max_back);
+        if(max_forward&lt;=size)
+        {
+                memset(real,0,max_forward);
+                size-=max_forward;
+                v_pointer+=max_forward;
+        }
+        else
+        {
+                memset(real,0,size);
+                size=0;
+                v_pointer+=size;
+        }
+}
+Dupdate(scancom-&gt;write);  !!!!!!!!!!!!!
+
+
+
+***************************************************************************
+Old programs call the scanner with the command 0x100 (and not 0x200).
+These programs (e.g. tms CRANACH) also do not yet use virtual memory
+management. Therefore the SCANCOM structure is not defined from the
+position marked onwards. The functions Dchange_pointer or Dupdate
+should then be replaced in the driver by dummy functions.
+
+/********************************************************************/
+
+Possible application as ACC:
+
+/********************************************************************/
+/*    main()                                                        */
+/*                                                                  */
+/*    Heart of the program                                          */
+/********************************************************************/
+
+int main( void )
+{
+   int work_in[12],work_out[58],dummy;
+   int buffer[20];
+
+   appl_id = <a href="appl.html#appl_init">appl_init</a>();
+
+   /* Open an own workstation */
+   handle=<a href="graf.html#graf_handle">graf_handle</a>(&amp;dummy,&amp;dummy,&amp;dummy,&amp;dummy);
+   for ( dummy=0; dummy&lt;10; work_in[dummy++]=1 );
+   work_in[10]=2;
+   <a href="vdi_control.html#v_opnvwk">v_opnvwk</a>(work_in,&amp;handle,work_out);
+
+   if(!<a href="rsrc.html#rsrc_load">rsrc_load</a>(&quot;SCANNER.RSC&quot;))
+   {
+      <a href="form.html#form_alert">form_alert</a>(0,NO_RSC_FILE);
+      goto FOREVER;
+   }
+
+   if( appl_id != -1 )
+   {
+      if( !_app )
+      {
+         scanner_moeglichkeiten();
+         menu_id = <a href="menu.html#menu_register">menu_register</a>( appl_id, &quot;  SCANNER&quot; );
+         event_loop();   /* Here one waits for the call of the    */
+                         /* driver by the program; the dialog is  */
+                         /* handled, the image is scanned and     */
+                         /* the values placed in vmemory          */
+      }
+
+   }
+FOREVER: /* <a href="linea_init.html">Initialization</a> has not worked */
+   while(1)
+        <a href="evnt.html#evnt_mesag">evnt_mesag</a>((int*)buffer);
+}
+
+/********************************************************************/
+/* Initialize scanner                  */
+/********************************************************************/
+
+void scanner_moeglichkeiten()
+{
+        long
+                **zeiger;
+        long
+                stack;
+
+/********** Divert pointer to GDPS *******************************/
+
+        stack=<a href="gemdos_system.html#Super">Super</a>(0);
+
+        zeiger = (long **)0x41c;
+
+        if(*(*zeiger+1)== 0x47445053l)
+                header.next = *zeiger;
+        else
+                header.next = NULL;
+
+        *zeiger = (void *)&amp;header;
+
+        <a href="gemdos_system.html#Super">Super</a>((void *)stack);
+
+/********************************************************************/
+
+        sprintf(header.ident,&quot;GDPS&quot;);
+        header.version          =100;
+        header.type             =0;          /* Scanner */
+        header.info             =info;
+        header.copyright        =copyright;
+        header.devdescr         =1 | 2 | 4;  /* Device description flags */
+        header.colours          =1;          /* Number of colours, 0=B/W */
+        header.deep             =1 | 16;     /* Possible bit-depths      */
+        header.free             =0;
+        header.scommand         =0;          /* Command to scanner       */
+        header.command          =&amp;command;
+
+}
+</pre>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_FOOT" href="proto_font.html"><img src="udo_lf.gif" alt="Font protocol" title="Font protocol" border="0" width="24" height="24">Font protocol</a>
+<a name="UDO_nav_rg_FOOT" href="proto_ltl.html"><img src="udo_rg.gif" alt="LTL protocol" title="LTL protocol" border="0" width="24" height="24">LTL protocol</a>
+</body>
+</html>

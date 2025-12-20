@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Einklinken in den Reset-Vektor
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_HEAD" href="bios_channels.html"><img src="udo_lf.gif" alt="Die Ein-/Ausgabekanäle des BIOS" title="Die Ein-/Ausgabekanäle des BIOS" border="0" width="24" height="24">Die Ein-/Ausgabekanäle des BIOS</a>
+<a name="UDO_nav_rg_HEAD" href="bios_sysvars.html"><img src="udo_rg.gif" alt="Die Systemvariablen" title="Die Systemvariablen" border="0" width="24" height="24">Die Systemvariablen</a>
+
+<hr>
+
+<h1><a name="Einklinken_20in_20den_20Reset-Vektor">3.3 Einklinken in den Reset-Vektor</a></h1>
+<a name="Reset-Vektor_2C_20Einklinken_20in"></a>
+<p>Das Kochrezept, um eigene Funktionen in den Reset-Vektor
+einklinken zu können, lautet wie folgt:
+</p>
+<ul>
+<li><p> Die Systemvariable <a href="bios_sysvars.html#resvalid">resvalid</a> auf den Wert 0x31415926 setzen,
+denn anderenfalls wird <i>resvector</i> vom <a href="bios_main.html">BIOS</a> gar nicht beachtet.
+<br>&nbsp;
+</p></li>
+<li><p> Adresse der eigenen Funktion in den <a href="bios_sysvars.html#resvector">resvector</a>-Vektor schreiben.
+<br>&nbsp;
+</p></li>
+<li><p> Per jmp(a6) aus der Funktion zurückspringen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Wichtig:</b> Ein Rücksprung per rts aus der installierten
+Funktion ist <i>nicht</i> möglich, da zu diesem Zeitpunkt noch kein
+Stack initialisiert ist. In der Praxis könnte man z.B. so vorgehen:
+</p>
+<pre>RESMAGIC    equ       $31415926
+_<a href="bios_sysvars.html#resvalid">resvalid</a>   equ       $426
+_<a href="bios_sysvars.html#resvector">resvector</a>  equ       $42a
+
+            .text
+install:    move.l    _<a href="bios_sysvars.html#resvalid">resvalid</a>,oldvalid
+            move.l    #RESMAGIC,<a href="bios_sysvars.html#resvalid">resvalid</a>
+            move.l    _<a href="bios_sysvars.html#resvector">resvector</a>,oldreset
+            move.l    #newreset,_<a href="bios_sysvars.html#resvector">resvector</a>
+            rts
+
+            dc.b      &quot;XBRARESV&quot;
+oldreset:   dc.l      0
+
+newreset:   move.l    oldreset,_<a href="bios_sysvars.html#resvector">resvector</a>
+            move.l    oldvalid,_<a href="bios_sysvars.html#resvalid">resvalid</a>
+            jmp       (a6)
+
+            .bss
+oldvalid:   .ds.l     1
+</pre>
+<p><b>Achtung:</b> Damit sich mehrere Programme installieren
+können, muß nach Abarbeitung der Funktion eine saubere
+De-Installation erfolgen.
+</p>
+<p>Querverweis: <a href="bios_sysvars.html">Systemvariablen</a> &nbsp; <a href="the_system_vectors.html">Systemvektoren</a> &nbsp; <a href="xbra_main.html">XBRA-Verfahren</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_FOOT" href="bios_channels.html"><img src="udo_lf.gif" alt="Die Ein-/Ausgabekanäle des BIOS" title="Die Ein-/Ausgabekanäle des BIOS" border="0" width="24" height="24">Die Ein-/Ausgabekanäle des BIOS</a>
+<a name="UDO_nav_rg_FOOT" href="bios_sysvars.html"><img src="udo_rg.gif" alt="Die Systemvariablen" title="Die Systemvariablen" border="0" width="24" height="24">Die Systemvariablen</a>
+</body>
+</html>

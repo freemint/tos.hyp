@@ -1,0 +1,92 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: Program launch and TPA
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="gemdos_programs.html"><img src="udo_lf.gif" alt="The program format" title="The program format" border="0" width="24" height="24">The program format</a>
+<a name="UDO_nav_rg_HEAD" href="gemdos_signals.html"><img src="udo_rg.gif" alt="Signals" title="Signals" border="0" width="24" height="24">Signals</a>
+
+<hr>
+
+<h1><a name="Program_20launch_20and_20TPA">5.6 Program launch and TPA</a></h1>
+<a name="TPA_20and_20Program_20launch"></a>
+<a name="Transient_20Program_20Area"></a>
+<p>At the launch of a program it is very important to return
+surplus memory to the operating system with <a href="gemdos_memory.html#Mshrink">Mshrink</a>, as otherwise
+there will be no memory available for other processes.
+</p>
+<p>A compiler normally takes over this task automatically; an
+assembler programmer, however, has to perform this task himself. The
+corresponding routine may look something like the following:
+</p>
+<pre>            .text
+
+            move.l    4(sp),a0      ; Pointer to <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a>
+            lea       mystack,sp    ; Set stack pointer
+            move.l    #$100,d0      ; Length of basepage
+            add.l     $c(a0),d0     ; Length of the TEXT segment
+            add.l     $14(a0),d0    ; Length of the DATA segment
+            add.l     $1c(a0),d0    ; Length of the BSS segment
+            move.l    d0,-(sp)      ; Return to the stack
+            move.l    a0,-(sp)      ; Basepage address to stack
+            clr.w     -(sp)         ; Fill parameter
+            move.w    #$4a,-(sp)    ; <a href="gemdos_memory.html#Mshrink">Mshrink</a>
+            trap      #1            ; Call <a href="gemdos_main.html">GEMDOS</a>
+            lea       $c(sp),sp     ; Correct stack
+            jsr       main          ; Call main program
+            move.w    d0,-(sp)      ; Return value of the program
+            move.w    #$4c,-(sp)    ; <a href="gemdos_process.html#Pterm">Pterm</a>
+            trap      #1            ; Call <a href="gemdos_main.html">GEMDOS</a>
+
+            .bss
+
+            .ds.l     2000          ; 8000 bytes stack
+mystack:    .ds.l     2
+</pre>
+<p><b>In plain language:</b> The required memory space is
+calculated by adding together the length of the basepage, the TEXT,
+the DATA and the BSS segments, as well as the stack (if necessary).
+All the required information resides in the basepage, whose address is
+passed as a parameter on the stack (4(sp)). The calculated value is
+then the number of bytes to which the TPA (Transient Program Area,
+memory range of a program) can be shrunk to.
+</p>
+<p><b>After execution of this procedure, the TPA of a program then
+has the following form:</b>
+</p>
+<p><img src="bilder/gif/tpa_en.gif" alt="" title="" border="0" width="352" height="209"></p>
+<p>The memory released in this way can now be used by GEMDOS for
+other purposes: perhaps for launching further programs, or to satisfy
+memory allocations via <a href="gemdos_memory.html#Malloc">Malloc</a> or <a href="gemdos_memory.html#Mxalloc">Mxalloc</a>.
+</p>
+<a name="TSR_20programs"></a>
+<a name="Terminate_20and_20Stay_20Resident"></a>
+<p>For a TSR program (<b>T</b>erminate and <b>S</b>tay
+<b>R</b>esident) too the required memory space can be found by the
+above method; the only difference is that programs of this type do
+<i>not</i> terminate themselves with <a href="gemdos_process.html#Pterm">Pterm</a> but with <a href="gemdos_process.html#Ptermres">Ptermres</a>, and
+with this anchor themselves resident in memory.
+</p>
+<p>See also: <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a> &nbsp; <a href="gemdos_memory.html">Memory management</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="gemdos_programs.html"><img src="udo_lf.gif" alt="The program format" title="The program format" border="0" width="24" height="24">The program format</a>
+<a name="UDO_nav_rg_FOOT" href="gemdos_signals.html"><img src="udo_rg.gif" alt="Signals" title="Signals" border="0" width="24" height="24">Signals</a>
+</body>
+</html>

@@ -1,0 +1,2647 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: xFSL interface
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_HEAD" href="proto_xacc.html"><img src="udo_lf.gif" alt="XAcc" title="XAcc" border="0" width="24" height="24">XAcc</a>
+<a name="UDO_nav_rg_HEAD" href="appendix.html"><img src="udo_rg.gif" alt="XSSI protocol" title="XSSI protocol" border="0" width="24" height="24">XSSI protocol</a>
+
+<hr>
+
+<h1><a name="xFSL_20interface">15.14 xFSL interface</a></h1>
+<p>GDOS, which for years suffered a shadowy existence on the Atari
+platform, has enjoyed rising popularity since the introduction of
+vector fonts at the latest. Ever more programs offer the possibility
+to use a font different from the system font for output (and partly
+also for input).
+</p>
+<p>Now to be able to select a font, one needs a font-selector. And
+so that not every programmer had to concoct his own brew, and to
+obtain consistent operation, there grew a desire for a system
+extension that made a font-selector available to all programs - just
+like a file- selector.
+</p>
+<p>The first program of this type was the '<a href="proto_xfsl.html#UFSL">UFSL</a>' by Michael
+Thänitz. Via a cookie it makes available routines for calling a
+font-selector. This interface is already being used by a number of
+programs, and there are also further font-selectors that can be called
+via this interface.
+</p>
+<p>Although one can now call a font-selector via the <a href="proto_xfsl.html#UFSL">UFSL</a>
+interface, it has already been subject to a number of - partly
+incompatible - alterations and extensions. That is why most programs
+today assume that they have only the original, simple UFSL interface available
+to them. The result is therefore that the extensions remain unused,
+and when a somewhat more powerful font-selector is required in a
+program, one is thrown back to having to write a new one specially for
+that program. In a somewhat exaggerated form there is presented here
+the idea of an external font-selector ad absurdum ...
+</p>
+<p>Due to the 'wild growth' of the UFSL interface it seemed more sensible
+to draw a clear line under this and develop a completely new interface
+that is then also offered via a new cookie.
+</p>
+<p>This text describes this new interface, which can not simply
+call a font-selector, but can also exert an influence on it in many
+ways.
+</p>
+<ul class="content">
+	<li>15.14.1 <a href="#About_20the_20xFSL_20interface">About the xFSL interface</a>
+	<li>15.14.2 <a href="#xFSL_20tips_20and_20notes">xFSL tips and notes</a>
+	<li>15.14.3 <a href="#xFSL_20revisions_20history">xFSL revisions history</a>
+	<li>15.14.4 <a href="#UFSL_2FxFSL_20program_20overview">UFSL/xFSL program overview</a>
+	<li>15.14.5 <a href="#The_20UFSL_20interface">The UFSL interface</a>
+	<li>15.14.6 <a href="#Notes_20for_20authors_20of_20other_20font-selectors">Notes for authors of other font-selectors</a>
+	</li>
+</ul>
+<br>
+<h3><a name="About_20the_20xFSL_20interface">15.14.1 About the xFSL interface</a></h3>
+<p>With the <a href="#xFSL_20interface">xFSL interface</a>, the caller (i.e. the program that calls
+the font-selector) has appreciably more influence on the
+font-selector, its behaviour, and on the fonts offered for selection.
+</p>
+<p>During the conception of the new interface, the attempt was made
+to pay regard to the capabilities of various programming languages
+(e.g. the avoidance of pointers to functions), and at the same time to
+be prepared for possible extensions of the interface.
+</p>
+<p>The adaptation of a program to the xFSL interface should be a matter of
+a few minutes, specially as sample calls in various programming
+languages are provided. The conversion of special requests may require
+somewhat more effort, of course, but should not present an insoluble
+problem.
+</p>
+<p>There follows a description of the <a href="proto_xfsl.html#xFSL_20cookie">xFSL cookie</a> as well as the
+various xFSL calls and parameters ...
+</p>
+<ul class="content">
+	<li>15.14.1.1 <a href="#The_20xFSL_20cookie">The xFSL cookie</a>
+	<li>15.14.1.2 <a href="#The_20simplified_20call_20_28xfsl_input_29">The simplified call (xfsl_input)</a>
+	<li>15.14.1.3 <a href="#The_20extended_20xFSL_20call">The extended xFSL call</a>
+	<li>15.14.1.4 <a href="#The_20font-flags">The font-flags</a>
+	<li>15.14.1.5 <a href="#xFSL_20return_20codes">xFSL return codes</a>
+	<li>15.14.1.6 <a href="#The_20Pure-C_20event_20structure">The Pure-C event structure</a>
+		</li>
+</ul>
+<br>
+<h4><a name="The_20xFSL_20cookie">15.14.1.1 The xFSL cookie</a></h4>
+<a name="xFSL_20cookie"></a>
+<p>If a font-selector is <a href="xbios_sound.html#installed">installed</a> that supports the xFSL
+interface, then a cookie 'xFSL' exists whose value is a pointer to the
+following structure:
+</p>
+<blockquote>
+<pre>typedef struct
+{
+  unsigned long xfsl;       /* Magic 'xFSL'              */
+  unsigned int  revision;   /* Interface revision        */
+  unsigned long product;    /* Font-selector identifier  */
+  unsigned int  version;    /* Font-selector version     */
+  xFSL_INPUT    <a href="proto_xfsl.html#xfsl_input">xfsl_input</a>; /* Simplified call           */
+  xFSL_INIT     <a href="#xfsl_init">xfsl_init</a>;  /* Init call                 */
+  xFSL_<a href="proto_xfsl.html#EVENT">EVENT</a>    <a href="#xfsl_event">xfsl_event</a>; /* Event call                */
+  xFSL_<a href="aes_fundamentals.html#EXIT">EXIT</a>     <a href="#xfsl_exit">xfsl_exit</a>;  /* Exit call                 */
+  xFSL_<a href="wind.html#INFO">INFO</a>     <a href="proto_xfsl.html#xfsl_info">xfsl_info</a>;  /* Info call                 */
+} xFSL;
+</pre>
+</blockquote>
+<p>Die Komponenten der Struktur im einzelnen:
+</p>
+<table class="UDO_env_ilist">
+<tr><td nowrap="nowrap" valign="top"><i>xfsl</i></td>
+<td valign="top"> Here we have for safety's sake once more the ASCII character
+string 'xFSL' (= 0x7846534C in hexadecimal).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>revision</i></td>
+<td valign="top"> This is the revision number of the xFSL interface; at present it
+contains the value 4. If the interface should be extended in the
+future, one will find correspondingly higher values there.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>product</i></td>
+<td valign="top"> Here one finds the identifier for the actually <a href="xbios_sound.html#installed">installed</a>
+font-selector. This entry is intended, however, only as additional
+information, and should <i>not</i> be evaluated by application
+programs that want to call the font-selector!
+<br>&nbsp;
+<br>Identifiers used to date:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Identifier</td>
+  <td align="left" valign="top">Font-selector</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CLVN</td>
+  <td align="left" valign="top">Calvino</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FSEL</td>
+  <td align="left" valign="top">FontSel</td>
+</tr>
+<tr>
+  <td align="left" valign="top">HUGO</td>
+  <td align="left" valign="top">HuGo!</td>
+</tr>
+</table>
+</div>
+
+<br>The identifier (like the following version number too) was only
+introduced for programs that want to output information about the
+<a href="xbios_sound.html#installed">installed</a> font-selector (e.g. the program 'SysInfo').
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>version</i></td>
+<td valign="top"> The version number of the <a href="xbios_sound.html#installed">installed</a> font-selector as BCD number
+(e.g. hexadecimal 0x100 for Version 1.00). The same notes apply here
+as for the <i>product</i> field above.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i><a href="proto_xfsl.html#xfsl_input">xfsl_input</a></i></td>
+<td valign="top"> This is the entry point for a simplified call of the
+font-selector. The font-selector then appears always as a modal dialog
+and most of the additional features of the xFSL interface can not be accessed.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i><a href="#xfsl_init">xfsl_init</a>, <a href="#xfsl_event">xfsl_event</a>, <a href="#xfsl_exit">xfsl_exit</a>&nbsp;</i></td>
+<td valign="top"> These three functions together form the extended font-selector
+call. All of the new features can be accessed via them. The procedure
+corresponds to the display of a GEM dialog:
+<br>&nbsp;
+
+<ol class="UDO_env_enumerate">
+<li><p> Display font-selector (<a href="#xfsl_init">xfsl_init</a>)
+<br>&nbsp;
+</p></li>
+<li><p> Event handling in a loop until 'OK' or 'Cancel' has been
+selected (<a href="#xfsl_event">xfsl_event</a>)
+<br>&nbsp;
+</p></li>
+<li><p> Remove font-selector from the screen (<a href="#xfsl_exit">xfsl_exit</a>)
+<br>&nbsp;
+</p></li>
+</ol>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i><a href="proto_xfsl.html#xfsl_info">xfsl_info</a></i></td>
+<td valign="top"> With this call one can inquire about some of the features of
+the <a href="xbios_sound.html#installed">installed</a> font-selector, e.g. Drag&amp;Drop support.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="The_20simplified_20call_20_28xfsl_input_29">15.14.1.2 The simplified call (xfsl_input)</a></h4>
+<a name="xfsl_input"></a>
+<p>xfsl_input is the entry point for a simplified call. With it one
+can only call the font-selector as a modal dialog. In addition one can
+specify a heading, and restrict the type of fonts that the selector is
+to present for selection.
+</p>
+<blockquote>
+<pre>int xfsl_input (int           vdihandle,
+                unsigned int  fontflags,
+                const char   *headline,
+                int          *id,
+                int          *size
+               );
+</pre>
+</blockquote>
+<p>The parameters in detail:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>vdihandle</tt></td>
+<td valign="top"> Here you pass the handle of a virtual VDI workstation
+already opened by your program (if you want to set a font in your
+program, you have to open such a VDI workstation anyway). The
+font-selector then adopts the font just set on this workstation as the
+current font (provided it is actually offered for selection by
+<i>fontflags</i>).
+<br>&nbsp;
+<br>Instead of a valid handle you can however just pass a NULL, in
+which case the font-selector will display the font that you pass in
+the parameters <i>id</i> and <i>size.</i>
+<br>&nbsp;
+<br>If you pass a VDI workstation handle, then the selected font
+will also be simultaneously set on this workstation.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontflags</tt></td>
+<td valign="top"> With the <a href="#The_20font-flags">font-flags</a> you can determine which fonts will actually be
+offered for selection.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>headline</tt></td>
+<td valign="top"> Here you can specify a header that will then appear in the
+font-selector. If the header is missing (pass 0L), then a default text
+('Font-selector', 'Fontauswahl' or similar) will be shown.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>id</tt></td>
+<td valign="top"> In this variable the ID of the selected font will be returned
+(naturally only if a font was really selected). This font can now be
+set directly with the VDI function <a href="vdi_attribute.html#vst_font">vst_font</a>.
+<br>&nbsp;
+<br>If you pass a NULL in <i>vdihandle</i>, then the font-selector
+will display the font specified in <i>id.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>size</tt></td>
+<td valign="top"> In this variable the size of the selected font in points will
+be returned (also only if a new font was really selected). If this is
+a bitmap font, then its size may be set with the VDI function
+<a href="vdi_attribute.html#vst_point">vst_point</a>. For vector fonts one should call the function <a href="vdi_attribute.html#vst_arbpt">vst_arbpt</a>.
+<br>&nbsp;
+<br>If you pass a NULL in <i>vdihandle</i>, then the font-selector
+will display the font specified in <i>id</i> in the size given in
+<i>size.</i>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Return values</u>
+</p>
+<p>xfsl_input returns a negative number if an error has arisen. A 0
+is returned if 'Cancel' was selected. If a 1 is returned, then a new
+font was selected.
+</p>
+<p>The return values are the same for all xFSL functions, and
+upwardly compatible to the return values of the <a href="proto_xfsl.html#UFSL">UFSL</a>.
+</p>
+<h4><a name="The_20extended_20xFSL_20call">15.14.1.3 The extended xFSL call</a></h4>
+<p>The extended xFSL call consists of three individual function
+calls:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt><a href="#xfsl_init">xfsl_init</a></tt></td>
+<td valign="top"> Displays the font-selector on the screen. In addition the
+parameters are passed here.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt><a href="#xfsl_event">xfsl_event</a></tt></td>
+<td valign="top"> This function is called repeatedly until a font has been
+selected in the font-selector, or 'Cancel' selected.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt><a href="#xfsl_exit">xfsl_exit</a></tt></td>
+<td valign="top"> Removes the font-selector from the screen again.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p>In C it can look like this, for instance:
+</p>
+<blockquote>
+<pre>xhandle = xfsl-&gt;<a href="#xfsl_init">xfsl_init</a> (vdihandle, &amp;xpar);
+if (xhandle &gt;= 0)
+{
+  do
+  {
+    ret = xfsl-&gt;<a href="#xfsl_event">xfsl_event</a> (xhandle, 0L);
+    if (ret == xFS_HELP)
+      ...;  /* Call Help function  */
+    else if (ret == xFS_POPUP)
+      ...;  /* Handle popup       */
+    else if (ret == xFS_<a href="proto_xfsl.html#EVENT">EVENT</a>)
+      ...;  /* Handle <a href="aes_main.html">AES</a> event   */
+  } while ((ret != xFS_OK) &amp;&amp; (ret != xFS_STOP));
+  xfsl-&gt;<a href="#xfsl_exit">xfsl_exit</a> (xhandle);
+}
+</pre>
+</blockquote>
+<p>This splitting up into three has the advantage, amongst others,
+that the handling of the events (HELP button, popup, AES events)
+does not have to pass pointers to functions (which presents
+difficulties in some programming languages). Also the interface can be
+extended easily by furher events if these should ever become
+necessary.
+</p>
+<h5><a name="xfsl_init">15.14.1.3.1 xfsl_init</a></h5>
+<p>This call not only brings up the font-selector on the screen, it
+also determines which fonts are to be displayed, whether a user-popup
+is being used and several other things.
+</p>
+<blockquote>
+<pre>int xsfl_init (int       vdihandle,
+               <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> *xpar
+              );
+</pre>
+</blockquote>
+<p>The two parameters mean:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>vdihandle</tt></td>
+<td valign="top"> As for the simplified call, here you pass the handle of a
+virtual VDI workstation already opened by your program, or simply a
+NULL.
+<br>&nbsp;
+<br>If you pass a valid workstation handle, then the font- selector
+will adopt the font current on this workstation and display it -
+provided <i>fontflags</i> (in the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure) actually makes
+it available for selection. If this is not the case, then the
+font-selector will choose a font from those available and display it.
+<br>&nbsp;
+<br>If you pass a NULL as workstation handle, then the font from the
+<a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure (to which a pointer in the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure
+points) will be adopted and displayed.
+<br>&nbsp;
+<br>If you pass a VDI workstation handle, then the font selected
+on this workstation will also be set.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>xpar</tt></td>
+<td valign="top"> This is a pointer (i.e. the address) of an <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure
+that contains all further specifications for the font-selector.
+<br>&nbsp;
+<br>Due to the large number of options, this structure has been
+given its <a href="#The_20xFSL_PAR_20structure">own page</a>.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>The following applies again for the return codes of the
+function: A negative return value indicates an error. Positive values
+here have a slightly different meaning: A 0 means that the
+font-selector was opened (successfully) as a modal dialog. Any other
+positive values correspond to the window handle of the opened
+font-selector. This way you can register the font-selector window with
+an AV-server, for instance.
+</p>
+<p>On success (return value larger or equal to 0) you should store
+the handle in a variable, as it will still be needed for the following
+calls (<a href="#xfsl_event">xfsl_event</a> and <a href="#xfsl_exit">xfsl_exit</a>).
+</p>
+<p><b>Note:</b> If the font-selector is to be displayed as a
+window, but xfsl_init returns the error xFS_NO_WINDOW (no more windows
+available), then one should attempt to display the font-selector at
+least as a dialog (clear control-flag CC_WINDOW and call xfsl_init
+again).
+</p>
+<p><b>Remember:</b> The user wants a font-selector, not an
+error-message!
+</p>
+<h5><a name="xfsl_event">15.14.1.3.2 xfsl_event</a></h5>
+<p>When the font-selector has been initialized and brought to the
+screen, xfsl_event takes over the main work.
+</p>
+<blockquote>
+<pre>int xfsl_event (int    xhandle,
+                <a href="proto_xfsl.html#EVENT">EVENT</a> *event
+               );
+</pre>
+</blockquote>
+<p>The two parameters mean:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>xhandle</tt></td>
+<td valign="top"> The handle of the font-selector, as returned by <a href="#xfsl_init">xfsl_init</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>event</tt></td>
+<td valign="top"> Pointer to an <a href="proto_xfsl.html#EVENT">EVENT</a> structure, as used by Pure-C. In this
+structure the font-selector returns AES events that it could not
+process itself. In addition, you can also use the input parameters to
+tell the font-selector about which events are to be reported.
+<br>&nbsp;
+<br>However, the pointer can also just be a NULL if you do not want
+to evaluate any (further) events. If the font-selector is to be
+operated as a window-dialog and the caller (i.e. your program) has
+some other windows open, then you have to evaluate the redraw messages
+at least!
+<br>&nbsp;
+<br><b>Example:</b> If you set the <a href="evnt.html#MU_MESAG">MU_MESAG</a> flag in
+<i>ev_mflags</i> of <a href="evnt.html#evnt_multi">evnt_multi</a>, then the font-selector will return
+all the arriving AES messages that it cannot handle itself to the
+caller.
+<br>&nbsp;
+<br><b>Note:</b> It is also possible, or course, to receive timer
+events; but these should only be used sparingly and not be too short,
+as in that case the font-selector has to leave its own event loop each
+time. 250 ms might serve as the - non-binding - lower limit.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>The possible return values of xfsl_event:</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>xFS_STOP</tt></td>
+<td valign="top"> The 'Cancel' button or (if present) the Closer of the
+window-dialog was selected in the font-selector.
+<br>&nbsp;
+<br>If the CC_<a href="wind.html#CLOSER">CLOSER</a> control-flag is set and the Closer is clicked
+on, the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure to which the pointer in the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>
+structure points nevertheless contains data about which font was last
+selected in the font- selector. Otherwise this information would not
+be preserved.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>xFS_OK</tt></td>
+<td valign="top"> A font was chosen and 'OK' selected. The font that was selected
+is described in the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure to which the pointer in the
+<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure points. If a valid VDI handle was passed at
+<a href="#xfsl_init">xfsl_init</a>, then this font will also be set immediately on this VDI
+workstation.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>xFS_HELP</tt></td>
+<td valign="top"> The HELP button was selected (this can only occur if one has
+been provided, of course). It is up to the caller how it reacts to
+this. Normally help will be provided by the display of a Help page (or
+triggering such a display).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>xFS_<a href="proto_xfsl.html#EVENT">EVENT</a></tt></td>
+<td valign="top"> An AES event has occurred that the font-selector could not
+process (e.g. a Redraw message for another window). Exactly what this
+event was can be gathered from the <i>ev_mwich</i> field of the <a href="proto_xfsl.html#EVENT">EVENT</a>
+structure.
+<br>&nbsp;
+<br>Desk accessories should not forget calling <a href="#xfsl_exit">xfsl_exit</a> on receipt
+of an <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> message! The same applies for the <a href="evnt.html#AP_TERM">AP_TERM</a> message.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>xFS_POPUP</tt></td>
+<td valign="top"> A change was made in the user-popup (if present). For the
+changed popup entry the FF_CHANGED bit is set in the <i>fontflags</i>
+element. The popup entry which was then selected, and on return to the
+font-selector will be the current one in the popup (at the next
+xfsl_event call), will lie in the <i>sel_entry</i> element of
+<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>.
+<br>&nbsp;
+<br>You now still have the option of making changes to the popup
+entries, for instance to alter the <a href="#The_20font-flags">font-flags</a>, or adopt the changed font
+in all other popup entries (in this way it is possible to use the
+popup for some other kind of information which may have nothing to do
+with the selected font). But the texts and the number of popup entries
+may not be changed!
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">other values:</td>
+<td valign="top"> Other positive values should be ignored. It is possible that
+the interface will be extended by further return values (events).
+<br>&nbsp;
+<br>Negative values indicate an error, the font-selector should then
+be aborted. But it is imperative that one still calls <a href="#xfsl_exit">xfsl_exit</a>
+beforehand!
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h5><a name="xfsl_exit">15.14.1.3.3 xfsl_exit</a></h5>
+<p>With the xfsl_exit call the font-selector is removed from the
+screen again:
+</p>
+<blockquote>
+<pre>void xfsl_exit (int xhandle);
+</pre>
+</blockquote>
+<p>Here <i>xhandle</i> is again the handle of the font-selector,
+as returned by <a href="#xfsl_init">xfsl_init</a>.
+</p>
+<p>xfsl_exit must be called always when the use of the
+font-selector is to be ended, be it that a font was chosen or 'Cancel'
+was selected, or that <a href="#xfsl_event">xfsl_event</a> reported an error. If already the
+<a href="#xfsl_init">xfsl_init</a> call failed, then xfsl_exit may <i>not</i> be called
+(logical, since one has no valid handle).
+</p>
+<p>The call of xfsl_exit should also not be forgotten on arrival of
+the <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> and <a href="evnt.html#AP_TERM">AP_TERM</a> messages!
+</p>
+<h5><a name="The_20info_20call_20_28xfsl_info_29">15.14.1.3.4 The info call (xfsl_info)</a></h5>
+<a name="xfsl_info"></a>
+<p>With this call one can inquire about some of the features of the
+installed font-selector:
+</p>
+<blockquote>
+<pre>long xfsl_info (void);
+</pre>
+</blockquote>
+<p>If the return value is positive, then the following flags
+represent the features that are present (negative return values are,
+as usual, error-messages):
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_SIZE</td>
+  <td align="left" valign="top">0x0001</td>
+  <td align="left" valign="top">Size changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_COLOR</td>
+  <td align="left" valign="top">0x0002</td>
+  <td align="left" valign="top">Colour changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_ATTR</td>
+  <td align="left" valign="top">0x0004</td>
+  <td align="left" valign="top">Attribute changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_WIDTH</td>
+  <td align="left" valign="top">0x0008</td>
+  <td align="left" valign="top">Width changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_KERN</td>
+  <td align="left" valign="top">0x0010</td>
+  <td align="left" valign="top"><a href="VDI_fundamentals.html#Kerning">Kerning</a> changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_SKEW</td>
+  <td align="left" valign="top">0x0020</td>
+  <td align="left" valign="top">Slope/skew changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_ALIGN</td>
+  <td align="left" valign="top">0x0040</td>
+  <td align="left" valign="top"><a href="proto_xfsl.html#Alignment">Alignment</a> changes possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_ROTATION</td>
+  <td align="left" valign="top">0x0080</td>
+  <td align="left" valign="top"><a href="proto_xfsl.html#Text_20rotation">Text rotation</a> possible</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_FIX31</td>
+  <td align="left" valign="top">0x0100</td>
+  <td align="left" valign="top"><a href="vdi_structures.html#fix31">fix31</a> support</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_POPUP</td>
+  <td align="left" valign="top">0x0200</td>
+  <td align="left" valign="top"><a href="xcontrol.html#Popup">Popup</a> support</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_DRAGDROP</td>
+  <td align="left" valign="top">0x0400</td>
+  <td align="left" valign="top">Drag&amp;Drop support</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XF_MAPPING</td>
+  <td align="left" valign="top">0x0800</td>
+  <td align="left" valign="top">Understands mapping</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<p>Further features of the font-selector can be inquired indirectly
+via the <i>control</i> element of the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure: On a
+successful <a href="#xfsl_init">xfsl_init</a> call, those control-flags that the font-selector
+does not know are cleared.
+</p>
+<h5><a name="The_20VDI_20workstation_20in_20the_20xFSL_20interface">15.14.1.3.5 The VDI workstation in the xFSL interface</a></h5>
+<p>With the <a href="proto_xfsl.html#xfsl_input">xfsl_input</a> and <a href="#xfsl_init">xfsl_init</a> calls one can pass the handle
+of a virtual VDI workstation already opened by the user in each
+case.
+</p>
+<p>The further behaviour of the font-selector depends on whether
+one actually passes a workstation handle or just a NULL:
+</p>
+<p>If one passes a valid handle, then the font-selector will try to
+ascertain the current font on the corresponding workstation and then -
+provided it matches the passed <a href="#The_20font-flags">font-flags</a> - to also set it and offer it
+for selection. If the current font does not match the
+<i>fontflags</i> setting (say if only vector fonts are to be offered
+but the current font is a bitmap font), then the font-selector will
+select a font from those on offer and present it as the current font.
+</p>
+<p>If the user now selects a font and closes the font-selector with
+'OK' then this font will also be set immediately on the passed
+workstation, so that the calling program no longer has to do this.
+</p>
+<p>For this one should note that the font-selector also opens its
+own VDI workstation and uses this internally and for the selection
+of the fonts. Amongst other things it will also call <a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a>
+for this workstation (provided a GDOS is installed). This can lead to
+some unexpected results if no <a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a> has been called yet on
+the passed workstation and the user selects a font in the
+font-selector that only becomes available after a <a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a> call!
+</p>
+<br>
+<p>Instead of a workstation handle however one can also simply pass
+a NULL. The font-selector will then ascertain the current font from
+the passed parameters (for a <a href="proto_xfsl.html#xfsl_input">xfsl_input</a> call) or from the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>
+structure (for a <a href="#xfsl_init">xfsl_init</a> call).
+</p>
+<p>The selected font will then (logically) only be returned in the
+parameters or the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure and the caller then has to set it
+him/herself.
+</p>
+<h5><a name="The_20xFSL_PAR_20structure">15.14.1.3.6 The xFSL_PAR structure</a></h5>
+<a name="xFSL_PAR"></a>
+<p>With this structure you have extensive influence on the
+behaviour of the font-selector and the type of fonts displayed.
+Therefore the description of the options is somewhat on the long side
+...
+</p>
+<blockquote>
+<pre>typedef struct
+{
+ int            par_size;    /* <a href="proto_olga.html#Size">Size</a> of xFSL_PAR structure     */
+ int            pfi_size;    /* <a href="proto_olga.html#Size">Size</a> of <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure    */
+ unsigned long  control;     /* Control-flags                  */
+ const char    *headline;    /* Header, or 0L                  */
+ const char    *example;     /* Sample text, or 0L             */
+ const char    *helptext;    /* Text of the HELP button, or 0L */
+ <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>     *font;        /* Pointer to Fontinfo structure  */
+ unsigned int   fontflags;   /* Permitted font types           */
+ const char    *poptext;     /* Text before the popup, or 0L   */
+ int            num_entries; /* Number of entries (0..n)       */
+ int            sel_entry;   /* Selected entry (0..n-1)        */
+ <a href="proto_xfsl.html#xFSL_PENTRY">xFSL_PENTRY</a>   *popup;       /* Pointer to a popup, or 0L      */
+ char          *helpinfo;    /* Pointer to Help-file/-page     */
+} xFSL_PAR;
+</pre>
+</blockquote>
+<p>Despite the multitude of entries everything is really quite
+simple, the more so that the fields that you do not need, or whose
+meaning is not yet clear to you, can simply be filled with zeros,
+whereupon the font-selector will then assume sensible default values.
+</p>
+<p>The fields in detail:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>par_size</tt></td>
+<td valign="top"> This field may not be set to zero; here the size of the
+xFSL_PAR structure in bytes is entered, so that in C one can simply
+write:
+<br>&nbsp;
+<blockquote>
+<pre>xpar.par_size=sizeof(xFSL_PAR);
+</pre>
+</blockquote>
+<br>The size of the structure currently comprises 42 bytes. Should
+the structure be extended at some time, then the font-selector can
+recognize from the size specification whether it is dealing with the
+old or the new structure.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>pfi_size</tt></td>
+<td valign="top"> This field too may not be zero; here one has to enter the size
+of the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure, so in C:
+<br>&nbsp;
+<blockquote>
+<pre>xpar.pfi_size=sizeof(<a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>);
+</pre>
+</blockquote>
+<br>The current size of the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure comprises 38 bytes
+and might also be extended in the future.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>control</tt></td>
+<td valign="top"> These are the so-called control-flags, with which the behaviour
+of the font-selector can be influenced (e.g. whether it is to appear
+as a window or a dialog).
+<br>&nbsp;
+<br>These flags are described in greater detail in their <a href="#The_20control-flags">dedicated section</a>
+below.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>headline</tt></td>
+<td valign="top"> This, as already familiar from the simplified call, is a
+pointer to a header line for the font-selector. If this is missing
+(<i>headline</i> contains 0L), then a default text header will
+inserted.
+<br>&nbsp;
+<br>The length of the header should be within the limit set by <a href="proto_xfsl.html#UFSL">UFSL</a>
+(34 characters), though the font-selector will truncate longer headers
+if necessary.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>example</tt></td>
+<td valign="top"> A pointer to a sample text. The font-selector displays an
+example of glyphs in the currently selected font making up a text that
+may be specified here. If this text is missing (i.e. <i>example</i>
+contains zero) then the font- selector will display a default text
+(e.g. the name of the current font in each case).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>helptext</tt></td>
+<td valign="top"> This is the text for a button that can be displayed at bottom
+left of the font-selector. Normally one will want to display a button
+labelled 'HELP' (or 'HILFE'), which explains to the user the function
+of the font-selector, and what the selected font is to be used for.
+<br>&nbsp;
+<br>If this text is missing (i.e. <i>helptext</i> contains zero),
+then no HELP button will be displayed and also <a href="#xfsl_event">xfsl_event</a> will not
+return a value for xFS_HELP.
+<br>&nbsp;
+<br>One should choose a short text (around 8 characters), though the
+font-selector will truncate longer texts if necessary.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>font</tt></td>
+<td valign="top"> This is a pointer to a structure (<a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>) which describes a
+font. The structure is used both for passing values to the
+font-selector as well as returning the selected font.
+<br>&nbsp;
+<br>This structure too is described in greater detail in its <a href="#The_20PFONTINFO_20structure">dedicated section</a>
+below.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontflags</tt></td>
+<td valign="top"> These are once more the <a href="#The_20font-flags">font-flags</a>, familiar from the simplified
+call, with which you can influence the fonts available for selection.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>poptext</tt>, <tt>num_entries</tt>, <tt>sel_entry</tt>, <tt>popup</tt>:</td>
+<td valign="top"> With these four parameters an additional popup can be made to
+appear in the font- selector. Due to the manifold options there is
+again a <a href="#The_20user-popup">dedicated section</a> below for this.
+<br>&nbsp;
+<br>If you do not want a popup, then simply set these four values to
+zero.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>helpinfo</tt></td>
+<td valign="top"> This is a pure output parameter: If the HELP button was
+selected (provided it is present, see `<i>helptext</i>'), then one
+will find here a pointer to a filename of a Help-file and the name of
+a page to be displayed. The filename is specified without a path or
+extension, with the page name following directly after it, separated
+by a comma.
+<br>&nbsp;
+<blockquote>
+<b>The string may only be read, but not altered!</b>
+<br>&nbsp;
+</blockquote>
+<br>If you do not want to display Help yourself with xFS_HELP then
+you can use the information to call up a help-system (e.g. ST-Guide).
+<br>&nbsp;
+<br><b>Example:</b> <a href="#xfsl_event">xfsl_event</a> returns xFS_HELP, in
+<i>helpinfo</i> there is a pointer to the string:
+<br>&nbsp;
+<blockquote>
+<pre>fine,The finest font-selector of all time
+</pre>
+</blockquote>
+<br>From this one can create the following call for ST-Guide:
+<br>&nbsp;
+<blockquote>
+<pre>*:\fine.hyp The finest font-selector of all time
+</pre>
+</blockquote>
+<br>So one appends the extension for the relevant help-system to the
+filename and passes the post-comma portion as a page-name.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p>To stress once more: Fields that you do not require or do not
+yet understand can simply be set to zero at first. Exceptions are
+only:
+</p>
+<ul>
+<li><p> <i>par_size</i>, the size of the xFSL_PAR structure itself
+<br>&nbsp;
+</p></li>
+<li><p> <i>pfi_size</i>, the size of the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure
+<br>&nbsp;
+</p></li>
+<li><p> <i>font</i>, the pointer to the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h5><a name="The_20control-flags">15.14.1.3.7 The control-flags</a></h5>
+<p>With the control-flags one can influence the benaviour of the
+font- selector.
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_WINDOW</td>
+  <td align="left" valign="top">0x0001</td>
+  <td align="left" valign="top">Font-selector as a window</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_APPMODAL</td>
+  <td align="left" valign="top">0x0002</td>
+  <td align="left" valign="top">Font-selector is application-modal</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_FIX31</td>
+  <td align="left" valign="top">0x0004</td>
+  <td align="left" valign="top">All size specifications in 1/65536 point</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_FAKESTYLE</td>
+  <td align="left" valign="top">0x0008</td>
+  <td align="left" valign="top">Simulate styles (only bitmap fonts)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_<a href="wind.html#CLOSER">CLOSER</a></td>
+  <td align="left" valign="top">0x0010</td>
+  <td align="left" valign="top">Window with Closer, no OK button</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOSIZE</td>
+  <td align="left" valign="top">0x0100</td>
+  <td align="left" valign="top">Do not alter size</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOCOLOR</td>
+  <td align="left" valign="top">0x0200</td>
+  <td align="left" valign="top">Do not alter colour</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOATTR</td>
+  <td align="left" valign="top">0x0400</td>
+  <td align="left" valign="top">Do not alter attributes</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOWIDTH</td>
+  <td align="left" valign="top">0x0800</td>
+  <td align="left" valign="top">Do not alter width</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOKERN</td>
+  <td align="left" valign="top">0x1000</td>
+  <td align="left" valign="top">Do not alter kerning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOSKEW</td>
+  <td align="left" valign="top">0x2000</td>
+  <td align="left" valign="top">Do not alter skewing</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOALIGN</td>
+  <td align="left" valign="top">0x4000</td>
+  <td align="left" valign="top">Do not alter alignment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_NOROTATION</td>
+  <td align="left" valign="top">0x8000</td>
+  <td align="left" valign="top">Do not alter text rotation</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_DFLTSIZE</td>
+  <td align="left" valign="top">0x10000</td>
+  <td align="left" valign="top">'Default' font size</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CC_INVSTYLE</td>
+  <td align="left" valign="top">0x20000</td>
+  <td align="left" valign="top">'Inverse' attribute</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<p>The function of the individual flags should be clear already
+from the names and short descriptions. Here still a few notes:
+</p>
+<ul>
+<li><p> <tt>CC_APPMODAL</tt>
+<br>'application-modal' means that the program is put in a mode in
+which only the font-selector can be processed. Essentially this means
+that the font-selector intercepts all <a href="evnt.html#WM_TOPPED">WM_TOPPED</a> messages for other
+windows of the calling program and does <i>not</i> pass them on, but
+makes itself the topped window instead. This is meant to tell the user
+that he should first deal with the font-selector before he can
+initiate another action in the program.
+<br>&nbsp;
+<br>The caller in this mode should of course forego topping its own
+windows with <a href="wind.html#wind_set">wind_set</a>(<a href="wind.html#WF_TOP">WF_TOP</a>).
+<br>&nbsp;
+</p></li>
+<li><p> <tt>CC_FAKESTYLE</tt>
+<br>This is a specialty that only Calvino offers at present: For those
+bitmap fonts for which no light, italic or bold variants are present,
+the missing cuts are each simulated with the VDI function
+<a href="vdi_attribute.html#vst_effects">vst_effects</a>.
+<br>&nbsp;
+</p></li>
+<li><p> <tt>CC_<a href="wind.html#CLOSER">CLOSER</a></tt>
+<br>If this flag and CC_WINDOW are set, then the font-selector is
+provided with a Closer, while the 'OK' and the 'Cancel' buttons are
+hidden. This is intenderd for cases where the font-selector is to be
+used as a pure Drag&amp;Drop selector.
+<br>&nbsp;
+</p></li>
+<li><p> <tt>CC_NO...</tt>
+<br>With these flags one can determine which settings are not to be
+altered. For instance, a program may want to prevent the size of a
+font being changed, while a change of the font itself is to be
+allowed. In that case the caller only has to set the CC_NOSIZE flag.
+<br>&nbsp;
+<br>But please note that despite a set CC_NO... flag you always have
+to pass a valid value. The meaning of these flags therefore is that
+the preset values may not be changed, and not that these values are
+not of interest.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Please note:</b> Not all font-selectors support all of the
+control-flags! If a font-selector does not support a flag, then it will
+simply ignore it. On a successful(!) <a href="#xfsl_init">xfsl_init</a> call, the font-selector
+will clear those flags in the <i>control</i> element of the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>
+structure that it does not understand.
+</p>
+<h5><a name="The_20PFONTINFO_20structure">15.14.1.3.8 The PFONTINFO structure</a></h5>
+<a name="PFONTINFO"></a>
+<p>This structure describes a font. After calling the font-selector
+it contains the selected font. In addition these specifications are
+evaluated by the font-selector already at the call (and the described
+font displayed), if a zero is passed as the VDI handle.
+</p>
+<blockquote>
+<pre>typedef struct
+{
+ int          fontid;     /* ID of the font               */
+ int          fonttype;   /* Type of font                 */
+ char        *fontname;   /* Name of the font             */
+ <a href="proto_xfsl.html#union">union</a> fsize  fontsize;   /* Font size in pt or <a href="vdi_structures.html#fix31">fix31</a>     */
+ <a href="proto_xfsl.html#union">union</a> fsize  fontwidth;  /* Width in pt or <a href="vdi_structures.html#fix31">fix31</a>         */
+ char         trackkern;  /* <a href="VDI_fundamentals.html#Track_20kerning">Track kerning</a>                */
+ char         pairkern;   /* <a href="VDI_fundamentals.html#Pair_20kerning">Pair kerning</a>                 */
+ int          fontattr;   /* Attributes                   */
+ int          fontskew;   /* Skew                         */
+ int          fontcol;    /* Colour                       */
+ int          backcol;    /* Text background colour       */
+ int          halign;     /* Horizontal text alignment    */
+ int          valign;     /* Vertical text alignment      */
+ int          rotation;   /* Text rotation in 1/10 degree */
+ int          validtype;  /* Type (V_CHAR_...) or mapping */
+ int         *validchars; /* Valid characters, or  0L     */
+} PFONTINFO;
+</pre>
+</blockquote>
+<p>The elements in detail:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>fontid</tt></td>
+<td valign="top"> The ID of the font, as also returned by the VDI function
+<a href="vdi_inquire.html#vqt_name">vqt_name</a>. The font ID is a non-zero number (so can also be negative).
+<br>&nbsp;
+<a name="BITMAP_FONT"></a>
+<a name="SPEEDO_FONT"></a>
+<a name="TT_FONT"></a>
+<a name="PFB_FONT"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fonttype</tt></td>
+<td valign="top"> The type of font, as used as of Speedo 5 or <a href="VDI_fundamentals.html#NVDI">NVDI</a> 3:
+<br>&nbsp;
+<a name="Fonttyp"></a>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Font type</td>
+</tr>
+<tr>
+  <td align="left" valign="top">BITMAP_FONT</td>
+  <td align="left" valign="top">0x0001</td>
+  <td align="left" valign="top">Pixel</td>
+</tr>
+<tr>
+  <td align="left" valign="top">SPEEDO_FONT</td>
+  <td align="left" valign="top">0x0002</td>
+  <td align="left" valign="top">Speedo</td>
+</tr>
+<tr>
+  <td align="left" valign="top">TT_FONT</td>
+  <td align="left" valign="top">0x0004</td>
+  <td align="left" valign="top">TrueType</td>
+</tr>
+<tr>
+  <td align="left" valign="top">PFB_FONT</td>
+  <td align="left" valign="top">0x0008</td>
+  <td align="left" valign="top">Type-1 (Postscript)</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<br>These specification are currenly for information only, having no
+meaning for the font-selector. However, in the future it will be
+possible to set a font not just by its ID but also by its name, in
+which case the font type will be required as well.
+<br>&nbsp;
+<br>The font type is also of interest when one wants to alter the
+size of the font: With bitmap fonts this is done with the VDI
+function <a href="vdi_attribute.html#vst_point">vst_point</a>, for all other types (vector fonts) with the
+function <a href="vdi_attribute.html#vst_arbpt">vst_arbpt</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontname</tt></td>
+<td valign="top"> The name of the font, as returned by <a href="vdi_inquire.html#vqt_name">vqt_name</a> (possibly one or
+more space characters were removed).
+<br>&nbsp;
+<br>The caller itself must make enough space available for the font
+name, thus for 32 characters and a NULL-byte! If you do not require
+the font name, then you can also simply set the pointer to zero.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontsize</tt></td>
+<td valign="top"> The size of the font in points (pt) or 1/65536 point (type
+'<a href="vdi_structures.html#fix31">fix31</a>'):
+<br>&nbsp;
+<blockquote>
+<pre><a href="proto_xfsl.html#union">union</a> fsize
+{
+ int   size;    /* Font size in points        */
+ <a href="vdi_structures.html#fix31">fix31</a> size31;  /* Font size in 1/65536 point */
+};
+</pre>
+</blockquote>
+<br>Which of these two statements is valid is controlled globally
+with the control-flag CC_FIX31.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontwidth</tt></td>
+<td valign="top"> Width of the font in points (pt) or 1/65536 point (type (type
+'<a href="vdi_structures.html#fix31">fix31</a>'):
+<br>&nbsp;
+<blockquote>
+<pre><a href="proto_xfsl.html#union">union</a> fsize
+{
+ int   size;    /* Font size in points        */
+ <a href="vdi_structures.html#fix31">fix31</a> size31;  /* Font size in 1/65536 point */
+};
+</pre>
+</blockquote>
+<br>Which of these two statements is valid is controlled globally
+with the control-flag CC_FIX31.
+<br>&nbsp;
+<br>The width can be set with the VDI functions <a href="vdi_attribute.html#vst_width">vst_width</a> in
+points and with <a href="vdi_attribute.html#vst_setsize">vst_setsize</a> in <a href="vdi_structures.html#fix31">fix31</a>.
+<br>&nbsp;
+<a name="Kerning_20parameter"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">trackkern</td>
+<td valign="top"> This parameter specifies the type of <a href="VDI_fundamentals.html#Track_20kerning">track kerning</a> for <a href="vdi_attribute.html#vst_kern">vst_kern</a>. Valid
+values are:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="center" valign="top">Value</td>
+  <td align="left" valign="top">Kerning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">No kerning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">Normal kerning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">Tight kerning</td>
+</tr>
+<tr>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">Very tight kerning</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">pairkern</td>
+<td valign="top"> With this parameter <a href="VDI_fundamentals.html#Pair_20kerning">pair kerning</a> can be switched on (0) or off (1),
+see <a href="vdi_attribute.html#vst_kern">vst_kern</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontattr</tt></td>
+<td valign="top"> These are the font attributes (text effects), as also used by
+the VDI function <a href="vdi_attribute.html#vst_effects">vst_effects</a>.
+<br>&nbsp;
+<br>Calvino only uses this field if the CC_FAKESTYLE control-flag is
+set.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontskew</tt></td>
+<td valign="top"> The slope or skew of the font in 1/10 degree, see <a href="vdi_attribute.html#vst_skew">vst_skew</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>fontcol</tt></td>
+<td valign="top"> The colour of the font. The VDI colours are used, i.e. 0 =
+White, 1 = Black, etc. See <a href="vdi_attribute.html#vst_color">vst_color</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>backcol</tt></td>
+<td valign="top"> The background colour to the text. The VDI colours are used,
+i.e. 0 = White, 1 = Black etc. The setting of a text background colour
+is not supported directly by the VDI, so it is up to the caller
+whether and how this parameter is used.
+<br>&nbsp;
+<a name="Text_20alignment"></a>
+<a name="Alignment"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>halign</tt></td>
+<td valign="top"> With this one can specify the horizontal alignment of the text:
+The text is to be output ranged left, ranged right or centred.
+<br>&nbsp;
+<a name="THA_LEFT"></a>
+<a name="THA_CENTER"></a>
+<a name="THA_RIGHT"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Alignment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">THA_LEFT</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">Ranged left</td>
+</tr>
+<tr>
+  <td align="left" valign="top">THA_CENTER</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Centred</td>
+</tr>
+<tr>
+  <td align="left" valign="top">THA_RIGHT</td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">Ranged right</td>
+</tr>
+</table>
+</div>
+
+<br>These values correspond to the parameter for horizontal
+alignment for the VDI call <a href="vdi_attribute.html#vst_alignment">vst_alignment</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>valign</tt></td>
+<td valign="top"> With this one can specify the vertical aligment of the text:
+The text is to be output aligned to the top line or the bottom line,
+or (vertically) centred.
+<br>&nbsp;
+<a name="TVA_BOTTOM"></a>
+<a name="TVA_CENTER"></a>
+<a name="TVA_TOP"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Alignment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">TVA_BOTTOM</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">At the text bottom line</td>
+</tr>
+<tr>
+  <td align="left" valign="top">TVA_CENTER</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Vertically centred</td>
+</tr>
+<tr>
+  <td align="left" valign="top">TVA_TOP</td>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">At the text top line</td>
+</tr>
+</table>
+</div>
+
+<br>These values deliberately do <i>not</i> correspond to the
+parameter for vertical alignment with <a href="vdi_attribute.html#vst_alignment">vst_alignment</a>! Values used there
+('Base line', 'Character cell bottom line') are hardly intuitive for
+the normal user and hence should not form part of the user interface
+(which they would be however for selections in the font-selector). The
+alignment therefore must be converted by the calling program to the
+'correct' values.
+<br>&nbsp;
+<a name="Text_20rotation"></a>
+<a name="Rotation"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>rotation</tt></td>
+<td valign="top"> Text rotation in 1/10 degrees, as also used in the VDI
+function <a href="vdi_attribute.html#vst_rotation">vst_rotation</a>.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p>Still missing are the two parameters <i>validtype</i> and
+<i>validchars</i>:
+</p>
+<p>Sometimes it is important to ensure that the font contains
+certain characters. There are two possibilities for this:
+</p>
+<p>If <i>validchars</i> is zero, one can select with
+<i>validtype</i> one of the following four groups of characters:
+</p>
+<a name="V_CHAR_IND"></a>
+<a name="V_CHAR_ASC"></a>
+<a name="V_CHAR_PRT"></a>
+<a name="V_CHAR_ALL"></a>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="right" valign="top">Range</td>
+  <td align="left" valign="top">Comment</td>
+</tr>
+<tr>
+  <td align="left" valign="top">V_CHAR_IND</td>
+  <td align="left" valign="top">-1</td>
+  <td align="right" valign="top">-</td>
+  <td align="left" valign="top">'Doesn't matter'</td>
+</tr>
+<tr>
+  <td align="left" valign="top">V_CHAR_ASC</td>
+  <td align="left" valign="top">-2</td>
+  <td align="right" valign="top">32-126</td>
+  <td align="left" valign="top">All printable ASCII characters</td>
+</tr>
+<tr>
+  <td align="left" valign="top">V_CHAR_PRT</td>
+  <td align="left" valign="top">-3</td>
+  <td align="right" valign="top">32-255</td>
+  <td align="left" valign="top">All printable characters</td>
+</tr>
+<tr>
+  <td align="left" valign="top">V_CHAR_ALL</td>
+  <td align="left" valign="top">-4</td>
+  <td align="right" valign="top">0-255</td>
+  <td align="left" valign="top">Really all characters</td>
+</tr>
+</table>
+</div>
+
+<p>These four groups ought to cover the most common applications.
+</p>
+<p>If both <i>validtype</i> and <i>validchars</i> are zero, then
+the font-selector will treat this as V_CHAR_IND; the same for othr
+invalid values in <i>validtype.</i>
+</p>
+<br>
+<p>Should the four groups not suffice at times, then one can
+instead also specify more precisely with <i>validtype</i> and
+<i>validchars</i> which characters are required:
+</p>
+<table class="UDO_env_ilist">
+<a name="Mapping"></a>
+<tr><td nowrap="nowrap" valign="top"><i>validtype</i></td>
+<td valign="top"> then contains a value for the character mapping to be used by
+GDOS (see <a href="vdi_attribute.html#vst_charmap">vst_charmap</a> and <a href="proto_xfsl.html#What_27s_20mapping_3F">What's mapping?</a>).
+<br>&nbsp;
+<br>A free choice of mapping is only available with an appropriate
+GDOS (<a href="VDI_fundamentals.html#SpeedoGDOS">SpeedoGDOS</a> or <a href="VDI_fundamentals.html#NVDI">NVDI</a> from Version 3 onwards). At present the
+following mappings are defined:
+<br>&nbsp;
+<a name="MAP_DIRECT"></a>
+<a name="MAP_ASCII"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">MAP_DIRECT</td>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">Direct mapping</td>
+</tr>
+<tr>
+  <td align="left" valign="top">MAP_ASCII</td>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">ASCII mapping (default)</td>
+</tr>
+</table>
+</div>
+
+<br>If the GDOS does not support mapping, then the font-selector
+will only accept MAP_ASCII; in that case all other mappings will be
+ignored and a test for the presence of given characters will
+<i>not</i> be performed.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>validchars</i></td>
+<td valign="top"> is a pointer to an array of integers (WORDs), with which one
+can specify which characters the font <i>has</i> to contain.
+<br>&nbsp;
+<br>The array consists of a series of from-to pairs:
+<br>&nbsp;
+<ul>
+<li><p> Two values following each other specify a range (from-to)
+<br>&nbsp;
+</p></li>
+<li><p> Individual characters are specified by doubling up
+<br>&nbsp;
+</p></li>
+<li><p> The end of the list is specified by a from-to pair in which the
+'to' is smaller than the 'from'
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br><b>Example:</b> Only those fonts should be offered for
+selection that contain all printable ASCII characters as well as the
+German Umlauts:
+<br>&nbsp;
+<blockquote>
+<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> xpar;
+<br>int chars[] = { ' ', '&nbsp;', /* ASCII 32..126 */
+<br>'ä','ä', 'ö','ö', 'ü','ü',
+<br>'Ä','Ä', 'Ö','Ö', 'Ü','Ü', 'ß','ß',
+<br>1,0 /* Ende der Liste */
+<br>};
+<br>
+<br>xpar.font-&gt;validtype=MAP_ASCII;
+<br>xpar.font-&gt;validchars=chars;
+<br>&nbsp;
+</blockquote>
+
+</td></tr>
+</table>
+
+<p>Future GDOSes will probably support further mappings (BICS,
+Unicode, ...). Thanks to the coding used, the font-selector will also
+handle these correctly: The mapping is simply passed in
+<i>validtype</i> and then the presence of a character tested with
+<i>validchars.</i>
+</p>
+<p><b>Note:</b> The various possibilities available with the
+<i>validtype</i> and <i>validchars</i> parameters should be used
+sparingly and with some thought, as the required testing of the
+characters may - depending on the GDOS - take quite a lot of time.
+</p>
+<h5><a name="The_20user-popup">15.14.1.3.9 The user-popup</a></h5>
+<p>For the user-defined popup (user-popup in short) the following
+fields exist in the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><tt>poptext</tt></td>
+<td valign="top"> Pointer to a text that is to appear before the popup, or 0L.
+The font-selector is free to ignore this text.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>num_entries</tt></td>
+<td valign="top"> Number of entries (i.e. lines) in popup. If there is a zero
+here than no popup will be displayed. One should not use more than 16
+entries, even though some font- selectors may support more in some
+circumstances.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>sel_entry</tt></td>
+<td valign="top"> The selected entry in the popup (count starts from 0). The
+font-selector stores the number of the selected popup entry here and
+reads out the value anew at each <a href="#xfsl_event">xfsl_event</a> call. In this way you can
+also force the font-selector to activate the entry with number 5
+instead of the selected number 3, for instance, (at xFS_POPUP the
+font-selector only reports which entry was selected, though this is
+only activated on jumping back into the font-selector).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><tt>popup</tt></td>
+<td valign="top"> This is a pointer to an array of xFSL_PENTRY elements as shown
+below. At the specified address there have to be exactly as many
+elements as were specified in <i>num_entries.</i>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<a name="xFSL_PENTRY"></a>
+<p>An entry in the popup is built up as follows:
+</p>
+<blockquote>
+<pre>typedef struct
+{
+ char         *entry;      /* Text of the popup entry        */
+ <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>    *fontinfo;   /* Pointer to Fontinfo structure  */
+ unsigned int  fontflags;  /* Permitted font types           */
+ long          funcflags;  /* Function-flags, only for HuGo! */
+} xFSL_PENTRY;
+</pre>
+</blockquote>
+<p>The meaning of the elements of this structure should be clear
+from the preceding explanations. The function-flags correspond to the
+control- flags, apart from the flags that influence the global
+behaviour of the font-selector (CC_WINDOW etc.). These are ignored
+here.
+</p>
+<p><b>Important:</b> The pointer to the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure may
+not be NULL!
+</p>
+<p>If the text of an entry starts with a `-', then the relevant
+entry is disabled (displayed in light type and not selectable). This
+is mainly intended for separation lines between entries.
+</p>
+<br>
+<p><u>Application</u>
+</p>
+<p>In principle one can see three fields of use for the user-popup:
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> Each popup entry sets the font for a given part of a program.
+So for example one could allow only non-proportional fonts in a given
+program window, no vector fonts in another one, and all fonts in a
+third.
+<br>&nbsp;
+</p></li>
+<li><p> Each entry makes a given group of fonts available. For
+instance, if one frequently requires vector fonts, one could construct
+a popup with the entries 'Vector fonts only' and 'All fonts'.
+<br>&nbsp;
+</p></li>
+<li><p> The popup however can be used also for something completely
+different. One could accommodate information here that though it has
+nothing to do with fonts, affects the window for which one wants to
+set a font. For instance, one could offer a choice of the way that
+inverse characters are to be displayed in a console window in the form
+of a popup having entries 'Inverse', 'Bold', 'Underlined' available
+for selection.
+<br>&nbsp;
+<br>If one wants to alienate the purpose of the popup in this way,
+then with the xFS_POPUP message one has to transfer the changed font
+(which can be recognized by the set FF_CHANGED flag) to all other
+popup entries, as otherwise the font that is displayed in the
+font-selector would change!
+<br>&nbsp;
+</p></li>
+</ol>
+
+<h4><a name="The_20font-flags">15.14.1.4 The font-flags</a></h4>
+<p>With the font-flags one can restrict the fonts offered for
+selection:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_SYSTEM</td>
+  <td align="left" valign="top">0x0001</td>
+  <td align="left" valign="top">Show system font (additionally)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_MONOSPACED</td>
+  <td align="left" valign="top">0x0002</td>
+  <td align="left" valign="top">Show monospaced fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_PROPORTIONAL</td>
+  <td align="left" valign="top">0x0004</td>
+  <td align="left" valign="top">Show proportional fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_BITMAP</td>
+  <td align="left" valign="top">0x0008</td>
+  <td align="left" valign="top">Show bitmap fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_SPD</td>
+  <td align="left" valign="top">0x0010</td>
+  <td align="left" valign="top">Show Speedo fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_TTF</td>
+  <td align="left" valign="top">0x0020</td>
+  <td align="left" valign="top">Show TrueType fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_PFB</td>
+  <td align="left" valign="top">0x0040</td>
+  <td align="left" valign="top">Show Type-1 fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_CFN</td>
+  <td align="left" valign="top">0x0080</td>
+  <td align="left" valign="top">Show Calamus fonts (not implemented yet)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_VECTOR</td>
+  <td align="left" valign="top">0x00F0</td>
+  <td align="left" valign="top">Show all vector fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_ALL</td>
+  <td align="left" valign="top">0x00FE</td>
+  <td align="left" valign="top">Show all fonts</td>
+</tr>
+<tr>
+  <td align="left" valign="top">FF_CHANGED</td>
+  <td align="left" valign="top">0x8000</td>
+  <td align="left" valign="top">Change made (only in the popup)</td>
+</tr>
+</table>
+</div>
+
+<p>The values have been chosen in such a way that the individual
+flags may be OR'd with each other. So, for instance if one uses for
+the font-flags FF_MONOSPACED|FF_VECTOR, then only non-proportional
+vector fonts will be offered for selection.
+</p>
+<p>In addition the following applies:
+</p>
+<ul>
+<li><p> FF_SYSTEM has priority, i.e. if this flag is set then the
+system font will be made available for selection too in any event.
+<br>&nbsp;
+</p></li>
+<li><p> If FF_SYSTEM is not set, then the system font will be offered
+for selection only when its properties correspond to the set flags.
+<br>&nbsp;
+</p></li>
+<li><p> If neither FF_MONOSPACED nor FF_PROPORTIONAL is set, then the
+font-flags are treated as if both flags are set.
+<br>&nbsp;
+<br>This applies in a similar way for FF_VECTOR and FF_BITMAP.
+<br>&nbsp;
+</p></li>
+<li><p> If FF_VECTOR is set, the all vector font formats will be
+offered automatically. A finer subdivision is possible with the flags
+FF_SPD, ..., FF_CFN, if desired.
+<br>&nbsp;
+<br><b>Please note:</b> Calamus fonts (and therefore the FF_CFN
+flag) are not supported by any GDOS at present!
+<br>&nbsp;
+</p></li>
+<li><p> The flag FF_CHANGED is only used to mark in the user-popup the
+settings that have changed. The font-selector only sets this flag but
+does not itself evaluate it.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h4><a name="xFSL_20return_20codes">15.14.1.5 xFSL return codes</a></h4>
+<p>All xFSL calls return consistent return codes (return values). A
+negative number represents an error, a positive number (or zero) means
+success or an event.
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="right" valign="top">Value</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_PARERROR</td>
+  <td align="right" valign="top">-9</td>
+  <td align="left" valign="top">Parameter error, e.g. call after Rev. 3</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_LOADERROR</td>
+  <td align="right" valign="top">-8</td>
+  <td align="left" valign="top">Error when loading an xFSL module</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_RES_<a href="bios_errors.html#ERROR">ERROR</a></td>
+  <td align="right" valign="top">-7</td>
+  <td align="left" valign="top">Resolution too low (minimum 640x400 pixels)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_NO_HANDLE</td>
+  <td align="right" valign="top">-6</td>
+  <td align="left" valign="top">No VDI handle free</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_NO_WINDOW</td>
+  <td align="right" valign="top">-5</td>
+  <td align="left" valign="top">No window(handle) free</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_NO_FONTS</td>
+  <td align="right" valign="top">-4</td>
+  <td align="left" valign="top">No fonts loaded</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_NO_FONTSIZE</td>
+  <td align="right" valign="top">-3</td>
+  <td align="left" valign="top">Font size not identifiable</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_ACTIVE</td>
+  <td align="right" valign="top">-2</td>
+  <td align="left" valign="top">Font-selector is active already</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_<a href="bios_errors.html#ERROR">ERROR</a></td>
+  <td align="right" valign="top">-1</td>
+  <td align="left" valign="top">General error (memory shortage or similar)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_STOP</td>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">[Cancel] button selected</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_OK</td>
+  <td align="right" valign="top">1</td>
+  <td align="left" valign="top">[OK] button selected</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_HELP</td>
+  <td align="right" valign="top">2</td>
+  <td align="left" valign="top">[Help] button selected</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_<a href="proto_xfsl.html#EVENT">EVENT</a></td>
+  <td align="right" valign="top">3</td>
+  <td align="left" valign="top">AES event occurred</td>
+</tr>
+<tr>
+  <td align="left" valign="top">xFS_POPUP</td>
+  <td align="right" valign="top">4</td>
+  <td align="left" valign="top">Changes to user-popup</td>
+</tr>
+</table>
+</div>
+
+<p>These values were chosen to be upwardly compatible to the <a href="proto_xfsl.html#UFSL">UFSL</a>
+font- selector (this knows the return codes -4, -3, -2, -1, 0 and 1).
+</p>
+<p>In addition, <a href="gemdos_main.html">GEMDOS</a> error messages (values smaller or equal to
+-32) can occur; in particular, <a href="#xfsl_init">xfsl_init</a> can also return the value
+<a href="gemdos_errors.html#EINVFN">EINVFN</a> (-32) if the font-selector does not support the extended call.
+</p>
+<p>With the <a href="#xfsl_init">xfsl_init</a> call, positive return values correspond to
+the font-selector's window handle (0 means that the font-selector was
+opened as a modal dialog).
+</p>
+<p>It is possible that the list of return codes will be extended in
+the future for further errors (values smaller than -9) or events
+(values greater that 4). This should be respected during the design of
+the program: Unknown errors should lead to an abort, unknown events
+should be ignored.
+</p>
+<h4><a name="The_20Pure-C_20event_20structure">15.14.1.6 The Pure-C event structure</a></h4>
+<a name="EVENT"></a>
+<p>The GEM library of Pure-C uses a special structure in which
+the parameters of the AES function <a href="evnt.html#evnt_multi">evnt_multi</a> are coalesced. This
+structure is also used by <a href="#xfsl_event">xfsl_event</a>.
+</p>
+<blockquote>
+<pre>typedef struct /* Special type for EventMulti */
+{
+ /* Input parameters */
+ int ev_mflags,
+     ev_mbclicks, ev_bmask, ev_mbstate,
+     ev_mm1flags, ev_mm1x, ev_mm1y, ev_mm1width, ev_mm1height,
+     ev_mm2flags, ev_mm2x, ev_mm2y, ev_mm2width, ev_mm2height,
+     ev_mtlocount, ev_mthicount;
+
+ /* Output parameters */
+ int ev_mwich,
+     ev_mmox, ev_mmoy, ev_mmobutton, ev_mmokstate,
+     ev_mkreturn, ev_mbreturn;
+
+ /* <a href="proto_ssp.html#Message">Message</a>-Buffer */
+ int ev_mmgpbuf[8];
+} EVENT;
+</pre>
+</blockquote>
+<p>The elements of the structure correspond to those of the
+<a href="evnt.html#evnt_multi">evnt_multi</a> call. The order of the parameters too - apart from a few
+exceptions - is identical. The field <i>ev_mwich</i> contains the
+occurred events in the same coding as <i>ev_mflags</i> in <a href="evnt.html#evnt_multi">evnt_multi</a>.
+</p>
+<h3><a name="xFSL_20tips_20and_20notes">15.14.2 xFSL tips and notes</a></h3>
+<p>In the following sections an attempt is made to give some tips
+and notes for the <a href="#xFSL_20interface">xFSL interface</a>.
+</p>
+<h4><a name="A_20simple_20xFSL_20call">15.14.2.1 A simple xFSL call</a></h4>
+<p>In view of the multitude of parameters and setting options, the
+following note seems appropriate:
+</p>
+<div align="center">
+<b>Don't panic!</b>
+</div>
+<p>An xFSL call is simpler than it appears at first. In particular
+one can adopt here the strategy of 'step-by-step refinement', since
+one can set (almost) all parameters to zero at first.
+</p>
+<p>A possible simple xFSL call can look like this, for instance:
+</p>
+<blockquote>
+<pre>#include &lt;stdio.h&gt;
+#include &lt;<a href="aes_fundamentals.html#aes">aes</a>.h&gt;
+#include &lt;<a href="vdi_bindings.html#vdi">vdi</a>.h&gt;
+#include &lt;xfsl.h&gt;
+
+void call_xfsl (void)
+{
+  int xhandle, xret;
+  <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> xpar;
+  <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> pfont;
+  xFSL *xfsl;
+
+  memset (&amp;xpar, 0, sizeof (<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>));
+  memset (&amp;pfont, 0, sizeof (<a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>));
+
+  xpar.par_size = sizeof (<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>);
+  xpar.pfi_size = sizeof (<a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>);
+  xpar.font = &amp;pfont;
+  xpar.font-&gt;fontcol = BLACK;
+
+  if (get_cookie ('xFSL', &amp;xfsl))
+  {
+    xhandle = xfsl-&gt;<a href="#xfsl_init">xfsl_init</a> (0, &amp;xpar);
+    if (xhandle &gt;= 0)
+    {
+     do
+       xret = xfsl-&gt;<a href="#xfsl_event">xfsl_event</a> (xhandle, 0L);
+     while (xret &gt; xFS_OK);
+     xfsl-&gt;<a href="#xfsl_exit">xfsl_exit</a> (xhandle);
+     if (xret == xFS_STOP)
+       printf (&quot;Cancel\n&quot;);
+     else if (xret == xFS_OK)
+       printf (&quot;Font with ID %d selected\n&quot;, xpar.font-&gt;fontid);
+     else if (xret &lt; 0)
+       printf (&quot;Error %d\n&quot;, xret);
+   }
+   else
+     printf (&quot;Error %d\n&quot;, xhandle);
+  }
+  else
+    printf (&quot;Cookie not found!\n&quot;);
+}
+</pre>
+</blockquote>
+<p>With the two memset calls all elements of the structures
+<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> and <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> are set to zero. Subsequently some absolutely
+necessary values are entered:
+</p>
+<ul>
+<li><p> The size of the two structures <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> and <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a>
+<br>&nbsp;
+</p></li>
+<li><p> The address of the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure is entered in the
+<a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure
+<br>&nbsp;
+</p></li>
+<li><p> The font colour is set to black (one could also omit this, but
+normally one wants to write in black type on a white background)
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>MNo further preparation is required, and now the actual call
+follows. First the <a href="proto_xfsl.html#xFSL_20cookie">xFSL cookie</a> is searched for and on success the
+font-selector will be initialized by passing the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure.
+If this call was successful (<i>xhandle</i> is greater or equal to
+zero), then the font-selector is already on the screen. In the main
+loop one now waits until the font-selector is terminated either with
+xFS_STOP or xFS_OK by the user, or until an error occurs (other
+positive return values are simply ignored here). With the call of
+<a href="#xfsl_exit">xfsl_exit</a> the font-selector is removed from the screen once more and
+subsequently the return value is evaluated.
+</p>
+<p>That wasn't too complicated, was it? From here on you can now
+continue experimenting with various parameters and flags.
+</p>
+<h4><a name="xFSL_20Questions_20and_20Answers">15.14.2.2 xFSL Questions and Answers</a></h4>
+<p><b>How can I find out which features the font-selector
+offers?</b>
+</p>
+<p>Directly, this can be done for some features by using the
+function <a href="proto_xfsl.html#xfsl_info">xfsl_info</a>. Indirectly, further features can be inquired for
+with the <i>control</i> field in the <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a> structure: After a
+successful <a href="#xfsl_init">xfsl_init</a> call the font-selector will clear those <a href="#The_20control-flags">control-flags</a>
+that it does not understand.
+</p>
+<p><b>How should my program behave when it realizes that the
+font-selector does not support the desired feature?</b>
+</p>
+<p>If some kind of font-selector is installed, then it also ought to
+be used in any case. Depending on how important the missing feature
+is, your program could look for alternatives (e.g. via the Font
+protocol) or attempt to compensate for the missing feature.
+</p>
+<p>Once again: The user wanted a font-selector, not an
+error-message! If the missing feature can be compensated for only with
+difficulty, then you should inform the user once(!) with a
+corresponding note, but call up the font-selector nevertheless. Even
+if the selection can then not be made with the desired convenience, it
+is still far less frustrating for the user than not being able to
+select a font at all.
+</p>
+<p>Some examples: If the popup is to be used to set the font for a
+given program window, then if the popup is missing the font should be
+set for the topped window of the program. If the font-selector does
+not support the locking of size-changes, then the returned size should
+simply be ignored and - if it differs from the desired size - the user
+informed about this by a note.
+</p>
+<p>Incidentally, one should not rely on the font-selector
+supporting the same features the next time it is called! The
+font-selectors that work with an overlay (XFSL.OVL) can be substituted
+at any time without a Reset by re-copying the overlay.
+</p>
+<p><b>What's all this 'mapping' about?</b>
+</p>
+<a name="What_27s_20mapping_3F"></a>
+<p>Vector fonts generally contain more than the familiar 256
+characters, and furthermore they are not normally in the accustomed
+ASCII coding (for example the space character may lie at position 0
+instead of 32). Therefore the pertinent characters of the font are
+'mapped' to the 'normal' 256 characters, so that the space character
+lies as usual in position 32, no matter what position it has within
+the font. This is designated as 'ASCII mapping'.
+</p>
+<p>The ASCII mapping is active by default, but due to this one
+cannot access the characters that lie outside the ASCII character set.
+Hence a second mapping, 'Direct mapping', is available. Here one has
+access to <i>all</i> characters of a font. However, for this one also
+has to know what type of font one is dealing with and how many
+characters the font contains: Speedo fonts usually have 564
+characters, TrueType fonts can (theoretically) contain up to 65536
+characters. One can get this information after switching to Direct
+mapping with the VDI function <a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a>:
+</p>
+<p>int minADE, maxADE;
+</p>
+<p><a href="vdi_attribute.html#vst_charmap">vst_charmap</a>(handle,0);
+<a href="vdi_inquire.html#vqt_fontinfo">vqt_fontinfo</a>(handle,&amp;minADE,&amp;maxADE,dumarray,&amp;dummy,dumarray);
+</p>
+<p>In <i>minADE</i> one gets the smallest, in <i>maxADE</i> the
+largest valid character index.
+</p>
+<p>Direct mapping only has limited use for normal applications.
+Unlike ASCII mapping which provides consistent mapping for all types
+of fonts, one needs to know here exactly what kind of font one is
+dealing with. Thus, for instance, the Speedo symbol fonts have a
+different coding to the 'normal' Speedo fonts. This means that at
+position 64 of such a symbol font, say, one will not find the same
+character as for a 'normal' Speedo font.
+</p>
+<p>Other mappings than ASCII are therefore of no interest to the
+majority of programs at present. But future GDOSes or equivalents may
+possibly also offer other consistent mappings (e.g. Unicode or BICS),
+where one can once more rely on the same character appearing always at
+a given position (similar to ASCII mapping but also including
+positions higher than 255).
+</p>
+<p><b>Note:</b> <a href="VDI_fundamentals.html#NVDI">NVDI</a> from <a href="VDI_fundamentals.html#NVDI">NVDI</a> 4 onwards is able to use Unicode
+mapping.
+</p>
+<h4><a name="xFSL_20technical_20programming_20notes">15.14.2.3 xFSL technical programming notes</a></h4>
+<p>The description of the <a href="#xFSL_20interface">xFSL interface</a> in this text is effected
+in Pure-C. In the following sections the data-types and specifics of
+Pure-C are described in greater detail, so that xFSL calls succeed in
+other programming languages and C-dialects as well.
+</p>
+<h5><a name="Data-types">15.14.2.3.1 Data-types</a></h5>
+<p>The following data-types are used in this (part of the) text:
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Name</td>
+  <td align="left" valign="top">Size</td>
+</tr>
+<tr>
+  <td align="left" valign="top">int</td>
+  <td align="left" valign="top">16-bit signed</td>
+</tr>
+<tr>
+  <td align="left" valign="top">unsigned int</td>
+  <td align="left" valign="top">16-bit unsigned</td>
+</tr>
+<tr>
+  <td align="left" valign="top">long</td>
+  <td align="left" valign="top">32-bit signed</td>
+</tr>
+<tr>
+  <td align="left" valign="top">unsigned long</td>
+  <td align="left" valign="top">32-bit unsigned</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<p>The data-type 'char' is an (ASCII) character and is used here
+only as a pointer type, i.e. as a pointer to a C-string (series of
+characters terminated with a NULL-byte).
+</p>
+<br>
+<a name="union"></a>
+<p><u>Union</u>
+</p>
+<p>A union corresponds to a variable record in Pascal. It is a
+structure whose individual elements lie 'on top of each other', i.e.
+occupy the same block of memory. Which element is valid at a given
+time depends on the context, or is left to the programmer.
+</p>
+<p><b>Example:</b> In the structure <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> a union `fsize' is
+used for the size specification:
+</p>
+<blockquote>
+<pre>union fsize
+{
+ int   size;    /* Font size in points        */
+ <a href="vdi_structures.html#fix31">fix31</a> size31;  /* Font size in 1/65536 point */
+};
+</pre>
+</blockquote>
+<p>The memory requirement of this union comprises four bytes, as
+the type <a href="vdi_structures.html#fix31">fix31</a> is four bytes long. One <b>could</b> now assign to the
+element <i>size31</i> a size-specification in 1/65536 point and then
+read out the value in whole points from the element <i>size</i> - but
+this is not to be recommended, as in the conversion of fix31 to
+points one should always round off (see below).
+</p>
+<br>
+<a name="Data-type_20fix31"></a>
+<p><u>fix31</u>
+</p>
+<p>The data-type fix31 is a fixed-point number, in which the upper
+16 bits represent the signed pre-decimal point (whole number) portion,
+and the lower 16 bits the unsigned decimal portion. It is used only
+for the size specification and positioning of fonts, so that one can
+obtain a precision of 1/65536 point with it.
+</p>
+<p>In the conversion of fix31 to points one must not forget
+rounding. To quote from the <a href="VDI_fundamentals.html#NVDI">NVDI</a> guide:
+</p>
+<p><b>One may never, <i>never, ever</i> just cut off the decimal
+part!</b>
+</p>
+<h5><a name="xFSL_20parameter_20passing">15.14.2.3.2 xFSL parameter passing</a></h5>
+<p>The passing of parameters for all xFSL calls is done via the
+stack according to C-convention. This means that at the call the
+parameter lying furthest right is placed first on the stack, and the
+left-most parameter at the end, i.e. when jumping to the
+font-selector, lies at the top.
+</p>
+<h5><a name="Pure-C_20and_20_27cdecl_27">15.14.2.3.3 Pure-C and 'cdecl'</a></h5>
+<p>Pure-C normally passes the parameters to functions in registers.
+For passing via the stack one must either use the keyword 'cdecl' (as
+in the include file XFSL.H) or the compiler switch '-H' must be set.
+</p>
+<p>The keyword 'cdecl' is a Pure-C-specific extension and so will
+issue a warning with compiler switch '-A' (ANSI-conform) set.
+</p>
+<h3><a name="xFSL_20revisions_20history">15.14.3 xFSL revisions history</a></h3>
+<p><b>Revision 4</b>
+</p>
+<ul>
+<li><p> Due to a small design error in the older revisions that limited
+the extendebility of the interface, Revision 4 is <i>not</i>
+compatible to older revisions. This should not be a problem in
+practice, as the font-selector will quit calls according to the old
+scheme with an error. The old Revision 3 will disappear in time.
+<br>&nbsp;
+</p></li>
+<li><p> New parameters in the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure:
+<br>&nbsp;
+<ul>
+<li><p> Text background colour (<i>backcol</i>)
+<br>&nbsp;
+</p></li>
+<li><p> <a href="proto_xfsl.html#Text_20alignment">Text alignment</a> (<i>halign</i> and <i>valign</i>)
+<br>&nbsp;
+</p></li>
+<li><p> <a href="proto_xfsl.html#Text_20rotation">Text rotation</a> (<i>rotation</i>)
+<br>&nbsp;
+</p></li>
+<li><p> Specification of characters that the selected font <b>has</b>
+to contain (<i>validtype</i> and <i>validchars</i>)
+<br>&nbsp;
+</p></li>
+</ul>
+
+</p></li>
+<li><p> <a href="#The_20PFONTINFO_20structure">The PFONTINFO structure</a> is also filled for returns of xFS_STOP
+with the values of the last font selected in the font-selector
+<br>&nbsp;
+</p></li>
+<li><p> Coding of the font-flags changed (finer differentiation of the
+vector formats)
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Revision 3</b>
+</p>
+<ul>
+<li><p> The first publicly available interfacen revision
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Older revisions</b>
+</p>
+<ul>
+<li><p> Older revisions can be safely ignored, as these never appeared
+in a program available to the public at large
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="UFSL_2FxFSL_20program_20overview">15.14.4 UFSL/xFSL program overview</a></h3>
+<p>There follows an overview of all available font-selectors at
+this time that dispose of a <a href="proto_xfsl.html#UFSL">UFSL</a> or an <a href="#xFSL_20interface">xFSL interface</a> (or both).
+</p>
+<p>This is followed by a list of programs that use a font-selector
+with one or both of these interfaces.
+</p>
+<h4><a name="Font-selector_20overview">15.14.4.1 Font-selector overview</a></h4>
+<p>A short overview of the currently existig font-selectors:
+</p>
+<dl class="UDO_env_description">
+<dd><a name="UFSL"></a></dd>
+<dt><b>UFSL</b></dt>
+<dd>
+<p> by Michael Thänitz
+<br>This is the prototype of all external font-selectors. The last
+published version is 0.97, after which Michael unfortunately ceased
+its development. Thankfully however he has published the source texts.
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>FontSel</b></dt>
+<dd>
+<p> by Holger Weets and Christoph Zwerschke
+<br>A small but also rather spartan font-selector from Holger Weets,
+which from Version 1.02 has been developed further by Christoph
+Zwerschke. As of the Version 1.02 the <a href="#xFSL_20interface">xFSL interface</a> is supported as
+well.
+<br>&nbsp;
+<dd><a name="xUFSL"></a></dd>
+</p>
+
+</dd>
+<dt><b>xUFSL</b></dt>
+<dd>
+<p> by Stefan Rogel
+<br>The xUFSL offers many additional features to the font-selectors
+named above. As these could not be accessed via the existing UFSL
+interface, Stefan has extended the interface. The design of the first
+version was, to put it carefully, 'controversial'. The last published
+Version: 1.05. The successor of the xUFSL is ...
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>HuGo</b></dt>
+<dd>
+<p> by Stefan Rogel
+<br>HuGo! is the successor of the xUFSL adapted to the <a href="#xFSL_20interface">xFSL interface</a>
+(the UFSL interface is also still supported, but not the special
+extensions of the xUFSL to the UFSL interface). The name change was
+made to avoid confusion.
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>Calvino</b></dt>
+<dd>
+<p> by Dirk Haun
+<br>Together with HuGo! the first font-selector with a <a href="#xFSL_20interface">xFSL interface</a>.
+Calvino too still supports the simple UFSL interface.
+<br>&nbsp;
+</p>
+
+</dd>
+<dt><b>FONT_SEL und FONT_PAL</b></dt>
+<dd>
+<p> by Christian Grunenberg
+<br>These two programs work on a Drag&amp;Drop basis, so they support
+neither the UFSL nor the <a href="#xFSL_20interface">xFSL interface</a>, but instead support the Font
+protocol. FONT_SEL is a font-selector, FONT_PAL a font palette (with
+integrated font-selector).
+<br>&nbsp;
+</p>
+
+</dd>
+</dl>
+<h4><a name="Programs_20that_20support_20a_20font-selector">15.14.4.2 Programs that support a font-selector</a></h4>
+<p>The following programs support an external font-selector
+(position at 16.08.1998, all specifications without guarantee):
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Program</td>
+  <td align="left" valign="top">Category</td>
+  <td align="left" valign="top">Author</td>
+  <td align="center" valign="top"><a href="proto_xfsl.html#UFSL">UFSL</a></td>
+  <td align="center" valign="top">xFSL</td>
+</tr>
+<tr>
+  <td align="left" valign="top">800XL-Deejay</td>
+  <td align="left" valign="top">Drive emulator</td>
+  <td align="left" valign="top">Kolja Koischwitz</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">APP_List</td>
+  <td align="left" valign="top">System utility</td>
+  <td align="left" valign="top">Ralf Zimmermann</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Bellini</td>
+  <td align="left" valign="top">Graphics program</td>
+  <td align="left" valign="top">Ingo Dehne</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">BibelST</td>
+  <td align="left" valign="top">Bible software</td>
+  <td align="left" valign="top">Reinhard Bartel</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Cat2Maus</td>
+  <td align="left" valign="top">MausTausch</td>
+  <td align="left" valign="top">Harald Sommerfeldt</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Chatwin</td>
+  <td align="left" valign="top">Shell</td>
+  <td align="left" valign="top">Dirk Haun</td>
+  <td align="center" valign="top">+W</td>
+  <td align="center" valign="top">+W</td>
+</tr>
+<tr>
+  <td align="left" valign="top">CyPress</td>
+  <td align="left" valign="top">Text processor</td>
+  <td align="left" valign="top">Rene Bartholomay</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+W</td>
+</tr>
+<tr>
+  <td align="left" valign="top">DB-Point</td>
+  <td align="left" valign="top">Newsreader</td>
+  <td align="left" valign="top">Michael Heng</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Disk Cake</td>
+  <td align="left" valign="top">Disk utility</td>
+  <td align="left" valign="top">Christoph Zwerschke</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Egale</td>
+  <td align="left" valign="top">File utility</td>
+  <td align="left" valign="top">David Reitter</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Everest</td>
+  <td align="left" valign="top">Editor</td>
+  <td align="left" valign="top">Oliver Schmidt</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Face Value</td>
+  <td align="left" valign="top">App.builder/Lib</td>
+  <td align="left" valign="top">Vegard Hofsoy</td>
+  <td align="center" valign="top">-</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Floh</td>
+  <td align="left" valign="top">FFile list utility</td>
+  <td align="left" valign="top">Heiko Schaefer</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GEMAR</td>
+  <td align="left" valign="top">Backup</td>
+  <td align="left" valign="top">Steffen Engel</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">GEM-Fontviewer</td>
+  <td align="left" valign="top">Font displayer</td>
+  <td align="left" valign="top">Reinhard Bartel</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">GEM-Plan</td>
+  <td align="left" valign="top">Spreadsheet</td>
+  <td align="left" valign="top">Reiner Rosin</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+W</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Hitchcock</td>
+  <td align="left" valign="top">System utility</td>
+  <td align="left" valign="top">Thorsten Pohlmann</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">IdeaList</td>
+  <td align="left" valign="top">ASCII print program</td>
+  <td align="left" valign="top">Christoph Bartholme</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Imagin</td>
+  <td align="left" valign="top">Function plotter</td>
+  <td align="left" valign="top">Reinhard Maier</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Jedi</td>
+  <td align="left" valign="top">GAL-Assembler</td>
+  <td align="left" valign="top">Ralf Zimmermann</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Kandinsky</td>
+  <td align="left" valign="top">Drawing program</td>
+  <td align="left" valign="top">Ulrich Rossgoderer</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">MagiC!Conf</td>
+  <td align="left" valign="top"><a href="magic.html">MagiC</a> utility</td>
+  <td align="left" valign="top">Christian Ratsch</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">MasterBrowse</td>
+  <td align="left" valign="top">File viewer</td>
+  <td align="left" valign="top">Michel Forget</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">MenuInfo</td>
+  <td align="left" valign="top">System utility</td>
+  <td align="left" valign="top">Dirk Hagedorn</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+W</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Okami</td>
+  <td align="left" valign="top">Newsreader</td>
+  <td align="left" valign="top">Wolfram Rösler</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Photo Line</td>
+  <td align="left" valign="top">Image processor</td>
+  <td align="left" valign="top">Gerhard Huber</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">QED</td>
+  <td align="left" valign="top">Editor</td>
+  <td align="left" valign="top">Christian Felsch</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">RoadRunner</td>
+  <td align="left" valign="top">Car journey planner</td>
+  <td align="left" valign="top">Andreas Schrell</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+W</td>
+</tr>
+<tr>
+  <td align="left" valign="top">SaugUtility</td>
+  <td align="left" valign="top">Ditto</td>
+  <td align="left" valign="top">Frank Rüger</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Schecks</td>
+  <td align="left" valign="top">Business software</td>
+  <td align="left" valign="top">Christian Lehmann</td>
+  <td align="center" valign="top"></td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">ST-Guide</td>
+  <td align="left" valign="top">Hypertext</td>
+  <td align="left" valign="top">Holger Weets</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">STJ-Oberon</td>
+  <td align="left" valign="top">Programming language</td>
+  <td align="left" valign="top">Stephan Junker</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Texel</td>
+  <td align="left" valign="top">Spreadsheet</td>
+  <td align="left" valign="top">Thomas Much</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+</td>
+</tr>
+<tr>
+  <td align="left" valign="top">UpToCASE</td>
+  <td align="left" valign="top">CASE tool</td>
+  <td align="left" valign="top">Michael Nolte</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">VESAL</td>
+  <td align="left" valign="top">Learning program</td>
+  <td align="left" valign="top">Peter Klasen</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">Zeig's mir</td>
+  <td align="left" valign="top">File viewer</td>
+  <td align="left" valign="top">Reiner Rosin</td>
+  <td align="center" valign="top">+</td>
+  <td align="center" valign="top">+W</td>
+</tr>
+</table>
+</div>
+
+<p>(+: supported, W: as window-dialog)
+</p>
+<br>
+<span class="page-break"></span>
+<h3><a name="The_20UFSL_20interface">15.14.5 The UFSL interface</a></h3>
+<p>For the sake of completeness, an English translation of the
+original description by Michael Thänitz of the original <a href="proto_xfsl.html#UFSL">UFSL</a>
+interface follows here :
+</p>
+<p><u>Programming interface:</u>
+</p>
+<p><a href="proto_xfsl.html#UFSL">UFSL</a> is a font-selector box for the AUTO folder. If offers a
+simple programming interface to the programmer via a cookie.
+</p>
+<p>The cookie is called: '<a href="proto_xfsl.html#UFSL">UFSL</a>'.
+<br>The cookie returns a pointer to the following structure:
+</p>
+<pre> typedef struct
+ {
+  unsigned long  id;      /* <a href="proto_xfsl.html#UFSL">UFSL</a> ID (<a href="proto_xfsl.html#UFSL">UFSL</a>)       */
+  unsigned int   version; /* Version (BCD format) */
+  int dialtyp;            /* 0=Dialog, 1=Window   */
+  int cdecl (*font_selinit)(void);
+  int cdecl (*font_selinput)(
+              int vdihandle,
+              int dummy,
+              char *text,    /* Custom text, max. 34 characters  */
+              int ftype,     /* 1=Only monospaced fonts, 0=All   */
+              int *fretid,   /* Set Font ID                      */
+              int *fretsize  /* Set font size                    */
+              );
+  <a href="aes_structures.html#OBJECT">OBJECT</a> *helpbutton;           /* Type: BOXTEXT                 */
+  void cdecl (*helpfunc)(void); /* User-defined Help function    */
+
+  /**** As of Version 0.91 ********************************************/
+  char *examplestr;            /* Sample text for font display     */
+
+  /**** As of Version 0.96 ********************************************/
+  void cdecl (*msgfunc)(int event, int msgbuf[]);/* Redraw function */
+
+  /**** As of Version 0.97 ********************************************/
+  int cdecl (*fontsel_exinput)(
+              int vdihandle,
+              int ftype,     /* 1=Only monospaced fonts, 0=All     */
+              char *text,    /* Custom text, masx. 34 characters   */
+              int *fretid,   /* Set font ID                        */
+              int *fretsize  /* Set font size                      */
+              );
+ } <a href="proto_xfsl.html#UFSL">UFSL</a>;
+</pre>
+<p><u>Call:</u>
+</p>
+<pre><a href="proto_xfsl.html#UFSL">UFSL</a> *ufsl;
+ufsl=(<a href="proto_xfsl.html#UFSL">UFSL</a> *)get_cookie('<a href="proto_xfsl.html#UFSL">UFSL</a>');
+ufsl-&gt;helpfunc= my_helpfunc;   /* Help function, or NULL */
+ufsl-&gt;msgfunc = my_msghandler; /* Redraw function, or NULL,
+                                  respect <i>dialtyp</i>       */
+ufsl-&gt;fontsel_input(vdihandle,&quot;Please select a font&quot;,0,&amp;id,&amp;size);
+<u>or</u>
+ufsl-&gt;fontsel_input(vdihandle,NULL,0,&amp;id,&amp;size);
+</pre>
+<p><u>Return codes:</u>
+</p>
+<pre> 1 : All OK, values are valid
+ 0 : Cancel selected
+-1 : Out of memory
+-2 : Impermissible mutliple call
+-3 : Font size could not be identified
+-4 : Number of fonts must be greater than zero
+</pre>
+<p><u><a href="vdi_escape.html#Special_20functions">Special functions</a>:</u>
+</p>
+<pre>void cdecl (*helpfunc)(void); /* User-defined Help function      */
+</pre>
+<p><a href="proto_xfsl.html#UFSL">UFSL</a> can call a user-defined Help function via the equally
+optional HELP button. <i>helpfunc</i> requires no parameters and also
+has no return value.
+</p>
+<pre>void cdecl (*msgfunc)(int event, int msgbuf[]); /* Redraw function */
+</pre>
+<p>When using the <a href="proto_xfsl.html#UFSL">UFSL</a> as a window-dialog it is necessary to make a
+Redraw function available. It sends any received events back to the
+calling program, so that after moving the dialog one can restore the
+background windows. <i>msgfunc</i> returns the result of <a href="evnt.html#evnt_multi">evnt_multi</a>
+as the first parameter and the MsgPipe as the second parameter. A
+return code is not required. The calling program must make available
+all the required routines for window handling. <a href="wind.html#wind_update">wind_update</a>(..._UPDATE)
+is not set by <a href="proto_xfsl.html#UFSL">UFSL</a>, so this is the duty of the calling user program.
+On principle (?) the memory protection of MultiTOS should be switched
+off.
+</p>
+<p>Basically one should give some thought whether all events should
+be replied to appropriately. A <a href="evnt.html#WM_TOPPED">WM_TOPPED</a>, which tops other windows of
+the program, should not be answered, since <a href="proto_xfsl.html#UFSL">UFSL</a> naturally can only be
+applications modal as <a href="proto_xfsl.html#UFSL">UFSL</a> gyrates in its own <a href="form.html#form_do">form_do</a> / <a href="evnt.html#evnt_multi">evnt_multi</a>.
+</p>
+<h3><a name="Notes_20for_20authors_20of_20other_20font-selectors">15.14.6 Notes for authors of other font-selectors</a></h3>
+<p>Authors of other font-selectors are invited to have their
+program join the <a href="#xFSL_20interface">xFSL interface</a>. In principle, every font-selector
+that uses a TSR concept can be furnished with the <a href="#xFSL_20interface">xFSL interface</a>.
+</p>
+<p>To prevent misunderstandings: The overlay technique and the
+reentrancy as offered by Calvino and HuGo! are not part of the actual
+interface and hence need not be supported by other font-selectors.
+Indeed the interface between the resident part ('shell') and the
+post-loaded part ('overlay') is also standardized and therefore can be
+used by other font-selectors as well. A description of this internal
+interface is available on request, see 'Contact addresses'.
+</p>
+<p>Since a number of programs already support the old <a href="proto_xfsl.html#UFSL">UFSL</a>
+interface, it seems advisable to make this interface available in new
+font-selectors as well. However a quick look at these programs shows
+that they call the font-selector almost exclusively as a modal dialog.
+Thus the recommendation is to build in minimal <a href="proto_xfsl.html#UFSL">UFSL</a> support (as a
+modal dialog only) and instead implement the <a href="#xFSL_20interface">xFSL interface</a> as widely
+as possible, since one can now expect that just those - now finally
+standardized - extensions will be used by programs rather than the
+<a href="proto_xfsl.html#UFSL">UFSL</a> interface.
+</p>
+<p>A font-selector should offer the following additional features
+if possible:
+</p>
+<ul>
+<li><p> Size changes possible
+<br>In particular this means that not just fixed sizes can be chosen,
+but with vector fonts inbetween sizes can be set as well.
+<br>&nbsp;
+</p></li>
+<li><p> fix31 support
+<br>For some applications the setting of the font size in points is
+not enough, hence a setting in 1/65536 point should be possible.
+<br>&nbsp;
+</p></li>
+<li><p> User-popup
+<br>With an additional popup, the font-selector can be used more
+flexibly.
+<br>&nbsp;
+</p></li>
+<li><p> Drag&amp;Drop support
+<br>Besides the 'traditional' call via the cookie, solutions on the
+Drag&amp;Drop basis are coming more and more into fashion. If the
+font-selector already supports Drag&amp;Drop natively, then it can be
+converted easily with a 'front end' program into a full-blown
+Drag&amp;Drop selector.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>The following conventions were agreed for an xFSL font-selector:
+</p>
+<ul>
+<li><p> If the font-selector has a Closer, then clicking on this will
+be interpreted as 'Cancel', i.e. xFS_STOP will be returned. If the
+CC_<a href="wind.html#CLOSER">CLOSER</a> control-flag is set, then the font current at the time will
+be returned nevertheless (in the <a href="proto_xfsl.html#PFONTINFO">PFONTINFO</a> structure in <a href="proto_xfsl.html#xFSL_PAR">xFSL_PAR</a>).
+<br>&nbsp;
+</p></li>
+<li><p> If the extended call (<a href="#xfsl_init">xfsl_init</a>, <a href="#xfsl_event">xfsl_event</a> and <a href="#xfsl_exit">xfsl_exit</a>) is
+not supported, then at least a dummy function for <a href="#xfsl_init">xfsl_init</a> will be
+<a href="xbios_sound.html#installed">installed</a> that always returns -32 (GEMDOS error-message <a href="gemdos_errors.html#EINVFN">EINVFN</a>,
+invalid function number).
+<br>&nbsp;
+<br>But it is urgently requested that the extended call is offered,
+as this is the one used most frequently.
+<br>&nbsp;
+</p></li>
+<li><p> It does not matter if the font-selector only appears as a modal
+dialog for the extended call. But with a set CC_WINDOW, <a href="#xfsl_init">xfsl_init</a>
+should then return xFS_NO_WINDOW, so that the caller can adjust
+himself to this.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protocols" title="Protocols" border="0" width="24" height="24">Protocols</a>
+<a name="UDO_nav_lf_FOOT" href="proto_xacc.html"><img src="udo_lf.gif" alt="XAcc" title="XAcc" border="0" width="24" height="24">XAcc</a>
+<a name="UDO_nav_rg_FOOT" href="appendix.html"><img src="udo_rg.gif" alt="XSSI protocol" title="XSSI protocol" border="0" width="24" height="24">XSSI protocol</a>
+</body>
+</html>

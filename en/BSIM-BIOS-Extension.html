@@ -1,0 +1,626 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: BSIM-BIOS-Extension
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_HEAD" href="xbra_main.html"><img src="udo_lf.gif" alt="XBRA procedure" title="XBRA procedure" border="0" width="24" height="24">XBRA procedure</a>
+<a name="UDO_nav_rg_HEAD" href="bios_functions.html"><img src="udo_rg.gif" alt="BIOS function list" title="BIOS function list" border="0" width="24" height="24">BIOS function list</a>
+
+<hr>
+
+<h1><a name="BSIM-BIOS-Extension">3.10 BSIM-BIOS-Extension</a></h1>
+<a name="BSIM"></a>
+<p>The basic idea of the Drive-B-Simulator is to read a floppy disk
+into memory and operate it as a RAM-disk. The 'write disk' function
+writes the RAM-disk back to the disk. A 'swap mode' allows the program
+to work with applications that stubbornly access drive A.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#bsim_id">bsim_id</a></td>
+<td valign="top"> Check if BSIM is available
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#drv_change">drv_change</a></td>
+<td valign="top"> Swap drives
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#drvprotec">drvprotec</a></td>
+<td valign="top"> Get/set software write-protection for drives
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#dstate">dstate</a></td>
+<td valign="top"> Get details about the drive
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#kill_disk">kill_disk</a></td>
+<td valign="top"> Remove disk from memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#load_disk">load_disk</a></td>
+<td valign="top"> Load disk into memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#save_disk">save_disk</a></td>
+<td valign="top"> Save to disk
+
+</td></tr>
+</table>
+
+<p><b>Note:</b> Drive-B-Simulator uses the same XBRA ID as BlitSim
+('BSIM').
+</p>
+<p><b>Configuration file:</b>
+</p>
+<p>The config file BSTAT.INF is an array of 18 bytes. The following
+apply:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Offset</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0..15</td>
+<td valign="top"> Write lock status (0 or 1) for each drive, from byte 0=A to
+byte 15=P
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">16</td>
+<td valign="top"> Load disk at startup (0 or 1)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">17</td>
+<td valign="top"> Swap drives at startup (0 or 1)
+
+</td></tr>
+</table>
+
+<p><b>Warning</b> Calls to this <a href="bios_main.html">BIOS</a> extension must be avoided
+because Drive-B-Simulator uses undocumented <a href="tos_main.html">TOS</a> features and
+hard-coded addresses which prevent it from working under EmuTOS.
+</p>
+<p>Presented in the german magazine <a href="tos_main.html">TOS</a> 3/1992.
+</p>
+<h3><a name="bsim_id">3.10.1 bsim_id</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »BSIM id« - Check if <a href="BSIM-BIOS-Extension.html#BSIM">BSIM</a> is available
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 300 (0x012c)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20bsim_id">See 'Bindings for bsim_id'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine bsim_id checks if <a href="BSIM-BIOS-Extension.html#BSIM">BSIM</a> is available.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns 0x4253494D ('BSIM') if <a href="BSIM-BIOS-Extension.html#BSIM">BSIM</a> is
+available.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20bsim_id">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20bsim_id">3.10.1.1 Bindings for bsim_id</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    #$12C,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #2,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(300)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="drv_change">3.10.2 drv_change</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Drive change« - Swap drives
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 304 (0x0130)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20drv_change">See 'Bindings for drv_change'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine drv_change allows to swap drives. The
+<i>data</i> argument is as follows:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0:</td>
+<td valign="top"> Normal
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1:</td>
+<td valign="top"> Swapped
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> Status
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function can return the following results in D0:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0:</td>
+<td valign="top"> Normal
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1:</td>
+<td valign="top"> Swapped
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20drv_change">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20drv_change">3.10.2.1 Bindings for drv_change</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.w    #data,-(sp)   ; Offset 2
+move.w    #$130,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #4,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(304,W:data%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="drvprotec">3.10.3 drvprotec</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Drive protection« - Write lock settings
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 305 (0x0131)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20drvprotec">See 'Bindings for drvprotec'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine drvprotec gets or sets the write-protected
+drive status. The <i>prtdrv</i> argument is a bit-vector for the
+protected drives (bit 0=A, bit 1=B...), or -1 to inquire the current
+status.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns a bit-vector for the protected drives.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20drvprotec">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20drvprotec">3.10.3.1 Bindings for drvprotec</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.l    #prtdrv,-(sp) ; Offset 2
+move.w    #$131,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(305,L:prtdrv%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="dstate">3.10.4 dstate</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Drive status« - Get RAM-disk details
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 306 (0x0132)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20dstate">See 'Bindings for dstate'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine dstate copies details of the RAM-disk into
+the buffer pointed to by <i>pointer</i>. The structure is as follows:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Offset</td>
+<td valign="top"> Description
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">0 (long)</td>
+<td valign="top"> Memory start address of the disk
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">4 (long)</td>
+<td valign="top"> Disk size
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">8 (short)</td>
+<td valign="top"> Sides
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">10 (short)</td>
+<td valign="top"> Tracks
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">12 (short)</td>
+<td valign="top"> Sectors
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns 0 in DO on success, or -1 if there is no
+disk in memory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20dstate">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20dstate">3.10.4.1 Bindings for dstate</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>pea       pointer(pc)   ; Offset 2
+move.w    #$132,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(306,L:pointer%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="kill_disk">3.10.5 kill_disk</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Kill disk« - Remove disk from memory
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 302 (0x012e)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20kill_disk">See 'Bindings for kill_disk'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine kill_disk removes the disk from memory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function can return the following results in D0:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_errors.html#E_OK">E_OK</a>:</td>
+<td valign="top"> No error has arisen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> Wrong magic value
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20kill_disk">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20kill_disk">3.10.5.1 Bindings for kill_disk</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.l    #magic,-(sp)  ; Offset 2, magic:$87654321
+move.w    #$12E,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(302,L:magic%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="load_disk">3.10.6 load_disk</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Load disk« - Load a disk into memory
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 301 (0x012d)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20load_disk">See 'Bindings for load_disk'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine loads the disk into memory.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function can return the following results in D0:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_errors.html#E_OK">E_OK</a>:</td>
+<td valign="top"> No error has arisen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> Not enough memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-2:</td>
+<td valign="top"> A disk is already in memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-3:</td>
+<td valign="top"> Disk error
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-4:</td>
+<td valign="top"> Wrong magic value
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20load_disk">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20load_disk">3.10.6.1 Bindings for load_disk</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.l    #magic,-(sp)  ; Offset 2, magic:$12345678
+move.w    #$12D,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(301,L:magic%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="save_disk">3.10.7 save_disk</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Save disk« - Save RAM-disk to disk
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 303 (0x012f)
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> <a href="#Bindings_20for_20save_disk">See 'Bindings for save_disk'</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The BIOS routine save_disk saves data from memory to the
+disk.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function can return the following results in D0:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="gemdos_errors.html#E_OK">E_OK</a>:</td>
+<td valign="top"> No error has arisen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> Wrong magic value
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-2:</td>
+<td valign="top"> No disk in memory
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-4:</td>
+<td valign="top"> Write error
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Availability:</td>
+<td valign="top"> Drive-B-Simulator.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="#Bindings_20for_20save_disk">Binding</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Bindings_20for_20save_disk">3.10.7.1 Bindings for save_disk</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Assembler:</td>
+<td valign="top">
+<br>&nbsp;
+<pre>move.l    #magic,-(sp)  ; Offset 2, magic:$ABCD0123
+move.w    #$12F,-(sp)   ; Offset 0
+trap      #13           ; Call <a href="bios_main.html">BIOS</a>
+addq.l    #6,sp         ; Correct stack
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">GFA-Basic:</td>
+<td valign="top"> Fehler%=Bios(303,L:magic%)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_FOOT" href="xbra_main.html"><img src="udo_lf.gif" alt="XBRA procedure" title="XBRA procedure" border="0" width="24" height="24">XBRA procedure</a>
+<a name="UDO_nav_rg_FOOT" href="bios_functions.html"><img src="udo_rg.gif" alt="BIOS function list" title="BIOS function list" border="0" width="24" height="24">BIOS function list</a>
+</body>
+</html>

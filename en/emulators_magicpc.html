@@ -1,0 +1,1565 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: MagiC PC interface
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="emulators.html"><img src="udo_up.gif" alt="Emulators" title="Emulators" border="0" width="24" height="24">Emulators</a>
+<a name="UDO_nav_lf_HEAD" href="emulators_magicmac.html"><img src="udo_lf.gif" alt="MagiC Mac specifics" title="MagiC Mac specifics" border="0" width="24" height="24">MagiC Mac specifics</a>
+<a name="UDO_nav_rg_HEAD" href="emulators_stem.html"><img src="udo_rg.gif" alt="STEmulator" title="STEmulator" border="0" width="24" height="24">STEmulator</a>
+
+<hr>
+
+<h1><a name="MagiC_20PC_20interface">14.2 MagiC PC interface</a></h1>
+<p>MagiC PC knows sveral interfaces with which one can call up
+functions of the Windows system.
+</p>
+<ul>
+<li><p> <a href="#mec0_20_28MPS_29_20interface">mec0 (MPS) interface</a>:
+<br>This serves for executing any kind of (self-written) Windows code.
+It is stored in a DLL and called via illegal opcodes from within
+MagiC PC.
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#mec1_20interface">mec1 interface</a>:
+<br>With this a predefined set of special functions can be called.
+<br>&nbsp;
+</p></li>
+<li><p> mec2 Schnittstelle:
+<br>Is provided by XFS_PC.LDR.
+<br>&nbsp;
+</p></li>
+<li><p> mec3 Schnittstelle:
+<br>Used by MPC_ACC for communication with MagiCPC.
+<br>&nbsp;
+</p></li>
+<li><p> mecnvdi Schnittstelle:
+<br>Is provided by <a href="VDI_fundamentals.html#NVDI">NVDI</a>_PC.DLL.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="mec0_20_28MPS_29_20interface">14.2.1 mec0 (MPS) interface</a></h3>
+<p><u>0. General remarks</u>
+</p>
+<p>MPS = Magic_Programmier_Schnittstelle = MagiC programmer's
+interface
+</p>
+<p>Files of the demo example:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="#mps_base.def">mps_base.def</a></td>
+<td valign="top"> The export list of the DLL, <i>DO NOT ALTER!</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#mps_base.h">mps_base.h</a></td>
+<td valign="top"> Definition of the MPS interface, <i>DO NOT ALTER!</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#mps_base.cpp">mps_base.cpp</a></td>
+<td valign="top"> Basic functions of the DLL, <i>DO NOT ALTER!</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#mps_demo.h">mps_demo.h</a></td>
+<td valign="top"> Definitions for the demo-DLL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#mps_demo.cpp">mps_demo.cpp</a></td>
+<td valign="top"> The MPS_functions of the demo-DLL
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="#testmps.s">testmps.s</a></td>
+<td valign="top"> Motorola - Example for calling the MPS functions of the demo
+
+</td></tr>
+</table>
+
+<p>To develop your own MPS_DLLs, please use mps_base.def, mps_base.h and
+mps_base.cpp <i>unaltered.</i> You can alter/supplement mps_demo.h and mps_demo.cpp.
+In particular, please choose your own DLL_ID in <a href="#mps_demo.h">mps_demo.h</a> for
+differentiation from other MPS_DLLs.
+</p>
+<p><u>I. Concept</u>
+</p>
+<p>Windows-side one can use dynamic link libraries (DLLs) to
+establish any number of functions (called 'MPS_functions' in the
+following) which can be called within MagiC PC (Motorola-side).
+</p>
+<p>In the start-up phase MagiC PC attempts to load and start all
+DLLs in the MPS subdirectory. For this MagiC PC calls three functions
+to be exported from the DLL (in this order):
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> mps_get_type(): Must return 0x4701!
+<br>&nbsp;
+</p></li>
+<li><p> mps_get_functionlist(...): Obtains DLL_ID and MPS_functions
+list of the DLL.
+<br>&nbsp;
+</p></li>
+<li><p> mps_magicinfo: Provides information about MagiC PC's own data
+and functions which the DLL may use on demand.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<p>All functions declared in 2) can be called via special opcodes
+on the Motorola side. See part IV for more about the call.
+</p>
+<p><u>II. Functions of the DLL to be exported ('Basic
+functions')</u>
+</p>
+<p>An MPS_DLL must export exactly 3 C functions under fixed ordinal
+numbers (these are also called basic functions): (see mfp_base.def,
+mfp_base.cpp, mfp_base.h)
+</p>
+<ul>
+<li><p> @101: int mps_get_type()
+<br>&nbsp;
+<br>Purpose: Serves for reassurance that it was really MPS_DLL that
+was caught. !! Return value: 0x4701 !!
+<br>&nbsp;
+</p></li>
+<li><p> @102: int mps_get_functionlist(DWORD *mps_dll_id,MPS_fuptr
+**p_funktionsliste);
+<br>&nbsp;
+<br>Purpose: MagiC PC wants to know DLL_ID and MPS_functionlist.
+<br>&nbsp;
+<br>Return values:
+<br>*mps_ddl_id: DLL_ID (4 bytes, to be selected DLL-specifically!)
+<br>*p_functionslist: Pointer to list of the MPS_functions.
+<br>Return: 1: All OK
+<br>&nbsp;
+</p></li>
+<li><p> @103: void mps_magicinfo(MPS_magicinfo *is);
+<br>&nbsp;
+<br>Purpose: Provides information about MagiC PC's own info /
+function pointers which the DLL may use:
+<br>&nbsp;
+<a name="MPS_magicinfo"></a>
+<pre>  typedef struct {
+   DWORD sizeof_str;               // <a href="proto_olga.html#Size">Size</a> of MPS_magicinfo
+   DWORD magic_version;            // e.g. 0x010001
+   DWORD magic_date;               // e.g. 19960815  (ascending)
+   BYTE  is_demo;                  // Is it a demo version?
+   BYTE  uu1, uu2, uu3;            // Still unused, 0
+
+   // Convert address Motorola -&gt; Intel
+   BYTE *(*intel_adr)(DWORD motadr);
+   // Convert pointer Motorola -&gt; Intel
+   BYTE *(*intel_ptr)(DWORD motptr);
+
+   WORD (*swap_word)(WORD w);      // Swap one WORD
+   DWORD (*swap_long)(DWORD dw);   // Swap one LONGword
+  } MPS_magicinfo;
+</pre>
+<br>The address conversions return NULL if motadr or motptr is
+invalid.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><u>III. The freely definable MPS_functions of a DLL:</u>
+</p>
+<p>MPS_functions basically have the form:
+</p>
+<p>void function_blabla( MPS_motregs *motregs )
+</p>
+<p><i>motregs</i> here points to a list of the Motorola registers
+d0-a7. The contents of the registers is already in the correct Intel
+byte order. The Motorola registers may also have new values written to
+them.
+</p>
+<p>With mps_get_functionlist the DLL passes the list of addresses
+of all such MPS_functions. The function numbers correspond to the
+position of the function within the list. If a number is to remain
+free, then its address is passed as 0xffffffff (= -1). See also
+<a href="#mps_demo.cpp">mps_demo.cpp</a>.
+</p>
+<p><u>IV. Motorola-side call</u>
+</p>
+<p>MPS_functions are called by a Motorola-side 8-byte opcode:
+</p>
+<pre>    dc.w    $4fbf       * 2 bytes: Do not alter!
+    dc.l    DLL_ID      * 4 bytes: DLL-specific DLL_ID
+    dc.w    Fkt_no.     * 2 bytes: Function number
+</pre>
+<p>DLL_ID is the DLL_ID (4 bytes!) passed via mps_get_functionlist.
+Function number is the position of the function in the function list
+passed by mps_get_functionlist (count starts at 0).
+</p>
+<p><u>V. Miscellaneous</u>
+</p>
+
+<ol class="UDO_env_enumerate">
+<li><p> Each DLL should use an individual DLL_ID to prevent conflicts
+between multiple DLLs (see <a href="#mps_demo.h">mps_demo.h</a>). DLL_IDs with bit 31 set are
+reserved for us (Application Systems) or for allocated IDs. Therefore
+please do not choose a DLL_ID with set bit 31! If we are to allocate a
+reserved DLL_ID to you, please get in touch with Herr Hoffmann of
+Application Systems Heidelberg.
+<br>&nbsp;
+<br>The following DLL_IDs have been allocated:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">DLL_ID</td>
+  <td align="left" valign="top">Program name</td>
+  <td align="left" valign="top">Author</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x003f5c66</td>
+  <td align="left" valign="top">MPCTime</td>
+  <td align="left" valign="top">Robert Weiß</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x2053434B</td>
+  <td align="left" valign="top">MPCSTiK</td>
+  <td align="left" valign="top">Dan Ackerman</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x21342812</td>
+  <td align="left" valign="top">Draconis Windows Sockets</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x44594a01</td>
+  <td align="left" valign="top">In2Cat</td>
+  <td align="left" valign="top">Dimitri Junker</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x44594a02</td>
+  <td align="left" valign="top">Win_Lnk</td>
+  <td align="left" valign="top">Dimitri Junker</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x4e415446</td>
+  <td align="left" valign="top">mpsyield</td>
+  <td align="center" valign="top"></td>
+</tr>
+<tr>
+  <td align="left" valign="top">0x50475752</td>
+  <td align="left" valign="top">MPC_POWR</td>
+  <td align="left" valign="top">Emanuel Welter</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+<li><p> Pay attention to the displacement of the address space!! If you
+want to use a Motorola address on the DLL side, you should call
+intel_adr(..) or intel_ptr(..) respectively for conversion (see
+MPS_magicinfo in <a href="#mps_base.h">mps_base.h</a>). Addresses from the DLL address space can
+<i>not</i> be used Motorola-side!
+<br>&nbsp;
+</p></li>
+<li><p> Also pay attention to the different byte order between Motorola
+and Intel processors. WORDs and LONGwords from the Motorola address
+space have to be swapped so that they lie correctly in the DLL. If
+anything is written back then it has to be swapped once more. For this
+you can call the functions swap_word(..) or swap_long(..) (see
+MPS_magicinfo in <a href="#mps_base.h">mps_base.h</a>). BUT: Elements of MPS_motregs (d0-a7) are
+already in the Intel order and do not have to be swapped.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<h4><a name="mps_base.def">14.2.1.1 mps_base.def</a></h4>
+<pre>; ==========================================================
+; Export definitions for MPS <a href="magic.html">MagiC</a> PC programmer's interface   FS 15.08.96
+; ==========================================================
+;
+; !! DO NOT ALTER !!
+; ==================
+EXPORTS
+   mps_get_type         @101
+   mps_get_functionlist @102
+   mps_magicinfo        @103
+</pre>
+<h4><a name="mps_base.h">14.2.1.2 mps_base.h</a></h4>
+<pre>// <a href="VT_52_terminal.html#Tab">Tab</a> size: 3
+
+// Last change:  15.08.96
+// Author:   FS
+
+// ------------------------------------------------------------------------
+//
+// The <a href="magic.html">MagiC</a> PC programmer's interface
+//
+// mps_base.h: Basic include     !! ADOPT UNALTERED !!
+//                               =====================
+
+#ifdef __cplusplus
+   extern &quot;C&quot; {
+#endif
+
+/* ========================================================================
+   The DLL functions freely definable by the user have the form:
+   void mps_function(MPS_motregs *r),
+   where r represents a pointer to the 16 Motorola registers, so:
+*/
+   typedef struct {              // MPS_motregs = The Motorola registers
+     long d0,d1,d2,d3,d4,d5,d6,d7;
+     long a0,a1,a2,a3,a4,a5,a6,a7;
+     } MPS_motregs;
+                                 // MPS_fuptr = Pointer to a MPS_function:
+   typedef void (*MPS_fuptr)(MPS_motregs *);
+
+
+/* ======================================================================
+   The DLL basic function mps_info is passed the following info block
+   MPS_infostr:
+*/
+   typedef struct {
+     DWORD sizeof_str;           // <a href="proto_olga.html#Size">Size</a> of MPS_infostr
+     DWORD magic_version;        // e.g. 0x010001
+     DWORD magic_date;           // e.g. 19960815  (ascending)
+     BYTE  is_demo;              // Is it a demo-version?
+     BYTE  uu1, uu2, uu3;        // Still unused, 0
+
+     BYTE *(*intel_adr)(DWORD motadr); // Convert address Motorola -&gt; Intel
+     BYTE *(*intel_ptr)(DWORD motptr); // Convert pointer Motorola -&gt; Intel
+
+     WORD (*swap_word)(WORD w);           // Swap one WORD
+     DWORD (*swap_long)(DWORD dw);        // Swap one LONGword
+     } <a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a>;
+
+// =============== 3 basic functions to be exported: ==================
+//
+   int mps_get_type();                                             // @101
+   int mps_get_functionlist(DWORD *mps_dll_id,
+                            MPS_fuptr **p_functionslist);          // @102
+   void mps_magicinfo(<a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a> *is);                          // @103
+//
+// See also <a href="#mps_base.cpp">mps_base.cpp</a>, <a href="#mps_base.def">mps_base.def</a>
+
+
+#ifdef __cplusplus
+   }
+#endif
+</pre>
+<p>See also: <a href="#MagiC_20PC_20interface">MagiC PC interface</a>
+</p>
+<h4><a name="mps_base.cpp">14.2.1.3 mps_base.cpp</a></h4>
+<pre>// <a href="VT_52_terminal.html#Tab">Tab</a> size: 3
+
+// Last change:  15.08.96
+// Author:   FS
+
+// ------------------------------------------------------------------------
+// Demo example for <a href="magic.html">MagiC</a> PC programmer's interface (MPS)
+//
+// Part 1: Basic functions, adopt UNCHANGED!
+// =======
+//
+// ------------------------------------------------------------------------
+
+#include &quot;windows.h&quot;
+#include &quot;<a href="#mps_base.h">mps_base.h</a>&quot;
+#include &quot;<a href="#mps_demo.h">mps_demo.h</a>&quot;
+
+//
+// The following 3 basic functions must be exported by the DLL:
+//
+
+
+// 1) Basic function @101: Type query
+// ---------------------
+   int mps_get_type()
+// ----------------
+ {
+   return(0x4701);         // Must return this value
+ }
+
+// 2) Basic function @102: <a href="magic.html">MagiC</a> PC requests ID and function list
+// -----------------------
+   int mps_get_functionlist(DWORD *mps_dll_id,MPS_fuptr **p_functionslist)
+// ------------------------
+ {
+   *mps_dll_id = DLL_ID;              // User-defined ID, see <a href="#mps_demo.h">mps_demo.h</a>
+   *p_functionslist = my_funclist;    // Enter pointer to function list
+   return(1);
+ }
+
+// 3) Basic function @103: <a href="magic.html">MagiC</a> PC passes <a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a> to the DLL
+// -----------------------
+   void mps_magicinfo(<a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a> *is)
+// -------------
+ {
+   m_info = *is;                    // Remember
+ }
+
+//
+// END basic functions ----------------------------------------------------
+//
+
+</pre>
+<p>See also: <a href="#MagiC_20PC_20interface">MagiC PC interface</a>
+</p>
+<h4><a name="mps_demo.h">14.2.1.4 mps_demo.h</a></h4>
+<pre>// <a href="VT_52_terminal.html#Tab">Tab</a> size: 3
+
+// Last change:  15.08.96
+// Author:   FS
+
+// ------------------------------------------------------------------------
+// Demo example for <a href="magic.html">MagiC</a> PC programmer's interface (MPS)
+//
+// Part 2: User-defined functions, change DLL_ID to your own value !!!
+// =======
+//
+// ------------------------------------------------------------------------
+
+#define DLL_ID  0x01020304           // Change to your own value
+                                     // !! Values with bit 31 set are
+                                     // reserved for Appl.Systems.
+                                     // ID reservation: Apply to
+                                     // Appl. Systems (Herr Hoffmann)!
+
+   extern MPS_fuptr my_funclist[];   // Function list in the demo-DLL
+
+   extern <a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a> m_info;      // Is adopted by <a href="magic.html">MagiC</a> PC
+</pre>
+<p>See also: <a href="#MagiC_20PC_20interface">MagiC PC interface</a>
+</p>
+<h4><a name="mps_demo.cpp">14.2.1.5 mps_demo.cpp</a></h4>
+<pre>// <a href="VT_52_terminal.html#Tab">Tab</a> size: 3
+
+// Last change:  15.08.96
+// Author:   FS
+
+// ------------------------------------------------------------------------
+// Demo example for <a href="magic.html">MagiC</a> PC programmer's interface (MPS)
+//
+// Parl 2: User-defined functions, freely alterable
+// =======
+//
+// ------------------------------------------------------------------------
+
+#include &quot;windows.h&quot;
+#include &quot;<a href="#mps_base.h">mps_base.h</a>&quot;
+#include &quot;<a href="#mps_demo.h">mps_demo.h</a>&quot;
+
+   <a href="emulators_magicpc.html#MPS_magicinfo">MPS_magicinfo</a> m_info;               // Global for the DLL
+
+//
+// List of the user-defined functions (alter/extend as required):
+// ------------------------------------------------------------------
+   static void demo_0(MPS_motregs *r);
+   static void demo_1(MPS_motregs *r);
+   static void demo_3(MPS_motregs *r);
+   static void copy_string(MPS_motregs *r);
+
+   MPS_fuptr my_funclist[] = {
+     demo_0,                       // Demo function 0
+     demo_1,                       // Demo function 1
+     (MPS_fuptr) -1,               // -1 (i.e function No.2 not defined)
+     demo_3,                       // Demo function 3
+     copy_string,                  // Demo function 4
+     NULL                          // !! A NULL-entry at list end !!
+     } ;
+
+
+// ******************************************************************
+//
+// Here the user-defined functions:
+// ================================
+//
+
+// Demo_0 only returns the value 1 in d0:
+//
+   static void demo_0(MPS_motregs *r)
+// ----------------------
+ {
+   r-&gt;d0 = 1;                       // Demo-0 sets d0 to 1
+   return;
+ }
+
+// Demo_1 adds the registers d1 and d2; result to d0:
+//
+   static void demo_1(MPS_motregs *r)
+// ----------------------
+ {
+   r-&gt;d0 = r-&gt;d1 + r-&gt;d2;
+   return;
+ }
+
+// Demo_3 does nothing at all!
+//
+   static void demo_3(MPS_motregs *r)
+// ----------------------
+ {
+   return;
+ }
+
+// Demo routine_4 copy_string copies a string to Motorola address space:
+//                -----------
+// a0: Destination address,
+// d0: Maximum number of characters (incl. 0)
+//
+   static void copy_string(MPS_motregs *r)
+// -----------------------
+ {
+   static char string[] = &quot;This is a demo-text of copy_string(..)&quot;;
+
+   int i, nchmax;
+   char *dest;
+
+   nchmax = (int) r-&gt;d0;
+   dest = (char *) (*m_info.intel_ptr)(r-&gt;a0);
+   if (nchmax&lt;=0 || dest==NULL) return;         // Invalid?
+
+   for (i=0; i&lt;nchmax; i++) {
+     if ((dest[i] = string[i])==0)
+       return;
+     }
+   dest[nchmax-1] = 0;                          // Too long-&gt;truncate
+   return;
+ }
+</pre>
+<p>See also: <a href="#MagiC_20PC_20interface">MagiC PC interface</a>
+</p>
+<h4><a name="testmps.s">14.2.1.6 testmps.s</a></h4>
+<pre>
+*                                                 FS  15.08.96
+*
+*   ===========================================================
+*   Sample for the call of the MPS functions from Motorola side
+*   ===========================================================
+*
+* Source Windows-side:
+* --------------------
+* <a href="#mps_base.cpp">mps_base.cpp</a>, <a href="#mps_demo.cpp">mps_demo.cpp</a>
+*
+mps_code .equ  $4fbf                   * !! DO NOT ALTER !!
+DLL_ID   .equ  $01020304               * Enter own DLL_ID here
+
+* -------------------------------------- 60 bytes buffer
+bufsize  .equ  60
+.bss
+.even
+buffer:   ds.w  bufsize
+* --------------------------------------
+
+
+*
+* ------------------- Here we go: -----------------------------------
+*
+.text
+.globl _main
+_main:
+      moveq    #-1,d0                  * d0 to -1 (for testing)
+
+*     ===========================      * Call function 0 (Demo_0):
+      dc.w     mps_code                * = $4fbf
+      dc.l     DLL_ID                  * = Own DLL_ID
+      dc.w     0                       * Function number (here 0)
+*     ===========================
+      cmpi.l   #1,d0                   * Should return 1
+      bne      finish
+
+* Example for call with parameters (copy_string)
+* ----------------------------------
+      movea.l  #buffer,a0              * Pointer to buffer for string
+      move.l   #bufsize,d0             * Max. string length (incl.0-byte)
+
+*     ===========================      * Call function 4 (copy_string):
+      dc.w     mps_code                * = $4fbf
+      dc.l     DLL_ID                  * = Own DLL_ID
+      dc.w     4                       * Function number (here 4)
+*     ===========================
+
+      bsr      put_line                * Output line (a0)
+finish:
+      bsr      wait                    * <a href="powerdos.html#Wait">Wait</a> for keypress
+      rts
+*
+* --------------------- END main routine _main -----------------------
+*
+
+
+* ------------------------ Output line (a0) --------------------------
+put_line:
+      moveq    #13,d0
+      bsr      put_char
+      moveq    #10,d0
+put_lnext:
+      bsr      put_char
+      move.b   (a0)+,d0
+      bne      put_lnext
+      rts
+
+* ------------------------ Output chatacter d0 -----------------------
+put_char:
+      movem.l  d0-d2/a0-a2,-(sp)
+      move.w   d0,-(sp)
+      move.w   #2,-(sp)
+      move.w   #3,-(sp)
+      trap     #13
+      addq.l   #6,sp
+      movem.l  (sp)+,d0-d2/a0-a2
+      rts
+
+* -------------------------- <a href="powerdos.html#Wait">Wait</a> for keypress -----------------------
+wait:
+      move.w   #2,-(sp)
+      move.w   #2,-(sp)
+      trap     #13
+      addq.l   #4,sp
+      rts
+
+</pre>
+<p>See also: <a href="#MagiC_20PC_20interface">MagiC PC interface</a>
+</p>
+<h3><a name="mec1_20interface">14.2.2 mec1 interface</a></h3>
+
+<ol class="UDO_env_enumerate">
+<li><p> Concept
+<br>&nbsp;
+<br>The mec1 interface makes it possible to call functions
+predefined by the emulator in Motorola code. In principle it is
+similar to the <a href="#mec0_20_28MPS_29_20interface">mec0 (MPS) interface</a>, though the functions are not
+freely definable in a DLL but already predefined by the emulator.
+<br>&nbsp;
+</p></li>
+<li><p> Call: The functions are called uniformly by the opcode $43bf,
+followed by a function number, thus with 4 bytes total length.
+Example:
+<br>&nbsp;
+<br>dc.w $43bf,$0031
+<br>&nbsp;
+<br>calls the mec1 function with the number 0x31. ($43bf is the
+opcode for chk &lt;ea&gt;,d1, with &lt;ea&gt; = 111111 binary, so
+invalid). Parameter passing is, as with mec0, via the Motorola
+registers.
+<br>&nbsp;
+</p></li>
+<li><p> The functions
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">$0001</td>
+<td valign="top"> long emu_version:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">None</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: Version number</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1: Version date</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d2: Bit0: Is it a demo-version?</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0002</td>
+<td valign="top"> long emu_enquire: Obtains diverse information
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">long d0: What do you want to know?</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">long d0: Value</td>
+</tr>
+</table>
+</div>
+
+<br>bisher definiert:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">was:</td>
+  <td align="left" valign="top">1: Version number</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">2: Version date</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">3: Is it a demo?</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0003</td>
+<td valign="top"> void emu_getexepath: Obtains the full path (including drive,
+without MAGIC_PC.EXE)
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: char *bufadr (Buffer)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0: short nb_max (Max. bytecount for buffer)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0004</td>
+<td valign="top"> int emu_install_newvdi:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Byte *bufadr (New contents of <a href="VDI_fundamentals.html#NVDI">NVDI</a>_PC.DLL)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0: long nbytes  (Length)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: &gt;0:  <a href="VDI_fundamentals.html#NVDI">NVDI</a>_PC.DLN sucessfully created.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">At next runup it will be automatically</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">renamed to <a href="VDI_fundamentals.html#NVDI">NVDI</a>_PC.DLL, as discussed.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0008</td>
+<td valign="top">
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d2: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0009</td>
+<td valign="top">
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0010</td>
+<td valign="top"> void dw_addline: &nbsp;! As of 03.97
+<br>&nbsp;
+<br>Output text in new line in the debug window
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Pointer to the text.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0011</td>
+<td valign="top"> void dw_addtext: &nbsp;! As of 03.97
+<br>&nbsp;
+<br>Output text in debug window
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Pointer to the text</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0012</td>
+<td valign="top"> void dw_formtxt: &nbsp;! As of 03.97
+<br>&nbsp;
+<br>Output text sprintf-like in debug window
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Pointer to the format-string</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0, d1, ...  Additional parameters suitable</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">for the format-string. The format-string</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">corresponds roughly to sprintf(format,...);</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">string pointers are not allowed, however.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0020</td>
+<td valign="top"> enq_bigscreen
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d2: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d3: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d4: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0021</td>
+<td valign="top"> new_bigscreen
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d1: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d2: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d3: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d4: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0022</td>
+<td valign="top">
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0028</td>
+<td valign="top">
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0: unknown</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: unknown</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0031</td>
+<td valign="top"> int printer_open &nbsp;! As of 03.97
+<br>&nbsp;
+<br>printer_open Opens the standard printer and starts a new
+document
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: char *DocName (NULL-pointer allowed)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&gt;0: All OK</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0&lt;=0 Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0032</td>
+<td valign="top"> int printer_close &nbsp;! As of 03.97
+<br>&nbsp;
+<br>printer_close Terminates the previously opened document and
+closes the printer
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">None</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&gt;0: All OK</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0&lt;=0 Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0033</td>
+<td valign="top"> int printer_write &nbsp;! As of 03.97
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Byte *pData;  // Pointer to the data buffer</td>
+</tr>
+<tr>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top">d0: long nBytes;  // No. of bytes in buffer</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: Number of bytes transferred</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0040</td>
+<td valign="top"> DWORD getTickCount &nbsp;! As of 03.97
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: TickCount (msec since start of the computer)</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0041</td>
+<td valign="top"> DWORD getDrivePath &nbsp;! ab 02.99
+<br>&nbsp;
+<br>The function obtains the Windows path for a <a href="magic.html">MagiC</a> drive
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0: Drive No. (0 for A:, 1 for B:, ...)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">a0: Text buffer for the path</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1: <a href="proto_olga.html#Size">Size</a> of the text buffer</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: 0: Not found,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp; 1: Container drive,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp; 2: xfs drive (Windows drive)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp; 4: Floppy drive</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0042</td>
+<td valign="top"> DWORD setClipboardDir &nbsp;! ab 02.99
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: char *pPath // NULL: Set to default</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0: 1</td>
+</tr>
+</table>
+</div>
+
+<br>Beispiel:
+<br>&nbsp;
+<pre>        movea.l stringadr,a0  *
+        dc.w    $43bf,$0042   * mec1, call function $42
+        tst.l   d0            * -1: Function not implemented
+        jl  nichtimplementiert
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0043</td>
+<td valign="top"> long getMouseWheel
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0.l: 1: Reset position after readout</td>
+</tr>
+<tr>
+  <td align="left" valign="top"></td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0: Don't reset position after readout</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0.l: Current position of the mouse-wheel</td>
+</tr>
+</table>
+</div>
+
+<br>Beispiel:
+<br>&nbsp;
+<pre>        moveq   #1,d0       * Reset position after readout
+        dc.w    $43bf,$0043 * mec1, call function $43
+        tst.l   d0          * Position altered since last reset
+        je  no_action
+        &lt;d0.l verarbeiten&gt;
+</pre>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0045</td>
+<td valign="top"> long setCompiler &nbsp;! As of 17.06.99
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">d0.l: Selection; realised at present:</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d0 = 1: Switch compiler on/off:</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;-</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1 = 0: Compiler off,</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1 = 1: Compiler on</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1 = -1: Query mode (from my experience</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this does not work, but it ought</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;to work in the 6.20 version)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">Old mode (0 or 1)</td>
+</tr>
+</table>
+</div>
+
+
+</td></tr>
+</table>
+
+</p></li>
+</ol>
+
+<h3><a name="mec2_20interface">14.2.3 mec2 interface</a></h3>
+
+<ol class="UDO_env_enumerate">
+<li><p> Concept
+<br>&nbsp;
+<br>The mec2 interface is provided by XFS_PC.LDR.
+<br>&nbsp;
+</p></li>
+<li><p> Call: The functions are called uniformly by the opcode $45bf,
+followed by a function number, thus with 4 bytes total length.
+Example:
+<br>&nbsp;
+<br>dc.w $45bf,$0001
+<br>&nbsp;
+</p></li>
+<li><p> The functions
+<br>&nbsp;
+<br>Details about the various functions or not known yet.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<h3><a name="mec3_20interface">14.2.4 mec3 interface</a></h3>
+
+<ol class="UDO_env_enumerate">
+<li><p> Concept
+<br>&nbsp;
+<br>The mec3 is used by MPC_ACC for communication with MagiCPC.
+<br>&nbsp;
+</p></li>
+<li><p> Call: The functions are called uniformly by the opcode $47bf,
+followed by a function number, thus with 4 bytes total length.
+Example:
+<br>&nbsp;
+<br>dc.w $47bf,$0001
+<br>&nbsp;
+</p></li>
+<li><p> The functions
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">$0001</td>
+<td valign="top"> long mpc_shutdown:
+<br>&nbsp;
+<br>Terminate MagiCPC.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">Keine</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0002</td>
+<td valign="top"> long mpc_restart:
+<br>&nbsp;
+<br>Restart MagiCPC.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">Keine</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0010</td>
+<td valign="top"> : long start_winfile
+<br>&nbsp;
+<br>Execute windows program.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: pathname (must not be null)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">a1: command line (can be null)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">a2: environment (can be null)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">a3: current directory (can be null)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0020</td>
+<td valign="top"> : long mpc_control
+<br>&nbsp;
+<br>This function has several subfunctions, whose number is passed
+in d0.l
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">$0010 </td>
+<td valign="top"> mpc_init
+<br>&nbsp;
+<br>Tell MagiCPC that MPC_ACC is active.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0011 </td>
+<td valign="top"> mpc_exit
+<br>&nbsp;
+<br>Tell MagiCPC that MPC_ACC is no longer active.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0020 </td>
+<td valign="top"> mpc_control
+<br>&nbsp;
+<br>Ask MagiCPC whether a shutdown should be initiated.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&gt;0: <a href="gemdos_system.html#Shutdown">Shutdown</a> should be started.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0021 </td>
+<td valign="top"> mpc_shutdown_start
+<br>&nbsp;
+<br>Tell MagiCPC that shutdown has started.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&gt;0: <a href="gemdos_system.html#Shutdown">Shutdown</a> should be started.</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0022 </td>
+<td valign="top"> mpc_shutdown_completed
+<br>&nbsp;
+<br>Tell MagiCPC that shutdown has successfully completed.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0023 </td>
+<td valign="top"> mpc_shutdown_cancelled
+<br>&nbsp;
+<br>Tell MagiCPC that shutdown has been canceled.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0030 </td>
+<td valign="top"> mpc_execute
+<br>&nbsp;
+<br>Get filename to be executed from MagiCPC.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a1: pathname</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1: max length for pathname</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">a2: command line</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d2: max length for command line</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0031 </td>
+<td valign="top"> mpc_start_exe
+<br>&nbsp;
+<br>Execute windows program. This function is used when parameters
+are passed via <a href="proto_av.html#VA_START">VA_START</a> to MPC_ACC.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: pointer to argument vector</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">d0&lt;&gt;0: All OK, 0=Error</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">$0040 </td>
+<td valign="top"> mpc_debout
+<br>&nbsp;
+<br>Output text sprintf-like in debug window
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameters:</td>
+  <td align="left" valign="top">a0: Zeiger auf den Format-String</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">d1, ... d7  Additional parameters suitable</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">for the format-string. The format-string</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">corresponds roughly to sprintf(format,...);</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">string pointers are not allowed, however.</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Return:</td>
+  <td align="left" valign="top">none</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">others</td>
+<td valign="top"> For unknown/illegal subfunction codes, -1 is returned in d0.l
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">others</td>
+<td valign="top"> For unknown/illegal function codes, -1 is returned in d0.l
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+</p></li>
+</ol>
+
+<h3><a name="mecnvdi_20interface">14.2.5 mecnvdi interface</a></h3>
+
+<ol class="UDO_env_enumerate">
+<li><p> Concept
+<br>&nbsp;
+<br>The <a href="#mec2_20interface">mec2 interface</a> is provided by <a href="VDI_fundamentals.html#NVDI">NVDI</a>_PC.DLL.
+<br>&nbsp;
+</p></li>
+<li><p> Call: The functions are called uniformly by the opcode $41bf,
+followed by a function number, thus with 4 bytes total length.
+Example:
+<br>&nbsp;
+<br>dc.w $41bf,$0001
+<br>&nbsp;
+</p></li>
+<li><p> The functions
+<br>&nbsp;
+<br>Details about the various functions or not known yet.
+<br>&nbsp;
+</p></li>
+</ol>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="emulators.html"><img src="udo_up.gif" alt="Emulators" title="Emulators" border="0" width="24" height="24">Emulators</a>
+<a name="UDO_nav_lf_FOOT" href="emulators_magicmac.html"><img src="udo_lf.gif" alt="MagiC Mac specifics" title="MagiC Mac specifics" border="0" width="24" height="24">MagiC Mac specifics</a>
+<a name="UDO_nav_rg_FOOT" href="emulators_stem.html"><img src="udo_rg.gif" alt="STEmulator" title="STEmulator" border="0" width="24" height="24">STEmulator</a>
+</body>
+</html>

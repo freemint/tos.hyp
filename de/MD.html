@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Memory-Deskriptor (MD) in TOS
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="typedefs.html"><img src="udo_up.gif" alt="Typdefinitionen" title="Typdefinitionen" border="0" width="24" height="24">Typdefinitionen</a>
+<a name="UDO_nav_lf_HEAD" href="magic_MCB.html"><img src="udo_lf.gif" alt="Memory-Control-Block (MCB) in MagiC" title="Memory-Control-Block (MCB) in MagiC" border="0" width="24" height="24">Memory-Control-Block (MCB) in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="MRETS.html"><img src="udo_rg.gif" alt="MRETS" title="MRETS" border="0" width="24" height="24">MRETS</a>
+
+<hr>
+
+<h1><a name="Memory-Deskriptor_20_28MD_29_20in_20TOS">I.11 Memory-Deskriptor (MD) in TOS</a></h1>
+<a name="Speicherverwaltung_20in_20TOS"></a>
+<a name="TOS_2C_20Speicherverwaltung_20in"></a>
+<pre>typedef struct md
+{
+    struct md *m_link;      /* Zeiger auf nächsten <a href="bios_structures.html#MD">MD</a>    */
+    int32_t      m_start;   /* Anfangsadresse des Blocks */
+    int32_t      m_length;  /* Länge des Blocks          */
+    <a href="gemdos_structures.html#BASEPAGE">BASEPAGE</a>  *m_own;       /* Zeiger auf die Basepage   */
+} <a href="bios_structures.html#MD">MD</a>;
+</pre>
+<p><b>Hinweis:</b> Die Komponente <i>m_own</i> zeigt dabei auf
+die Basepage des Prozesses, dem der Speicherblock gehört.
+</p>
+<p>Diese Strukturen werden in der internen <a href="gemdos_memory.html">Speicherverwaltung</a> von
+<a href="tos_main.html">TOS</a> (aber <i>nicht</i> von <a href="magic.html">MagiC</a>!) verwaltet. Diese Deskriptoren,
+soweit benutzt, hängen in drei Speicherlisten, und zwar für freie
+Blöcke, belegte Blöcke und für den nächsten zu belegenden Block
+(mem_rover). Mit dem mem_rover-Konzept sollte erreicht werden, daß
+aufeinanderfolgende <a href="gemdos_memory.html#Malloc">Malloc</a>-Aufrufe möglichst aufeinanderfolgenden
+Speicher anfordern (wurde an anderer Stelle schon als Fehler
+bezeichnet). Damit sollte die Segmentierung verringert werden.
+</p>
+<p><b>Diese Idee ist jedoch unbrauchbar, wenn mehrere Programme
+gleichzeitig laufen und abwechselnd Mallocs machen</b>. Das von Atari
+implementierte Konzept hat den Vorteil, daß es unempfindlich gegen
+amoklaufende Programme ist, da die MDs im Systemspeicher liegen, weit
+weg vom Benutzerspeicher. Ein bekannter Nachteil des beschriebenen
+Konzepts ist, daß nur eine sehr begrenzte Anzahl von Malloc-Aufrufen
+möglich sind, da jeder Aufruf einen <a href="bios_structures.html#MD">MD</a> des begrenzten Systemspeichers
+aufzehrt; dieser wird außerdem noch massiv von geöffneten Ordnern
+und Dateien belastet. Ein weiterer Nachteil der <a href="gemdos_memory.html">Speicherverwaltung</a> des
+<a href="tos_main.html">TOS</a>: Wenn ein Programm einen Speicherblock überlaufen läßt, d.h.
+über dessen Ende hinausschreibt, bleibt dies i.a. völlig unbemerkt.
+</p>
+<p>Besonders im Multitaskingsystem ist die Gefahr eines
+überschriebenen Speicherblocks ungleich höher als im <a href="tos_main.html">TOS</a>. Ferner ist
+die Anzahl der benötigten Speicherblöcke sowie auch die der Ordner
+(jedes Programm hat eigene Dateien und Standardverzeichnisse)
+wesentlich höher. Aus diesem Grund hat MagiC ein völlig anderes
+Konzept; dort gibt es nur noch eine Speicherliste deren Zeiger auf den
+ersten <a href="magic_MCB.html#MCB">MCB</a> zeigt.
+</p>
+<p>Querverweis: <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="magic_MCB.html#MCB">MCB</a> &nbsp; <a href="bios_structures.html#MPB">MPB</a> &nbsp; <a href="gemdos_memory.html">Speicherverwaltung</a> &nbsp; <a href="bios_sysvars.html#themd">themd</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="typedefs.html"><img src="udo_up.gif" alt="Typdefinitionen" title="Typdefinitionen" border="0" width="24" height="24">Typdefinitionen</a>
+<a name="UDO_nav_lf_FOOT" href="magic_MCB.html"><img src="udo_lf.gif" alt="Memory-Control-Block (MCB) in MagiC" title="Memory-Control-Block (MCB) in MagiC" border="0" width="24" height="24">Memory-Control-Block (MCB) in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="MRETS.html"><img src="udo_rg.gif" alt="MRETS" title="MRETS" border="0" width="24" height="24">MRETS</a>
+</body>
+</html>

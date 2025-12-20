@@ -1,0 +1,222 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: BIOS Structures
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_HEAD" href="bios_functions.html"><img src="udo_lf.gif" alt="BIOS function list" title="BIOS function list" border="0" width="24" height="24">BIOS function list</a>
+<a name="UDO_nav_rg_HEAD" href="xbios_main.html"><img src="udo_rg.gif" alt="XBIOS" title="XBIOS" border="0" width="24" height="24">XBIOS</a>
+
+<hr>
+
+<h1><a name="BIOS_20Structures">3.12 BIOS Structures</a></h1>
+<ul class="content">
+	<li> 3.12.1 <a href="#BPB">BPB</a>
+	<li> 3.12.2 <a href="#MD">MD</a>
+	<li> 3.12.3 <a href="#MPB">MPB</a>
+	<li> 3.12.4 <a href="#patternrectdata">patternrectdata</a>
+	<li> 3.12.5 <a href="#PUN_INFO">PUN_INFO</a>
+	<li> 3.12.6 <a href="#solidrectdata">solidrectdata</a>
+	</li>
+</ul>
+<br>
+<h3><a name="BPB">3.12.1 BPB</a></h3>
+<pre>typedef struct
+{
+  WORD   recsiz;       /* Bytes per sector                     */
+  WORD   clsiz;        /* Sectors per cluster                  */
+  WORD   clsizb;       /* Bytes per cluster                    */
+  WORD   rdlen;        /* Directory length                     */
+  WORD   fsiz;         /* Length of the FAT in sectors         */
+  WORD   fatrec;       /* Start of the 2nd FAT                 */
+  WORD   datrec;       /* 1st free sector                      */
+  WORD   numcl;        /* Total numbr of clusters              */
+  WORD   bflags;       /* Flags as bit-vector                  */
+                       /* Bit 0: 0 (12-Bit-FAT), 1 16-Bit-FAT  */
+                       /* Bit 1: 0 (two FATs), 1 (one FAT)     */
+                       /*        only available since <a href="tos_main.html">TOS</a> 2.06 */
+} BPB ;
+</pre>
+<p>See also: <a href="About_the_BIOS.html#Getbpb">Getbpb</a>
+</p>
+<h3><a name="MD">3.12.2 MD</a></h3>
+<pre>typedef struct
+{
+     MD *m_link;         /* Next MD (or NULL)          */
+     long m_start;       /* saddr of block             */
+     long m_length;      /* # bytes in block           */
+     <a href="gemdos_structures.html#PD">PD</a> *m_own;          /* Owner's process descriptor */
+} MD;
+
+</pre>
+<p>See also: <a href="bios_main.html">BIOS</a> &nbsp; <a href="About_the_BIOS.html#Getmpb">Getmpb</a> &nbsp; <a href="#MPB">MPB</a>
+</p>
+<h3><a name="MPB">3.12.3 MPB</a></h3>
+<pre>typedef struct
+{
+    <a href="#MD">MD</a> *mp_mfl;      /* Memory free list      */
+    <a href="#MD">MD</a> *mp_mal;      /* Memory allocated list */
+    <a href="#MD">MD</a> *mp_rover;    /* Roving ptr            */
+} MPB;
+
+</pre>
+<p>See also: <a href="bios_main.html">BIOS</a> &nbsp; <a href="About_the_BIOS.html#Getmpb">Getmpb</a>
+</p>
+<h3><a name="patternrectdata">3.12.4 patternrectdata</a></h3>
+<pre>struct patternrectdata
+{
+  int16_t x1, y1;
+  int16_t x2, y2;
+  int32_t fg_color;
+  int32_t bg_color;
+  int16_t mode;
+  int32_t *pattern;
+  int32_t *patternmask;
+}
+</pre>
+<p>See also: <a href="bios_cookiejar.html#Cookie_2C_20_VDI">_VDI</a>
+</p>
+<h3><a name="PUN_INFO">3.12.5 PUN_INFO</a></h3>
+<pre>typedef struct
+{
+    WORD puns;               /* Number of devices               */
+    BYTE pun[16];            /* Various flags                   */
+    LONG part_start[16];     /* Partition starts                */
+    LONG P_cookie;           /* Must be &quot;AHDI&quot;                  */
+    LONG *P_cookptr;         /* Points to the previous element  */
+    UWORD P_version;         /* Version number (&gt;= 0x0300)      */
+    UWORD P_max_sector;      /* Maximum sector size             */
+    LONG  reserved[16];      /* Reserved                        */
+} PUN_INFO;
+</pre>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">puns</td>
+<td valign="top"> Contains the number of hard drives found by the hard disk
+driver. With two dummy entries (0xFF) for drive A and B.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">pun</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bit 0..2:</td>
+<td valign="top"> Device number of the hard drive.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 3:</td>
+<td valign="top"> With the bit set, this is a device on the SCSI port (otherwise
+ACSI): Though this bit is not yet officially documented, it can be
+used without reservation.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 4:</td>
+<td valign="top"> Falcon IDE
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 5:</td>
+<td valign="top"> USB
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 6:</td>
+<td valign="top"> Removable media
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 7:</td>
+<td valign="top"> If this bit is set, then the BIOS device is not controlled by
+the hard disk driver (applies e.g. for the two floppy disk drives on
+device numbers 0 and 1).
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">part_start</td>
+<td valign="top"> Contains for each (supported) device number the number of the
+start sector on the corresponding hard drive. Again two dummy entries
+(0L) for drive A and B.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">P_cookie</td>
+<td valign="top"> Magic value; always &quot;AHDI&quot;
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">P_cookptr</td>
+<td valign="top"> Should always point to the previous structure element.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">P_version</td>
+<td valign="top"> Version number e.g. 0x0300
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">P_max_sector</td>
+<td valign="top"> Describes the largest occurring block size for BIOS sectors.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p>Example of how one obtains the address of the structure:
+</p>
+<pre>PUN_INFO *GetPunPtr (void)
+{
+  PUN_INFO *P;
+  int32_t oldstack;
+
+  oldstack = <a href="gemdos_system.html#Super">Super</a> (0L);
+  P = *((PUN_INFO **)(0x516L));
+  <a href="gemdos_system.html#Super">Super</a> ((void *)oldstack);
+
+  if (P)
+    if (P-&gt;P_cookptr == &amp;(P-&gt;P_cookie)) /* Cookie ok? */
+      if (P-&gt;P_version &gt;= 0x300)
+        return P;
+
+  return 0L;
+}
+</pre>
+<p>See also: <a href="xhdi.html#XHDI">XHDI specification</a> &nbsp; <a href="bios_sysvars.html#pun_ptr">pun_ptr</a>
+</p>
+<h3><a name="solidrectdata">3.12.6 solidrectdata</a></h3>
+<pre>struct solidrectdata
+{
+  int16_t x1, y1;
+  int16_t x2, y2;
+  int32_t fg_color;
+  int32_t bg_color;
+  int16_t mode;
+}
+</pre>
+<p>See also: <a href="bios_cookiejar.html#Cookie_2C_20_VDI">_VDI</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="bios_main.html"><img src="udo_up.gif" alt="BIOS" title="BIOS" border="0" width="24" height="24">BIOS</a>
+<a name="UDO_nav_lf_FOOT" href="bios_functions.html"><img src="udo_lf.gif" alt="BIOS function list" title="BIOS function list" border="0" width="24" height="24">BIOS function list</a>
+<a name="UDO_nav_rg_FOOT" href="xbios_main.html"><img src="udo_rg.gif" alt="XBIOS" title="XBIOS" border="0" width="24" height="24">XBIOS</a>
+</body>
+</html>

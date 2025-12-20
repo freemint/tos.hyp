@@ -1,0 +1,1634 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: XHDI functions
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="xhdi.html"><img src="udo_up.gif" alt="XHDI - eXtended HardDisk Interface (Version 1.30)" title="XHDI - eXtended HardDisk Interface (Version 1.30)" border="0" width="24" height="24">XHDI - eXtended HardDisk Interface (Version 1.30)</a>
+<a name="UDO_nav_lf_HEAD" href="xhdi_partition_types.html"><img src="udo_lf.gif" alt="Recommended partition types" title="Recommended partition types" border="0" width="24" height="24">Recommended partition types</a>
+<a name="UDO_nav_rg_HEAD" href="typedefs.html"><img src="udo_rg.gif" alt="Type definitions" title="Type definitions" border="0" width="24" height="24">Type definitions</a>
+
+<hr>
+
+<h1><a name="XHDI_20functions">H.5 XHDI functions</a></h1>
+<p>All functions have to be called from supervisor-mode. The
+effects of a call in user-mode are undefined. All processor registers
+except d0 are preserved. EINVFN is returned for invalid opcodes.
+</p>
+<p>Some of the function calls - notably `<a href="#XHReadWrite">XHReadWrite</a>' - might be
+implemented by calls to BIOS or XBIOS functions and therefore can
+activate the `Critical Error Handler'. It's the responsibility of the
+caller to switch of the `CEH', if this is needed.
+</p>
+<a name="XHDI_20error-codes"></a>
+<p>The following return values are defined for all functions:
+</p>
+<p><b>TOS error-codes:</b>
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0:</td>
+  <td align="left" valign="top">OK (OK)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-1:</td>
+  <td align="left" valign="top">Unspecified error (ERROR)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-2:</td>
+  <td align="left" valign="top">Device not responding (EDRVNR)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-15:</td>
+  <td align="left" valign="top">Unknown device (EUNDEV)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-32:</td>
+  <td align="left" valign="top">Invalid function number (EINVFN)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-36:</td>
+  <td align="left" valign="top">Access denied, device is reserved (EACCDN)</td>
+</tr>
+<tr>
+  <td align="right" valign="top">-46:</td>
+  <td align="left" valign="top">Invalid drive number (EDRIVE)</td>
+</tr>
+</table>
+</div>
+
+<p><b>SCSI error-codes (ranging from -200 to -455)</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(-200 - N):</td>
+<td valign="top"> SCSI error-code N (the `Additional Sense Code', byte 12 in the
+`Extended Sense Format', see Appendix B in `Draft proposed American
+National Standard for information systems - Revision 11a - SCSI-3
+Primary Commands, 28 March 1997)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>IDE error-codes (ranging from -456 to -711)</b>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(-456 - N):</td>
+<td valign="top"> IDE error-code N (value of the IDE error register)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>Note:</b> Obviously, you can get SCSI error-codes only for
+ACSI or SCSI devices. For other device types like IDE drives the
+following assignments may be used:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Bit in IDE-</td>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">error register</td>
+  <td align="left" valign="top">Meaning</td>
+  <td align="left" valign="top">SCSI error</td>
+  <td align="left" valign="top">XHDI error</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Track 0 not found</td>
+  <td align="left" valign="top">$06</td>
+  <td align="left" valign="top">-206</td>
+</tr>
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">DAM not found</td>
+  <td align="left" valign="top">$13</td>
+  <td align="left" valign="top">-219</td>
+</tr>
+<tr>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">ID-Field not found</td>
+  <td align="left" valign="top">$12</td>
+  <td align="left" valign="top">-218</td>
+</tr>
+<tr>
+  <td align="left" valign="top">7</td>
+  <td align="left" valign="top">Bad block mark</td>
+  <td align="left" valign="top">$10</td>
+  <td align="left" valign="top">-216</td>
+</tr>
+<tr>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top">Uncorrectable error</td>
+  <td align="left" valign="top">$11</td>
+  <td align="left" valign="top">-217</td>
+</tr>
+<tr>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">Command aborted</td>
+  <td align="left" valign="top">$20</td>
+  <td align="left" valign="top">-232</td>
+</tr>
+<tr>
+  <td align="left" valign="top">5</td>
+  <td align="left" valign="top">Media Change</td>
+  <td align="left" valign="top">$28</td>
+  <td align="left" valign="top">-240</td>
+</tr>
+<tr>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">Media Change requested</td>
+  <td align="left" valign="top">$5A</td>
+  <td align="left" valign="top">-290</td>
+</tr>
+</table>
+</div>
+
+<p>(It is recommended to test the bits in the above order).
+</p>
+<p>For other devices (like disk drives connected to the floppy
+controller) there may be other, not yet defined, error-codes.
+</p>
+<p>Parameters are passed the same way as to GEMDOS functions. All
+values are put onto the stack, with the 16-bit opcode last, i.e. at
+the lowest address. The 32-bit result is returned in d0.
+</p>
+<p>Wherever it is specified that `the caller may pass a zero
+pointer' for a pointer parameter, then passing such a zero pointer
+indicates that the caller is not interested in the value to be
+returned. Drivers must always check pointers for zero before
+dereferencing them.
+</p>
+<p>See also: <a href="xhdi.html#XHDI">XHDI specification</a> &nbsp; SCSI specification &nbsp; <a href="About_the_BIOS.html">About the BIOS</a>
+</p>
+<h3><a name="XHGetVersion">H.5.1 XHGetVersion</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHGetVersion« - Inquire protocol version.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 0
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> UWORD XHGetVersion ( VOID );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHGetVersion returns the current protocol version.
+<b>Example:</b> 0x0119 is Version 1.19 (the format is similar to that
+returned by <a href="gemdos_system.html#Sversion">Sversion</a> but high and low bytes are not reversed). This
+version of the XHDI specification has the version number 0x0130.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The return value describes the version number of the XHDI
+protocol, with the high byte containing the version number and the low
+byte the revision.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHInqTarget">H.5.2 XHInqTarget</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHInqTarget« - Return information about a device.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 1
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHInqTarget ( UWORD major, UWORD minor, ULONG *block_size,
+ULONG *device_flags, BYTE *product_name );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHInqTarget returns information about the device specified by
+<i>major</i> and <i>minor.</i> Reservations made with <a href="#XHReserve">XHReserve</a> are
+reflected in <i>device_flags.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bit</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>block_size</i></td>
+<td valign="top"> Block size for this device (important for `<a href="#XHReadWrite">XHReadWrite</a>');
+usually 512
+<a name="XH_TARGET_STOPPABLE"></a>
+<a name="XH_TARGET_REMOVABLE"></a>
+<a name="XH_TARGET_LOCKABLE"></a>
+<a name="XH_TARGET_EJECTABLE"></a>
+<a name="XH_TARGET_LOCKED"></a>
+<a name="XH_TARGET_STOPPED"></a>
+<a name="XH_TARGET_RESERVED"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>device_flags</i></td>
+<td valign="top"> (Bit set -&gt; Capability available):
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">0</td>
+<td valign="top"> Device is stoppable (XH_TARGET_STOPPABLE (0x00000001L))
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">1</td>
+<td valign="top"> The medium is removable (XH_TARGET_REMOVABLE (0x00000002L))
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2</td>
+<td valign="top"> The eject mechanism can be locked (XH_TARGET_LOCKABLE
+(0x00000004L))
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">3</td>
+<td valign="top"> The device can physically eject the medium (XH_TARGET_EJECTABLE
+(0x00000008L))
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">29</td>
+<td valign="top"> Eject mechanism has been locked by the driver (XH_TARGET_LOCKED
+(0x20000000L), from XHDI 1.25 up).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">30</td>
+<td valign="top"> Device has been stopped by the driver (XH_TARGET_STOPPED
+(0x40000000L), from XHDI 1.25 up ).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">31</td>
+<td valign="top"> The device is currently reserved (XH_TARGET_RESERVED
+(0x80000000L)).
+
+</td></tr>
+</table>
+
+<br>All other bits are reserved, drivers should set them to zero.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><i>product_name</i></td>
+<td valign="top"> Product name of the device, similar to the information returned
+by the SCSI command INQUIRE (max. 33 characters incl. terminating
+zero). If this information is not available, the driver should return
+a zero-length string.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Note:</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-</td>
+<td valign="top"> The caller may pass a zero pointer for <i>block_size</i>,
+<i>device_flags</i> and <i>product_name.</i>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">-</td>
+<td valign="top"> For IDE devices, product name information might have to be
+truncated to fit into 32 characters. (See <a href="#XHInqTarget2">XHInqTarget2</a>)
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHReserve">H.5.3 XHReserve</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHReserve« - Reserve a device, or release it again.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 2
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHReserve ( UWORD major, UWORD minor, UWORD do_reserve,
+UWORD key );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHReserve reserves or releases a device. <a href="#XHLock">XHLock</a>, <a href="#XHStop">XHStop</a> and
+<a href="#XHEject">XHEject</a> only work for reserved devices if the correct <i>key</i>
+parameter is passed.
+<br>&nbsp;
+<br><b>Example:</b> Take a virtual memory manager which has locked
+a removable hard disk with the swap partition. You don't want the user
+to be able to unlock this device with a CPX module!
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">do_reserve</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(1)</td>
+<td valign="top"> Reserve
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(0)</td>
+<td valign="top"> Release
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> Only used for release
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> On success, a 16-bit key different from 0 is returned. This key
+must be specified for all further accesses to the device, as well as
+for releasing it again.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHLock">H.5.4 XHLock</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHLock« - Lock or unlock eject button.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 3
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHLock ( UWORD major, UWORD minor, UWORD do_lock, UWORD
+key );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHLock locks or unlocks the eject mechanism of the device.
+<br>&nbsp;
+<br>The driver has to attend to whether this command is passed on to
+the device or not (in case the medium is not capable of being locked).
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">do_lock</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(1)</td>
+<td valign="top"> Lock
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(0)</td>
+<td valign="top"> Unlock
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> If the device is reserved pass the key, otherwise zero.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The code returned in case of errors is undefined. But more
+information is not really required, since one can make a targeted test
+for this capability beforehand with <a href="#XHInqTarget">XHInqTarget</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHStop">H.5.5 XHStop</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHStop« - Stop device, or restart it again.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 4
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHStop ( UWORD major, UWORD minor, UWORD do_stop, UWORD
+key );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHStop stops (ships) or starts the device.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">do_stop</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(1)</td>
+<td valign="top"> Stop
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(0)</td>
+<td valign="top"> Start
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> If the device is reserved pass the key, otherwise zero.
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> if the drive is accessed, the driver should
+restart it without an explicit restart call.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The code returned in case of errors is undefined. But more
+information is not really required, since one can make a targeted test
+for this capability beforehand with <a href="#XHInqTarget">XHInqTarget</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHEject">H.5.6 XHEject</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHEject« - Eject medium or reinsert it again.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 5
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHEject ( UWORD major, UWORD minor, UWORD do_eject, UWORD
+key );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHEject ejects or inserts the medium.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">do_eject</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">(1)</td>
+<td valign="top"> Ejects medium
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">(0)</td>
+<td valign="top"> Inserts medium
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> If the device is reserved pass the key, otherwise zero.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The code returned in case of errors is undefined. But more
+information is not really required, since one can make a targeted test
+for this capability beforehand with <a href="#XHInqTarget">XHInqTarget</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHDrvMap">H.5.7 XHDrvMap</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHDrvMap« - Return bit-vector with BIOS XHDI device numbers.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 6
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> ULONG XHDrvMap ( VOID );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHDrvMap returns a bit-mask of BIOS devices supported by the
+XHDI driver(s) (like the return value from <a href="About_the_BIOS.html#Drvmap">Drvmap</a>).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The return value is the corresponding bit-vector.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHInqDev">H.5.8 XHInqDev</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHInqDev« - Obtain major and minor device number, start
+sector and Bios parameter block (BPB of a BIOS device.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 7
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHInqDev ( UWORD <a href="About_the_BIOS.html#bios">bios</a>_device, UWORD *major, UWORD *minor,
+ULONG *start_sector, <a href="bios_structures.html#BPB">BPB</a> *bpb );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHInqDev returns major device number, minor device number,
+starting sector and <a href="bios_structures.html#BPB">BPB</a> of a given BIOS device. (<b>Note:</b>
+Getting the BPB this way will <i>not</i> reset the internal
+media-change state).
+<br>&nbsp;
+<br><b>Note 2:</b> The caller provides a pointer to the BPB
+structure, which is filled by the driver.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="gemdos_errors.html#E_OK">E_OK</a>, EDRNVR (device not responding, e.g. medium not inserted),
+<a href="gemdos_errors.html#EDRIVE">EDRIVE</a> (wrong BIOS device number) or some other applicable
+error-code. If the error-code is EDRVNR, <i>major</i> and
+<i>minor</i> contain the correct values anyway.
+<br>&nbsp;
+<br>If <i>start_sector</i> is 0xFFFFFFFF, the device is only
+temporarily inaccessible (example: you have inserted a cartridge with
+two partitions, but three drive bits have been reserved for the
+device).
+<br>&nbsp;
+<br>The BPB is invalid if the structure element <i>recsiz</i> is
+zero.
+<br>&nbsp;
+<br><b>Note:</b> A filesystem is fully described by major and minor
+device number and the starting block number. This does <i>not</i>
+mean that it is necessarily a FAT filesystem.
+<br>&nbsp;
+<br>The caller may pass a zero pointer for <i>major</i>,
+<i>minor</i>, <i>start_sector</i> and <i>bpb.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHInqDriver">H.5.9 XHInqDriver</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHInqDriver« - Obtain information about the driver.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 8
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHInqDriver ( UWORD <a href="About_the_BIOS.html#bios">bios</a>_device, BYTE *name, BYTE
+*version, BYTE *company, UWORD *ahdi_version, UWORD *maxIPL );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHInqDriver gets information about the driver for the
+<i><a href="About_the_BIOS.html#bios">bios</a>_device.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">name</td>
+<td valign="top"> Name of driver (max. 17 characters)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">version</td>
+<td valign="top"> String with version number (max. 7 characters)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">company</td>
+<td valign="top"> Name of company/programmer (max. 17 characters).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">ahdi_version</td>
+<td valign="top"> AHDI version level (as defined in the <a href="bios_structures.html#PUN_INFO">PUN_INFO</a> structure).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">maxIPL:</td>
+<td valign="top"> Highest IPL under which the driver can work (usually 5 for
+drivers which use <a href="bios_sysvars.html#UDO__hz_200">_hz_200</a> for timing loops).
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> The caller may pass a zero pointer for
+<i>name</i>, <i>version</i>, <i>company</i>, <i>ahdi_version</i>
+and <i>maxIPL.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHNewCookie">H.5.10 XHNewCookie</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHNewCookie« - <a href="c_task_royal.html#Install">Install</a> additional XHDI handler.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 9
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHNewCookie ( ULONG newcookie );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHNewCookie installs an additional XHDI handler. Advantage:
+The <a href="xhdi_cookie.html">XHDI cookie</a> continues to point to the same address. Those who want
+to support this function must do the following:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">1.</td>
+<td valign="top"> <b>If this is the first call of this kind:</b> Proceed
+subsequently as if the XHDI cookie had already pointed to <i>newcookie</i>
+at the time of installation.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2.</td>
+<td valign="top"> <b>If not:</b> Pass function on to 'next' handler.
+
+</td></tr>
+</table>
+
+<br>Those who would like to perform a multiple installation should
+proceed as follows:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">1.</td>
+<td valign="top"> Test whether XHNewCookie leads to success.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">2.</td>
+<td valign="top"> Otherways displace the cookie `by hand'.
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> This function is optional and may return <a href="gemdos_errors.html#EINVFN">EINVFN</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHReadWrite">H.5.11 XHReadWrite</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHReadWrite« - Read/write physical block numbers.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 10
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHReadWrite ( UWORD major, UWORD minor, UWORD rwflag,
+ULONG recno, UWORD count, VOID *buf );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHReadWrite reads or writes physical blocks, like the BIOS
+function <a href="About_the_BIOS.html#Rwabs">Rwabs</a>.
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">rwflag</td>
+<td valign="top">
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bits 0..2:</td>
+<td valign="top"> As defined in the AHDI Release Notes (3.00, April 18, 1990)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 3:</td>
+<td valign="top"> (physical mode) is ignored
+
+</td></tr>
+</table>
+
+<br>All other bits are reserved and should be set to zero.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">recno</td>
+<td valign="top"> Block number
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">count</td>
+<td valign="top"> Block count
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">buf</td>
+<td valign="top"> Pointer to buffer
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHInqTarget2">H.5.12 XHInqTarget2</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHInqTarget2« - Obtain information about a device.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 11
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHInqTarget2 ( UWORD major, UWORD minor, ULONG
+*block_size, ULONG *device_flags, BYTE *product_name, UWORD stringlen
+);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHInqTarget2 returns information about the device specified by
+<i>major</i> and <i>minor</i> (in <i>device_flags</i>: an attribute
+vector, in <i>product_name</i>: optionally the product descriptin of
+the device). Reservations made with <a href="#XHReserve">XHReserve</a> are respected.
+<br>&nbsp;
+<br>This function is available only with XHDI version 1.01 and
+above.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top">
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Meaning
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">block_size</td>
+<td valign="top"> Block size for this device (important for <a href="#XHReadWrite">XHReadWrite</a>); usually
+512.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">device_flags</td>
+<td valign="top"> (Bit set -&gt; Capability available):
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Bit 0:</td>
+<td valign="top"> Device is stoppable (<a href="xhdi_functions.html#XH_TARGET_STOPPABLE">XH_TARGET_STOPPABLE</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 1:</td>
+<td valign="top"> The medium is removable (<a href="xhdi_functions.html#XH_TARGET_REMOVABLE">XH_TARGET_REMOVABLE</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 2:</td>
+<td valign="top"> The eject mechanism can be locked (<a href="xhdi_functions.html#XH_TARGET_LOCKABLE">XH_TARGET_LOCKABLE</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 3:</td>
+<td valign="top"> The device can physically eject the medium
+(<a href="xhdi_functions.html#XH_TARGET_EJECTABLE">XH_TARGET_EJECTABLE</a>)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 29:</td>
+<td valign="top"> Eject mechanism has been locked by the driver
+(<a href="xhdi_functions.html#XH_TARGET_LOCKED">XH_TARGET_LOCKED</a>, from XHDI 1.25 up)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 30:</td>
+<td valign="top"> Device has been stopped by the driver (<a href="xhdi_functions.html#XH_TARGET_STOPPED">XH_TARGET_STOPPED</a>, from
+XHDI 1.25 up)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Bit 31:</td>
+<td valign="top"> The device is currently reserved (<a href="xhdi_functions.html#XH_TARGET_RESERVED">XH_TARGET_RESERVED</a>)
+
+</td></tr>
+</table>
+
+<br>All other bits are reserved, drivers should set them to zero.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">product_name</td>
+<td valign="top"> Product name of the device, similar to the information returned
+by the SCSI command INQUIRE (maximum <i>stringlen</i> characters
+incl. terminating zero); if this information is not available, the
+driver should return a zero-length string
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">stringlen</td>
+<td valign="top"> Length of string buffer passed in <i>product_name</i>
+
+</td></tr>
+</table>
+
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Note:</td>
+<td valign="top"> The caller may pass a zero pointer for <i>blocksize</i>,
+<i>device_flags</i> and <i>product_name.</i>
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHInqDev2">H.5.13 XHInqDev2</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHInqDev2« - Inquire major and minor device number, start
+sector and Bios parameter block (BPB) of a device.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 12
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHInqDev2 ( UWORD <a href="About_the_BIOS.html#bios">bios</a>_device, UWORD *major, UWORD *minor,
+ULONG *start_sector, <a href="bios_structures.html#BPB">BPB</a> *bpb, ULONG *blocks, BYTE *partid );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHInqDev2 returns major device number, minor device number,
+starting sector, <a href="bios_structures.html#BPB">BPB</a>, size and partition ID of a given BIOS device
+(<b>Note:</b> Getting the <a href="bios_structures.html#BPB">BPB</a> this way will <i>not</i> reset the
+internal media-change state).
+<br>&nbsp;
+<br><b>Note 2:</b> The caller provides a pointer to the BPB
+structure, which is filled by the driver.
+<br>&nbsp;
+<br>The function is available only with XHDI version 1.10 and
+above.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="gemdos_errors.html#E_OK">E_OK</a>, EDRNVR (device not responding, e,g. medium not inserted),
+<a href="gemdos_errors.html#EDRIVE">EDRIVE</a> (wrong BIOS device number) or some other applicable
+error-code. If the error-code is <a href="bios_errors.html#EDRVNR">EDRVNR</a>, <i>major</i> and
+<i>minor</i> <i>start_sector</i> contain the correct values anyway.
+<br>&nbsp;
+<br>If <i>start_sector</i> is 0xFFFFFFFF, the device is only
+temporarily inaccessible (example: you have inserted a cartridge with
+two partitions, but three drive bits have been reserved for the
+device).
+<br>&nbsp;
+<br>The BPB is invalid if the structure element <i>recsiz</i> is
+zero.
+<br>&nbsp;
+<br>If the partition ID isn't available (possible reason: no
+standard Atari root sector or no root sector at all), an empty string
+is returned.
+<br>&nbsp;
+<br>Starting with XHDI 1.20 for MSDOS-compatible media the one
+byte partition code is returned as:
+<br>partid[0] = '\0' (zero byte)
+<br>partid[1] = 'D' (for 'DOS')
+<br>partid[2] = Partition code
+<br>&nbsp;
+<br><b>Note:</b> A filesystem is fully described by major and minor
+device number and the starting block number. This does <i>not</i>
+mean that it is necessarily a FAT filesystem.
+<br>&nbsp;
+<br><b>Note 2:</b> The caller may pass a zero pointer for
+<i>major</i>, <i>minor</i>, <i>start_sector</i>, <i>bpb</i>,
+<i>blocks</i> and <i>partid.</i>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHDriverSpecial">H.5.14 XHDriverSpecial</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHDriverSpecial« - Use driver-specific extensions.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 13
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHDriverSpecial ( ULONG key1, ULONG key2, UWORD subopcode,
+VOID *data );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> This opcode may be used for driver-specific extensions. It's up
+to the driver how to interpret the arguments in <i>subopcode</i> and
+<i>data.</i> <i>key1</i> and <i>key2</i> are used to specify for
+which driver the call is intended:
+<br>&nbsp;
+<br><i>key1</i> should contain four printable <a href="ascii.html">ASCII characters</a>, <i>key2</i>
+a random ULONG value (example: date of definition in BCD format).
+<br>&nbsp;
+<br><b>Note:</b> OPTIONAL function, may return <a href="gemdos_errors.html#EINVFN">EINVFN</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHGetCapacity">H.5.15 XHGetCapacity</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHGetCapacity« - Obtain number of addressable sectors and
+their size. ermitteln
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 14
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHGetCapacity ( UWORD major, UWORD minor, ULONG *blocks,
+ULONG *blocksize );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The XHGetCapacity functions returns the number of adressable
+sectors in <i>blocks</i> and their size in <i>blocksize.</i> Note
+that - depending of the device used - this function may need several
+seconds to complete.
+<br>&nbsp;
+<br><b>Note:</b> This function is optional, may return EINVFN.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHMediumChanged">H.5.16 XHMediumChanged</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHMediumChanged« - Informs the driver about mediachange
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 15
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHMediumChanged ( UWORD major, UWORD minor );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHMediumChanged informs the driver that the medium in the given
+device has been changed. Upon receiving this notice, the driver should
+do the same things as if the device itself had returned a media-change
+status.
+<br>&nbsp;
+<br><b>Note:</b> This function is optional and may return <a href="gemdos_errors.html#EINVFN">EINVFN</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The return value is <a href="gemdos_errors.html#E_OK">E_OK</a> if, and only if, this information has
+been correctly interpreted (this means: all logical drives on the
+device are either disabled or ready to use).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHMiNTInfo">H.5.17 XHMiNTInfo</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHMiNTInfo« - Set or inquire MiNT-specific information.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 16
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHMiNTInfo ( UWORD opcode, VOID *data );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHMiNTInfo is a function for setting/inquiring MiNT-related
+information.
+<br>&nbsp;
+<br>The following opcodes are defined (for unknown opcodes <a href="gemdos_errors.html#EINVFN">EINVFN</a> is
+returned; <a href="gemdos_errors.html#E_OK">E_OK</a> is returned if, and only if, the call has been executed
+correctly).
+<br>&nbsp;
+<a name="XH_MI_SETKERINFO"></a>
+<br>XH_MI_SETKERINFO (0) [struct kerinfo *data]
+<br>&nbsp;
+<br>Sends (through <i>data</i>) a pointer to the MiNT kernel info
+structure to the driver. The driver can use it for direct calls of
+kernel functions.
+<br>&nbsp;
+<a name="XH_MI_GETKERINFO"></a>
+<br>XH_MI_GETKERINFO (1) [struct kerinfo **data]
+<br>&nbsp;
+<br>Inquires for a previously set MiNT kernel info pointer. The
+pointer is returned in the struct kerinfo * pointed to by
+<i>data.</i> If the adress of the MiNT kernel info structure is
+unknown, <i>data</i> is filled with a NULL pointer.
+<br>&nbsp;
+<br><b>Note:</b> This function is optional and may return <a href="gemdos_errors.html#EINVFN">EINVFN</a>.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHDOSLimits">H.5.18 XHDOSLimits</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHDOSLimits« - Set/get internal limits of DOS.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 17
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHDOSLimits ( UWORD which, ULONG limit );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> The function XHDOSLimits asks the driver for the internal
+limits of the currently running DOS (or sets the driver's limits).
+<b>Example:</b> it can be used by a FAT filesystem driver to inform
+the driver about the change of some of the limits. <i>which</i>
+describes the type of limit, <i>limit</i> is the new value (with zero
+meaning that the value shouldn't be changed). The function returns the
+previous value for the limit.
+<br>&nbsp;
+<br>As a required functionality starting with XHDI release 1.30 a
+driver shall retrieve limit values from previously started XHDI
+drivers, if these exist. When a limit is changed, this information
+then shall be passed through to other XHDI drivers.
+<br>&nbsp;
+<a name="XH_DL_SECSIZ"></a>
+<a name="XH_DL_MINFAT"></a>
+<a name="XH_DL_MAXFAT"></a>
+<a name="XH_DL_MINSPC"></a>
+<a name="XH_DL_MAXSPC"></a>
+<a name="XH_DL_CLUSTS"></a>
+<a name="XH_DL_MAXSEC"></a>
+<a name="XH_DL_DRIVES"></a>
+<a name="XH_DL_CLSIZB"></a>
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">which</td>
+  <td align="left" valign="top">Meaning</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_SECSIZ (0)</td>
+  <td align="left" valign="top">Maximum sector size (BIOS level)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_MINFAT (1)</td>
+  <td align="left" valign="top">Minimum number of FATs</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_MAXFAT (2)</td>
+  <td align="left" valign="top">Maximal number of FATs</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_MINSPC (3)</td>
+  <td align="left" valign="top">Minimum sectors per cluster</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_MAXSPC (4)</td>
+  <td align="left" valign="top">Maximum sectors per cluster</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_CLUSTS (5)</td>
+  <td align="left" valign="top">Maximum number of clusters of a 16-bit FAT</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_MAXSEC (6)</td>
+  <td align="left" valign="top">Maximum number of sectors</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_DRIVES (7)</td>
+  <td align="left" valign="top">Maximum number of BIOS drives supported by the DOS</td>
+</tr>
+<tr>
+  <td align="left" valign="top">XH_DL_CLSIZB (8)</td>
+  <td align="left" valign="top">Maximum cluster size</td>
+</tr>
+</table>
+</div>
+
+<br>- <b>With XHDI version 1.30 and above:</b>
+<br>&nbsp;
+<a name="XH_DL_RDLEN"></a>
+<a name="XH_DL_CLUSTS12"></a>
+<a name="XH_DL_CLUSTS32"></a>
+<a name="XH_DL_BFLAGS"></a>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">XH_DL_RDLEN (9)</td>
+<td valign="top"> Max. (bpb-&gt;rdlen * bpb-&gt;recsiz/32)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">XH_DL_CLUSTS12 (12)</td>
+<td valign="top"> Max. number of clusters of a 12-bit FAT
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">XH_DL_CLUSTS32 (13)</td>
+<td valign="top"> Max. number of clusters of a 32 bit FAT
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">XH_DL_BFLAGS (14)</td>
+<td valign="top"> Supported bits in bpb-&gt;bflags
+
+</td></tr>
+</table>
+
+<br><b>Note:</b> This function is optional, hence a call may be
+answered with EINVFN.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> The function returns the value of the previous limit.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHLastAccess">H.5.19 XHLastAccess</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHLastAccess« - Obtain number of milliseconds since the last
+access.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 18
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHLastAccess ( UWORD major, UWORD minor, ULONG *ms );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> XHLastAccess returns in <i>ms</i> the amount of milliseconds
+since the last successfull read or write operation on the device.
+<br>&nbsp;
+<br>This function is available only with XHDI version 1.25 and
+above.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XHReaccess">H.5.20 XHReaccess</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XHReaccess« - Check device for media-change.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Opcode:</td>
+<td valign="top"> 19
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Syntax:</td>
+<td valign="top"> LONG XHReaccess ( UWORD major, UWORD minor );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Description:</td>
+<td valign="top"> Calling the XHReaccess function causes the driver to check the
+device for a possible media-change and to update the partition
+information if needed (like XHMediumChange, but the driver checks for
+the media- change status before continuing).
+<br>&nbsp;
+<br>This function is available only with XHDI version 1.25 and
+above.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Return value:</td>
+<td valign="top"> <a href="xhdi_functions.html#XHDI_20error-codes">XHDI error-codes</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Group:</td>
+<td valign="top"> <a href="#XHDI_20functions">XHDI functions</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">See also:</td>
+<td valign="top"> <a href="xhdi_arbitration.html">Arbitration</a> &nbsp; <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> &nbsp; <a href="xhdi_partition_types.html">Partition types</a> &nbsp; <a href="bios_sysvars.html">System variables</a> &nbsp; <a href="xhdi_cookie.html">XHDI cookie</a> &nbsp; <a href="xhdi.html#XHDI">XHDI</a>
+terminology
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="xhdi.html"><img src="udo_up.gif" alt="XHDI - eXtended HardDisk Interface (Version 1.30)" title="XHDI - eXtended HardDisk Interface (Version 1.30)" border="0" width="24" height="24">XHDI - eXtended HardDisk Interface (Version 1.30)</a>
+<a name="UDO_nav_lf_FOOT" href="xhdi_partition_types.html"><img src="udo_lf.gif" alt="Recommended partition types" title="Recommended partition types" border="0" width="24" height="24">Recommended partition types</a>
+<a name="UDO_nav_rg_FOOT" href="typedefs.html"><img src="udo_rg.gif" alt="Type definitions" title="Type definitions" border="0" width="24" height="24">Type definitions</a>
+</body>
+</html>

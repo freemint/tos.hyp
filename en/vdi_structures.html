@@ -1,0 +1,493 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: VDI structures
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_HEAD" href="vdi_functions.html"><img src="udo_lf.gif" alt="VDI functions list" title="VDI functions list" border="0" width="24" height="24">VDI functions list</a>
+<a name="UDO_nav_rg_HEAD" href="aes_main.html"><img src="udo_rg.gif" alt="AES" title="AES" border="0" width="24" height="24">AES</a>
+
+<hr>
+
+<h1><a name="VDI_20structures">7.14 VDI structures</a></h1>
+<ul class="content">
+	<li> 7.14.1 <a href="#VDIPB">VDIPB</a>
+	<li> 7.14.2 <a href="#BIT_IMAGE">BIT_IMAGE</a>
+	<li> 7.14.3 <a href="#COLOR_ENTRY">COLOR_ENTRY</a>
+	<li> 7.14.4 <a href="#COLOR_RGB">COLOR_RGB</a>
+	<li> 7.14.5 <a href="#COLOR_TAB">COLOR_TAB</a>
+	<li> 7.14.6 <a href="#fix31">fix31</a>
+	<li> 7.14.7 <a href="#FONT_HDR">FONT_HDR</a>
+	<li> 7.14.8 <a href="#GCBITMAP">GCBITMAP</a>
+	<li> 7.14.9 <a href="#MFDB">MFDB</a>
+	<li> 7.14.10 <a href="#POINT16">POINT16</a>
+	<li> 7.14.11 <a href="#POINT32">POINT32</a>
+	<li> 7.14.12 <a href="#pxyarray">pxyarray</a>
+	<li> 7.14.13 <a href="#RECT16">RECT16</a>
+	<li> 7.14.14 <a href="#RECT32">RECT32</a>
+	<li> 7.14.15 <a href="#XFNT_INFO">XFNT_INFO</a>
+	</li>
+</ul>
+<br>
+<h3><a name="VDIPB">7.14.1 VDIPB</a></h3>
+<pre>typedef struct
+{
+   int16_t  *<a href="vdi_bindings.html#contrl">contrl</a>;    /* Pointer to <a href="vdi_bindings.html#contrl">contrl</a> array */
+   int16_t  *<a href="vdi_bindings.html#intin">intin</a>;     /* Pointer to <a href="vdi_bindings.html#intin">intin</a> array  */
+   int16_t  *<a href="vdi_bindings.html#ptsin">ptsin</a>;     /* Pointer to <a href="vdi_bindings.html#ptsin">ptsin</a> array  */
+   int16_t  *<a href="vdi_bindings.html#intout">intout</a>;    /* Pointer to <a href="vdi_bindings.html#intout">intout</a> array */
+   int16_t  *<a href="vdi_bindings.html#ptsout">ptsout</a>;    /* Pointer to <a href="vdi_bindings.html#ptsout">ptsout</a> array */
+} VDIPB;
+</pre>
+<h3><a name="BIT_IMAGE">7.14.2 BIT_IMAGE</a></h3>
+<pre>typedef struct
+{
+   int16_t   nbplanes;
+   int16_t   width;
+   int16_t   height;
+} BIT_IMAGE;
+</pre>
+<h3><a name="COLOR_ENTRY">7.14.3 COLOR_ENTRY</a></h3>
+<p>The <a href="proto_xfsl.html#union">union</a> COLOR_ENTRY contains the colour table entry. In
+future, colour spaces other than RGB may be available:
+</p>
+<pre>typedef <a href="proto_xfsl.html#union">union</a>
+{
+   <a href="#COLOR_RGB">COLOR_RGB</a>   rgb;
+   COLOR_CMYK  cmyk;
+} COLOR_ENTRY;
+</pre>
+<h3><a name="COLOR_RGB">7.14.4 COLOR_RGB</a></h3>
+<pre>typedef struct
+{
+   uint16   reserved;     /* Set to 0 or the index of the entry */
+   uint16   red;          /* Red:   0&lt;-&gt;65535 */
+   uint16   green;        /* Green: 0&lt;-&gt;65535 */
+   uint16   blue;         /* Blue:  0&lt;-&gt;65535 */
+} COLOR_RGB;
+</pre>
+<p>If the colour data in a program is present in a sensible format
+(e.g. 8 bits per channel) already, one can save oneself a
+transformation with multiplication and division. The Shift and OR
+functions of the processor perform this faster and more elegantly.
+eleganter.
+</p>
+<p><b>Example:</b> The colour value is described by the byte
+variables r, g, b. The correct conversion to the 16-bit format of the
+COLOR_RGB structure proceeds as follows:
+</p>
+<pre>COLOR_RGB color;
+
+color.reserved = 0;
+
+color.red = r;
+color.red |= (color.red &lt;&lt; 8);
+
+color.green = g;
+color.green |= (color.green &lt;&lt; 8);
+
+color.blue = b;
+color.blue |= (color.blue &lt;&lt; 8);
+</pre>
+<p>The structure element <i>reserved</i> should be set to 0 or
+(for building up a colour table) contain the index of the entry. In
+each case, however, the upper 8 bits of <i>reserved</i> must be set
+to 0, as they may be used by the colour routines for some flags.
+</p>
+<h3><a name="COLOR_TAB">7.14.5 COLOR_TAB</a></h3>
+<pre>typedef struct                    /* Colour table                    */
+{
+   int32 magic;                   /* 'ctab'                          */
+   int32 length;
+   int32 format;                  /* Format (0)                      */
+   int32 reserved;                /* Reserved, set to 0              */
+   int32 map_id;                  /* Colour table ID                 */
+   int32 color_space;             /* Colour space (at present only
+                                     CSPACE_RGB)                     */
+   int32 flags;                   /* <a href="vdi_main.html">VDI</a>-internal flags, set to 0    */
+   int32 no_colors;               /* Number of colour entries        */
+   int32 reserved1;               /* Reserved, must be 0             */
+   int32 reserved2;               /* Reserved, must be 0             */
+   int32 reserved3;               /* Reserved, must be 0             */
+   int32 reserved4;               /* Reserved, must be 0             */
+   <a href="#COLOR_ENTRY">COLOR_ENTRY</a> colors[];
+} COLOR_TAB;
+</pre>
+<h3><a name="fix31">7.14.6 fix31</a></h3>
+<p>The data type fix31 corresponds to the type LONG, and is
+required in connection with vector fonts where one calculates
+positions and steps in 1/65536. Here the width of a pixel corresponds
+to the value 65536. The upper 16 bits represent the <b>whole number
+part</b> and the lower 16 bits the <b>decimal part</b> of the number.
+</p>
+<p>Examples:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Hex</td>
+  <td align="left" valign="top">Dec</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">$00010000</td>
+  <td align="left" valign="top">65536</td>
+  <td align="left" valign="top">1.0 pixels</td>
+</tr>
+<tr>
+  <td align="left" valign="top">$0001c000</td>
+  <td align="left" valign="top">114688</td>
+  <td align="left" valign="top">1.75 pixels</td>
+</tr>
+<tr>
+  <td align="left" valign="top">$fffec000</td>
+  <td align="left" valign="top">-81920</td>
+  <td align="left" valign="top">-1.25 pixels</td>
+</tr>
+<tr>
+  <td align="left" valign="top">$fffe4000</td>
+  <td align="left" valign="top">-114688</td>
+  <td align="left" valign="top">-1.75 pixels</td>
+</tr>
+</table>
+</div>
+
+<p><b>Important:</b> The decimal part may <i>never</i> be cut
+off!
+</p>
+<p>If you add advance widths (returned by <a href="vdi_inquire.html#vqt_advance">vqt_advance</a>) and you
+would like to determine the discrete coordinate for cursor placement,
+you should use the following code:
+</p>
+<pre>int16_t fix31_to_pixel( fix31 a )
+{
+   int16_t b;
+
+   b = (int16_t) (( a + 32768L ) &gt;&gt; 16 ); /* Round !! */
+   return( b );                           /* Return pixel value */
+}
+</pre>
+<p>See also: <a href="VDI_fundamentals.html#About_20the_20GDOS">GDOS</a> &nbsp; <a href="VDI_fundamentals.html#NVDI">NVDI</a> &nbsp; <a href="VDI_fundamentals.html#SpeedoGDOS">SpeedoGDOS</a>
+</p>
+<h3><a name="FONT_HDR">7.14.7 FONT_HDR</a></h3>
+<a name="Bitmap_20fonts_2C_20Header_20for"></a>
+<p>The following structure describes the file-header for a bitmap
+font in the <i>Digital Research</i> standard format. In this format
+the font is organised as a wide, monochrome raster image; the width of
+the raster is the sum of all character widths, the raster height
+corres- ponds to the height of a single character. <b>From this
+follows:</b> The left edge of a character does <i>not</i> necessarily
+have to fall on a byte boundary; only the end of each raster line is
+filled with NULL- bits so that the next line falls on a WORD boundary
+again.
+</p>
+<pre>typedef struct font_hdr
+{
+   int16_t     font_id;        /* Font number                        */
+   int16_t     point;          /* <a href="proto_olga.html#Size">Size</a> in points                     */
+   int8_t      name[32];       /* Name of the font                   */
+   uint16_t    first_ade;      /* First character in font            */
+   uint16_t    last_ade;       /* Last character in font             */
+   uint16_t    top;            /* Distance: Top line    &lt;-&gt; Baseline */
+   uint16_t    ascent;         /* Distance: Ascent line &lt;-&gt; Baseline */
+   uint16_t    half;           /* Distance: Half line   &lt;-&gt; Baseline */
+   uint16_t    descent;        /* Distance: Descent line&lt;-&gt; Baseline */
+   uint16_t    bottom;         /* Distance: Bottom line &lt;-&gt; Baseline */
+   uint16_t    max_char_width; /* Largest character width            */
+   uint16_t    max_cell_width; /* Largest character cell width       */
+   uint16_t    left_offset;    /* Left offset for italic (skewed)    */
+   uint16_t    right_offset;   /* Right offset for italic (skewed)   */
+   uint16_t    thicken;        /* Thickening factor for bold         */
+   uint16_t    ul_size;        /* Width of underline                 */
+   uint16_t    lighten;        /* Mask for light (0x5555)            */
+   uint16_t    skew;           /* Mask for italic (0x5555)           */
+   uint16_t    flags;          /* Various flags:
+                                  Set for system font
+                                   Bit 1: Set if horizontal offset
+                                          table is in use
+                                   Bit 2: Set if Motorola format
+                                   Bit 3: Set if non-proportional    */
+   uint8_t     *hor_table;     /* Pointer to horizontal offset table */
+   uint16_t    *off_table;     /* Pointer to character offset table  */
+   uint16_t    *dat_table;     /* Pointer to font image              */
+   uint16_t    form_width;     /* Width of the font image            */
+   uint16_t    form_height;    /* Height of the font image           */
+   font_hdr    *next_font;     /* Pointer to next font header        */
+} FONT_HDR;
+</pre>
+<p><b>Note:</b> As GEM was originally developed on the PC, all
+data is normally in the <i>Intel format</i>, so that on computers
+with Motorola processors we have to swap the upper and lower bytes of
+all words. <b>Warning:</b> To be able to interrogate the
+Motorola/Intel flag (bit 2 of the component <i>flags</i>), one must
+actually know already in which format the font is present. The
+solution to this problem: Start from the assumption that bit 10 of the
+flag will never be used and test whether bit 2 of the 67th byte of the
+header is set (because then the font is present in the Motorola
+format).
+</p>
+<a name="Character_20offset_20table"></a>
+<p><b>The character offset table</b> contains entries of 16-bit
+values that hold the horizontal pixel offsets for each character
+within the font raster. So for the index one must use the character's
+ASCII code minus the ASCII code of the first character in the font
+(component <i>first_ade</i>). The width of a character results from
+the difference to the offset value of the next higher character; so
+that this formula works for the last character as well, the table
+always has one more entry than the number of characters available.
+</p>
+<a name="Horizontal_20offset_20table"></a>
+<p><b>The horizontal offset table</b> contains positive or
+negative offset values that are added to the X-position before the
+output of a character; however, this is supported only for a few
+fonts.
+</p>
+<p>Last but not least one should point out that a normal
+application should never have to deal with this format; this
+infomation is of importance only for developers of font editors or
+GDOS versions.
+</p>
+<p>See also:
+<br><a href="VDI_fundamentals.html#About_20the_20GDOS">GDOS</a> &nbsp; <a href="VDI_fundamentals.html#NVDI">NVDI</a> &nbsp; <a href="VDI_fundamentals.html#SpeedoGDOS">SpeedoGDOS</a> &nbsp; <a href="VDI_fundamentals.html#Details_20about_20vector_20fonts">Vector fonts</a> &nbsp; <a href="vdi_attribute.html#vst_alignment">vst_alignment</a> &nbsp;
+<a href="vdi_control.html#vst_load_fonts">vst_load_fonts</a> &nbsp; <a href="vdi_control.html#vst_unload_fonts">vst_unload_fonts</a> &nbsp; <a href="vdi_inquire.html#vqt_fontheader">vqt_fontheader</a>
+</p>
+<h3><a name="GCBITMAP">7.14.8 GCBITMAP</a></h3>
+<pre>/*
+ * Published bitmap description (structure
+ * with version header)
+ */
+typedef struct _gcbitmap
+{
+   LONG       magic;      /* Structure identifier 'cbtm' */
+   LONG       length;     /* Structure length */
+   LONG       format;     /* Structure format (0) */
+   LONG       reserved;   /* Reserved (0) */
+   BYTE       *addr;      /* Address of bitmap */
+   LONG       width;      /* Width of a line in bytes */
+   LONG       bits;       /* Bit-depth */
+   ULONG      px_format;  /* Pixel format */
+   LONG       xmin;       /* Minimum discrete
+                             X-coordinate of bitmap */
+   LONG       ymin;       /* Minimum discrete
+                             Y-coordinate of bitmap */
+   LONG       xmax;       /* Maximum discrete
+                             X-coordinate of bitmap + 1 */
+   LONG       ymax;       /* Maximum discrete
+                             Y-coordinate of bitmap + 1 */
+   CTAB_REF   ctab;       /* Reference to color table,
+                             or 0L */
+   ITAB_REF   itab;       /* Reference to inverse color
+                             table, or 0L */
+   LONG       reserved0;  /* Reserved, must be 0 */
+   LONG       reserved1;  /* Reserved, must be 0 */
+} GCBITMAP;
+</pre>
+<p>See also: <a href="VDI_fundamentals.html#NVDI">NVDI</a> &nbsp; <a href="vdi_control.html#v_open_bm">v_open_bm</a> &nbsp; <a href="vdi_raster.html#vr_transfer_bits">vr_transfer_bits</a>
+</p>
+<h3><a name="MFDB">7.14.9 MFDB</a></h3>
+<p>The <b>M</b>emory <b>F</b>orm <b>D</b>efinition <b>B</b>lock
+is a data structure that is used by the VDI to describe destination
+and source memory blocks for raster operations.
+</p>
+<p>C-declaration:
+</p>
+<pre>typedef struct mfdb
+{
+   VOID *fd_addr;                /* Pointer to the start of the
+                                    memory block, e.g. the
+                                    screen memory base address  */
+   WORD  fd_w;                   /* Width in pixels             */
+   WORD  fd_h;                   /* Height in pixels            */
+   WORD  fd_wdwidth;             /* Width of a line in words    */
+   WORD  fd_stand;               /* 0 = Device-specific format  */
+                                 /* 1 = Standard format         */
+   WORD  fd_nplanes;             /* Number of planes            */
+   WORD  fd_r1, fd_r2, fd_r3;    /* Reserved, must be 0         */
+} MFDB;
+</pre>
+<p><b>Note:</b> If the component <i>fd_addr</i> contains a 0, the
+rest of the MFDB does not have to be filled out. The raster operations
+<a href="vdi_raster.html#vrt_cpyfm">vrt_cpyfm</a> and <a href="vdi_raster.html#vro_cpyfm">vro_cpyfm</a> then automatically refer to the screen (or, in
+the case of a printer driver to the printer bitmap). The reserved
+words <i>fd_r1</i>, <i>fd_r2</i> and <i>fd_r3</i> should be set to
+0 to cater for future extensions!
+</p>
+<p>See also: <a href="VDI_fundamentals.html#Raster_20formats">Raster formats</a> &nbsp; <a href="vdi_raster.html">Raster functions</a>
+</p>
+<h3><a name="POINT16">7.14.10 POINT16</a></h3>
+<pre>typedef struct                     /* Point for 16-bit coordinates */
+{
+   int16 x;
+   int16 y;
+} POINT16;
+</pre>
+<h3><a name="POINT32">7.14.11 POINT32</a></h3>
+<pre>typedef struct                     /* Point for 32-bit coordinates */
+{
+   int32 x;
+   int32 y;
+} POINT32;
+</pre>
+<h3><a name="pxyarray">7.14.12 pxyarray</a></h3>
+<p>pxyarray is used in VDI to depict various graphical objects
+based on several coordinate pairs (x,y). Examples for the use of a
+pxyarray are for the depiction of rectangles:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">pxyarray[0]</td>
+  <td align="left" valign="top">X-coordinate of the top left corner point</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[1]</td>
+  <td align="left" valign="top">Y-coordinate of the top left corner point</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[2]</td>
+  <td align="left" valign="top">X-coordinate of the bottom right corner point</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[3]</td>
+  <td align="left" valign="top">Y-coordinate of the bottom right corner point</td>
+</tr>
+</table>
+</div>
+
+<p>Or generally, for n point-pairs:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">pxyarray[0]</td>
+  <td align="left" valign="top">X-coordinate of the first point-pair</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[1]</td>
+  <td align="left" valign="top">Y-coordinate of the first point-pair</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[2]</td>
+  <td align="left" valign="top">X-coordinate of the second point-pair</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[3]</td>
+  <td align="left" valign="top">Y-coordinate of the second point-pair</td>
+</tr>
+<tr>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[2*n - 2]</td>
+  <td align="left" valign="top">X-coordinate of the n-th point-pair</td>
+</tr>
+<tr>
+  <td align="left" valign="top">pxyarray[2*n - 1]</td>
+  <td align="left" valign="top">Y-coordinate of the n-th point-pair</td>
+</tr>
+</table>
+</div>
+
+<p>See also: <a href="About_the_VDI.html">About the VDI</a> &nbsp; <a href="vdi_bindings.html">VDI bindings</a>
+</p>
+<h3><a name="RECT16">7.14.13 RECT16</a></h3>
+<pre>typedef struct                 /* Rectangle for 16-bit coordinates */
+{
+   int16 x1;
+   int16 y1;
+   int16 x2;
+   int16 y2;
+} RECT16;
+</pre>
+<h3><a name="RECT32">7.14.14 RECT32</a></h3>
+<pre>typedef struct                 /* Rectangle for 32-bit coordinates */
+{
+   int32 x1;
+   int32 y1;
+   int32 x2;
+   int32 y2;
+} RECT32;
+</pre>
+<h3><a name="XFNT_INFO">7.14.15 XFNT_INFO</a></h3>
+<pre>typedef struct
+{
+   int32_t  size;             /* Length of the structure; initialize
+                                 this entry before calling <a href="vdi_inquire.html#vqt_xfntinfo">vqt_xfntinfo</a>  */
+   int16_t  format;           /* Font format, e.g. 4 for TrueType        */
+   int16_t  id;               /* Font ID, e.g. 6059                      */
+   int16_t  index;            /* <a href="indexudo.html">Index</a>                                   */
+   int8_t  font_name[50];     /* Font name, e.g. &quot;Century 725 Italic BT&quot; */
+   int8_t  family_name[50];   /* Font family name, e.g. &quot;Century725 BT&quot;  */
+   int8_t  style_name[50];    /* Font style name, e.g. &quot;Italic&quot;          */
+   int8_t  file_name1[200];   /* Name and path of the first font file,   */
+                              /* e.g. &quot;C:\FONTS\TT1059M_.TTF&quot;            */
+   int8_t  file_name2[200];   /* Name of the 2nd font file               */
+   int8_t  file_name3[200];   /* Name of the 3rd font file               */
+   int16_t  pt_cnt;           /* Number of available point sizes         */
+                              /* (<a href="vdi_attribute.html#vst_point">vst_point</a>), e.g. 10                    */
+   int16_t  pt_sizes[64];     /* Available point sizes, e.g. { 8, 9, 10, */
+                              /*            11, 12, 14, 18, 24, 36, 48 } */
+} XFNT_INFO;
+</pre>
+<p><b>Note:</b> So that the information can be entered in the
+structure, the size of the structure must be entered into the
+component <i>size</i>.
+</p>
+<p>The following apply for the component <i>format</i>:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Bitmap font</td>
+</tr>
+<tr>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Speedo font</td>
+</tr>
+<tr>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">TrueType font</td>
+</tr>
+<tr>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Type-1 font</td>
+</tr>
+</table>
+</div>
+
+<p>All character strings are NULL-terminated strings in C format.
+Structure elements that are not demanded have <i>no</i> defined
+contents.
+</p>
+<p>See also: <a href="gem_about.html">GEM</a> &nbsp; <a href="VDI_fundamentals.html#NVDI">NVDI</a> &nbsp; <a href="vdi_inquire.html#vqt_xfntinfo">vqt_xfntinfo</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_FOOT" href="vdi_functions.html"><img src="udo_lf.gif" alt="VDI functions list" title="VDI functions list" border="0" width="24" height="24">VDI functions list</a>
+<a name="UDO_nav_rg_FOOT" href="aes_main.html"><img src="udo_rg.gif" alt="AES" title="AES" border="0" width="24" height="24">AES</a>
+</body>
+</html>

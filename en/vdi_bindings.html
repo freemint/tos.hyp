@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: VDI bindings
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_HEAD" href="VDI_fundamentals.html"><img src="udo_lf.gif" alt="VDI fundamentals" title="VDI fundamentals" border="0" width="24" height="24">VDI fundamentals</a>
+<a name="UDO_nav_rg_HEAD" href="vdi_attribute.html"><img src="udo_rg.gif" alt="Attribute functions" title="Attribute functions" border="0" width="24" height="24">Attribute functions</a>
+
+<hr>
+
+<h1><a name="VDI_20bindings">7.3 VDI bindings</a></h1>
+<a name="Bindings_20of_20the_20VDI"></a>
+<p>The VDI is called via a single subprogram, which is passed five
+parameters; these are addresses of various arrays that are used for
+input/output communication. To call a VDI function, the following
+parameter block must be populated with the addresses of the arrays
+described below:
+</p>
+<a name="VDI_20parameter_20block"></a>
+<a name="Parameter_20block_20of_20the_20VDI"></a>
+<pre>typedef struct
+{
+   int16_t  *contrl;    /* Pointer to contrl array */
+   int16_t  *intin;     /* Pointer to intin array  */
+   int16_t  *ptsin;     /* Pointer to ptsin array  */
+   int16_t  *intout;    /* Pointer to intout array */
+   int16_t  *ptsout;    /* Pointer to ptsout array */
+} <a href="vdi_structures.html#VDIPB">VDIPB</a>;
+</pre>
+<p>The address of this parameter block must then be stored in
+register d1, and additionally register d0.w must be filled with the
+value 0x73 (115). With a TRAP#2 system call the VDI can then be
+called directly. For the <b><i>Pure-Assembler,</i></b> for example,
+this could look like this:
+</p>
+<pre>        .EXPORT vdi         ; Export function
+
+        .IMPORT contrl      ; Import contrl field
+        .IMPORT intin       ; Import intin field
+        .IMPORT ptsin       ; Import ptsin field
+        .IMPORT intout      ; Import intout field
+        .IMPORT ptsout      ; Import ptsout field
+
+        .DATA               ; Start of the DATA segment
+
+pblock: .DC.L contrl        ; Address of the contrl arrays
+        .DC.L intin         ; Address of the intin arrays
+        .DC.L ptsin         ; Address of the ptsin arrays
+        .DC.L intout        ; Address of the intout arrays
+        .DC.L ptsout        ; Address of the ptsout arrays
+
+        .CODE               ; Start of the CODE segment
+</pre>
+<a name="vdi"></a>
+<pre>vdi:     MOVE.L #pblock,D1  ; Address of the parameter blocks
+         MOVE.W #$73,D0     ; Opcode of the <a href="vdi_main.html">VDI</a>
+         TRAP   #2          ; Call <a href="gem_about.html">GEM</a>
+         RTS                ; Exit here
+
+       .END                 ; End of the module
+</pre>
+<p>There is no clear information available about which registers
+may be changed. In fact, however, the pertinent routines in ROM save
+<i>all</i> registers.
+</p>
+<p>Unlike GEMDOS, the VDI unfortunately has no documented return value for
+'unknown function number'. Hence, in doubtful cases, one has to help
+oneself as follows:
+</p>
+<ul>
+<li><p> Many properties of a driver can already be obtained via the
+function <a href="vdi_inquire.html#vq_extnd">vq_extnd</a>.
+<br>&nbsp;
+</p></li>
+<li><p> Otherwise one should simply try the relevant VDI call, and
+then analyse the return values. This is because many functions return
+the set value as a result. In addition one can examine the fields
+contrl[2] and contrl[4] (see below) and check whether these hold the
+correct numbers.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Now to the individual arrays. With each field, designated input
+and output actions can be carried out. The following apply:
+</p>
+<table class="UDO_env_blist">
+<a name="contrl"></a>
+<tr><td nowrap="nowrap" valign="top"><b>int16_t contrl[12]</b></td>
+<td valign="top"> This field passes the function number, the number of entries,
+the handle of the workstation as well as the function-dependent
+parameters. Inputs to the VDI are entered as follows:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">contrl[0] =</td>
+<td valign="top"> Opcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[1] =</td>
+<td valign="top"> Number of values in ptsin array
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[3] =</td>
+<td valign="top"> Number of values in intin array
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[5] =</td>
+<td valign="top"> Sub-opcode
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[6] =</td>
+<td valign="top"> Workstation handle
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[7..n] =</td>
+<td valign="top"> Depends on the function
+
+</td></tr>
+</table>
+
+<br>Outputs of the VDI are made via the following fields:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">contrl[2] =</td>
+<td valign="top"> Number of values in ptsout array
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[4] =</td>
+<td valign="top"> Number of values in intout array
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">contrl[6] =</td>
+<td valign="top"> Workstation handle (only <a href="vdi_control.html#v_opnwk">v_opnwk</a>/<a href="vdi_control.html#v_opnvwk">v_opnvwk</a>/<a href="vdi_control.html#v_opnbm">v_opnbm</a>)
+
+</td></tr>
+</table>
+
+<a name="ptsin"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t ptsin[1024]</b></td>
+<td valign="top"> &nbsp;
+<br>&nbsp;
+<a name="ptsout"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t ptsout[256]</b></td>
+<td valign="top"> These two fields are used to pass pairs of coordinates or
+dimensions in pixels (such as the width of a line, or the height of a
+character, for instance). The size of these fields depends on the
+function called.
+<br>&nbsp;
+<a name="intin"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t intin[1024]</b></td>
+<td valign="top"> &nbsp;
+<br>&nbsp;
+<a name="intout"></a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><b>int16_t intout[512]</b></td>
+<td valign="top"> These fields are required to pass values such as an index of a
+character or of a colour. The size of these fields depends on the
+function called.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<p><b>When passing strings to the VDI, one should note some
+specialties:</b> These are passed basically via the fields intin and
+intout, where one WORD per character is used. This has the advantage
+that other codings than ASCII can be used as well, and more than 256
+characters of a font may be used.
+</p>
+<p>As a rule the bindings work with normal C-strings, and convert
+them for the VDI. For this the length of the strings are stored in
+contrl[3] or contrl[4], and no terminating NULL-byte or WORD is
+present. To convert a character string lying in intout to a C-string,
+for instance, contrl[4] elements have to be copied (and the upper 8
+bits cut off !) and then a NULL-byte appended.
+</p>
+<p><b>Warning:</b> If the operating system supports threads, then
+it is imperative that a multithread-proof library is used.
+</p>
+<p>See also: <a href="#C-string_20to_20VDI-string">C-string to VDI-string</a> &nbsp; <a href="#VDI-string_20to_20C-string">VDI-string to C-string</a> &nbsp; <a href="aes_main.html">AES</a>
+bindings
+</p>
+<h3><a name="VDI-string_20to_20C-string">7.3.1 VDI-string to C-string</a></h3>
+<pre>VOID <a href="vdi_bindings.html#vdi">vdi</a>_str_to_c( UWORD *src, UBYTE *des, int16_t len )
+{
+   while ( len &gt; 0 )
+   {
+      *des++ = (UBYTE)*src++;  /* Only low byte */
+      len--;
+   }
+   *des++ = 0;  /* End of string */
+}
+</pre>
+<h3><a name="C-string_20to_20VDI-string">7.3.2 C-string to VDI-string</a></h3>
+<pre>int16_t c_str_to_<a href="vdi_bindings.html#vdi">vdi</a>( UBYTE *src, UWORD *des )
+{
+   int16_t  len;
+
+   while (( *des++ = *src++ ) != 0 )
+      len++;
+   return (len); /* Length of the string without NULL byte */
+}
+</pre>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="vdi_main.html"><img src="udo_up.gif" alt="VDI" title="VDI" border="0" width="24" height="24">VDI</a>
+<a name="UDO_nav_lf_FOOT" href="VDI_fundamentals.html"><img src="udo_lf.gif" alt="VDI fundamentals" title="VDI fundamentals" border="0" width="24" height="24">VDI fundamentals</a>
+<a name="UDO_nav_rg_FOOT" href="vdi_attribute.html"><img src="udo_rg.gif" alt="Attribute functions" title="Attribute functions" border="0" width="24" height="24">Attribute functions</a>
+</body>
+</html>

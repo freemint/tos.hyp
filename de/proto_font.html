@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Font-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_dhst.html"><img src="udo_lf.gif" alt="Document-History-Protokoll" title="Document-History-Protokoll" border="0" width="24" height="24">Document-History-Protokoll</a>
+<a name="UDO_nav_rg_HEAD" href="proto_gdps.html"><img src="udo_rg.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+
+<hr>
+
+<h1><a name="Font-Protokoll">15.5 Font-Protokoll</a></h1>
+<p><u>Beschreibung des Font-Protokolls, Revision 5</u>
+</p>
+<p>Eine minimale Unterstützung dieses Protokolls besteht in der
+Auswertung der Nachricht <tt>FONT_CHANGED</tt>. Programme, die eines
+der (GDOS&ndash;) Attribute Textwinkel, &ndash;breite, &ndash;kerning,
+&ndash;neigung oder die Angabe der Textgröße in 1/65536 Punkt
+unterstützen, sollten auch die Nachricht <tt>XFONT_CHANGED</tt>, die
+zusätzliche Informationen anbietet, unterstützen.
+</p>
+<p>Über die Nachricht <tt>FONT_SELECT</tt> kann der Fontselektor
+auch von der Applikation aufgerufen werden. Dabei können auch die
+aktuell eingestellten Attribute übergeben werden.
+</p>
+<p>Unterstützt die Anwendung auch das
+<a href="proto_xacc.html">XAcc</a>&ndash;2&ndash;Protokoll, so kann sie auch leicht die
+Unterstützung der Bestätigungsnachricht <tt>FONT_ACK</tt> offenlegen
+und ohne Environment&ndash;Variable nach Fontselektoren im Speicher
+suchen.
+</p>
+<ul>
+<a name="FONT_CHANGED"></a>
+<li><p> <tt>FONT_CHANGED</tt>&ndash;Nachricht:
+<br>Nachricht des Fontselektors an eine Applikation, daß der
+Zeichensatz und/oder die Zeichenattribute (Größe, Farbe und Effekte)
+in einem oder mehreren Fenstern der Applikation gewechselt werden
+sollen. Besitzt die Zielapplikation im erweiterten <a href="proto_xacc.html">XAcc</a>&ndash;Namen
+die Kennung <q><tt>XFontAck</tt></q>, so muß diese Nachricht mit der
+Nachricht <tt>FONT_ACK</tt> beantwortet werden. Ansonsten ist die
+Unterstützung dieser Nachricht optional.
+<br>&nbsp;
+<br>Negative Werte in <tt>msg[6/7]</tt> bzw. Null in <tt>msg[4/5]</tt>
+stehen für keine Veränderung
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]  = FONT_CHANGED (0x7a18)
+msg[1]  = apID
+msg[2]  = 0
+msg[3]  = Fenster-Handle oder negativer Wert, falls
+          Font in allen Fenstern gewechselt werden soll
+msg[4]  = Font-ID oder Null
+msg[5]  = Font-Größe in Punkt (&gt;0) oder Pixel (&lt;0)
+          bzw. Null für keine Veränderung
+msg[6]  = Font-Farbe
+msg[7]  = Effekte:
+          Bit 0: Fett
+          Bit 1: Hell
+          Bit 2: Kursiv
+          Bit 3: Unterstrichen
+          Bit 4: Umrandet
+          Bit 5: Schattiert
+          Bit 6: Invers
+          Bit 12: 1=Font ist monospaced; 0=unbekannt
+          (restliche Bits sind reserviert)
+</pre>
+</blockquote>
+<br>Bit 12 ist mit der Revision 5 eingeführt worden.
+<br>&nbsp;
+<a name="XFONT_CHANGED"></a>
+</p></li>
+<li><p> <tt>XFONT_CHANGED</tt>&ndash;Nachricht:
+<br>Erweiterte (GDOS&ndash;)Attribute übermitteln. Diese Nachricht
+ist optional und wird <i>vor</i> der Nachricht <tt>FONT_CHANGED</tt>
+verschickt, d.h. erst wenn die Nachricht <tt>FONT_CHANGED</tt>
+eintrifft und den gleichen Absender (<tt>msg[1]</tt> vergleichen!) hat,
+sollten diese Werte gesetzt werden! Dadurch werden doppelte Redraws
+und/oder Fehler vermieden.
+<br>&nbsp;
+<br>Die Nachricht <tt>FONT_CHANGED</tt> enthält die auf Punkt
+gerundete Größe, d.h. Programme, die <tt>XFONT_CHANGED</tt> nicht
+unterstützen, können diesen Wert benutzen.
+<br>&nbsp;
+<br>Fontselektoren versenden idR diese Nachricht nur, wenn eines der
+übermittelten Attribute vom Normalwert abweicht!
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = XFONT_CHANGED (0x7a1b)
+msg[1]   = apID
+msg[2]   = 0
+msg[3/4] = Größe in 1/65536-Punkt (<a href="vdi_structures.html#fix31">fix31</a>)
+msg[5]   = Rotationswinkel in 1/10-Grad (0-3599)
+msg[6]   = Neigung in 1/10-Grad (-1800 - 1800)
+msg[7]   = Breite und <a href="VDI_fundamentals.html#Kerning">Kerning</a>:
+           Bit 15:    Paar-Kerning
+           Bit 13/14: Track-Kerningmodus (0-3)
+           Bit 0-12:  Breite in Punkt
+
+           in C:
+
+           typedef struct
+           {
+               unsigned int  pair  : 1;
+               unsigned int  track : 2;
+               unsigned int  width : 13;
+           } VECTOR_<a href="wind.html#INFO">INFO</a>;
+</pre>
+</blockquote>
+<a name="FONT_SELECT"></a>
+</p></li>
+<li><p> <tt>FONT_SELECT</tt>&ndash;Nachricht:
+<br>Mit dieser Nachricht kann ein im Speicher vorhandener
+Fontselektor, der im erweiterten <a href="proto_xacc.html">XAcc</a>&ndash;Namen die Kennung
+<q><tt>XFontSelect</tt></q> besitzt, aufgerufen werden. Unterstützt
+die Anwendung und/oder der Fontselektor kein
+<a href="proto_xacc.html">XAcc</a>&ndash;2&ndash;Protokoll, so kann noch nach dem Inhalt der
+(AES-)Environment&ndash;Variablen <q><tt>FONTSELECT</tt></q> gesucht
+werden. Diese Variable kann gegebenenfalls auch mehrere Namen
+(getrennt durch Semikolon) enthalten, wobei die Namen optional auch
+Pfad und Dateierweiterung besitzen können, so daß man den
+Fontselektor unter Multitasking bei Bedarf <i>parallel</i> nachladen
+kann.
+<br>&nbsp;
+<br><b>Beispiele:</b>
+<br>&nbsp;
+<pre>setenv FONTSELECT=FONT_PAL;FONT_SEL
+setenv FONTSELECT=C:\FONTSEL\FONT_SEL.APP;C:\FONTSEL\FONT_PAL.APP
+</pre>
+<br>Zur passiven Unterstützung des Font&ndash;Protokolls genügt
+aber die Auswertung der o.g. Nachrichten <tt>FONT_CHANGED</tt> und
+<tt>XFONT_CHANGED</tt>.
+<br>&nbsp;
+<br>Negative Werte in <tt>msg[6/7]</tt> oder eine Null
+<tt>msg[4/5]</tt> bedeuten, daß dieser Parameter nicht benötigt wird,
+nicht eingestellt werden soll oder noch nicht gesetzt wurde
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = FONT_SELECT (0x7a19)
+msg[1]   = apID
+msg[2]   = 0
+msg[3]   = Handle des Fensters, dessen Zeichensatz ein-
+           gestellt werden soll, oder ein negativer
+           Wert, wenn der Zeichensatz in allen Fenstern
+           der Applikation gewechselt werden soll
+msg[4]   = Font-ID oder Null
+msg[5]   = Font-Größe in Punkt (&gt;0) oder Pixel (&lt;0) bzw.
+           Null, falls der Parameter nicht benötigt wird
+           (s.o.)
+msg[6]   = Farbe
+msg[7]   = Effekte (s.o.)
+</pre>
+</blockquote>
+<a name="FONT_ACK"></a>
+</p></li>
+<li><p> <tt>FONT_ACK</tt>&ndash;Nachricht:
+<br>Fontselektor darüber informieren, ob die
+<tt>FONT_CHANGED</tt>&ndash;Nachricht ausgewertet bzw. die
+Zeichensatz&ndash;Attribute eingestellt werden konnten
+<br>&nbsp;
+<blockquote>
+<pre>msg[0]   = FONT_ACK (0x7a1a)
+msg[1]   = apID
+msg[2]   = 0
+msg[3]   = TRUE (1):  Nachricht wurde ausgewertet
+           FALSE (0): Nachricht wurde ignoriert
+msg[4-7] = 0 (reserviert)
+</pre>
+</blockquote>
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="proto_xfsl.html">xFSL-Schnittstelle</a> &nbsp; <a href="fnts.html">Zeichensatzauswahl von MagiC</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_dhst.html"><img src="udo_lf.gif" alt="Document-History-Protokoll" title="Document-History-Protokoll" border="0" width="24" height="24">Document-History-Protokoll</a>
+<a name="UDO_nav_rg_FOOT" href="proto_gdps.html"><img src="udo_rg.gif" alt="GDPS: Gerti's Driver Piping System" title="GDPS: Gerti's Driver Piping System" border="0" width="24" height="24">GDPS: Gerti's Driver Piping System</a>
+</body>
+</html>

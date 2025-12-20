@@ -1,0 +1,2404 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Das XCONTROL
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="xcontrol_main.html"><img src="udo_up.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_lf_HEAD" href="xcontrol_main.html"><img src="udo_lf.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_rg_HEAD" href="guidelines.html"><img src="udo_rg.gif" alt="Programmierrichtlinen" title="Programmierrichtlinen" border="0" width="24" height="24">Programmierrichtlinen</a>
+
+<hr>
+
+<h1><a name="Das_20XCONTROL">9.1 Das XCONTROL</a></h1>
+<p>XControl ist ein modulares (erweiterbares) Kontrollfeld, das von
+Atari zuerst mit den Computern der TT und Mega-STE Serie ausgeliefert
+wurde.
+</p>
+<p><img src="bilder/gif/xcontrol.gif" alt="" title="" border="0" width="258" height="196"></p>
+<p>Die einzelnen Module sind Dateien mit der Namenserweiterung
+'.CPX' (Control-Panel eXtension), und XControl selbst kann als
+Steuerungsprogramm für diese Module angesehen werden.
+</p>
+<p><b>Wichtig:</b> XControl sollte nur als Tool für
+Konfigurationsdialoge angesehen werden, und <i>nicht</i> für andere
+Zwecke mißbraucht werden.
+</p>
+<p>Die Kommunikation zwischen XControl und seinen Modulen erfolgt
+über zwei Strukturen, die mit <a href="XCPB.html">XCPB</a> und <a href="CPXINFO.html">CPXINFO</a> bezeichnet werden.
+Über erstere werden einige Flags sowie eine ganze Reihe von
+Hilfsfunktionen zugänglich gemacht.
+</p>
+<a name="XControl_2C_20Start_20von"></a>
+<p>Beim Start lädt XControl alle verfügbaren CPX-Header; sofern
+im Header ein entsprechendes Flag gesetzt ist, werden alle CPX-Dateien
+einmal zum initialisieren aufgerufen. Für jedes einzelne Modul kann
+angegeben werden, ob es resident geladen werden soll (dies kann auch
+über das mitgelieferte Konfigurations-CPX verändert werden).
+Darüber hinaus ist es möglich, CPX-Module zu schreiben, die nur
+bestimmte Werte setzen. Man spricht in diesem Zusammenhang von
+'Set-Only'-Modulen, die nur beim Booten bzw. erneuten Laden der
+CPX-Module durch XControl aufgerufen werden, und bei der
+Initialisierung einfach einen Nullzeiger zurückliefern.
+</p>
+<a name="CPX-Moduls_2C_20Aktivierung_20eines"></a>
+<p>Sobald ein CPX-Modul vom Anwender ausgewählt wird, lädt
+XControl dieses in den Speicher, und ruft die Funktion <a href="#cpx_init">cpx_init</a> auf.
+Anschließend wird noch <a href="#cpx_call">cpx_call</a> aufgerufen, wobei im wesentlichen nun
+das Modul selbst die Steuerung übernimmt.
+</p>
+<a name="CPX_2C_20Form-"></a>
+<a name="CPX_2C_20Event-"></a>
+<a name="Form-CPX"></a>
+<a name="Event-CPX"></a>
+<p><b>Man unterscheidet zwischen Form-CPX und Event-CPX</b>.
+Erstere sind relativ einfach zu programmieren, bieten jedoch nur eine
+eingeschränkte Flexibilität. Letztere sind flexibler, da sie die
+<a href="aes_main.html">AES</a>-Events direkt auswerten. Alle mit XControl 1.0 ausgelieferten
+CPX-Module sind Form-CPX Dateien, woraus geschlossen werden kann, daß
+Form-CPX in den meisten Fällen ausreichen.
+</p>
+<a name="CPX_2C_20Suffix_20eines"></a>
+<p>Für die Dateinamen von CPX-Modulen gilt die folgende
+Terminologie:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Suffix</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CP</td>
+  <td align="left" valign="top">Standard-CPX ohne Header</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CPX</td>
+  <td align="left" valign="top">Standard-CPX, fertig zum Gebrauch</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.CPZ</td>
+  <td align="left" valign="top">inaktive CPX (von XControl deaktiviert)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*.HDR</td>
+  <td align="left" valign="top">Header für die CPX-Datei</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*_R.CPX</td>
+  <td align="left" valign="top">residente CPX-Datei</td>
+</tr>
+<tr>
+  <td align="left" valign="top">*_S.CPX</td>
+  <td align="left" valign="top">Set-Only CPX-Datei</td>
+</tr>
+</table>
+</div>
+
+<a name="CPX-Datei_2C_20Aufbau_20einer"></a>
+<a name="CPX-Datei_2C_20Header_20einer"></a>
+<p>Der Aufbau einer CPX-Datei ist einem normalen Programm sehr
+ähnlich. Sie besteht aus einem 512 Byte großen Header und dem
+übrigen Dateiinhalt, bei dem es sich fast um eine normale
+<a href="gemdos_main.html">GEMDOS</a>-Programmdatei handelt. Der Header ist dabei wie folgt
+definiert:
+</p>
+<a name="CPXHEAD"></a>
+<pre>typedef struct
+{
+    uint16_t magic;                 /* Magic-Konstante = 100   */
+
+    struct
+    {
+        unsigned reserved : 13;  /* reserviert              */
+        unsigned resident :  1;  /* RAM-resident            */
+        unsigned bootinit :  1;  /* Boot-Initialisierung    */
+        unsigned setonly  :  1;  /* Set-Only                */
+
+    } flags;
+
+    int32_t  cpx_id;                /* eindeutige CPX-ID       */
+    uint16_t cpx_version;           /* CPX-Versionsnummer      */
+    int8_t   i_text[14];            /* Icontext                */
+    uint16_t sm_icon[48];           /* Bitmap (32*24 Pixel)    */
+    uint16_t i_color;               /* Iconfarbe               */
+    int8_t   title_text[18];        /* Name des CPX            */
+    uint16_t t_color;               /* Textfarbe               */
+    int8_t   buffer[64];            /* nicht-flüchtiger Puffer */
+    int8_t   reserved[306];         /* reserviert              */
+
+} CPXHEAD;
+</pre>
+<p><b>Zum Header noch einige Anmerkungen:</b>
+</p>
+<ul>
+<li> die erste Funktion im TEXT-Segment muß die
+Initialisierungsroutine für die CPX sein
+</li>
+<li> zur Konstruktion eines CPX-Headers gibt es mehrere Toolkits
+</li>
+<li> Header und gelinkte Programmdatei können in den meisten
+UNIX-ähnlichen Shells (z.B. der Mupfel aus Gemini) mit dem Kommando
+'cat' zusammengefügt werden.
+</li>
+<li> bei der CPX-Entwicklung ist es sehr praktisch, daß man
+XControl auch als Programm starten kann (Suffix ändern !). Dies
+erlaubt es, ohne permanentes Neu-Booten des Rechners zu arbeiten.
+</li>
+<li> CPX-ID und -Versionsnummer sorgen dafür, daß jede CPX nur ein
+einziges mal (und auch nur die neueste Version) erscheint.
+</li>
+</ul>
+
+<p>Bei der Programmierung eines CPX-Moduls sind einige Feinheiten
+zu beachten. Da ein solches Modul (mit Ausnahme von 64 Byte) über
+keinen nichtvergänglichen Speicher verfügt, ist nichts erlaubt, was
+Speicher in irgendeiner Form fest reserviert. Insbesondere gehen
+Variableninhalte mit dem Verlassen der CPX in aller Regel verloren !
+<b>Daher sollte man</b>:
+</p>
+<ul>
+<li> Resourcen statisch einbinden
+</li>
+<li> Speicheranforderungen nur kurzzeitig erlauben
+</li>
+<li> virtuelle <a href="vdi_main.html">VDI</a>-Workstations nicht dauerhaft anlegen
+</li>
+</ul>
+
+<p>Bei der Programmierung eines CPX-Moduls kann auf Funktionen der
+beiden folgenden Kategorien zurückgegriffen werden:
+</p>
+<ul>
+<li><p> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</p></li>
+<li><p> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</p></li>
+</ul>
+
+<a name="COPS"></a>
+<p><b>Hinweis:</b> Als Alternative zu XCONTROL, welches von Atari
+nicht mehr weiterentwickelt wird, bieten sich verschiedene Programme
+an. Besonders empfehlenswert ist dabei COPS (<b>COntrol Panel
+Server</b>, mit dessen Hilfe sich nicht nur beliebig viele CPX-Module
+gleichzeitig öffnen lassen, sondern das auch Kontrollfelder mit
+größerer Arbeitsfläche als XCONTROL erlaubt.
+</p>
+<h3><a name="CPX-Programmierrichtlinien">9.1.1 CPX-Programmierrichtlinien</a></h3>
+<a name="Richtlinien_20f_C3_BCr_20CPX-Module"></a>
+<p>Bei der Programmierung eines CPX-Moduls sollte man tunlichst die
+folgenden Regeln beachten:
+</p>
+<ul>
+<li> reservierter Speicher ist möglichst schnell wieder freizugeben
+</li>
+<li> XControl-Funktionen sind immer auszunutzen, wenn dies möglich
+ist
+</li>
+<li> die Benutzerschnittstelle ist einfach und in Anlehnung an die
+anderen CPX-Module zu gestalten
+</li>
+<li> grafische Elemente sind Menükommandos vorzuziehen
+</li>
+<li> 'OK' und 'Abbruch' sind (wenn möglich) immer zu implementieren
+</li>
+<li> <a href="#Popup">Popup</a>-Menüs sind als Text mit schattiertem Rechteck
+darzustellen
+</li>
+<li> <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> (Verlassen des Hauptprogramms) wird als 'Abbruch'
+gewertet
+</li>
+<li> WM_CLOSE (Schließen des XControl-Fensters) wird als 'OK'
+gewertet
+</li>
+<li> 'Save'/'Sichern' ist als 'OK' ohne Verlassen des Dialogs zu
+werten
+</li>
+<li> das Wurzelobjekt der CPX hat immer eine Größe von 256*176
+Pixeln. <b>Ausnahme:</b> Unter <a href="xcontrol.html#COPS">COPS</a> darf der Objektbaum eine Größe
+von bis zu 512*384 Pixeln besitzen.
+</li>
+<li> Interrupt-Vektoren dürfen nicht verändert werden
+</li>
+<li> <a href="#Xform_do">Xform_do</a> darf nicht mit Funktionen für <a href="xcontrol.html#Event-CPX">Event-CPX</a> vermischt
+werden
+</li>
+<li> reservierter Speicher darf beim Verlassen der CPX nicht
+vergessen werden, da es sonst zu einer Fragmentierung des Speichers
+kommt
+</li>
+<li> bereits von anderen CPX verwandte ID's dürfen nicht benutzt
+werden
+</li>
+<li> geöffnete Dateien müssen wieder geschlossen werden
+</li>
+<li> geöffnete VDI-Workstations sind auf jedenfall wieder zu
+schließen (spätestens bei einer AC_CLOSE bzw. WM_CLOSE Meldung), wenn
+sie nicht mehr benötigt werden
+</li>
+</ul>
+
+<h3><a name="CPX-Funktionen">9.1.2 CPX-Funktionen</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_button">cpx_button</a></td>
+<td valign="top"> Maustasten-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_call">cpx_call</a> </td>
+<td valign="top"> Aktivierungsroutine
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_close">cpx_close</a> </td>
+<td valign="top"> Close-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_draw">cpx_draw</a> </td>
+<td valign="top"> Redraw-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_hook">cpx_hook</a> </td>
+<td valign="top"> Preemption Hook
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_init">cpx_init</a> </td>
+<td valign="top"> Initialisierung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_m1">cpx_m1</a> </td>
+<td valign="top"> Mausrechteck-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_m2">cpx_m2</a> </td>
+<td valign="top"> Mausrechteck-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_key">cpx_key</a> </td>
+<td valign="top"> Keyboard-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_timer">cpx_timer</a> </td>
+<td valign="top"> Timer-Ereignis
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#cpx_wmove">cpx_wmove</a> </td>
+<td valign="top"> Fensterverschiebung
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_button">9.1.2.1 cpx_button</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_button« - Ereignis für die Maustasten
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_button) (<a href="MRETS.html">MRETS</a> *mrets, int16_t nclicks,
+int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird bei einem aufgetretenen Maustastenereignis
+aufgerufen. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Maus-Parameter zum Event
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">nclicks</td>
+<td valign="top"> Anzahl der Mausklicks
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> auf den Wert 1 setzen, falls das CPX verlassen werden soll
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#cpx_timer">cpx_timer</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_call">9.1.2.2 cpx_call</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_call« - Aufruf des CPX Moduls
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_call) ( <a href="GRECT.html">GRECT</a> *work );
+<br>&nbsp;
+<br>int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_call) ( <a href="GRECT.html">GRECT</a> *work, <a href="aes_structures.html#DIALOG">DIALOG</a> *dialog );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn der Anwender das
+entsprechende Modul ausgewählt hat. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">work</td>
+<td valign="top"> Rechteck mit den Koordinaten des XControl-Fensters
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">dialog</td>
+<td valign="top"> Zeiger auf einen Fensterdialog
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Die zweite Aufrufform steht nur unter <a href="xcontrol.html#COPS">COPS</a> zur
+Verfügung. Der Parameter <i>dialog</i> enthält in diesem Fall einen
+Zeiger auf die Fensterdialogstruktur. Der Dialog wird von <a href="xcontrol.html#COPS">COPS</a> nach
+dem <a href="#cpx_init">cpx_init</a> mit Hilfe von <a href="wdlg.html#wdlg_create">wdlg_create</a> und <a href="wdlg.html#wdlg_open">wdlg_open</a> geöffnet. Der
+Parameter <i>work</i> und der Objektbaum liegen bis zum ersten Aufruf
+von <a href="#Xform_do">Xform_do</a> bzw. bis zur Rückkehr aus der Funktion cpx_call
+außerhalb des sichtbaren Bildschirms.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Ende der Bearbeitung</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">CPX soll weiterbearbeitet werden</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="xcontrol_main.html">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_close">9.1.2.3 cpx_close</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_close« - Ereignis zum Schließen des Fensters
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_close) (int16_t flag);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion sorgt für das Schließen des CPX-Moduls. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">flag</td>
+<td valign="top"> Grund des Schließens
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top"><a href="evnt.html#AC_CLOSE">AC_CLOSE</a> <a href="proto_ssp.html#Message">Message</a></td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">WM_CLOSE <a href="proto_ssp.html#Message">Message</a></td>
+</tr>
+</table>
+</div>
+
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Die Funktion wird bei jeder AC_CLOSE bzw.
+WM_CLOSE Nachricht aufgerufen. Die CPX sollte dann sofort allen
+reservierten Speicher freigeben. Die Funktion muss bei jeder <a href="xcontrol.html#Event-CPX">Event-CPX</a>
+implementiert sein. AC_CLOSE ist als 'Abbruch', WM_CLOSE als 'Ok' zu
+werten.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_init">cpx_init</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_draw">9.1.2.4 cpx_draw</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_draw« - Ereignis zum Neuzeichnen des CPX-Fensters
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_draw) (<a href="GRECT.html">GRECT</a> *clip);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion sorgt für das Neuzeichnen von Teilen des
+CPX-Fensters. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">clip</td>
+<td valign="top"> neu zu zeichnender Bereich, der auch als übergabe-Parameter
+für <a href="#GetFirstRect">GetFirstRect</a> benötigt wird.
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Die nötige Rechteckliste muss per <a href="#GetFirstRect">GetFirstRect</a>
+und <a href="#GetNextRect">GetNextRect</a> ermittelt werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_wmove">cpx_wmove</a> &nbsp; <a href="#GetFirstRect">GetFirstRect</a> &nbsp; <a href="#GetNextRect">GetNextRect</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_hook">9.1.2.5 cpx_hook</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_hook« - Preemption Hook
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Definiton</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_hook) (int16_t event, int16_t *msg, <a href="MRETS.html">MRETS</a>
+*mrets, int16_t *key, int16_t *nclicks);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird sofort nach <a href="evnt.html#evnt_multi">evnt_multi</a> aufgerufen, also noch
+bevor XControl das Event bearbeitet. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> aufgetretene Events
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg</td>
+<td valign="top"> Ereignispuffer
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Mausparameter
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> Tastendruck
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">nclicks</td>
+<td valign="top"> Anzahl der Mausklicks
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Event-Bearbeitung fortsetzen</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Event-Bearbeitung abbrechen</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_draw">cpx_draw</a> &nbsp; <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#cpx_m1">cpx_m1</a> &nbsp; <a href="#cpx_m2">cpx_m2</a> &nbsp; <a href="#cpx_timer">cpx_timer</a> &nbsp;
+<a href="#cpx_wmove">cpx_wmove</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_init">9.1.2.6 cpx_init</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_init« - Initialisierung der CPX
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> <a href="CPXINFO.html">CPXINFO</a> * <a href="proto_xfsl.html#cdecl">cdecl</a> cpx_init (<a href="XCPB.html">XCPB</a> *xcpb);
+<br>&nbsp;
+<br>CPXINFO * cdecl cpx_init (XCPB *xcpb, int32_t magic, int32_t
+version );
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion sorgt für die Initialisierung der CPX. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>xcpb</i></td>
+  <td align="left" valign="top">Zeiger auf die <a href="XCPB.html">XCPB</a>-Struktur von XControl</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Die Funktion muss am Beginn des Textsegments
+der CPX-Datei stehen, und wird während der XControl-Initialisierung
+sowie beim Aktivieren der CPX aufgerufen.
+<br>&nbsp;
+<br>Mit Hilfe der zweiten Aufrufform kann anhand der Parameter
+<i>magic</i> und <i>version</i> festgestellt werden, ob die CPX
+unter XCONTROL oder <a href="xcontrol.html#COPS">COPS</a> läuft. Es bietet sich die folgende Routine an:
+<br>&nbsp;
+<a name="COPS_2C_20Test_20auf"></a>
+<pre>int16_t is_<a href="xcontrol.html#COPS">COPS</a> ( int32_t magic, int32_t version )
+{
+   if ((magic == '<a href="xcontrol.html#COPS">COPS</a>') &amp;&amp; (version &gt;= 0x10000L))
+      return (TRUE);      /* <a href="xcontrol.html#COPS">COPS</a> */
+   else return (FALSE);   /* <a href="xcontrol_main.html">XCONTROL</a> */
+}
+</pre>
+<br>Falls <a href="xcontrol.html#COPS">COPS</a> erkannt wurde, kann die CPX einen bis zu 512*384
+Pixel großen Objektbaum zeichnen und bei der Funktion <a href="#Xform_do">Xform_do</a>
+übergeben.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">'Set Only'-CPX</td>
+</tr>
+<tr>
+  <td align="left" valign="top">sonst</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Zeiger auf die CPXINFO-Struktur der CPX</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_close">cpx_close</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_m1">9.1.2.7 cpx_m1</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_m1« - Ereignis für ein Mausrechteck
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_m1) (<a href="MRETS.html">MRETS</a> *mrets, int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn der Mauszeiger einen
+bestimmten Bereich betritt oder verläßt. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Parameter der Maus
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> auf den Wert 1 setzen, wenn die CPX verlassen werden soll
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_m2">cpx_m2</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_m2">9.1.2.8 cpx_m2</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_m2« - Ereignis für ein Mausrechteck
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_m2) (<a href="MRETS.html">MRETS</a> *mrets, int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn der Mauszeiger einen
+bestimmten Bereich betritt oder verläßt. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mrets</td>
+<td valign="top"> Parameter der Maus
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> auf den Wert 1 setzen, wenn die CPX verlassen werden soll
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_m1">cpx_m1</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_key">9.1.2.9 cpx_key</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_key« - Ereignis für einen Tastendruck
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_key) (int16_t kstate, int16_t key, int16_t
+*event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn ein Keyboard-Event
+aufgetreten ist. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">kstate</td>
+<td valign="top"> Status der Umschalttasten (Alternate, Control, Shift, etc.)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">key</td>
+<td valign="top"> <b>auslösende Taste</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Highbyte :</td>
+  <td align="left" valign="top">Scan-Code der Taste</td>
+</tr>
+<tr>
+  <td align="left" valign="top">Lowbyte  :</td>
+  <td align="left" valign="top">ASCII-Code der Taste</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> auf den Wert 1 setzen, wenn die CPX verlassen werden soll
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_timer">cpx_timer</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_timer">9.1.2.10 cpx_timer</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_timer« - Timer Ereignis
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_timer) (int16_t *event);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn ein Timer-Event aufgetreten
+ist. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">event</td>
+<td valign="top"> auf den Wert 1 setzen, wenn die CPX verlassen werden soll
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Timer-Events werden von <a href="xcontrol.html#Form-CPX">Form-CPX</a> <i>nicht</i>
+unterstützt.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_button">cpx_button</a> &nbsp; <a href="#cpx_key">cpx_key</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="cpx_wmove">9.1.2.11 cpx_wmove</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »cpx_wmove« - Verschiebung des XControl-Fensters
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*cpx_wmove) (<a href="GRECT.html">GRECT</a> *work);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wird aufgerufen, wenn der Anwender das
+Xcontrol-Fenster bewegt. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>work</i></td>
+  <td align="left" valign="top">neue Koordinaten des XControl-Fensters</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#CPX-Funktionen">CPX-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#cpx_draw">cpx_draw</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h3><a name="XCONTROL-Funktionen">9.1.3 XCONTROL-Funktionen</a></h3>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#CPX_Save">CPX_Save</a> </td>
+<td valign="top"> Defaults sichern
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Get_Buffer">Get_Buffer</a> </td>
+<td valign="top"> Zwischenspeicher ermitteln
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#getcookie">getcookie</a> </td>
+<td valign="top"> Cookie-Variablen abfragen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#GetFirstRect">GetFirstRect</a> </td>
+<td valign="top"> Behandlung der Rechteckliste
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#GetNextRect">GetNextRect</a> </td>
+<td valign="top"> Behandlung der Rechteckliste
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#MFsave">MFsave</a> </td>
+<td valign="top"> Mausform sichern/wiederherstellen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Popup">Popup</a> </td>
+<td valign="top"> <a href="#Popup">Popup</a>-Menü
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#rsh_fix">rsh_fix</a> </td>
+<td valign="top"> Objektbaum-Umwandlung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#rsh_obfix">rsh_obfix</a> </td>
+<td valign="top"> Umwandlung eines Objektes
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Set_Evnt_Mask">Set_Evnt_Mask</a></td>
+<td valign="top"> Eventmaske setzen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_arrow">Sl_arrow</a> </td>
+<td valign="top"> Slider-Arrow
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_dragx">Sl_dragx</a> </td>
+<td valign="top"> Sliderdrag-Bewegung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_dragy">Sl_dragy</a> </td>
+<td valign="top"> Sliderdrag-Bewegung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_size">Sl_size</a> </td>
+<td valign="top"> Slidergröße
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_x">Sl_x</a> </td>
+<td valign="top"> Positionierung eines Sliders
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Sl_y">Sl_y</a> </td>
+<td valign="top"> Positionierung eines Sliders
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#Xform_do">Xform_do</a> </td>
+<td valign="top"> Formular-Verwaltung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&#x2022; <a href="#XGen_Alert">XGen_Alert</a> </td>
+<td valign="top"> Alarmbox
+
+</td></tr>
+</table>
+
+<h4><a name="CPX_Save">9.1.3.1 CPX_Save</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »CPX_Save« - Defaults sichern
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*CPX_Save) (VOID *ptr, int32_t num);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion erlaubt das Speichern von Defaulteinstellungen
+einer CPX. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>ptr</i></td>
+  <td align="left" valign="top">Adresse der zu speichernden Daten</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num</i></td>
+  <td align="left" valign="top">Anzahl der zu speichernden Bytes</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> XControl speichert die Einstellungen im DATA
+Segment der CPX. Daher müssen Entwickler selbst für ausreichend
+freien Speicherplatz im DATA-Segment sorgen. Dies geschieht über das
+Datenfeld 'SAVE_VARS' in CPXSTART.S.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Fehler aufgetreten</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt; 0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">kein Fehler aufgetreten</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Get_Buffer">9.1.3.2 Get_Buffer</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Get_Buffer« - Zwischenspeicher ermitteln
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Get_Buffer) (VOID);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ermittelt die Adresse eines 64 Byte großen,
+residenten Speicherbereiches.
+<br>&nbsp;
+<br><b>Hinweis:</b> In diesem Speicher kann die CPX Inhalte von
+Write-Only-Registern sichern, falls <a href="tos_main.html">TOS</a> keine Funktion zur Abfrage
+bietet (Beispiel: Fensterfarben). Es sei noch einmal darauf
+hingewiesen, daß jeder andere Speicher einer CPX flüchtig ist !
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen Zeiger auf den Speicherbereich
+zurück.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="getcookie">9.1.3.3 getcookie</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »getcookie« - Cookievariablen abfragen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*getcookie) (int32_t cookie, int32_t *p_value);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion sucht einen Cookie, und ermittelt seinen Wert. Es
+gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">cookie</td>
+<td valign="top"> Cookie-Variable
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">p_value</td>
+<td valign="top"> Adresse einer Variablen die den Wert aufnehmen soll, oder NULL,
+falls der Wert nicht von Interesse ist.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="right" valign="top">0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Cookie nicht gefunden</td>
+</tr>
+<tr>
+  <td align="right" valign="top">&lt;&gt;0</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Cookie gefunden</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="bios_cookiejar.html">Cookie-Jar</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="GetFirstRect">9.1.3.4 GetFirstRect</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »GetFirstRect« - Rechteckliste abfragen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> <a href="GRECT.html">GRECT</a> * <a href="proto_xfsl.html#cdecl">cdecl</a> (*GetFirstRect) (<a href="GRECT.html">GRECT</a> *prect);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ermittelt das erste Rechteck der Rechteckliste. Es
+gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>prect</i></td>
+  <td align="left" valign="top">zu aktualisierender Bereich</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Die Funktion wird zum Neuzeichnen von
+Fensterbereichen nach einer <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> <a href="proto_ssp.html#Message">Message</a> benötigt; der
+Objektbaum wird jedoch von XControl selbst verwaltet.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">keine weiteren Ausschnitte vorhanden</td>
+</tr>
+<tr>
+  <td align="left" valign="top">sonst</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">wiederherzustellender Ausschnitt</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#GetNextRect">GetNextRect</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="GetNextRect">9.1.3.5 GetNextRect</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »GetNextRect« - Rechteckliste abfragen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> <a href="GRECT.html">GRECT</a> * <a href="proto_xfsl.html#cdecl">cdecl</a> (*GetNextRect) (VOID);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ermittelt das nächste Rechteck der Rechteckliste.
+<br>&nbsp;
+<br><b>Hinweis:</b> Die Funktion wird zum Neuzeichnen von
+Fensterbereichen nach einer <a href="evnt.html#WM_REDRAW">WM_REDRAW</a> <a href="proto_ssp.html#Message">Message</a> benötigt; der
+Objektbaum wird jedoch von XControl selbst verwaltet.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">NULL</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">keine weiteren Ausschnitte vorhanden</td>
+</tr>
+<tr>
+  <td align="left" valign="top">sonst</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">wiederherzustellender Ausschnitt</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#GetFirstRect">GetFirstRect</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="MFsave">9.1.3.6 MFsave</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »MFsave« - Mausform sichern oder wiederherstellen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*MFsave) (int16_t saveit, <a href="aes_structures.html#MFORM">MFORM</a> *mf);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion sichert oder restauriert die Form des Mauszeigers.
+Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">savit</td>
+<td valign="top">
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Mausform wiederherstellen</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">Mausform sichern</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">mf</td>
+<td valign="top"> Speicherbereich zur Sicherung der Mausform
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="graf.html#graf_mouse">graf_mouse</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Popup">9.1.3.7 Popup</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Popup« - Verwaltung eines Popup-Menüs
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*Popup) (int8_t *items[], int16_t num_items,
+int16_t default_item, int16_t font_size, <a href="GRECT.html">GRECT</a> *button, <a href="GRECT.html">GRECT</a> *world);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ermöglicht die komplette Verwaltung eines
+Popup-Menüs. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">items</td>
+<td valign="top"> Array mit Zeichenketten für die einzelnen Einträge. Jeder
+Eintrag muss die gleiche Länge besitzen, sowie vorne mindestens zwei
+und am Ende mindestens ein Leerzeichen aufweisen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">num_items</td>
+<td valign="top"> Anzahl der Einträge
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">default_item</td>
+<td valign="top"> Default-Eintrag (Zählung beginnt bei 0), oder der Wert -1
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">font_size</td>
+<td valign="top"> <b>Zeichengröße:</b> 8*16 oder 8*8-Font. Als Parameter sind
+die gleichen Werte wie in der <a href="aes_structures.html#TEDINFO">TEDINFO</a>-Struktur zu verwenden. Laut
+Atari wird z.Zt. nur der große Zeichensatz verwendet.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">button</td>
+<td valign="top"> Rechteck des Buttons, zu dem das Popup gehört.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">world</td>
+<td valign="top"> Rechteck des Hintergrund-Objekbaumes (i.d.R. der Objektbaum der
+CPX)
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Bei zu vielen Einträgen (ab fünf) wird das
+Popup automatisch gescrollt; die Bearbeitung blockiert alle anderen
+Aktionen.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert den gewählten Eintrag des Popups zurück,
+oder den Wert -1, wenn kein Element des Popups ausgewählt worden ist.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Xform_do">Xform_do</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="rsh_fix">9.1.3.8 rsh_fix</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »rsh_fix« - Umwandlung eines Objektbaumes
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*rsh_fix) (int16_t num_objs, int16_t num_frstr,
+int16_t num_frimg, int16_t num_tree, <a href="aes_structures.html#OBJECT">OBJECT</a> *rs_object, <a href="aes_structures.html#TEDINFO">TEDINFO</a>
+*rs_tedinfo, int8_t *rs_string[], <a href="aes_structures.html#ICONBLK">ICONBLK</a> *rs_iconblk, <a href="aes_structures.html#BITBLK">BITBLK</a>
+*rs_bitblk, int32_t *rs_frstr, int32_t *rs_frimg, int32_t *rs_trindex,
+struct foobar *rs_imdope);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion wandelt einen Objektbaum auf Basis von 8*16 Pixel
+großen Zeichen. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_objs</i></td>
+  <td align="left" valign="top">Gesamtzahl der Objekte</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_frstr</i></td>
+  <td align="left" valign="top">Gesamtzahl der Strings</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_frimg</i></td>
+  <td align="left" valign="top">Gesamtzahl der Images</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>num_tree</i></td>
+  <td align="left" valign="top">Gesamtzahl der Objektbäume</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_object</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_tedinfo</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_string</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_iconblk</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_bitblk</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_frstr</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_frimg</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tr_trindex</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>rs_imdope</i></td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Die CPX hat somit unter allen Auflösungen die
+gleiche Pixelgröße. Bei der Arbeit mit einem RCS sollte man daher
+ebenfalls einen Grafikmodus mit 8*16 Pixel großen Zeichen wählen.
+<br>&nbsp;
+<br>Die Koordinaten-Umwandlung darf natürlich nur ein einziges Mal
+stattfinden - XControl stellt dazu in der <a href="XCPB.html">XCPB</a>-Struktur das Flag
+'SkipRshFix' zur Verfügung.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#rsh_obfix">rsh_obfix</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="rsh_obfix">9.1.3.9 rsh_obfix</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »rsh_obfix« - Umwandlung eines Objektes
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*rsh_obfix) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t curob);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion konvertiert die Größe und Position eines
+Objektes von einer Zeichendarstellung in die Pixeldarstellung. Es
+gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Adresse des Objektbaumes</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>curob</i></td>
+  <td align="left" valign="top">zu konvertierendes Objekt</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#rsh_fix">rsh_fix</a> &nbsp; <a href="rsrc.html#rsrc_obfix">rsrc_obfix</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Set_Evnt_Mask">9.1.3.10 Set_Evnt_Mask</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Set_Evnt_Mask« - Festlegen der Ereignis Maske
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Set_Evnt_Mask) (int16_t mask, MOBLK *m1, MOBLK
+*m2, int32_t time);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion legt fest, auf welche Ereignisse die CPX reagieren
+soll. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>mask</i></td>
+  <td align="left" valign="top">erlaubte Events (analog <a href="evnt.html#evnt_multi">evnt_multi</a>)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>m1</i></td>
+  <td align="left" valign="top">Mausrechteck und -richtung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>m2</i></td>
+  <td align="left" valign="top">Mausrechteck und -richtung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>time</i></td>
+  <td align="left" valign="top">Zeit in Millisekunden für Timer-Event</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_arrow">9.1.3.11 Sl_arrow</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_arrow« - Behandlung des Sliderarrows
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_arrow) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t obj, int16_t inc, int16_t min, int16_t max, int16_t
+*value, int16_t direction, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ist aufzurufen, sobald der Pfeil eines Sliders
+angeklickt wird. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Adresse des Objektbaumes
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Basisobjekt
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (Child des Basisobjektes)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">obj</td>
+<td valign="top"> Pfeil der angeklickt wurde
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">inc</td>
+<td valign="top"> Anzahl der Einheiten die addiert bzw. subtrahiert werden sollen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimalwert der angenommen werden kann
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximalwert der angenommen werden kann
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> Adresse für aktuellen Wert
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">direction</td>
+<td valign="top"> <b>Richtung</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">vertikal</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">horizontal</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Adresse einer Funktion (analog zu <a href="#Sl_x">Sl_x</a>, bzw. <a href="#Sl_y">Sl_y</a>).
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_dragx">9.1.3.12 Sl_dragx</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_dragx« - Draggen eines Sliders
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_dragx) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t min, int16_t max, int16_t *value, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion verwaltet die Bewegung des horizontalen Sliders.
+Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Adresse des Objektbaumes</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>base</i></td>
+  <td align="left" valign="top">Basisobjekt</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>slider</i></td>
+  <td align="left" valign="top">Slider (Child des Basisobjektes)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>min</i></td>
+  <td align="left" valign="top">Minimalwert der angenommen werden kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max</i></td>
+  <td align="left" valign="top">Maximalwert der angenommen werden kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>value</i></td>
+  <td align="left" valign="top">Adresse für aktuellen Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>foo</i></td>
+  <td align="left" valign="top">Adresse einer Funktion analog zu <a href="#Sl_x">Sl_x</a></td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_dragy">9.1.3.13 Sl_dragy</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_dragy« - Draggen eines Sliders
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_dragy) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t min, int16_t max, int16_t *value, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion verwaltet die Bewegung des horizontalen Sliders.
+Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Adresse des Objektbaumes</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>base</i></td>
+  <td align="left" valign="top">Basisobjekt</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>slider</i></td>
+  <td align="left" valign="top">Slider (Child des Basisobjektes)</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>min</i></td>
+  <td align="left" valign="top">Minimalwert der angenommen werden kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>max</i></td>
+  <td align="left" valign="top">Maximalwert der angenommen werden kann</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>value</i></td>
+  <td align="left" valign="top">Adresse für aktuellen Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>foo</i></td>
+  <td align="left" valign="top">Adresse einer Funktion analog zu <a href="#Sl_y">Sl_y</a></td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_size">9.1.3.14 Sl_size</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_size« - Größe des Sliders festlegen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_size) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t
+slider, int16_t num_items, int16_t visible, int16_t direction, int16_t
+min_size);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion stellt die Größe des Sliders ein. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Adresse des Objektbaumes
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Basisobjekt
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (Child des Basisobjektes)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">num_items</td>
+<td valign="top"> Anzahl der vorhandenen Elemente
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">visible</td>
+<td valign="top"> Anzahl der sichtbaren Elemente
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">direction</td>
+<td valign="top"> <b>Richtung</b>
+<br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">0</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">vertical</td>
+</tr>
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">=</td>
+  <td align="left" valign="top">horizontal</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min_size</td>
+<td valign="top"> Minimalgröße des Sliders in Pixeln
+
+</td></tr>
+</table>
+
+<br><b>Hinweis:</b> Die Funktion wird benötigt, um die Relation
+der dargestellten Datenmenge zur vorhandenen zu erhalten.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_dragx">Sl_dragx</a> &nbsp; <a href="#Sl_dragy">Sl_dragy</a> &nbsp; <a href="#Sl_x">Sl_x</a> &nbsp; <a href="#Sl_y">Sl_y</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_x">9.1.3.15 Sl_x</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_x« - Positionierung eines Sliders
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_x) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t slider,
+int16_t value, int16_t min, int16_t max, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion positioniert den Slider innerhalb eines
+Basisobjektes in horizontaler Richtung. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Adresse des Objektbaumes
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Basisobjekt
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (Child des Basisobjektes)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> neuer Wert, den der Slider repräsentieren soll
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimalwert den value annehmen darf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximalwert den value annehmen darf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Adresse einer Funktion (oder NULL), die gleichzeitig mit der
+Slider-Neupositionierung aufgerufen wird; so lassen sich die
+Sliderbewegungen ausnutzen, um auch die angezeigten Werte zu erneuern.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_y">Sl_y</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Sl_y">9.1.3.16 Sl_y</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Sl_y« - Positionierung eines Sliders
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> VOID <a href="proto_xfsl.html#cdecl">cdecl</a> (*Sl_y) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t base, int16_t slider,
+int16_t value, int16_t min, int16_t max, VOID (*foo) (VOID));
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion positioniert den Slider innerhalb eines
+Basisobjektes in vertikaler Richtung. Es gilt:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Parameter</td>
+<td valign="top"> Bedeutung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">tree</td>
+<td valign="top"> Adresse des Objektbaumes
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">base</td>
+<td valign="top"> Basisobjekt
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">slider</td>
+<td valign="top"> Slider (Child des Basisobjektes)
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">value</td>
+<td valign="top"> neuer Wert, den der Slider repräsentieren soll
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">min</td>
+<td valign="top"> Minimalwert den value annehmen darf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">max</td>
+<td valign="top"> Maximalwert den value annehmen darf
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">foo</td>
+<td valign="top"> Adresse einer Funktion (oder NULL), die gleichzeitig mit der
+Slider-Neupositionierung aufgerufen wird; so lassen sich die
+Sliderbewegungen ausnutzen, um auch die angezeigten Werte zu erneuern.
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert kein Ergebnis.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="#Sl_x">Sl_x</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="Xform_do">9.1.3.17 Xform_do</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »Xform_do« - Verwaltung eines Formulars
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*Xform_do) (<a href="aes_structures.html#OBJECT">OBJECT</a> *tree, int16_t startob,
+int16_t *puntmsg);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion übernimmt die Verwaltung eines Formulars, sowie
+(in geringem Umfang) die Bearbeitung von <a href="aes_main.html">AES</a> <a href="evnt.html#Nachrichten">Nachrichten</a>. Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>tree</i></td>
+  <td align="left" valign="top">Adresse des Objektbaumes</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>startob</i></td>
+  <td align="left" valign="top">Startobjekt</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>puntmsg</i></td>
+  <td align="left" valign="top">Mitteilungs-Puffer</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Unter <a href="xcontrol.html#COPS">COPS</a> kann die CPX einen bis zu 512*384
+Pixel großen Objektbaum zeichnen und an diese Funktion übergeben.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">-1:</td>
+<td valign="top"> puntmsg enthält eine Nachricht, die auszuwerten ist:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#WM_REDRAW">WM_REDRAW</a>:</td>
+<td valign="top"> die CPX muß solche Objekte selbst neuzeichnen, die nicht zum
+Objektbaum gehören. Die Rechteckliste kann über die Funktionen
+<a href="#GetFirstRect">GetFirstRect</a> und <a href="#GetNextRect">GetNextRect</a> ermittelt werden.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#AC_CLOSE">AC_CLOSE</a>:</td>
+<td valign="top">
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">WM_CLOSE:</td>
+<td valign="top"> Die CPX wurde beendet; reservierter Speicher ist sofort
+freizugeben. <a href="evnt.html#AC_CLOSE">AC_CLOSE</a> ist als 'Abbruch', WM_CLOSE als 'Ok' zu werten.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top"><a href="evnt.html#CT_KEY">CT_KEY</a>:</td>
+<td valign="top"> spezielle Nachricht, die das Auswerten von Tastendrücken
+erlaubt, sofern diese keine Auswirkungen auf EDIT-Felder haben
+können.
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">puntmsg[3]</td>
+  <td align="left" valign="top">Highbyte</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">Scan-Code der Taste</td>
+</tr>
+<tr>
+  <td align="left" valign="top">puntmsg[3]</td>
+  <td align="left" valign="top">Lowbyte</td>
+  <td align="left" valign="top">:</td>
+  <td align="left" valign="top">ASCII-Code der Taste</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">sonst:</td>
+<td valign="top"> Nummer des angeklickten Objektes (ein Doppelklick wird im oberen Bit
+gekennzeichnet).
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="form.html#form_do">form_do</a> &nbsp; <a href="form.html#form_xdo">form_xdo</a> &nbsp; <a href="aes_fundamentals.html#Die_20Rechteckliste_20eines_20Fensters">Rechteckliste eines Fensters</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<h4><a name="XGen_Alert">9.1.3.18 XGen_Alert</a></h4>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Name:</td>
+<td valign="top"> »XGen_Alert« - Anzeigen einer Alarmbox
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Deklaration:</td>
+<td valign="top"> int16_t <a href="proto_xfsl.html#cdecl">cdecl</a> (*XGen_Alert) (int16_t id);
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Beschreibung:</td>
+<td valign="top"> Die Funktion ermöglicht das Anzeigen einer einfachen Alarmbox.
+Es gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Parameter</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><i>id</i></td>
+  <td align="left" valign="top"><b>Art der Meldung</b></td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;0 = &quot;Voreinstellungen sichern?&quot;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;1 = &quot;Fehler bei Speicheranforderung!&quot;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;2 = &quot;Fehler beim Schreiben/Lesen von Dateien&quot;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;</td>
+  <td align="left" valign="top">&nbsp;3 = &quot;Datei nicht gefunden&quot;</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Weitere Alarmboxen müssen selbst definiert
+werden. Hierzu bietet sich <a href="form.html#form_alert">form_alert</a> jedoch <i>nicht</i> an, da es
+die Alarmbox bezüglich der vollen Bildschirmfläche und nicht
+bezüglich des XControl-Fensters zentriert.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Ergebnis:</td>
+<td valign="top"> Die Funktion liefert einen der folgenden Werte zurück:
+<br>&nbsp;
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">&nbsp;&nbsp;&nbsp;0 :</td>
+<td valign="top"> Abbruch bzw. Cancel wurde angeklickt.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&lt;&gt; 0 :</td>
+<td valign="top"> Ok wurde angeklickt (falls eine Alarmbox nur einen Button hat,
+so ist es der Ok-Button)
+
+</td></tr>
+</table>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Gruppe:</td>
+<td valign="top"> <a href="#XCONTROL-Funktionen">XCONTROL-Funktionen</a>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Querverweis:</td>
+<td valign="top"> <a href="form.html#form_alert">form_alert</a> &nbsp; <a href="#Das_20XCONTROL">XCONTROL</a>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="xcontrol_main.html"><img src="udo_up.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_lf_FOOT" href="xcontrol_main.html"><img src="udo_lf.gif" alt="XCONTROL" title="XCONTROL" border="0" width="24" height="24">XCONTROL</a>
+<a name="UDO_nav_rg_FOOT" href="guidelines.html"><img src="udo_rg.gif" alt="Programmierrichtlinen" title="Programmierrichtlinen" border="0" width="24" height="24">Programmierrichtlinen</a>
+</body>
+</html>

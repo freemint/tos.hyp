@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Der Hintergrund-DMA von MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_errors.html"><img src="udo_lf.gif" alt="Spezielle Fehlermeldungen von MagiC" title="Spezielle Fehlermeldungen von MagiC" border="0" width="24" height="24">Spezielle Fehlermeldungen von MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_iconify.html"><img src="udo_rg.gif" alt="Das Iconify in MagiC" title="Das Iconify in MagiC" border="0" width="24" height="24">Das Iconify in MagiC</a>
+
+<hr>
+
+<h1><a name="Der_20Hintergrund-DMA_20von_20MagiC">11.9 Der Hintergrund-DMA von MagiC</a></h1>
+<a name="Hintergrund-DMA_20in_20MagiC"></a>
+<p>Ab <a href="magic.html">MagiC</a> 3 ist das gesamte DOS einschließlich der Zugriffe auf
+DOS Dateisysteme reentrant und läuft im Hintergrund ab. So ist es
+möglich, auf Laufwerk A Dateien zu bearbeiten, ohne den Rechner bei
+den Diskettenzugriffen merklich zu bremsen. Voraussetzung hierfür
+sind jedoch Disketten- und Festplattenroutinen, die im Hintergrund
+arbeiten.
+</p>
+<p>Damit der Plattentreiber diese Funktionen nicht zur Verfügung
+zu stellen braucht, enthält das <a href="bios_main.html">BIOS</a> von MagiC alle notwendigen
+Funktionen. Über den MagX-Cookie (Komponente <i>hddrv_functions</i>)
+erhält man Zugriff auf die folgende Struktur, die Zeiger auf wichtige
+Routinen des Hintergrund-DMAs enthält:
+</p>
+<pre>typedef struct
+{
+    LONG dma_begin ( VOID);
+    LONG dma_end   ( VOID );
+    LONG dma_wait  ( d0 = LONG ticks_200hz );
+    LONG ncr_begin ( VOID );
+    LONG ncr_end   ( VOID );
+    LONG ncr_wait  ( d0 = LONG ticks_200hz );
+} <a href="HDFUNCS.html">HDFUNCS</a>;
+</pre>
+<p><b>Hinweis:</b> Direkt vor der Struktur (2 Bytes vorher) liegt
+ein WORD, das die Tabellenlänge in LONGs angibt (in diesem Fall 6).
+Alle 6 Zeiger liegen im Systemvariablenbereich und dürfen notfalls
+verändert werden. Die internen Funktionen für die Floppy springen
+ebenfalls über die 6 Zeiger. <b>Wichtig:</b> Der Zeiger
+<i>hddrv_functions</i> im MagX-Cookie darf nicht verändert werden.
+</p>
+<p>Zur Bootzeit ist das präemptive Multitasking abgeschaltet
+(eigentlich ist auch das Multitasking abgeschaltet), aber die Routinen
+funktionieren auch vor Installation des <a href="aes_main.html">AES</a>, wobei die Warteroutinen
+dann ein 'busy waiting' machen (wie auch beim Abschalten des
+präemptiven Multitasking), und die Semaphorenroutinen machen (bis auf
+das Setzen und Löschen von <a href="bios_sysvars.html#flock">flock</a>) einfach nichts.
+</p>
+<p>Dieser Hypertext enthält Auszüge aus dem BIOS von MagiC, die demonstrieren
+sollen, wie das ganze funktioniert; dazu einige Worte:
+</p>
+<ul>
+<li><p> die Routinen acsi_xxx sind gleichzeitig für ACSI und FDC, d.h.
+dma_begin setzt flock, dma_end löscht es wieder.
+<br>&nbsp;
+</p></li>
+<li><p> die Routinen ncr_xxx sind für TT-SCSI.
+<br>&nbsp;
+</p></li>
+<li><p> die Funktionen xxx_begin reservieren die jeweilige <a href="powerdos.html#Semaphore">Semaphore</a>.
+Für die Rückgabwerte gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Wert</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-1</td>
+  <td align="left" valign="top"><a href="powerdos.html#Semaphore">Semaphore</a> ist bereits im Besitz</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;0</td>
+  <td align="left" valign="top">Ok</td>
+</tr>
+</table>
+</div>
+
+<br>Die Routinen verändern mit Ausnahme von d0 keine Register.
+<br>&nbsp;
+</p></li>
+<li><p> die Funktionen xxx_end geben die <a href="powerdos.html#Semaphore">Semaphore</a> wieder frei; auch
+hier wird kein Register verändert.
+<br>&nbsp;
+</p></li>
+<li><p> dma_wait wartet auf einen Interrupt des ACSI-DMA (bzw. FDC)
+Controllers; ncr_wait ist für den SCSI-Bus des Atari-TT. Für die
+Rückgabewerte gilt:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Wert</td>
+  <td align="left" valign="top">Bedeutung</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-2</td>
+  <td align="left" valign="top">Busfehler (Interrupt vom TT-SCSI)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">-1</td>
+  <td align="left" valign="top">Timeout</td>
+</tr>
+<tr>
+  <td align="left" valign="top">&nbsp;0</td>
+  <td align="left" valign="top">Ok</td>
+</tr>
+</table>
+</div>
+
+</p></li>
+</ul>
+
+<p>Querverweis: <a href="bios_main.html">BIOS</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="magic_xfs.html">XFS-Konzept in MagiC</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_errors.html"><img src="udo_lf.gif" alt="Spezielle Fehlermeldungen von MagiC" title="Spezielle Fehlermeldungen von MagiC" border="0" width="24" height="24">Spezielle Fehlermeldungen von MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_iconify.html"><img src="udo_rg.gif" alt="Das Iconify in MagiC" title="Das Iconify in MagiC" border="0" width="24" height="24">Das Iconify in MagiC</a>
+</body>
+</html>

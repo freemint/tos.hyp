@@ -1,0 +1,374 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Allgemeines zum Shutdown
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_semaphore.html"><img src="udo_lf.gif" alt="Semaphoren in MagiC" title="Semaphoren in MagiC" border="0" width="24" height="24">Semaphoren in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_smartredraw.html"><img src="udo_rg.gif" alt="Der Smart-Redraw in MagiC" title="Der Smart-Redraw in MagiC" border="0" width="24" height="24">Der Smart-Redraw in MagiC</a>
+
+<hr>
+
+<h1><a name="Allgemeines_20zum_20Shutdown">11.14 Allgemeines zum Shutdown</a></h1>
+<p>Unter einem <a href="gemdos_system.html#Shutdown">Shutdown</a> versteht man einen Mechanismus, der es
+erlaubt ein System kontrolliert herunter zu fahren. In einer
+Multitasking-Umgebung ist es nämlich eigentlich nicht mehr zulässig,
+den Rechner nach Gebrauch einfach abzuschalten; auch ein Rücksetzen
+per Reset-Taster sollte tabu sein. Vielmehr muß sichergestellt werden, daß
+alle Programme korrekt beendet und alle offenen Dateien korrekt
+geschlossen werden, bevor dem Computer der Strom abgedreht wird. Wird
+dies nicht beachtet, kann es durchaus zu Datenverlusten kommen.
+</p>
+<p>Aus diesem Grund haben z.B. UNIX-Systeme oder der Apple
+Macintosh einen Shutdown-Mechanismus; ein solcher wurde auch von Atari
+im MultiTOS eingeführt und steht ebenfalls in <a href="magic.html">MagiC</a> (ab Version 3.0)
+zur Verfügung.
+</p>
+<p>Aktiviert wird der Shutdown normalerweise über den Menüeintrag
+Datei/Ausschalten im Desktop, durch die Tastenkombination Ctrl-Alt-Del
+oder durch einen <a href="shel.html#Aufl_C3_B6sungswechsel">Auflösungswechsel</a>. Während des Shutdown können keine
+Programme gestartet werden.
+</p>
+<p>Querverweis: <a href="#Shutdown_20in_20MultiTOS">Shutdown in MultiTOS</a> &nbsp; <a href="#Shutdown_20in_20MagiC">Shutdown in MagiC</a> &nbsp; <a href="#Der_20Shutdown_20aus_20Sicht_20der_20Applikation">Shutdown beim Empfänger</a> &nbsp;
+<a href="#Der_20Shutdown_20aus_20Sicht_20des_20Initiators">Shutdown beim Initiator</a> &nbsp; <a href="shel.html#shel_write">shel_write</a>
+</p>
+<h3><a name="Shutdown_20in_20MultiTOS">11.14.1 Shutdown in MultiTOS</a></h3>
+<p>Unter MultiTOS müssen Programme folgendes tun, um den <a href="gemdos_system.html#Shutdown">Shutdown</a>
+Mechanismus zu unterstützen:
+</p>
+<ul>
+<li><p> <a href="shel.html#shel_write">shel_write</a> (mit doex = 9) ausführen, um dem <a href="aes_main.html">AES</a> mitzuteilen,
+daß sie die Nachricht <a href="evnt.html#AP_TERM">AP_TERM</a> verstehen.
+<br>&nbsp;
+</p></li>
+<li><p> bei Empfang der AP_TERM-Nachricht terminieren oder <a href="evnt.html#AP_TFAIL">AP_TFAIL</a>
+verschicken.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Hinweis:</b> MultiTOS schickt die AP_TERM-Nachricht dabei nur
+an solche Prozesse, die explizit AP_TERM verstehen. Da derzeit kaum
+Programme existieren, die ein entsprechendes shel_write absetzen, würde
+eine solche Implementierung in MagiC nicht das gewünschte Ergebnis
+liefern. Daher wurde ein anderes Verfahren gewählt, bei dem die
+AP_TERM Nachricht an <i>alle</i> laufenden Applikationen verschickt
+wird.
+</p>
+<p>Querverweis: <a href="#Shutdown_20in_20MagiC">Shutdown in MagiC</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp; <a href="#Der_20Shutdown_20aus_20Sicht_20der_20Applikation">Shutdown beim Empfänger</a> &nbsp; <a href="#Der_20Shutdown_20aus_20Sicht_20des_20Initiators">Shutdown beim Initiator</a>
+</p>
+<h3><a name="Shutdown_20in_20MagiC">11.14.2 Shutdown in MagiC</a></h3>
+<p>Unter <a href="magic.html">MagiC</a> funktioniert der <a href="gemdos_system.html#Shutdown">Shutdown</a> wie folgt: alle laufenden
+Programme erhalten eine <a href="evnt.html#AP_TERM">AP_TERM</a>-Nachricht die signalisiert, daß sie
+sich beenden sollen. Sind nach einer gewissen Zeit immer noch
+Programme im Speicher, so gibt <a href="magic_programs.html#SHUTDOWN">SHUTDOWN</a> eine Fehlermeldung aus. In der
+Datei <a href="magic_programs.html#SHUTDOWN.INF">SHUTDOWN.INF</a> können Programmnamen (ohne Suffix wie
+&quot;.prg&quot; oder &quot;.app&quot;) angegeben werden, die
+unkritisch sind und nicht zu einer Fehlermeldung durch SHUTDOWN führen
+sollen.
+</p>
+<p>Darüber hinaus sollten die folgenden Punkte beachtet werden:
+</p>
+<ul>
+<li><p> Wenn das System über Ctrl-Alt-Del beenden werden soll muss
+darauf geachtet werden daß der Bildschirm nicht gesperrt ist, d.h.
+daß z.B. nicht gerade ein Programm eine Dialogbox oder Alertbox auf
+dem Bildschirm bearbeitet. Weiterhin muß eine geeignete Shell
+(MAGXDESK, Thing) geladen sein, d.h. es darf kein Programm im
+&quot;single mode&quot; oder im Modus &quot;Shell nicht resident&quot;
+(z.B. per Alt-Doppelklick) geladen sein.
+<br>&nbsp;
+</p></li>
+<li><p> Ist der Bildschirm gesperrt, wird nur der <a href="magic_programs.html#Writeback-Daemon">Writeback-Daemon</a>
+beendet, d.h. der Cache zurückgeschrieben. Erst nach Freigeben des
+Bildschirms (d.h. nach Schließen der Dialogbox oder Alertbox) kann
+der Shutdown durchgeführt werden.
+<br>&nbsp;
+</p></li>
+<li><p> Sollte das System derart abgestürzt sein, daß kein <a href="gemdos_system.html#Shutdown">Shutdown</a>
+mehr möglich ist, sollte Ctrl-Alt-Del ein zweites Mal betätigt
+werden. Dann wird ein Warmstart durchgeführt, ohne daß Programme
+beendet werden.
+<br>&nbsp;
+</p></li>
+<li><p> Ist der &quot;single mode&quot; aktiv oder die Shell nicht
+geladen, wird ebenfalls nur der Writeback-Daemon beendet und der Cache
+zurückgeschrieben. Für den vollständigen Shutdown muß erst das
+laufende Programm beendet werden so daß die Shell wieder aktiv ist.
+Der Shutdown <i>muss</i> dann über den Menüpunkt Datei/Ausschalten
+durchgeführt werden.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>In MagiC 4 wurde der <a href="gemdos_system.html#Shutdown">Shutdown</a> Mechanismus wie folgt
+überarbeitet:</b> Das AES schickt jetzt eine SHUT_COMPLETED-Nachricht mit
+msg[3] = 0 (d.h. '<a href="gemdos_system.html#Shutdown">Shutdown</a> erfolglos beendet') und msg[4] = -1
+(ungültige ap_id), wenn nur noch Programme im System sind, die nicht
+exlizit <a href="evnt.html#AP_TERM">AP_TERM</a> verstehen. Damit bricht ein Programm, das nur die
+MultiTOS-Spezifikation beherrscht, den Shutdown ab. <a href="magic_programs.html#SHUTDOWN">SHUTDOWN</a>.PRG dagegen
+wurde an die neue Spezifikation angepaßt, und funktioniert wie
+bisher, d.h. gibt den noch laufenden Programmen einen Timeout und gibt
+dann die Namen aller unwilligen Applikationen aus.
+</p>
+<p>Darüber hinaus bekommt die Applikation #0 bei Ctrl-Alt-Del
+keine zufälligen Daten mehr in msg[4,5,6,7] übergeben, sondern die
+folgende Nachricht:
+</p>
+<pre>  msg[3]     = -1
+  msg[4,6,7] =  0
+  msg[5]     = <a href="evnt.html#AP_TERM">AP_TERM</a>
+</pre>
+<p>Querverweis:
+<br><a href="#Shutdown_20in_20MultiTOS">Shutdown in MultiTOS</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp; <a href="#Der_20Shutdown_20aus_20Sicht_20der_20Applikation">Shutdown beim Empfänger</a> &nbsp; <a href="#Der_20Shutdown_20aus_20Sicht_20des_20Initiators">Shutdown beim Initiator</a>
+</p>
+<h3><a name="Der_20Shutdown_20aus_20Sicht_20der_20Applikation">11.14.3 Der Shutdown aus Sicht der Applikation</a></h3>
+<p>Zunächst sei darauf hingewiesen, daß sich der <a href="gemdos_system.html#Shutdown">Shutdown</a>
+Mechanismus in MultiTOS von dem in MagiC unterscheidet: Ataris
+MultiTOS verschickt eine AP_TERM-Nachricht nur an solche Applikationen,
+die dem <a href="aes_main.html">AES</a> per shel_write (Opcode 9) explizit mitgeteilt haben, daß sie
+die AP_TERM-Nachricht verstehen; MagiC hingegen verschickt die
+Nachricht an alle aktiven Applikationen.
+</p>
+<p>Der <a href="gemdos_system.html#Shutdown">Shutdown</a> wird vom AES genau dann als erfolgreich
+angesehen, wenn sich alle Programme, die explizit <a href="evnt.html#AP_TERM">AP_TERM</a> verstehen,
+beendet haben. Sollte eine Applikation bekanntgeben daß sie sich
+nicht beenden kann, so wird der <a href="gemdos_system.html#Shutdown">Shutdown</a> abgebrochen. Aus diesen
+Gründen hat jedes Programm, daß eine AP_TERM Nachricht empfängt
+prinzipiell nur zwei Möglichkeiten:
+</p>
+<ul>
+<li> es beendet sich sofort
+</li>
+<li> es macht den folgenden Aufruf
+<pre>msg[0] = <a href="evnt.html#AP_TFAIL">AP_TFAIL</a>;
+msg[1] = err;
+<a href="shel.html#shel_write">shel_write</a>(10, 0, 0, (char *) msg, NULL);
+</pre>
+<br>und informiert damit das AES, daß der Vorgang mit dem
+Fehlercode err unterbrochen wurde. Die Applikation, die den Shutdown
+verursacht hat, bekommt die ap_id und den Fehlercode der
+unterbrechenden Applikation mitgeteilt.
+</li>
+</ul>
+
+<p>Reagiert die Applikation hingegen anders, d.h. ignoriert sie die
+AP_TERM Nachricht, so hängt das Verhalten des Systems davon ab, ob
+mitgeteilt wurde daß die AP_TERM-Nachricht verstanden wird. <b>Im
+Klartext:</b>
+</p>
+<ul>
+<li><p> Versteht die Applikation <i>explizit</i> AP_TERM, so geht das
+System davon aus, daß die Applikation z.Zt. keine <a href="evnt.html#Nachrichten">Nachrichten</a>
+empfangen kann. Der ShutDown wird nicht unterbrochen, sondern dauert
+solange, bis der Aufrufer (i.a. das Programm <a href="magic_programs.html#SHUTDOWN">SHUTDOWN</a>) den Shutdown
+abbricht. SHUTDOWN verwendet dazu einen Timeout von 3 Sekunden, d.h.
+wenn 3 Sekunden nach Beginn des <a href="gemdos_system.html#Shutdown">Shutdown</a> noch Programme aktiv sind,
+die AP_TERM verstehen, bricht das Programm den Shutdown-Prozeß ab.
+<br>&nbsp;
+</p></li>
+<li><p> Versteht die Applikation <i>nicht</i> explizit <a href="evnt.html#AP_TERM">AP_TERM</a>, meldet
+das System dem Initiator des Shutdown (i.a. SHUTDOWN.PRG) den
+erfolgreichen Abschluß des <a href="gemdos_system.html#Shutdown">Shutdown</a>-Vorgangs. Nur weil <a href="magic_programs.html#SHUTDOWN">SHUTDOWN</a>.PRG
+so nachsichtig mit alten Programmen ist, testet es, ob noch
+Applikationen aktiv sind, und gibt ggf. eine Meldung aus. Dabei kann
+man in SHUTDOWN.INF Programme angeben, die nicht zu einer Fehlermeldung
+führen sollen, d.h. die nicht beendet zu werden brauchen.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Hinweis:</b> Wurde der <a href="gemdos_system.html#Shutdown">Shutdown</a> per Alternate-Control-Delete
+ausgelöst, so bekommen zunächst nur der <a href="magic_programs.html#Writeback-Daemon">Writeback-Daemon</a> und die
+Applikation mit ID 0 eine AP_TERM-Nachricht. Als Absender ist dabei -1
+eingetragen. Die Applikation 0 (i.a. der Desktop) beendet sich dann
+und startet das Shutdown-Programm.
+</p>
+<p>Querverweis:
+<br><a href="#Der_20Shutdown_20aus_20Sicht_20des_20Initiators">Shutdown beim Initiator</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp; <a href="#Shutdown_20in_20MultiTOS">Shutdown in MultiTOS</a> &nbsp; <a href="#Shutdown_20in_20MagiC">Shutdown in MagiC</a>
+</p>
+<h3><a name="Der_20Shutdown_20aus_20Sicht_20des_20Initiators">11.14.4 Der Shutdown aus Sicht des Initiators</a></h3>
+<p><a href="gemdos_system.html#Shutdown">Shutdown</a> und Auflösungswechsel werden in MagiC von dem Programm SHUTDOWN
+übernommen, das mit den folgenden Parametern aufgerufen wird:
+</p>
+<pre><a href="magic_programs.html#SHUTDOWN">SHUTDOWN</a>.PRG dev txt
+</pre>
+<p>Dabei ist <i>dev</i> = -1, wenn ein Shutdown <i>ohne</i>
+<a href="shel.html#Aufl_C3_B6sungswechsel">Auflösungswechsel</a> durchgeführt werden soll, ansonsten die
+<a href="appl.html#Ger_C3_A4tenummer_20des_20VDI">Gerätenummer des VDI</a>-Bildschirmtreibers. <i>txt</i> ist die
+Texthöhe für das <a href="aes_main.html">AES</a>; diese sollte i.a. Null sein.
+</p>
+<p>Ein <a href="gemdos_system.html#Shutdown">Shutdown</a> wird per ret = <a href="shel.html#shel_write">shel_write</a>(4, TRUE, 0, NULL, NULL)
+gestartet. Dabei signalisiert ein Rückgabewert von 0, daß ein Shutdown
+nicht möglich ist, weil z.B. bereits ein <a href="gemdos_system.html#Shutdown">Shutdown</a> läuft. Ein
+<a href="shel.html#Aufl_C3_B6sungswechsel">Auflösungswechsel</a> wird mit ret = <a href="shel.html#shel_write">shel_write</a>(5, dev, 0, NULL, NULL)
+durchgeführt. Dabei ist <i>dev</i> der <a href="vdi_main.html">VDI</a>-Gerätetreiber.
+Alternativ kann mit shel_write(5, xdv, 1, NULL, NULL) in <i>xdv</i> ein
+Falcon-Auflösungsmodus angegeben werden.
+</p>
+<p>Diese Aufrufe sind alle MultiTOS-konform. Zusätzlich existiert
+ab <a href="magic.html">MagiC</a> 3 noch folgender Aufruf: ret = shel_write(5, dev, 100+txt, NULL,
+NULL). Hiermit kann man die Texthöhe für das <a href="aes_main.html">AES</a> festlegen. Eine
+Falcon-Auflösung kann man bei diesem Modus nicht übergeben, dev ist
+also die Gerätenummer des VDI-Bildschirmtreibers.
+</p>
+<p>Die Gerätenummer hängt vom verwendeten System und VDI ab.
+Bei einem nackten ST oder TT (ohne Grafikkarte) gilt die folgende
+Zuordung:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">1</td>
+  <td align="left" valign="top">Default-Auflösung</td>
+  <td align="left" valign="top">&nbsp;</td>
+</tr>
+<tr>
+  <td align="left" valign="top">2</td>
+  <td align="left" valign="top">ST niedrig</td>
+  <td align="left" valign="top">(320*200*16)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">3</td>
+  <td align="left" valign="top">ST mittel</td>
+  <td align="left" valign="top">(640*200*4)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">4</td>
+  <td align="left" valign="top">ST hoch</td>
+  <td align="left" valign="top">(640*400*2)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">6</td>
+  <td align="left" valign="top">TT mittel</td>
+  <td align="left" valign="top">(640*480*16)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">8</td>
+  <td align="left" valign="top">TT hoch</td>
+  <td align="left" valign="top">(1280*960*2)</td>
+</tr>
+<tr>
+  <td align="left" valign="top">9</td>
+  <td align="left" valign="top">TT niedrig</td>
+  <td align="left" valign="top">(320*480*256)</td>
+</tr>
+</table>
+</div>
+
+<p>Bei Einsatz einer Grafikkarte oder auf einem Macintosh stehen
+die Gerätenummern wie üblich in der ASSIGN.SYS-Datei im
+Wurzelverzeichnis des Bootlaufwerks.
+</p>
+<p>Nach erfolgreichem shel_write-Aufruf befindet sich das System im
+Shutdown-Modus, und es können keine Programme mehr gestartet werden.
+Nach einem erfolgreichen Abschluß des Shutdown oder Auflösungswechsels
+erhält der Initiator folgende Nachricht:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">msg[0] =</td>
+<td valign="top"> <a href="evnt.html#SHUT_COMPLETED">SHUT_COMPLETED</a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[3] =</td>
+<td valign="top"> 1 - Shutdown erfolgreich
+
+</td></tr>
+</table>
+
+<p>bzw. beim Auflösungswechsel
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">msg[0] =</td>
+<td valign="top"> <a href="evnt.html#RESCH_COMPLETED">RESCH_COMPLETED</a>
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[3] =</td>
+<td valign="top"> 1 - Auflösungswechsel erfolgreich
+
+</td></tr>
+</table>
+
+<p>Erfolgreich heißt für das System, daß alle Programme, die
+explizit <a href="evnt.html#AP_TERM">AP_TERM</a> verstehen, sich beendet haben. Soll der Shutdown
+trotzdem abgebrochen werden, so kann dies per ret = <a href="shel.html#shel_write">shel_write</a>(4,
+FALSE, 0, NULL, NULL) erfolgen. Andernfalls wird der Auflösungswechsel endgültig
+durchgeführt, wenn sich der Initiator beendet hat. Der <a href="gemdos_system.html#Shutdown">Shutdown</a>
+dagegen wird abgebrochen, wenn der Initiator terminiert.
+</p>
+<p>Hat ein Programm per <a href="evnt.html#AP_TFAIL">AP_TFAIL</a> den Shutdown verweigert, so erhält
+der Initiator die folgende Nachricht.
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">msg[0] =</td>
+<td valign="top"> SHUT_COMPLETED
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[3] =</td>
+<td valign="top"> 0 - Shutdown abgebrochen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[4] =</td>
+<td valign="top"> ap_id der Applikation, die verweigert hat
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[5] =</td>
+<td valign="top"> Fehlercode dieser Applikation
+
+</td></tr>
+</table>
+
+<p>bzw. beim Auflösungswechsel
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">msg[0] =</td>
+<td valign="top"> RESCH_COMPLETED
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[3] =</td>
+<td valign="top"> 0 - Auflösungswechsel abgebrochen
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[4] =</td>
+<td valign="top"> ap_id der Applikation, die verweigert hat
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">msg[5] =</td>
+<td valign="top"> Fehlercode dieser Applikation
+
+</td></tr>
+</table>
+
+<p>Das System hat in diesem Fall den Shutdown bzw. Auflösungswechsel schon
+beendet, d.h. der Initiator kann nichts mehr tun.
+</p>
+<p><b>Hinweis:</b> Weil es vorkommen kann, daß der Shutdown-Prozeß
+niemals vom System als abgeschlossen oder abgebrochen gemeldet wird
+(die RESCH_COMPLETED bzw. SHUT_COMPLETED-Nachricht also niemals verschickt wird),
+sollte der Initiator beim Warten auf die Nachricht einen Timeout
+vorsehen. Tritt dieser Fall ein, muß der Shutdown explizit abgebrochen
+werden. Per <a href="appl.html#appl_search">appl_search</a> kann der Initiator testen, ob noch Programme
+aktiv sind, die nicht explizit AP_TERM verstehen.
+</p>
+<p>Querverweis:
+<br><a href="#Der_20Shutdown_20aus_20Sicht_20der_20Applikation">Shutdown beim Empfänger</a> &nbsp; <a href="shel.html#shel_write">shel_write</a> &nbsp; <a href="#Shutdown_20in_20MultiTOS">Shutdown in MultiTOS</a> &nbsp; <a href="#Shutdown_20in_20MagiC">Shutdown in MagiC</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_semaphore.html"><img src="udo_lf.gif" alt="Semaphoren in MagiC" title="Semaphoren in MagiC" border="0" width="24" height="24">Semaphoren in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_smartredraw.html"><img src="udo_rg.gif" alt="Der Smart-Redraw in MagiC" title="Der Smart-Redraw in MagiC" border="0" width="24" height="24">Der Smart-Redraw in MagiC</a>
+</body>
+</html>

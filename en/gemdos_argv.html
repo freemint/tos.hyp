@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: ARGV procedure
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_HEAD" href="gemdos_mintnet.html"><img src="udo_lf.gif" alt="Network" title="Network" border="0" width="24" height="24">Network</a>
+<a name="UDO_nav_rg_HEAD" href="c_task_royal.html"><img src="udo_rg.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+
+<hr>
+
+<h1><a name="ARGV_20procedure">5.18 ARGV procedure</a></h1>
+<a name="Command_20lines_2C_20extended"></a>
+<p>The ARGV procedure serves for passing extended command lines,
+and was specified officially in the autumn of 1989 by <i>Ken
+Badertscher</i> (of Atari USA). The procedure works as follows:
+</p>
+<p>The environmental variable ARGV indicates that this procedure is
+being used; the value of the variables does <i>not</i> play a part in
+this, only its presence is decisive. The ARGV variable must be the
+last environmental variable, so that the called program can continue
+to use the &quot;front&quot; part as its normal environment.
+</p>
+<p>The extended command line is now simply written as a series of
+strings (NULL-terminated !) after ARGV in the environment. The first
+string here contains the name of the launched program, in the same way
+that it is passed with Pexec (and corresponds to the so far unused
+argv[0]). The following strings contain the individual parameters, in
+which space characters may appear too; the end of the list is
+indicated by a double 0, as for a normal environment.
+</p>
+<p>Beyond that one passes the value 127 with Pexec as the
+length-byte (first byte of the command line), which due to the
+existing length restriction to 125 bytes could not be accepted until
+now. This allows the called program to make sure that the values
+passed in the environment are really valid and have not been left
+behind by a program that does not know the ARGV standard, perhaps.
+</p>
+<p>Depending on whether one wants to pass parameters to programs
+via ARGV or just to read them, one proceeds in one of the following
+two ways:
+</p>
+<p>&#x2022; ARGV with a launched program
+</p>
+<a name="ARGV_20with_20a_20launched_20program"></a>
+<p>First establish whether the variable ARGV is present in the
+environment. If this is the case <i>and</i> the command line
+length-byte has the value 127, then one finds after the first 0
+following ARGV (since the variable could have a value) the individual
+command line parameters. At the end one should set the first letter of
+'ARGV' to 0 so that the environment takes the standard form again.
+</p>
+<p>&#x2022; ARGV at the caller
+</p>
+<a name="ARGV_20at_20the_20caller"></a>
+<p>First a new environment has to be created for the program to be
+called. To do this, calculate, say, the length of the environment
+already present, add the length of the command line and allocate a
+corresponding number of bytes. Then copy the existing environment (and
+during this remove any existing ARGV variable), followed by the
+command line parameters one after the other (each NULL-terminated). A
+final NULL concludes the environment. At the end pass the magic value
+127 in the length-byte of the command line.
+</p>
+<p>&#x2022; Extension of the ARGV procedure
+</p>
+<a name="ARGV_20procedure_2C_20extended"></a>
+<p>A problem with the original definition of the ARGV procedure was
+not being able to pass <i>empty</i> parameters (two zeros following
+each other will terminate the environment !). To be able to pass these
+nevertheless, the procedure was extended as follows:
+</p>
+<ul>
+<li><p> Empty parameters are set in the command line in <i>single</i>
+quotation marks, and appear in the environment as <i>exactly</i> one
+space.
+<br>&nbsp;
+</p></li>
+<li><p> A value is defined for the variable ARGV: if this starts with
+'NULL:', the rest of the line contains comma-separated positions of
+the empty parameters. <b>Example:</b> ARGV=NULL:3,5,9 means that
+argv[3], argv[5] and argv[9] are empty. The startup code should then
+be responsible for deleting the corresponding parameters.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Note:</b> To ensure maximum compatibility to old programs,
+the extended ARGV procedure should be used <i>only when</i> empty
+parameters actually have to be passed. In all other cases one should
+fall back to the original definiton.
+</p>
+<p>&#x2022; ARGV procedure as of MagiC 3.0
+</p>
+<a name="ARGV_20procedure_20as_20of_20MagiC_203.0"></a>
+<a name="MagiC_2C_20MagiC_2C_20ARGV_20procedure_20in"></a>
+<p>From MagiC 3 onwards the ARGV procedure is supported by <a href="gemdos_process.html#Pexec">Pexec</a>
+in three different ways:
+</p>
+<ul>
+<li><p> <b>If the length-byte of the command line is 127</b>, Pexec
+assumes that the calling program supports ARGV and the environment has
+been manipulated accordingly already; the environment is not changed,
+therefore.
+<br>&nbsp;
+</p></li>
+<li><p> <b>If the length-byte is 254</b>, MagiC expects directly
+after it the string &quot;ARGV=&quot;, followed by a NULL-byte and a
+list of parameters terminated by two NULL-bytes. By passing
+&quot;ARGV=NULL...&quot; etc. one can also use the extended ARGV
+procedure that permits passing of empty parameters (see above).
+<br>&nbsp;
+<br>Pexec deletes any ARGV present and enters the new environment.
+The command line consists only of the value 127 as an indicator that
+the parameters lie in the environment. This procedure is suitable if
+it is certain that the called program can handle the ARGV procedure.
+<br>&nbsp;
+</p></li>
+<li><p> <b>If the length-byte is 255</b>, MagiC expects directly
+after it a space-separated and NULL-byte terminated list of parameters
+(as the command line is passed generally). Pexec deletes any ARGV
+that may be present, creates a list of arguments from the command line
+and enters these as ARGV into the environment. The program file path
+that was passed to Pexec will be taken as argv[0]. If this path is
+invalid the result will be rubbish, so one should pass a sensible
+program name even with mode 5 of Pexec (create basepage). With mode
+7, argv[0] will simply be called &quot;NONAME&quot;, since no name is
+passed in this case.
+<br>&nbsp;
+<br>The command line has 127 as a length-byte as an indicator of the
+presence of ARGV. If the length of the command line is &lt; 127, then
+it will also be copied to the basepage, otherwise the command line
+consists only of the value 127. This procedure is suitable if the
+called program is not certain that it understands ARGV.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="gemdos_main.html"><img src="udo_up.gif" alt="GEMDOS" title="GEMDOS" border="0" width="24" height="24">GEMDOS</a>
+<a name="UDO_nav_lf_FOOT" href="gemdos_mintnet.html"><img src="udo_lf.gif" alt="Network" title="Network" border="0" width="24" height="24">Network</a>
+<a name="UDO_nav_rg_FOOT" href="c_task_royal.html"><img src="udo_rg.gif" alt="C'Task Royal" title="C'Task Royal" border="0" width="24" height="24">C'Task Royal</a>
+</body>
+</html>

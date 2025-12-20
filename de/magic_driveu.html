@@ -1,0 +1,358 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: Das Laufwerk U: in MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_iconify.html"><img src="udo_lf.gif" alt="Das Iconify in MagiC" title="Das Iconify in MagiC" border="0" width="24" height="24">Das Iconify in MagiC</a>
+<a name="UDO_nav_rg_HEAD" href="magic_magxinf.html"><img src="udo_rg.gif" alt="Der Aufbau der MAGX.INF-Datei" title="Der Aufbau der MAGX.INF-Datei" border="0" width="24" height="24">Der Aufbau der MAGX.INF-Datei</a>
+
+<hr>
+
+<h1><a name="Das_20Laufwerk_20U:_20in_20MagiC">11.11 Das Laufwerk U: in MagiC</a></h1>
+<p>Unter <a href="magic.html">MagiC</a> wird Laufwerk U: bei der Initialisierung des DOS
+angelegt. Damit es von gängigen Programmen als existent erkannt wird,
+wird das entsprechende Bit in <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> gesetzt; es existiert jedoch
+kein entsprechendes BIOS-Laufwerk.
+</p>
+<p><img src="bilder/gif/drv_u.gif" alt="" title="" border="0" width="235" height="262"></p>
+<p>Innerhalb des Laufwerks gibt es einige Spezialverzeichnisse, und
+zwar:
+</p>
+<ul>
+<li> <a href="#Das_20Verzeichnis_20U:_5CDEV">U:\DEV</a> &nbsp;(Devices)
+</li>
+<li> <a href="#Das_20Verzeichnis_20U:_5CPIPE">U:\PIPE</a> &nbsp;(Pipes)
+</li>
+<li> <a href="#Das_20Verzeichnis_20U:_5CPROC">U:\PROC</a> (Prozesse)
+</li>
+<li> <a href="#Das_20Verzeichnis_20U:_5CSHM">U:\SHM</a> &nbsp;(Shared Memory)
+</li>
+</ul>
+
+<p>Im Gegensatz zu MiNT sind dies jedoch keine eigenen
+Dateisysteme, sondern einfach nur Unterverzeichnisse des DFS für
+Laufwerk U:. Je nach Unterverzeichnis legt das U-DFS verschiedene
+Dateitypen und -treiber an. Da die Verzeichniskontrolle dem DOS_XFS
+obliegt, werden z.B. Schreibzugriffe auf ein Device im Verzeichnis per
+Dateidatum protokolliert. Das geht sogar soweit, daß ein
+Schreibzugriff auf das Wurzelverzeichnis von Laufwerk A: automatisch
+das Dateidatum von U:\A verändert.
+</p>
+<p>Alle Verzeichnisse sind z.Zt. auf maximal 32 Einträge
+beschränkt, und Aufrufe von <a href="gemdos_directory.html#Dfree">Dfree</a> liefern nur den Wert Null zurück.
+Auf dem Wurzelverzeichnis können außer den bestehenden Dateien nur
+symbolische Links (per <a href="gemdos_file.html#Fsymlink">Fsymlink</a>) erstellt werden.
+</p>
+<p>Vor jedem Zugriff auf Laufwerk U: werden neu hinzugekommene
+Laufwerke per symbolischem Link hinzugefügt bzw. nicht mehr
+existierende entfernt; dies wird über <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> erkannt. Ein
+symbolischer Link für Laufwerk X: wird standardmäßig unter dem
+Namen U:\X angemeldet, und zeigt auf das Verzeichnis X:\. Symbolische
+Links können umbenannt oder gelöscht werden (auch ein umbenannter
+Link wird automatisch gelöscht, wenn das entsprechende Bit in der
+Systemvariablen <a href="bios_sysvars.html#UDO__drvbits">_drvbits</a> gelöscht wird).
+</p>
+<p><b>Achtung:</b> MiNT bindet die Laufwerke nicht als symbolische
+Links ein, daher kann man folgende Befehlsfolge absetzen:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Dsetdrv</td>
+<td valign="top"> U:
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> ..
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\
+
+</td></tr>
+</table>
+
+<p>Bei einem symbolischen Link wechselt man hingegen tatsächlich
+den Pfad, d.h. in der dritten Zeile erscheint A:\ als aktueller Pfad.
+Um dieses Problem zu umgehen, gibt es eine Sonderbehandlung im Kernel,
+der die obige Befehlsfolge auch in <a href="magic.html">MagiC</a> ermöglicht. Dabei gibt es
+allerdings ein Problem: Der symbolische Link darf nicht umbenannt
+werden, da sonst folgendes passiert:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Frename</td>
+<td valign="top"> U:\A U:\FLOPPY
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetdrv</td>
+<td valign="top"> U:
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> U:\FLOPPY
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dsetpath</td>
+<td valign="top"> ..
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Dgetpath</td>
+<td valign="top"> ==&gt; U:\
+
+</td></tr>
+</table>
+
+<p>Weil alle <a href="gemdos_file.html">Dateifunktionen</a> auf U: genauso funktionieren wie auf
+einer Diskette ist es auch möglich, Verzeichnisse wie U:\DEV
+umzubenennen. <b>Achtung:</b> Dies sollte tunlichst vermieden werden,
+da sonst Anwenderprogramme ihre Gerätetreiber nicht mehr finden
+können.
+</p>
+<p>Querverweis: <a href="bios_main.html">BIOS</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="magic_xfs.html">XFS-Konzept in MagiC</a> &nbsp; <a href="gemdos_pipes.html">Test auf Pipes</a>
+</p>
+<h3><a name="Das_20Verzeichnis_20U:_5CDEV">11.11.1 Das Verzeichnis U:\DEV</a></h3>
+<p>In diesem Verzeichnis werden Gerätetreiber (Devices)
+eingetragen. Es handelt sich dabei um Pseudodateien, die nur dem DOS,
+nicht jedoch dem BIOS bekannt sind.
+</p>
+<p><img src="bilder/gif/drv_udev.gif" alt="" title="" border="0" width="233" height="220"></p>
+<p>Auch die altbekannten Gerätenamen finden sich in diesem
+Verzeichnis wieder, denn es gilt:
+</p>
+<ul>
+<li> CON: (Handle -1) ==&gt; U:\DEV\CON
+</li>
+<li> AUX: (Handle -2) ==&gt; U:\DEV\AUX
+</li>
+<li> PRN: (Handle -3) ==&gt; U:\DEV\PRN
+</li>
+<li> NUL: (Handle -4) ==&gt; U:\DEV\NULL
+</li>
+</ul>
+
+<p>Da auf die hier installierten Geräte mit den normalen
+<a href="gemdos_file.html">Dateifunktionen</a> des GEMDOS zugegriffen werden kann, ist es z.B.
+möglich ein Textdokument durch einfaches Speichern per <a href="gemdos_file.html#Fwrite">Fwrite</a> auf dem
+Drucker auszugeben. Dateinamen wie CON: werden dabei vom Kernel
+automatisch in die richtige Form umgewandelt (in diesem Fall also:
+U:\DEV\CON).
+</p>
+<p>Abhängig vom Rechnermodell stehen per Default die folgenden
+Devices zur Verfügung:
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Gerät</td>
+<td valign="top"> Beschreibung
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">&nbsp;</td>
+<td valign="top"> &nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">AUX</td>
+<td valign="top"> BIOS-Gerät 2
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">CON</td>
+<td valign="top"> Console
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">LAN</td>
+<td valign="top"> BIOS-Gerät 7, i.a. SCC, Kanal A
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MIDI</td>
+<td valign="top"> BIOS-Gerät 3, beim Ausgabestatus hingegen das Gerät mit der
+Nummer 4.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MODEM1</td>
+<td valign="top"> BIOS-Gerät 6, i.a. die mit dem ST-MFP realisierte serielle
+Schnittstelle, auf dem Falcon der SCC mit Kanal-B.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">MODEM2</td>
+<td valign="top"> BIOS-Gerät 7, i.a. SCC, Kanal B
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">NULL</td>
+<td valign="top"> leere Pseudodatei, liefert beim Schreiben immer den Status Ok
+und beim Lesen den Wert EOF (kein Zeichen verfügbar).
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">PRN</td>
+<td valign="top"> BIOS-Gerät 0, bei der Ausgabe wird bei einem Timeout
+abgebrochen.
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SERIAL1</td>
+<td valign="top"> BIOS-Gerät 8, i.a. der TT-MFP
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">SERIAL2</td>
+<td valign="top"> BIOS-Gerät 9, i.a. SCC, Kanal A
+
+</td></tr>
+</table>
+
+<p>Von CON: einmal abgesehen, arbeiten alle Geräte im
+&quot;Raw-Modus&quot;, d.h. Steuersequenzen wie Control-C werden nicht
+berücksichtigt.
+</p>
+<p>Weitere Geräte können jederzeit per <a href="gemdos_directory.html#Dcntl">Dcntl</a> erstellt und
+eingetragen werden; aufgrund des inkompatiblen Treiberformates muß
+jedoch der Opcode <a href="gemdos_directory.html#DEV_M_INSTALL">DEV_M_INSTALL</a> und nicht wie sonst üblich
+<a href="gemdos_directory.html#DEV_INSTALL">DEV_INSTALL</a> benutzt werden. Die vorhandenen Geräte können mit den
+üblichen Methoden umbenannt und gelöscht werden; im Gegensatz zu
+MiNT wird das Löschen eines Gerätes über den Gerätetreiber selbst
+abgewickelt, der sich so aus den entsprechenden Systemvektoren
+zurückziehen und den Speicher freigeben bzw. sich beenden kann. Ein
+weiterer Unterschied zu MiNT besteht darin, daß <a href="magic.html">MagiC</a> die volle
+Funktionalität des DOS-Dateisystems zur Verfügung stellt, d.h.:
+</p>
+<ul>
+<li> es dürfen keine Geräte gleichen Namens existieren.
+</li>
+<li> Schreibzugriffe werden mit Änderung des Dateidatums
+überwacht.
+</li>
+<li> schreibgeschützte Geräte dürfen nicht beschrieben, gelöscht
+oder umbenannt werden.
+</li>
+</ul>
+
+<p><b>Hinweis:</b> Über Fcreate können hier keine Dateien erzeugt
+werden; es ist allerdings möglich per <a href="gemdos_file.html#Fsymlink">Fsymlink</a> symbolische Links
+anzulegen.
+</p>
+<p>Querverweis: <a href="bios_main.html">BIOS</a> &nbsp; <a href="gemdos_main.html">GEMDOS</a> &nbsp; <a href="magic_xfs.html">XFS-Konzept in MagiC</a>
+</p>
+<h3><a name="Das_20Verzeichnis_20U:_5CPIPE">11.11.2 Das Verzeichnis U:\PIPE</a></h3>
+<a name="Pipes"></a>
+<p>In diesem Verzeichnis werden Pipes abgelegt; es handelt sich
+dabei um temporäre Dateien, die insbesondere für den Datenaustausch
+zwischen Prozessen benutzt werden.
+</p>
+<p>Man unterscheidet <i>unidirektionale</i> und
+<i>bidirektionale</i> Pipes: erstere erlauben einen Datenfluß nur in
+einer Richtung, letztere können in beide Richtungen übertragen,
+jedoch nicht gleichzeitig. Bidirektionale Pipes finden z.B. beim
+<a href="proto_dd.html">Drag&amp;Drop-Protokoll</a> Verwendung. Pipes liefern beim Lesen per
+Fread grundsätzlich EOF (End-of-File) wenn sie leer sind, oder kein
+schreibender Prozeß vorhanden ist. Analog wird beim Schreiben per
+<a href="gemdos_file.html#Fwrite">Fwrite</a> der Wert EOF geliefert, falls kein lesender Prozess vorhanden
+ist.
+</p>
+<p>Der Zugriff erfolgt dabei rein asynchron, d.h. Applikationen
+warten auf das Lesen bzw. Schreiben und wecken ggf. eine andere
+Applikation wieder auf. Pipes werden automatisch gelöscht, wenn das
+letzte Programm, daß sie benutzt, die sie repräsentierende Datei
+geschlossen hat.
+</p>
+<p><b>Hinweis:</b> MagiC unterstützt maximal 32 Pipes
+gleichzeitig. Ein <a href="gemdos_file.html#Fseek">Fseek</a> auf Pipes führt grundsätztlich zur Rückgabe
+von 0L, d.h. der Dateizeiger kann nicht beeinflußt werden. Im
+Verzeichnisfenster erscheinen Pipes mit einer Länge von 2 bzw. 4k und
+dem Datum ihrer Erstellung. Falls beim Öffnen einer Pipe eine Kennung
+&gt; 31 geliefert wird, kann die Systemfunktion <a href="gemdos_file.html#Fselect">Fselect</a> nicht benutzt
+werden.
+</p>
+<p><b>Darüber hinaus ist ab MagiC 3 folgendes zu beachten:</b>
+</p>
+<ul>
+<li><p> Pipes mit Modus 4 (Pseudo-TTYs) werden nicht unterstützt.
+<a href="magic.html">MagiC</a> kennt nur uni- und bidirektionale Pipes und erstellt bei Modus 4
+eine bidirektionale Pipe. Der Hauptgrund für Pipes sind zur Zeit das
+Drag&amp;Drop-Protokoll.
+<br>&nbsp;
+</p></li>
+<li><p> Pipes liefern bei <a href="gemdos_file.html#Finstat">Finstat</a>/<a href="gemdos_file.html#Foutstat">Foutstat</a> die Anzahl der vorhandenen
+bzw. noch freien Bytes im Block.
+<br>&nbsp;
+</p></li>
+<li><p> Wird eine Pipe geschlossen, so werden alle wartenden Programme
+aufgeweckt, um evtl. mögliche <i>Deadlocks</i> zu vermeiden.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>Querverweis:
+<br><a href="gemdos_file.html#Fcreate">Fcreate</a> &nbsp; <a href="gemdos_file.html#Fread">Fread</a> &nbsp; <a href="gemdos_file.html#Fwrite">Fwrite</a> &nbsp; <a href="gemdos_file.html#Fclose">Fclose</a> &nbsp; <a href="gemdos_file.html#Fpipe">Fpipe</a> &nbsp; <a href="gemdos_pipes.html">Test auf Pipes</a>
+</p>
+<h3><a name="Das_20Verzeichnis_20U:_5CPROC">11.11.3 Das Verzeichnis U:\PROC</a></h3>
+<a name="Name_20eines_20Prozesses"></a>
+<a name="Prozesses_2C_20Name_20eines"></a>
+<a name="UDO__PNAM"></a>
+<p>Dieses Verzeichnis gibt einen Überblick über die z.Zt. aktiven
+Prozesse im System. Jeder Eintrag besteht aus den folgenden
+Komponenten:
+</p>
+<p><img src="bilder/gif/drvuproc.gif" alt="" title="" border="0" width="231" height="226"></p>
+<ul>
+<li> dem Prozessnamen
+</li>
+<li> der Prozess-ID (PID)
+</li>
+<li> dem aktuellen Speicherplatzverbrauch
+</li>
+<li> <a href="gemdos_datetime.html">Datum und Uhrzeit</a> der Prozesserstellung
+</li>
+</ul>
+
+<p>In der Abbildung oben beispielsweise, besitzt der Prozess
+<i><a href="xcontrol_main.html">XCONTROL</a></i> die PID 4 und belegt z.Zt. 93460 Bytes Speicherplatz.
+</p>
+<p>Prozess IDs werden beim Programmstart vergeben und beim
+Terminieren freigegeben. Das Löschen einer Datei in diesem
+Verzeichnis hat zur Folge, daß der entsprechende Prozess (über den
+Programmanager des <a href="aes_main.html">AES</a>) zerstört wird.
+</p>
+<p><b>Hinweis:</b> Die MiNT-konformen Prozess-Attribute (spezielle
+Dateiattribute) werden von <a href="magic.html">MagiC</a> z.Zt. nicht unterstützt. Der Name
+eines Prozesses kann auch über die Environment-Variable <i>_PNAM</i>
+ermittelt werden; die Prozess-ID findet sich auch in der Basepage.
+</p>
+<p>Querverweis: <a href="gem_about.html">GEM</a> &nbsp; <a href="guidelines_styles.html">Style-Guidelines</a> &nbsp; <a href="magic_taskmanager.html">Task-Manager</a>
+</p>
+<h3><a name="Das_20Verzeichnis_20U:_5CSHM">11.11.4 Das Verzeichnis U:\SHM</a></h3>
+<a name="Shared_20memory"></a>
+<p>Dieses Verzeichnis dient als 'Ablage' für Shared Memory; hier
+können also Dateien angelegt werden die Speicherblöcke
+repräsentieren, und auf die andere Prozesse zugreifen dürfen.
+</p>
+<p>Über Shared Memory (gemeinsamen Speicher) läßt sich sehr
+leicht eine <i>Interprozess-Kommunikation</i> (IPC) realisieren.
+</p>
+<p>Querverweis: <a href="gemdos_file.html#Fcntl">Fcntl</a> &nbsp; <a href="gemdos_file.html#SHMGETBLK">SHMGETBLK</a> &nbsp; <a href="gemdos_file.html#SHMSETBLK">SHMSETBLK</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_iconify.html"><img src="udo_lf.gif" alt="Das Iconify in MagiC" title="Das Iconify in MagiC" border="0" width="24" height="24">Das Iconify in MagiC</a>
+<a name="UDO_nav_rg_FOOT" href="magic_magxinf.html"><img src="udo_rg.gif" alt="Der Aufbau der MAGX.INF-Datei" title="Der Aufbau der MAGX.INF-Datei" border="0" width="24" height="24">Der Aufbau der MAGX.INF-Datei</a>
+</body>
+</html>

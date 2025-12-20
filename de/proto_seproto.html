@@ -1,0 +1,1630 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 20.12.2025 -->
+<html lang="de">
+<head>
+<title>
+Die Anleitung zum TOS: SE-Protokoll
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="de">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_HEAD" href="proto_olga.html"><img src="udo_lf.gif" alt="OLGA-Protokoll" title="OLGA-Protokoll" border="0" width="24" height="24">OLGA-Protokoll</a>
+<a name="UDO_nav_rg_HEAD" href="proto_ssp.html"><img src="udo_rg.gif" alt="System Services Protocol (SSP)" title="System Services Protocol (SSP)" border="0" width="24" height="24">System Services Protocol (SSP)</a>
+
+<hr>
+
+<h1><a name="SE-Protokoll">15.9 SE-Protokoll</a></h1>
+<p>Sinn des SE-Protokolls ist die Kommunikation zwischen Shells zur
+Programmentwicklung und Editoren, daher auch der Name:
+Shell-Editor-Protokoll.
+</p>
+<p>Dieses Protokoll dient dazu, unter Multitasking-Systemen die
+Shell vom Editor aus zur Compilierung und ähnlichen Aktionen zu
+veranlassen, und um von der Shell Fehlermeldungen und/oder
+Fehlerdateien an den Editor zurückzugeben.
+</p>
+<p>Kommandos bzw. Nachrichten von der Shell an den Editor beginnen mit
+<tt>SE_</tt>, Nachrichten vom Editor an die Shell beginnen mit <tt>ES_</tt>.
+</p>
+<p>Die aktuelle Versionsnummer des Protokolls ist 1.05.
+</p>
+<ul class="content">
+	<li>15.9.1 <a href="#Kontaktaufnahme">Kontaktaufnahme</a>
+	<li>15.9.2 <a href="#Anmerkungen">Anmerkungen</a>
+	<li>15.9.3 <a href="#Nachrichten_20der_20Shell_20an_20den_20Editor">Nachrichten der Shell an den Editor</a>
+	<li>15.9.4 <a href="#Nachrichten_20des_20Editors_20an_20die_20Shell">Nachrichten des Editors an die Shell</a>
+	<li>15.9.5 <a href="#History">History</a>
+	<li>15.9.6 <a href="#Autoren_20und_20Programme">Autoren und Programme</a>
+	</li>
+</ul>
+<br>
+<h3><a name="Kontaktaufnahme">15.9.1 Kontaktaufnahme</a></h3>
+<p>Die Kontaktaufnahme läuft wie folgt ab:
+</p>
+<p>Die Shell verschickt nach dem Start die Nachricht
+<tt><a href="#SE_INIT">SE_INIT</a></tt>. Als Antwort erhält sie darauf die Nachricht
+<tt><a href="#ES_OK">ES_OK</a></tt>. Aus den Bitfeldern in den beiden Nachrichten kann die Shell
+nun ableiten, welche Kommandos sie an den Editor schicken kann und
+welche Kommandos vom Editor zu erwarten sind. Wenn die Shell nicht
+mehr am <a href="#SE-Protokoll">SE-Protokoll</a> teilnehmen will (z.B. weil sie beendet wird),
+dann schickt sie die Nachricht <tt><a href="#SE_QUIT">SE_QUIT</a></tt> an den Editor.
+</p>
+<p>Der Editor verschickt nach dem Start die Nachricht
+<tt><a href="#ES_INIT">ES_INIT</a></tt>. Als Antwort erhält sie darauf die Nachricht
+<tt><a href="#SE_OK">SE_OK</a></tt>. Aus den Bitfeldern in den beiden Nachrichten kann der Editor
+nun ableiten, welche Kommandos er an die Shell schicken kann und
+welche Kommandos von der Shell zu erwarten sind. Wenn der Editor nicht
+mehr am <a href="#SE-Protokoll">SE-Protokoll</a> teilnehmen will (z.B. weil er beendet wird), dann
+schickt er die Nachricht <tt><a href="#ES_QUIT">ES_QUIT</a></tt> an die Shell.
+</p>
+<p>Bleibt die Frage, an wen Shell und Editor diese Nachrichten schicken
+sollen. Das <a href="#SE-Protokoll">SE-Protokoll</a> ist sinnvoll am ehesten unter einem
+Multitasking-System einsetzbar, dort wird normalerweise die
+<a href="aes_main.html">AES</a>-Funktion <tt><a href="appl.html#appl_search">appl_search</a>()</tt> zur Verfügung stehen. Shell und
+Editor sollten also einfach ihre jeweilige Init-Nachricht an alle
+Prozesse (außer an Systemprozesse) schicken.
+</p>
+<p>Andere Möglichkeiten:
+</p>
+<ul>
+<li><p> Wenn die Shell den Namen ihres Editors kennt, kann sie sich
+natürlich auch darauf beschränken, <tt><a href="#SE_INIT">SE_INIT</a></tt> nur an diesen zu
+schicken.
+<br>&nbsp;
+</p></li>
+<li><p> Wenn die Funktion <tt>appl_search()</tt> nicht zur Verfügung steht,
+bietet sich das <a href="proto_xacc.html">XAcc</a>-Protokoll zur Kontaktaufnahme an: Shell und
+Editor sollten ihre Init-Nachrichten dann einfach an jeden Prozeß
+schicken, der sich per <a href="proto_xacc.html">XAcc</a> anmeldet. Das <a href="proto_xacc.html">XAcc</a>-Protokoll sieht
+außerdem noch eine maschinenlesbare Kennung des Programmtyps (XDSC)
+vor, so daß man u.U. sogar erkennen kann, ob es sich bei dem
+Kommunikationspartner um eine Shell (Kennung `PE' für <q>Programming
+Environment</q>) oder um einen Editor (Kennung `ED' für <q>Text
+Editor</q>) handelt.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="Anmerkungen">15.9.2 Anmerkungen</a></h3>
+<p>Wenn im folgenden von einer <q>Nachricht</q> die Rede ist, dann
+ist damit eine <a href="aes_main.html">AES</a>-Nachricht gemeint, die aus 8 Worten (Integers)
+besteht und mit der AES-Funktion <tt><a href="appl.html#appl_write">appl_write</a>()</tt> verschickt
+wird. Das erste Wort enthält jeweils die Nummer der Nachricht, das
+zweite die Applikations-ID des Absenders, das dritte ist immer Null.
+Die Belegung der anderen Worte ist von der jeweiligen Nachricht
+abhängig. Worte, für die keine Belegung angegeben wird, sind auf
+Null zu setzen.
+</p>
+<p><b>Bitte beachten:</b> Da die Zählung bei 0 beginnt, ist mit
+<q>Wort 3</q> im folgenden das <i>vierte</i> Wort gemeint!
+</p>
+<p>Zur Verdeutlichung nochmals in C:
+</p>
+<blockquote>
+<pre> int msg[8];
+
+ msg[0] = <a href="#SE_ACK">SE_ACK</a>;   /* Nachricht                         */
+ msg[1] = gl_apid;  /* ID des Absenders                  */
+ msg[2] = 0;        /* 0, d.h. keine Überlänge           */
+ msg[3] = TRUE;     /* dies ist &quot;Wort 3&quot;                 */
+ msg[4] = msg[5] = msg[6] = msg[7] = 0; /* Rest auf Null */
+ <a href="appl.html#appl_write">appl_write</a> (editor, 16, msg);          /* abschicken    */
+</pre>
+</blockquote>
+<br>
+<p>Wenn in einer Nachricht ein Zeiger (d.h. eine Adresse) enthalten
+ist, dann wird das obere Wort der Adresse im ersten und das untere
+Wort im zweiten der angegebenen Worte übergeben.
+</p>
+<p>Bei den Zeigern auf Speicherbereiche ist vom jeweiligen Absender
+der Nachricht darauf zu achten, daß diese Speicherbereiche vom
+Empfänger auch lesbar sind (Memory Protection!). Dafür sind diese
+als <q>Readable</q> zu allozieren! Das geschieht über den
+Gemdos-Aufruf <a href="gemdos_memory.html#Mxalloc">Mxalloc</a>().
+</p>
+<br>
+<p>Bei einigen Nachrichten können Zeilen- und Spaltennummern für eine
+Cursorposition übergeben werden. Da es unterschiedliche Auffassungen
+darüber gibt, ob Zeilen und/oder Spalten ab Null oder ab Eins
+gezählt werden, wird empfohlen, diese Angaben vor der Übernahme zu
+überprüfen und ggfs. zu korrigieren. Wenn der Editor seine Zeilen
+also ab Eins zählt, dann sollte ihn die Zeilennummer Null nicht aus
+der Fassung bringen, sondern er sollte sie wie Zeile Eins behandeln.
+</p>
+<h3><a name="Nachrichten_20der_20Shell_20an_20den_20Editor">15.9.3 Nachrichten der Shell an den Editor</a></h3>
+<p>Die Shell kann folgende Nachrichten bzw. Kommandos an den Editor
+senden:
+</p>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="left" valign="top">Nummer</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_INIT">SE_INIT</a></td>
+  <td align="left" valign="top">0x4200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OK">SE_OK</a></td>
+  <td align="left" valign="top">0x4201</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ACK">SE_ACK</a></td>
+  <td align="left" valign="top">0x4202</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OPEN">SE_OPEN</a></td>
+  <td align="left" valign="top">0x4203</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERROR">SE_ERROR</a></td>
+  <td align="left" valign="top">0x4204</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERRFILE">SE_ERRFILE</a></td>
+  <td align="left" valign="top">0x4205</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_PROJECT">SE_PROJECT</a></td>
+  <td align="left" valign="top">0x4206</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_QUIT">SE_QUIT</a></td>
+  <td align="left" valign="top">0x4207</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_TERMINATE">SE_TERMINATE</a></td>
+  <td align="left" valign="top">0x4208</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_CLOSE">SE_CLOSE</a></td>
+  <td align="left" valign="top">0x4209</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_MENU">SE_MENU</a></td>
+  <td align="left" valign="top">0x420A</td>
+</tr>
+</table>
+</div>
+
+<h4><a name="SE_INIT">15.9.3.1 SE_INIT</a></h4>
+<p>Die Shell fragt an, ob ein Editor das <a href="#SE-Protokoll">SE-Protokoll</a> versteht.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> Ein Bitset, welche Nachrichten die Shell versendet:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top">SE_INIT</td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OK">SE_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ACK">SE_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OPEN">SE_OPEN</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERROR">SE_ERROR</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERRFILE">SE_ERRFILE</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_PROJECT">SE_PROJECT</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_QUIT">SE_QUIT</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_TERMINATE">SE_TERMINATE</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_CLOSE">SE_CLOSE</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_MENU">SE_MENU</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 4+5:</td>
+<td valign="top"> Ein Bitset, welche Editorkommandos verstanden werden
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_INIT">ES_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_OK">ES_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_ACK">ES_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_COMPILE">ES_COMPILE</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKE">ES_MAKE</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEALL">ES_MAKEALL</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_LINK">ES_LINK</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_EXEC">ES_EXEC</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEEXEC">ES_MAKEEXEC</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_PROJECT">ES_PROJECT</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_QUIT">ES_QUIT</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_SHLCTRL">ES_SHLCTRL</a></td>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top">0x0800</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wort 4 und 5 bilden zusammen ein Langwort. Da
+für die bisher definierten Nachrichten aber nur 12 Bits benötigt werden,
+ist Wort 4 normalerweise Null.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 6:</td>
+<td valign="top"> Unterstützte Versionsnummer des Protokolls als BCD-Zahl, also
+0x0105 (hexadezimal) für Version 1.05
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Der Editor antwortet mit der Nachricht <a href="#ES_OK">ES_OK</a>.
+</p>
+<br>
+<p><b>siehe auch:</b> <a href="#ES_OK">ES_OK</a>, <a href="#SE_QUIT">SE_QUIT</a>
+</p>
+<h4><a name="SE_OK">15.9.3.2 SE_OK</a></h4>
+<p>Die Shell sagt dem Editor, daß sie das Protokoll versteht.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> Ein Bitset, welche Nachrichten die Shell versendet:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_INIT">SE_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top">SE_OK</td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ACK">SE_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OPEN">SE_OPEN</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERROR">SE_ERROR</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERRFILE">SE_ERRFILE</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_PROJECT">SE_PROJECT</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_QUIT">SE_QUIT</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_TERMINATE">SE_TERMINATE</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_CLOSE">SE_CLOSE</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_MENU">SE_MENU</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 4+5:</td>
+<td valign="top"> Ein Bitset, welche Editorkommandos verstanden werden:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_INIT">ES_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_OK">ES_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_ACK">ES_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_COMPILE">ES_COMPILE</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKE">ES_MAKE</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEALL">ES_MAKEALL</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_LINK">ES_LINK</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_EXEC">ES_EXEC</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEEXEC">ES_MAKEEXEC</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_PROJECT">ES_PROJECT</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_QUIT">ES_QUIT</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_SHLCTRL">ES_SHLCTRL</a></td>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top">0x0800</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wort 4 und 5 bilden zusammen ein Langwort. Da
+für die bisher definierten Nachrichten aber nur 12 Bits benötigt werden,
+ist Wort 4 normalerweise Null.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 6:</td>
+<td valign="top"> Unterstützte Versionsnummer des Protokolls als BCD-Zahl, also
+0x0105 (hexadezimal) für Version 1.05
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 7:</td>
+<td valign="top"> Die ApId des Programmes, dessen Nachricht beantwortet wird
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Keine. <tt>SE_OK</tt> ist bereits die Antwort der Shell auf die
+Nachricht <tt><a href="#ES_INIT">ES_INIT</a></tt>.
+</p>
+<h4><a name="SE_ACK">15.9.3.3 SE_ACK</a></h4>
+<p>Die Shell bestätigt den Empfang eines Editorkommandos und gibt
+zurück, ob das Kommando ausgeführt wird.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> <tt>TRUE</tt>&nbsp;: Kommando wird verstanden und ausgeführt,
+<br><tt>FALSE</tt>: Das Kommando wird nicht verstanden
+<br>&nbsp;
+<br>Ein <tt>SE_ACK</tt> mit <tt>TRUE</tt> sagt nichts darüber aus, ob
+das Kommando erfolgreich ausgeführt wurde. Es sagt nur, daß die
+Shell das Kommando versteht und ausführen wird!
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Keine (<tt>SE_ACK</tt> ist bereits die Antwort auf eine
+Nachricht).
+</p>
+<h4><a name="SE_OPEN">15.9.3.4 SE_OPEN</a></h4>
+<p>Die Shell sagt dem Editor, daß er einen Text öffnen soll.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf den Filenamen des zu öffnenden Files
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 5+6:</td>
+<td valign="top"> Zeile, in die der Cursor positioniert werden soll
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 7:</td>
+<td valign="top"> Spalte, in die der Cursor positioniert werden soll
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Als Antwort erhält die Shell ein <a href="#ES_ACK">ES_ACK</a>.
+</p>
+<br>
+<p><b>Hinweise:</b> Die Angabe einer Zeilen- und Spaltennummer ist
+erst ab Protokollversion 1.02 vorgesehen. Programme, die noch ältere
+Protokollversionen verwenden, sollten aber eigentlich die Worte 5-7
+auf Null gesetzt haben. Will man ganz sicher gehen, muß man ggfs. die
+bei <tt><a href="#SE_INIT">SE_INIT</a></tt> bzw. <tt><a href="#SE_OK">SE_OK</a></tt> übergebene Versionsnummer der
+Shell abfragen.
+</p>
+<p>Wenn die Shell keine Positionsangabe machen kann oder will,
+sollte sie Zeile und Spalte auf Null setzen.
+</p>
+<h4><a name="SE_ERROR">15.9.3.5 SE_ERROR</a></h4>
+<p>Es ist ein Fehler beim Compilieren aufgetreten.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf eine Infostruktur, die wie folgt aufgebaut ist:
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<a name="ERRINFO"></a>
+<pre>    typedef struct
+    {
+      char *errFile; /* Zeiger auf den Namen der compilierten Datei */
+      char *errMess; /* Zeiger auf die Fehlermeldung                */
+      int errNum;    /* Die Fehlernummer                            */
+      long errLine;  /* Die fehlerhafte Zeile                       */
+      int errRow;    /* Die Spalte mit dem Fehler (oder 0)          */
+    } ERRINFO;
+</pre>
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Mit <tt><a href="#ES_ACK">ES_ACK</a></tt> bestätigt der Editor die Meldung.
+</p>
+<br>
+<p><b>Hinweis:</b> Wenn die Shell keine Positionsangabe machen
+kann oder will, sollte sie Zeile und Spalte auf Null setzen.
+</p>
+<h4><a name="SE_ERRFILE">15.9.3.6 SE_ERRFILE</a></h4>
+<p>Es sind Fehler aufgetreten. Die Fehlermeldungen stehen in einem
+Errorfile, welches in der <a href="proto_ssp.html#Message">Message</a> spezifiziert wird.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf den Filenamen des Errorfiles mit den
+Fehlermeldungen
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 5+6:</td>
+<td valign="top"> Ein Zeiger auf den Namen des compilierten Textes
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Mit <a href="#ES_ACK">ES_ACK</a> bestätigt der Editor die Meldung.
+</p>
+<h4><a name="SE_PROJECT">15.9.3.7 SE_PROJECT</a></h4>
+<p>Die Shell teilt dem Editor mit, daß das Projekt geändert
+wurde. Der Filename des aktuellen Projektfiles wird als Parameter
+übergeben. Wird <tt>NULL</tt> übergeben, sollte das aktuelle Projekt
+abgemeldet werden.
+</p>
+<p>Eine vernünftige Reaktion des Editors wäre es in dem Fall,
+ebenfalls das Projekt zu wechseln, sofern er dies unterstützt.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf den Namen des Projektfiles oder <tt>NULL</tt>.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Der Editor bestätigt mit <a href="#ES_ACK">ES_ACK</a>.
+</p>
+<br>
+<p><b>Hinweis:</b> Den Namen des Projektfiles auf <tt>NULL</tt> zu
+setzen, ist erst ab Protokollversion 1.01 vorgesehen. Die Shell sollte
+daher vorher überprüfen, ob der Editor mindestens Protokollversion
+1.01 unterstützt.
+</p>
+<h4><a name="SE_QUIT">15.9.3.8 SE_QUIT</a></h4>
+<p>Die Shell teilt dem Editor mit, daß sie jetzt beendet wird. Der
+Editor sollte in dem Fall die Shell als Kommunikationspartner
+vergessen.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<dl class="UDO_env_description">
+<dt><b>keine Parameter</b></dt>
+<dd>
+<p>
+<br>&nbsp;
+</p>
+
+</dd>
+</dl>
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Es wird keine Antwort erwartet!
+</p>
+<h4><a name="SE_TERMINATE">15.9.3.9 SE_TERMINATE</a></h4>
+<p>Die Shell teilt dem Editor mit, daß dieser sich beenden soll.
+Der Editor sollte in dem Fall sich selbst beenden und seinen ganz
+normalen Terminierungsprozeß durchlaufen (und dabei auch ein
+<tt><a href="#ES_QUIT">ES_QUIT</a></tt> verschicken!). Der Grund für so eine Meldung der
+Shell könnte zum Beispiel zu wenig Speicher zum Compilieren sein.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<dl class="UDO_env_description">
+<dt><b>keine Parameter</b></dt>
+<dd>
+<p>
+<br>&nbsp;
+</p>
+
+</dd>
+</dl>
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Mit <a href="#ES_ACK">ES_ACK</a> bestätigt der Editor die Meldung.
+</p>
+<h4><a name="SE_CLOSE">15.9.3.10 SE_CLOSE</a></h4>
+<p>Die Shell teilt dem Editor mit, daß dieser bestimmte Texte
+sichern bzw. schließen soll. Beim Schließen von geänderten Texten
+sollte der Editor vorher nachfragen.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf den Namen einer Datei oder eine Dateimaske.
+<q><tt>*.*</tt></q> steht für alle Textfenster (entspricht also dem
+<tt>SE_CLOSE</tt> der Protokollversion 1.00).
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 5:</td>
+<td valign="top"> 0 = nur sichern
+<br>1 = sichern und schließen
+<br>2 = schließen ohne Sichern (ab Version 1.04)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Mit <a href="#ES_ACK">ES_ACK</a> bestätigt der Editor die Meldung.
+</p>
+<br>
+<p><b>Hinweis:</b> In der Protokollversion 1.00 waren für
+<tt>SE_CLOSE</tt> noch keine Parameter vorgesehen. Editoren, die nur
+Version 1.00 unterstützen, werden daher die Dateimasken und das Flag
+ignorieren und alle Texte sichern.
+</p>
+<h4><a name="SE_MENU">15.9.3.11 SE_MENU</a></h4>
+<p>Die Shell teilt dem Editor mit, was er für die einzelnen
+Programme in sein Menü eintragen soll. Der Editor kann somit für die
+Menüpunkte, die eine Aktion in der Shell auslösen, die gleichen
+Texte wie die Shell verwenden.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Ein Zeiger auf eine Infostruktur, die wie folgt aufgebaut ist:
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<a name="SEMENUINFO"></a>
+<pre>  typedef struct
+  {
+    char *compStr;      /* Text für den Menüpunkt &quot;Compiler&quot;       */
+    char *makeStr;      /* Text für den Menüpunkt &quot;Makefile&quot;       */
+    char *makeAllStr;   /* Text für den Menüpunkt &quot;Make all&quot;       */
+    char *linkStr;      /* Text für den Menüpunkt &quot;Linker&quot;         */
+    char *execStr;      /* Text für den Menüpunkt &quot;Execute&quot;        */
+    char *makeExecStr;  /* Text für den Menüpunkt &quot;Make &amp; Execute&quot; */
+    char *progName;     /* Name der Shell (ab Version 1.04)        */
+    char *shellCtrlStr; /* Text für den Menüpunkt &quot;Shell Control&quot;  */
+                        /* (ab Version 1.05)                       */
+  } SEMENUINFO;
+</pre>
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Mit <a href="#ES_ACK">ES_ACK</a> bestätigt der Editor die Meldung.
+</p>
+<br>
+<p><b>Hinweise:</b> Die Texte sind allesamt optional und können
+auch <tt>NULL</tt> sein, wenn die Shell keinen entsprechenden
+Menüpunkt hat. Dies bedeutet jedoch nicht, daß die Shell nicht über
+diese Funktionalität verfügt. Der Editor sollte daher für alle
+Texte ggfs. Defaulttexte einsetzen.
+</p>
+<p>Diese Nachricht existiert erst ab Protokollversion 1.02. Es
+genügt aber der Test, ob das entsprechende Bit in <tt><a href="#ES_INIT">ES_INIT</a></tt>
+bzw. <tt><a href="#ES_OK">ES_OK</a></tt> gesetzt ist.
+</p>
+<p>Beim Zugriff auf <tt>progName</tt> und <tt>shellCtrlStr</tt> muß
+darauf geachtet werden, daß der Kommunikationspartner diese auch
+schon unterstützt (Protokollversion testen)!
+</p>
+<h3><a name="Nachrichten_20des_20Editors_20an_20die_20Shell">15.9.4 Nachrichten des Editors an die Shell</a></h3>
+<p>Der Editor kann folgende Nachrichten bzw. Kommandos an die Shell
+senden:
+</p>
+<blockquote>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="left" valign="top">Nummer</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_INIT">ES_INIT</a></td>
+  <td align="left" valign="top">0x4240</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_OK">ES_OK</a></td>
+  <td align="left" valign="top">0x4241</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_ACK">ES_ACK</a></td>
+  <td align="left" valign="top">0x4242</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_COMPILE">ES_COMPILE</a></td>
+  <td align="left" valign="top">0x4243</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKE">ES_MAKE</a></td>
+  <td align="left" valign="top">0x4244</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEALL">ES_MAKEALL</a></td>
+  <td align="left" valign="top">0x4245</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_LINK">ES_LINK</a></td>
+  <td align="left" valign="top">0x4246</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_EXEC">ES_EXEC</a></td>
+  <td align="left" valign="top">0x4247</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEEXEC">ES_MAKEEXEC</a></td>
+  <td align="left" valign="top">0x4248</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_PROJECT">ES_PROJECT</a></td>
+  <td align="left" valign="top">0x4249</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_QUIT">ES_QUIT</a></td>
+  <td align="left" valign="top">0x424A</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_SHLCTRL">ES_SHLCTRL</a></td>
+  <td align="left" valign="top">0x424B</td>
+</tr>
+</table>
+</div>
+
+</blockquote>
+<h4><a name="ES_INIT">15.9.4.1 ES_INIT</a></h4>
+<p>Ein Editor fragt an, ob eine Shell das <a href="#SE-Protokoll">SE-Protokoll</a> versteht.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> Ein Bitset, welche Shellnachrichten verstanden werden:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_INIT">SE_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OK">SE_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ACK">SE_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OPEN">SE_OPEN</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERROR">SE_ERROR</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERRFILE">SE_ERRFILE</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_PROJECT">SE_PROJECT</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_QUIT">SE_QUIT</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_TERMINATE">SE_TERMINATE</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_CLOSE">SE_CLOSE</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_MENU">SE_MENU</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 4+5:</td>
+<td valign="top"> Ein Bitset, welche Editorkommandos versendet werden:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top">ES_INIT</td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_OK">ES_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_ACK">ES_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_COMPILE">ES_COMPILE</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKE">ES_MAKE</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEALL">ES_MAKEALL</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_LINK">ES_LINK</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_EXEC">ES_EXEC</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEEXEC">ES_MAKEEXEC</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_PROJECT">ES_PROJECT</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_QUIT">ES_QUIT</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_SHLCTRL">ES_SHLCTRL</a></td>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top">0x0800</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wort 4 und 5 bilden zusammen ein Langwort. Da
+für die bisher definierten Nachrichten aber nur 12 Bits benötigt werden,
+ist Wort 4 normalerweise Null.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 6:</td>
+<td valign="top"> Unterstützte Versionsnummer des Protokolls als BCD-Zahl, also
+0x0105 (hexadezimal) für Version 1.05
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Als Antwort erhält der Editor <tt><a href="#SE_OK">SE_OK</a></tt> von der Shell.
+</p>
+<h4><a name="ES_OK">15.9.4.2 ES_OK</a></h4>
+<p>Der Editor beantwortet die Anfrage der Shell nach dem Protokoll.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> Ein Bitset, welche Shellnachrichten verstanden werden:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_INIT">SE_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OK">SE_OK</a></td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ACK">SE_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_OPEN">SE_OPEN</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERROR">SE_ERROR</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_ERRFILE">SE_ERRFILE</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_PROJECT">SE_PROJECT</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_QUIT">SE_QUIT</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_TERMINATE">SE_TERMINATE</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_CLOSE">SE_CLOSE</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#SE_MENU">SE_MENU</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+</table>
+</div>
+
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 4+5:</td>
+<td valign="top"> Ein Bitset, welche Editorkommandos versendet werden:
+<br>&nbsp;
+<br><br>
+<div align="left"><table border="0" class="UDO_env_table">
+<tr>
+  <td align="left" valign="top">Nachricht</td>
+  <td align="center" valign="top">Bit</td>
+  <td align="left" valign="top">Hex-Wert</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_INIT">ES_INIT</a></td>
+  <td align="center" valign="top">0</td>
+  <td align="left" valign="top">0x0001</td>
+</tr>
+<tr>
+  <td align="left" valign="top">ES_OK</td>
+  <td align="center" valign="top">1</td>
+  <td align="left" valign="top">0x0002</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_ACK">ES_ACK</a></td>
+  <td align="center" valign="top">2</td>
+  <td align="left" valign="top">0x0004</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_COMPILE">ES_COMPILE</a></td>
+  <td align="center" valign="top">3</td>
+  <td align="left" valign="top">0x0008</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKE">ES_MAKE</a></td>
+  <td align="center" valign="top">4</td>
+  <td align="left" valign="top">0x0010</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEALL">ES_MAKEALL</a></td>
+  <td align="center" valign="top">5</td>
+  <td align="left" valign="top">0x0020</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_LINK">ES_LINK</a></td>
+  <td align="center" valign="top">6</td>
+  <td align="left" valign="top">0x0040</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_EXEC">ES_EXEC</a></td>
+  <td align="center" valign="top">7</td>
+  <td align="left" valign="top">0x0080</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_MAKEEXEC">ES_MAKEEXEC</a></td>
+  <td align="center" valign="top">8</td>
+  <td align="left" valign="top">0x0100</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_PROJECT">ES_PROJECT</a></td>
+  <td align="center" valign="top">9</td>
+  <td align="left" valign="top">0x0200</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_QUIT">ES_QUIT</a></td>
+  <td align="center" valign="top">10</td>
+  <td align="left" valign="top">0x0400</td>
+</tr>
+<tr>
+  <td align="left" valign="top"><a href="#ES_SHLCTRL">ES_SHLCTRL</a></td>
+  <td align="center" valign="top">11</td>
+  <td align="left" valign="top">0x0800</td>
+</tr>
+</table>
+</div>
+
+<br><b>Hinweis:</b> Wort 4 und 5 bilden zusammen ein Langwort. Da
+für die bisher definierten Nachrichten aber nur 12 Bits benötigt werden,
+ist Wort 4 normalerweise Null.
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 6:</td>
+<td valign="top"> Unterstützte Versionsnummer des Protokolls als BCD-Zahl, also
+0x0105 (hexadezimal) für Version 1.05
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 7:</td>
+<td valign="top"> Die ApId des Programmes, dessen Nachricht beantwortet wird
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Keine. <tt>ES_OK</tt> ist bereits die Antwort des Editors auf die
+Nachricht <tt><a href="#SE_INIT">SE_INIT</a></tt>.
+</p>
+<h4><a name="ES_ACK">15.9.4.3 ES_ACK</a></h4>
+<p>Der Editor bestätigt den Empfang des Kommandos.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3:</td>
+<td valign="top"> <tt>TRUE</tt>&nbsp;: Kommando wird verstanden und ausgeführt,
+<br><tt>FALSE</tt>: Das Kommando wird nicht verstanden
+<br>&nbsp;
+<br>Ein <tt>ES_ACK</tt> mit <tt>TRUE</tt> sagt nichts darüber aus, ob
+das Kommando erfolgreich ausgeführt wurde. Es sagt nur, daß der
+Editor das Kommando versteht und ausführen wird!
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Keine (<tt>ES_ACK</tt> ist bereits die Antwort auf eine
+Nachricht).
+</p>
+<h4><a name="ES_COMPILE">15.9.4.4 ES_COMPILE</a></h4>
+<p>Der Editor sagt der Shell, daß sie ein File übersetzen soll.
+Ein Zeiger auf den Dateinamen kann in der Nachricht übergeben werden.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen der zu compilierenden Datei oder
+<tt>NULL</tt>.
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Diese Nachricht muß mit <a href="#SE_ACK">SE_ACK</a> bestätigt werden.
+</p>
+<br>
+<p><b>Hinweis:</b> Den Namen der zu compilierenden Datei auf
+<tt>NULL</tt> zu setzen, ist erst ab Protokollversion 1.03 vorgesehen.
+Der Editor sollte daher vorher überprüfen, ob die Shell mindestens
+Protokollversion 1.03 unterstützt.
+</p>
+<h4><a name="ES_MAKE">15.9.4.5 ES_MAKE</a></h4>
+<p>Der Editor sagt der Shell, daß sie ein Make ausführen soll.
+Ein Filename kann in der Nachricht übergeben werden, muß aber nicht
+gesetzt sein und muß von der Shell auch nicht beachtet werden!
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des Makefiles (oder NULL)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<h4><a name="ES_MAKEALL">15.9.4.6 ES_MAKEALL</a></h4>
+<p>Der Editor sagt der Shell, daß ein komplettes <q>Make All</q>
+ausgeführt werden soll. Ein Filename für das Makefile kann (muß
+aber nicht) in der Nachricht übergeben werden.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des Makefiles (oder NULL)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<h4><a name="ES_LINK">15.9.4.7 ES_LINK</a></h4>
+<p>Der Editor sagt der Shell, daß das Programm gelinkt werden
+soll. Ein Filename kann in der Nachricht übergeben werden, muß aber
+nicht unbedingt von der Shell beachtet werden!
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen der Source, die gelinkt werden soll (oder
+NULL)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<h4><a name="ES_EXEC">15.9.4.8 ES_EXEC</a></h4>
+<p>Der Editor sagt der Shell, daß das Programm zu der Source
+ausgeführt werden soll. Ein Filename kann übergeben werden, muß von
+der Shell aber nicht beachtet werden.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des auszuführenden Files (oder NULL).
+<br>&nbsp;
+<br>Bei einer Sourcedatei ist diese ggf. noch zu compilieren
+und/oder zu linken
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<h4><a name="ES_MAKEEXEC">15.9.4.9 ES_MAKEEXEC</a></h4>
+<p>Die Shell soll ein Make ausführen und danach das Programm
+ausführen. Ein Filename für das Makefile kann (muß aber nicht) in
+der Nachricht übergeben werden.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des Makefiles (oder NULL)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<h4><a name="ES_PROJECT">15.9.4.10 ES_PROJECT</a></h4>
+<p>Der Editor teilt der Shell mit, daß das Projekt
+geändert/gewechselt wurde. Der Filename des Projektfiles wird als
+Parameter in der Nachricht übergeben. Wird <tt>NULL</tt> übergeben,
+sollte das aktuelle Projekt abgemeldet werden.
+</p>
+<p>Eine vernünftige Reaktion der Shell wäre in dem Fall,
+ebenfalls das Projekt zu wechseln, sofern sie dies unterstützt.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des Projektfiles oder <tt>NULL</tt>
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<br>
+<p><b>Hinweis:</b> Den Namen des Projektfiles auf <tt>NULL</tt> zu
+setzen, ist erst ab Protokollversion 1.01 vorgesehen. Der Editor
+sollte daher vorher überprüfen, ob die Shell mindestens
+Protokollversion 1.01 unterstützt.
+</p>
+<h4><a name="ES_QUIT">15.9.4.11 ES_QUIT</a></h4>
+<p>Der Editor teilt der Shell mit, daß er jetzt beendet wird. Die
+Shell sollte in dem Fall den Editor als Kommunikationspartner
+vergessen.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<dl class="UDO_env_description">
+<dt><b>keine Parameter</b></dt>
+<dd>
+<p>
+<br>&nbsp;
+</p>
+
+</dd>
+</dl>
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Es wird keine Antwort erwartet!
+</p>
+<h4><a name="ES_SHLCTRL">15.9.4.12 ES_SHLCTRL</a></h4>
+<p>Nachricht des Editors zur Kontrolle der Shell.
+</p>
+<br>
+<p><u>Aufbau der Nachricht</u>
+</p>
+<table class="UDO_env_xlist">
+<tr><td nowrap="nowrap" valign="top">Wort 3+4:</td>
+<td valign="top"> Zeiger auf den Namen des obersten Fensters des Editors oder
+<tt>NULL</tt>
+<br>&nbsp;
+</td></tr>
+
+<tr><td nowrap="nowrap" valign="top">Wort 5:</td>
+<td valign="top"> Steuer-Flags:
+<br>Bit 0: Shell soll sich toppen (Menü/Fenster)
+<br>&nbsp;
+
+</td></tr>
+</table>
+
+<br>
+<p><u>Antwort</u>
+</p>
+<p>Die Shell bestätigt mit <a href="#SE_ACK">SE_ACK</a>.
+</p>
+<br>
+<p><b>Hinweis:</b> Diese Nachricht existiert erst ab
+Protokollversion 1.05. Die übrigen Bits von Wort 5 sind für
+zukünftige Erweiterungen reserviert.
+</p>
+<h3><a name="History">15.9.5 History</a></h3>
+<p><b>Version 1.05</b> vom 23.12.1997
+</p>
+<ul>
+<li><p> neue Nachricht <tt><a href="#ES_SHLCTRL">ES_SHLCTRL</a></tt>
+<br>&nbsp;
+</p></li>
+<li><p> neuer Eintrag <tt>shellCtrlStr</tt> in der Struktur
+<tt><a href="proto_seproto.html#SEMENUINFO">SEMENUINFO</a></tt> bei <tt><a href="#SE_MENU">SE_MENU</a></tt>
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Version 1.04</b> vom 08.01.1997
+</p>
+<ul>
+<li><p> Flag 2 (<q>nur schließen</q>) bei <tt><a href="#SE_CLOSE">SE_CLOSE</a></tt>
+<br>&nbsp;
+</p></li>
+<li><p> neuer Eintrag <tt>progName</tt> in der Struktur
+<tt><a href="proto_seproto.html#SEMENUINFO">SEMENUINFO</a></tt> bei <tt><a href="#SE_MENU">SE_MENU</a></tt>
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Version 1.03</b> vom 19.11.1996
+</p>
+<ul>
+<li><p> bei <tt><a href="#ES_COMPILE">ES_COMPILE</a></tt> kann der Zeiger auf den Dateinamen jetzt
+auch <tt>NULL</tt> sein.
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Version 1.02</b> vom 13.08.1996
+</p>
+<ul>
+<li><p> neue Nachricht <tt><a href="#SE_MENU">SE_MENU</a></tt>
+<br>&nbsp;
+</p></li>
+<li><p> bei <tt><a href="#SE_OPEN">SE_OPEN</a></tt> kann nun auch eine Zeile und eine Spalte
+angegeben werden
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Version 1.01</b> vom 30.01.1996
+</p>
+<ul>
+<li><p> Angabe von Dateimasken und Close-Flag bei <tt><a href="#SE_CLOSE">SE_CLOSE</a></tt>
+<br>&nbsp;
+</p></li>
+<li><p> Projektname bei <tt><a href="#SE_PROJECT">SE_PROJECT</a></tt> und <tt><a href="#ES_PROJECT">ES_PROJECT</a></tt> kann
+auch <tt>NULL</tt> sein
+<br>&nbsp;
+</p></li>
+</ul>
+
+<br>
+<p><b>Version 1.00</b> vom 17.01.1994
+</p>
+<ul>
+<li><p> erste öffentliche Version
+<br>&nbsp;
+</p></li>
+</ul>
+
+<h3><a name="Autoren_20und_20Programme">15.9.6 Autoren und Programme</a></h3>
+<p>Das <a href="#SE-Protokoll">SE-Protokoll</a> wurde von Dirk Steins und Frank Storm
+entwickelt, die Erweiterungen zu den neueren Protokollversionen
+stammen von Christian Felsch und Dirk Haun.
+</p>
+<p>Die Zahl der Programme, die das SE-Protokoll unterstützen, ist leider
+noch nicht allzu groß:
+</p>
+<ul>
+<li><p> Editoren:
+<br>&nbsp;
+<ul>
+<li><p> Clix von Steffen Engels
+<br>&nbsp;
+</p></li>
+<li><p> Everest von Oliver Schmidt (ab Version 3.5)
+<br>&nbsp;
+</p></li>
+<li><p> Fred von Dirk Steins
+<br>&nbsp;
+</p></li>
+<li><p> qed von Christian Felsch (ab Version 3.3, ab Version 3.70 wird
+zudem Protokollversion 1.01 unterstützt)
+<br>&nbsp;
+</p></li>
+</ul>
+
+</p></li>
+<li><p> Shells:
+<br>&nbsp;
+<ul>
+<li><p> Chatwin von Dirk Haun (ab Version 3.04 wird das <a href="#SE-Protokoll">SE-Protokoll</a>
+komplett unterstützt, ältere Versionen unterstützen nur die
+wichtigsten Nachrichten)
+<br>&nbsp;
+</p></li>
+<li><p> Shell zum Megamax Modula-2 von Thomas Tempelmann und Dirk
+Steins
+<br>&nbsp;
+</p></li>
+<li><p> PC-Shell von Frank Schramm (ab Version 3.01)
+<br>&nbsp;
+</p></li>
+</ul>
+
+</p></li>
+<li><p> Sonstiges:
+<br>&nbsp;
+<ul>
+<li><p> SE-Lib von Manfred Rosenboom und Dirk Haun
+<br>&nbsp;
+<br>Dieser Bibliothek liegt auch der SE-Evaluator, eine Art Debugger
+für das SE-Protokoll, bei.
+<br>&nbsp;
+</p></li>
+</ul>
+
+</p></li>
+</ul>
+
+<p>Es bleibt zu hoffen, daß weitere Editoren und Shells dieses
+nützliche Protokoll unterstützen werden. Dieser Text trägt dabei
+hoffentlich etwas zur Verbreitung bei &#x2026;
+</p>
+<br>
+<p>Dirk Haun, 20. Dezember 2025
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="protocols.html"><img src="udo_up.gif" alt="Protokolle" title="Protokolle" border="0" width="24" height="24">Protokolle</a>
+<a name="UDO_nav_lf_FOOT" href="proto_olga.html"><img src="udo_lf.gif" alt="OLGA-Protokoll" title="OLGA-Protokoll" border="0" width="24" height="24">OLGA-Protokoll</a>
+<a name="UDO_nav_rg_FOOT" href="proto_ssp.html"><img src="udo_rg.gif" alt="System Services Protocol (SSP)" title="System Services Protocol (SSP)" border="0" width="24" height="24">System Services Protocol (SSP)</a>
+</body>
+</html>

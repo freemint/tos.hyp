@@ -1,0 +1,150 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<!-- last modified on 2025/12/20 -->
+<html lang="en">
+<head>
+<title>
+The documentation for TOS: VFAT-XFS in MagiC
+</title>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+<meta http-equiv="Content-Language" content="en">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="Generator" content="UDO Version 7.12 (1248) for Linux">
+</head>
+<body style="position: relative;">
+
+<a name="UDO_nav_hm_HEAD" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_HEAD" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_HEAD" href="magic_xfs.html"><img src="udo_lf.gif" alt="MagiC's XFS-concept" title="MagiC's XFS-concept" border="0" width="24" height="24">MagiC's XFS-concept</a>
+<a name="UDO_nav_rg_HEAD" href="magic_sharelib.html"><img src="udo_rg.gif" alt="Shared libraries" title="Shared libraries" border="0" width="24" height="24">Shared libraries</a>
+
+<hr>
+
+<h1><a name="VFAT-XFS_20in_20MagiC">11.22 VFAT-XFS in MagiC</a></h1>
+<p>As of Version 5.0 MagiC supports a VFAT-XFS, with whose help
+long filenames in Windows95 format can be used on the Atari.
+</p>
+<p><b>Advantages of this concept:</b>
+</p>
+<ul>
+<li><p> Existing partitions need not be reformatted; the long filenames
+are thus available directly
+<br>&nbsp;
+</p></li>
+<li><p> Files created in this way may be exchanged directly between
+<a href="magic.html">MagiC</a> and Windows95 (or higher), and the use of such files is also
+possible without an <a href="xbios_sound.html#installed">installed</a> VFAT-XFS (important in case one boots
+without MagiC at times, for instance)
+<br>&nbsp;
+</p></li>
+<li><p> As VFAT is based on the FAT concept, simple implementation was
+possible without any appreciable memory overheads
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Disadvantages of this concept:</b>
+</p>
+<ul>
+<li><p> VFAT has inherited all problems from FAT, so the known cluster
+fracturing also exists under VFAT, for instance
+<br>&nbsp;
+</p></li>
+<li><p> There are more modern concepts that are both faster and safer
+<br>&nbsp;
+</p></li>
+<li><p> On the Atari there are at present no programs that can repair
+volumes with long filenames; these would have to delete all the
+filename entries that are incomplete, or followed by a wrong main
+entry
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p><b>Technical description of the VFAT system:</b>
+</p>
+<pre>typedef struct
+{
+    BYTE   head;       /* Bit 0..4: Number, Bit 6: Endofname */
+    UBYTE  name1[10];  /* 5 Unicode characters               */
+    BYTE   attr;       /* Attribute (0x0f)                   */
+    BYTE   unused;     /* Unused at present                  */
+    BYTE   chksum;     /* Checksum of the short name         */
+    UBYTE  name2[12];  /* 6 Unicode characters               */
+    WORD   stcl;       /* First cluster (0)                  */
+    UBYTE  name3[4];   /* 2 Unicode characters               */
+} LDIR;
+</pre>
+<p><b>Note:</b> Here <i>head</i> is for the first entry e.g 0x01,
+for the second 0x02 and for the third 0x43, if the name requires three
+entries.
+</p>
+<p>One can store 13 characters for each entry. The entries with the
+long filename always lie immediately before the main (8+3) entry. The
+Unicode characters are in the Intel format. In the last entry, any
+unused characters after the NULL-byte are filled with 0xff, 0xff. The
+order of the entries is reversed, i.e. the last 13 characters of the
+long name lie physically in the first position. The last directory
+entry, which is flagged by a set bit 6 in the <i>head</i> field, lies
+physically in the first position.
+</p>
+<p>The component <i>stcl</i> is always zero; <i>chksum</i> is
+calculated from the short name (in an internal format) through
+right-rotation in turn of the previous result and addition of the 11
+characters. Linux uses the field <i>unused</i> to store flags for
+upper/lowercase. The current Windows version however always writes
+zeros to this field, and MagiC behaves in the same way. Further
+notes:
+</p>
+<ul>
+<li><p> The renaming of files with identical names apart from
+lower/upper case is possible. <b>Example:</b> By renaming 'test.txt'
+to 'TEST.TXT', the long name is discarded automatically.
+<br>&nbsp;
+</p></li>
+<li><p> The conversion Unicode &lt;-&gt; ASCII is implemented according
+to the <a href="VDI_fundamentals.html#NVDI">NVDI</a> mapping
+<br>&nbsp;
+</p></li>
+<li><p> If a file is copied from a VFAT partition with long filenames
+enabled to one with a normal FAT (where they are not), its name will
+be truncated to the 8+3 format. <b>Example:</b> Copying a file
+'longfilename.txt' to a FAT partition will make it appear in the
+directory as 'LONGFILE.TXT'. If an attempt is then made to copy the
+file 'longfilenameS.txt' to the same directory, the usual name
+conflict dialog will appear, inviting the user to rename the copy to
+avoid duplicating a filename.
+<br>&nbsp;
+</p></li>
+<li><p> If the parition type is changed from VFAT to normal FAT (using
+<a href="magic_programs.html#VFATCONF">VFATCONF</a>.PRG, say), any long filenames will be truncated; this is
+indicated by a tilde '&nbsp;' character followed by a numeral at the end of
+the shortened name. If two or more such files start with the same
+characters, the numeral will be incremented each time.
+<b>Example:</b> A directory containing 'longfilename.txt' and
+'longfilenameS.txt' when changed from a VFAT to a FAT partition will
+display 'LONGFI&nbsp;1.TXT' and 'LONGFI&nbsp;2.TXT'. The same applies to
+directory names.
+<br>&nbsp;
+</p></li>
+<li><p> In the creation of the short name, spaces are replaced by under
+scores. <b>Example:</b> 'Wassili Kandinsky.app' -&gt; 'WASSILI_.APP'.
+<br>&nbsp;
+</p></li>
+<li><p> The VFAT-XFS can also move folders within the directory
+structure (irrespective of whether long names are allowed or not).
+<br>&nbsp;
+</p></li>
+</ul>
+
+<p>See also: <a href="magic_xfs.html">MagiC's XFS-concept</a> &nbsp; <a href="magic_programs.html#VFATCONF">VFATCONF</a>
+</p>
+<hr>
+
+<a name="UDO_nav_hm_FOOT" href="index.html"><img src="udo_hm.gif" alt="Home" title="Home" border="0" width="24" height="24"></a>
+<a name="UDO_nav_up_FOOT" href="magic.html"><img src="udo_up.gif" alt="MagiC" title="MagiC" border="0" width="24" height="24">MagiC</a>
+<a name="UDO_nav_lf_FOOT" href="magic_xfs.html"><img src="udo_lf.gif" alt="MagiC's XFS-concept" title="MagiC's XFS-concept" border="0" width="24" height="24">MagiC's XFS-concept</a>
+<a name="UDO_nav_rg_FOOT" href="magic_sharelib.html"><img src="udo_rg.gif" alt="Shared libraries" title="Shared libraries" border="0" width="24" height="24">Shared libraries</a>
+</body>
+</html>
