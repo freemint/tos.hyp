@@ -12,6 +12,8 @@ $UDO --html -o "$PWD/gh-pages/index.html" "$PWD/html/tos_hyp.u"
 $UDO -D GERMAN --html --tree -o "$PWD/gh-pages/de/index.html" "$PWD/tos_hyp.u"
 $UDO -D GERMAN --stg --no-warningslines --check -o "$PWD/gh-pages/archives/tos_hyp_de.stg" "$PWD/tos_hyp.u"
 $HCP -z -o "gh-pages/archives/tos_hyp.hyp" "gh-pages/archives/tos_hyp_de.stg"
+mkdir -p "${DEPLOY_DIR}"
+cp "gh-pages/archives/tos_hyp.hyp" "${DEPLOY_DIR}/tos_hyp_de.hyp"
 
 cd "gh-pages/archives"
 zip -9 tos_hyp_de.zip "tos_hyp.hyp" "tos_hyp.ref"
@@ -21,6 +23,7 @@ cd -
 $UDO -D ENGLISH --html --tree -o "$PWD/gh-pages/en/index.html" "$PWD/tos_hyp.u"
 $UDO -D ENGLISH --stg --no-warningslines --check -o "$PWD/gh-pages/archives/tos_hyp_en.stg" "$PWD/tos_hyp.u"
 $HCP -z -o "gh-pages/archives/tos_hyp.hyp" "gh-pages/archives/tos_hyp_en.stg"
+cp "gh-pages/archives/tos_hyp.hyp" "${DEPLOY_DIR}/tos_hyp.hyp"
   
 cd "gh-pages/archives"
 zip -9 tos_hyp_en.zip "tos_hyp.hyp" "tos_hyp.ref"
