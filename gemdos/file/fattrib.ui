@@ -35,7 +35,7 @@ Set attributes
 !label File attributes of TOS
 !label Attributes of a file
 !item [attrib]
-(!B)File attribute flags:(!b)
+(!B)File attribute flags:(!b) (ignored if (!I)wflag(!i) = 0)
 !begin_xlist !compressed
 !item [Bit 0:]
 File is write-protected
@@ -52,8 +52,33 @@ Archive bit
 !end_xlist
 !end_xlist
 
-(!B)Note:(!b) If possible, programs should make use of the Fxattr and Fchmod
-routines, as these are more efficient than Fattrib.
+(!B)Note:(!b) Whether Fattrib can be used with folders depends on the
+GEMDOS version:
+
+!begin_itemize !compressed
+!item TOS 1.x to 3.x and EmuTOS search the directory entry with the
+attribute mask Read-only|Hidden|System|Archive. A folder that has none of
+these bits set is not found and EFILNF is returned. A folder with at least
+one of these bits set is found and its attributes can be read. TOS 1.04
+to 3.x and EmuTOS accept only bits 0, 1, 2 and 5 in (!I)attrib(!i) and
+return EACCDN otherwise, so setting the attributes of such a folder clears
+the Directory bit and turns the folder into a file. TOS 1.00 and 1.02
+write (!I)attrib(!i) without any check.
+!item TOS 4.x finds files and folders. Bit 4 cannot be changed, and bit 3
+cannot be set for a folder (EACCDN).
+!item MagiC finds files and folders. The attributes of a folder can only
+be read; setting them, or setting bits other than 0, 1, 2 and 5, returns
+EACCDN.
+!item MiNT finds files and folders. Only bits 0, 1, 2, 4 and 5 may be set,
+bit 4 cannot be changed, volume labels cannot be modified, and only the
+owner or the super-user may set attributes; otherwise EACCDN is returned.
+!end_itemize
+
+Fsfirst with bit 4 set in the attribute mask returns the attributes of a
+folder in all GEMDOS versions.
+
+If possible, programs should make use of the Fxattr and Fchmod routines,
+as these are more efficient than Fattrib.
 
 !item [(!nolink [Return]) value:]
 The function returns the following results:
@@ -63,9 +88,11 @@ Access denied.
 !item [EFILNF :]
 File not found.
 !item [EPTHNF :]
-Directory not found.
+Directory not found (TOS 1.04 to 3.x return EFILNF in this case).
 !item [Otherwise:]
-The current file attributes.
+The current file attributes ((!I)wflag(!i) = 0) or the new file
+attributes ((!I)wflag(!i) = 1). MiNT returns E_OK if the attributes were
+set.
 !end_xlist
 
 !item [Availability:]
@@ -141,7 +168,7 @@ Attribute setzen
 !label Dateiattribute von TOS
 !label Attribute einer Datei
 !item [attrib]
-(!B)Dateiattribute(!b)
+(!B)Dateiattribute(!b) (wird bei (!I)wflag(!i) = 0 ignoriert)
 !begin_xlist !compressed
 !item [Bit-0:]
 Datei ist schreibgeschÅtzt
@@ -158,8 +185,35 @@ Archiv-Bit
 !end_xlist
 !end_xlist
 
-(!B)Hinweis:(!b) Programme sollten nach Mîglichkeit auf die Routinen Fxattr
-und Fchmod zurÅckgreifen, da diese leistungsfÑhiger als Fattrib sind.
+(!B)Hinweis:(!b) Ob Fattrib auf Ordner angewendet werden kann, hÑngt von
+der GEMDOS-Version ab:
+
+!begin_itemize !compressed
+!item TOS 1.x bis 3.x und EmuTOS suchen den Verzeichniseintrag mit der
+Attributmaske SchreibgeschÅtzt|Versteckt|System|Archiv. Ein Ordner, bei
+dem keines dieser Bits gesetzt ist, wird nicht gefunden, und es wird
+EFILNF geliefert. Ein Ordner, bei dem mindestens eines dieser Bits gesetzt
+ist, wird gefunden, und seine Attribute kînnen gelesen werden. TOS 1.04
+bis 3.x und EmuTOS akzeptieren in (!I)attrib(!i) nur die Bits 0, 1, 2 und
+5 und liefern sonst EACCDN; das Setzen der Attribute eines solchen Ordners
+lîscht daher das Verzeichnis-Bit und macht den Ordner zu einer Datei.
+TOS 1.00 und 1.02 schreiben (!I)attrib(!i) ohne jede PrÅfung.
+!item TOS 4.x findet Dateien und Ordner. Bit 4 kann nicht verÑndert und
+Bit 3 bei einem Ordner nicht gesetzt werden (EACCDN).
+!item MagiC findet Dateien und Ordner. Die Attribute eines Ordners kînnen
+nur gelesen werden; das Setzen sowie das Setzen anderer Bits als 0, 1, 2
+und 5 liefert EACCDN.
+!item MiNT findet Dateien und Ordner. Nur die Bits 0, 1, 2, 4 und 5 dÅrfen
+gesetzt werden, Bit 4 kann nicht verÑndert werden, Diskettennamen kînnen
+nicht geÑndert werden, und nur der EigentÅmer oder der Super-User darf
+Attribute setzen; sonst wird EACCDN geliefert.
+!end_itemize
+
+Fsfirst mit gesetztem Bit 4 in der Attributmaske liefert in allen
+GEMDOS-Versionen die Attribute eines Ordners.
+
+Programme sollten nach Mîglichkeit auf die Routinen Fxattr und Fchmod
+zurÅckgreifen, da diese leistungsfÑhiger als Fattrib sind.
 
 !item [Ergebnis:]
 Die Funktion liefert folgende Resultate:
@@ -170,9 +224,12 @@ Zugriff verweigert
 !item [EFILNF :]
 Datei nicht gefunden
 !item [EPTHNF :]
-Verzeichnis nicht gefunden
+Verzeichnis nicht gefunden (TOS 1.04 bis 3.x liefern in diesem Fall
+EFILNF)
 !item [sonst :]
-die aktuellen Dateiattribute
+die aktuellen Dateiattribute ((!I)wflag(!i) = 0) bzw. die neuen
+Dateiattribute ((!I)wflag(!i) = 1). MiNT liefert E_OK, wenn die Attribute
+gesetzt wurden.
 !end_xlist
 
 !item [VerfÅgbar:]
